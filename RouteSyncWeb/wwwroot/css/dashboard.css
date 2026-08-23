@@ -1,4 +1,4 @@
-/* Dashboard/Index.cshtml */
+﻿/* Dashboard/Index.cshtml */
         /* Variables (inherit from sidebar). */
         :root {
         --db-teal: #4AADA8;
@@ -636,6 +636,41 @@
 
     .db-card {
         padding: 16px 14px;
+    }
+
+    /* Four cards, each the width of the screen and tall enough for a headline,
+       is four screens of scrolling to read four numbers. Two across, and the
+       number sized for a glance rather than a poster. */
+    .db-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .db-stat-card {
+        padding: 12px 12px 14px;
+    }
+
+    .db-stat-header {
+        gap: 8px;
+    }
+
+    .db-stat-icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    .db-stat-label {
+        font-size: .74rem;
+        line-height: 1.2;
+    }
+
+    .db-stat-value {
+        font-size: 1.4rem;
+    }
+
+    .db-stat-sub,
+    .db-stat-delta {
+        font-size: .68rem;
     }
 
     .db-title-row {

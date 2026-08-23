@@ -82,6 +82,17 @@
 
 </div>
 
+@* Phone only: this block holds at the top of the page while the trips scroll. *@
+<div class="dp-sticky-head" id="dpStickyHead">
+
+@* STATUS CHIPS. Phone only: the stat cards above carry these counts on a desk. *@
+<div class="dp-chips" id="dpChips" role="group" aria-label="Filter trips by status">
+    <button type="button" class="dp-chip dp-chip--on" data-chip="">All <span class="dp-chip-n"></span></button>
+    <button type="button" class="dp-chip" data-chip="Assignment Issue">Issues <span class="dp-chip-n"></span></button>
+    <button type="button" class="dp-chip" data-chip="Missed">Missed <span class="dp-chip-n"></span></button>
+    <button type="button" class="dp-chip" data-chip="Active">Active <span class="dp-chip-n"></span></button>
+</div>
+
 @* TOOLBAR *@
 <div class="dp-toolbar">
     <button class="dp-btn-primary" onclick="openAddTripModal()">
@@ -97,7 +108,20 @@
         <i class="ti ti-refresh"></i> Refresh
     </button>
     <span class="dp-updated" id="dpUpdated" title="Auto-refreshes every 30 seconds"></span>
+
+    @* Phone only: the three buttons above are planning tools, not things done at a
+       terminal, so they fold behind this rather than filling the screen. *@
+    <button type="button" class="dp-more" id="dpMoreBtn" aria-expanded="false"
+            aria-controls="dpMoreSheet" aria-label="More actions">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+        </svg>
+    </button>
 </div>
+
+</div>
+
+<p class="dp-empty-state" id="dpEmptyState" hidden></p>
 
 @* ROUTE BLOCKS *@
 <div id="dpRoutes">
@@ -105,6 +129,7 @@
 {
     <div class="rp-card rp-card--table dp-route-card" data-route-id="@route.RouteId">
         <div class="dp-route-header">
+            <span class="dp-route-caret" aria-hidden="true"></span>
             <span class="dp-route-name">@route.RouteName</span>
             <div class="dp-route-header-right">
                 @if (route.NeedsAssignment)
@@ -414,6 +439,8 @@
             // Reapply the active search filter to the replaced rows.
             const s = document.getElementById('searchInput');
             if (s && s.value) filterRows();
+            if (window.dpChipsRecount) window.dpChipsRecount();
+            if (window.dpSayIfEmpty) window.dpSayIfEmpty();
             dpStamp();
         } catch (e) {
             console.warn('dispatch refresh failed', e);
@@ -440,6 +467,16 @@
 
 
 @section TopbarContent {
+    <button type="button" class="rs-filter-toggle" data-filter-toggle="dpFilters"
+            aria-expanded="false" aria-controls="dpFilters">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18M6 12h12M10 19h4" />
+        </svg>
+        Filters
+    </button>
+
+    <div class="dp-topfilters rs-filters" id="dpFilters">
     <div class="rp-route-wrap">
         <span class="rp-filter-label">Route:</span>
         <div class="rp-select-wrap">
@@ -478,6 +515,7 @@
                 </svg>
             </span>
         </div>
+    </div>
     </div>
 }
 
@@ -577,7 +615,152 @@
 
     document.getElementById('routeFilter').addEventListener('change', applyFilters);
     document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+    // Status chips.
+    //
+    // They set the status select and let applyFilters do the work, so there is still
+    // one place that decides what a filter means. The counts are read from the rows
+    // on the page rather than the server, which keeps them right after a refresh
+    // replaces those rows.
+    document.addEventListener('DOMContentLoaded', function () {
+        var chipBar = document.getElementById('dpChips');
+        var statusSel = document.getElementById('statusFilter');
+        if (!chipBar || !statusSel) return;
+
+        function countChips() {
+            var rows = document.querySelectorAll('.dp-trip-row[data-trip-status]');
+            var totals = {};
+            rows.forEach(function (r) {
+                var st = r.dataset.tripStatus;
+                if (!st) return;
+                totals[st] = (totals[st] || 0) + 1;
+                totals[''] = (totals[''] || 0) + 1;
+            });
+            chipBar.querySelectorAll('.dp-chip').forEach(function (chip) {
+                var n = totals[chip.dataset.chip] || 0;
+                chip.querySelector('.dp-chip-n').textContent = n > 0 ? n : '';
+                chip.classList.toggle('dp-chip--empty', n === 0);
+            });
+        }
+
+        function mark() {
+            chipBar.querySelectorAll('.dp-chip').forEach(function (chip) {
+                chip.classList.toggle('dp-chip--on', chip.dataset.chip === statusSel.value);
+            });
+        }
+
+        chipBar.addEventListener('click', function (e) {
+            var chip = e.target.closest('.dp-chip');
+            if (!chip) return;
+            statusSel.value = chip.dataset.chip;
+            applyFilters();
+            mark();
+            sayIfEmpty();
+        });
+
+        // What an empty page means depends on what was asked for. "Nothing was
+        // missed" is worth reading; a blank screen is not.
+        var EMPTY = {
+            '': 'No trips today.',
+            'Assignment Issue': 'No assignment issues.',
+            'Missed': 'Nothing missed today.',
+            'Active': 'Nothing running right now.'
+        };
+
+        function sayIfEmpty() {
+            var note = document.getElementById('dpEmptyState');
+            if (!note) return;
+            var showing = Array.prototype.filter.call(
+                document.querySelectorAll('.dp-route-card'),
+                function (c) { return c.style.display !== 'none'; }).length;
+            note.textContent = EMPTY[statusSel.value] || 'No trips match this filter.';
+            note.hidden = showing > 0;
+        }
+
+        window.dpSayIfEmpty = sayIfEmpty;
+        sayIfEmpty();
+
+        // The route bars park under this block, whose height depends on how the
+        // chips and the search wrap. Measured rather than assumed, and again
+        // whenever the width changes.
+        var head = document.getElementById('dpStickyHead');
+        function measureHead() {
+            if (!head) return;
+            var h = Math.round(head.getBoundingClientRect().height);
+            // Zero means it has not been laid out yet, or the width is one where
+            // this block does not exist. Either way the stylesheet's own figure is
+            // a better answer than none.
+            if (h > 0) document.documentElement.style.setProperty('--dp-head', h + 'px');
+        }
+
+        // Watched rather than measured once: the chips and the search wrap at
+        // different widths, and a font arriving late changes the height again.
+        if (head && window.ResizeObserver) {
+            new ResizeObserver(measureHead).observe(head);
+        } else {
+            window.addEventListener('resize', measureHead);
+        }
+        requestAnimationFrame(measureHead);
+
+        statusSel.addEventListener('change', mark);
+
+        // A whole route folds away, so a dispatcher working one route can put the
+        // other out of sight. Header taps only; the Route Message button inside it
+        // has its own job.
+        document.addEventListener('click', function (e) {
+            var head = e.target.closest && e.target.closest('.dp-route-header');
+            if (!head) return;
+            if (e.target.closest('button, a')) return;
+            head.closest('.dp-route-card').classList.toggle('dp-route-card--shut');
+        });
+
+        // More actions. Its sheet is written further down the page than this script,
+        // which is why the whole block waits for the document to finish.
+        var moreBtn = document.getElementById('dpMoreBtn');
+        var moreSheet = document.getElementById('dpMoreSheet');
+        var moreBack = document.getElementById('dpMoreBackdrop');
+        function setMore(open) {
+            moreSheet.classList.toggle('dp-more-sheet--open', open);
+            moreBack.classList.toggle('dp-more-backdrop--open', open);
+            moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        moreBtn.addEventListener('click', function () {
+            setMore(!moreSheet.classList.contains('dp-more-sheet--open'));
+        });
+        moreBack.addEventListener('click', function () { setMore(false); });
+        moreSheet.addEventListener('click', function () { setMore(false); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') setMore(false);
+        });
+        window.dpChipsRecount = function () { countChips(); mark(); };
+        countChips();
+    });
+
+    // A phone loses the page whenever another app comes forward, and the poll above
+    // stops with it. Returning would otherwise show whatever was true up to thirty
+    // seconds ago, with nothing saying so. Touch only: a desk keeps its own timing.
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) dpRefresh(false);
+        });
+    }
 </script>
+
+@* More actions, phone only. The three buttons in the toolbar stay put for a desk;
+   this calls the same handlers rather than moving them. *@
+<div class="dp-more-backdrop" id="dpMoreBackdrop"></div>
+<div class="dp-more-sheet" id="dpMoreSheet" role="dialog" aria-modal="true" aria-label="More actions">
+    <div class="dp-more-grip"></div>
+    <button type="button" class="dp-more-item" onclick="openAddTripModal()">
+        <i class="ti ti-plus"></i> Add Trip
+    </button>
+    <button type="button" class="dp-more-item" onclick="openBroadcastModal()">
+        <i class="ti ti-speakerphone"></i> Broadcast Message
+    </button>
+    <a class="dp-more-item" href="/Schedule">
+        <i class="ti ti-calendar-week"></i> Edit Schedule
+    </a>
+</div>
 
 @* Trip Detail Modal. *@
 @await Html.PartialAsync("_TripDetailModal")
