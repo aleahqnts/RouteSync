@@ -70,11 +70,36 @@
 
         .sch-wrap { padding: 14px 12px 96px; }
 
-        .sch-toolbar { gap: 8px; }
-        .sch-week-label { min-width: 0; flex: 1 1 100%; order: -1; }
-        .sch-btn-save { margin-left: 0; flex: 1 1 100%; }
-        .sch-pick { flex: 1 1 100%; }
+        /* The toolbar is five controls of different jobs. On a phone they stack into
+           rows that each do one thing: leave, move a week, jump to a date, save. */
+        .sch-toolbar {
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .sch-toolbar > .sch-btn-ghost:first-child { flex: 1 1 100%; text-align: center; }
+
+        .sch-week-nav { flex: 1 1 100%; justify-content: space-between; gap: 8px; }
+        .sch-week-nav .sch-btn-ghost { flex: 0 0 auto; white-space: nowrap; }
+
+        .sch-week-label {
+            flex: 1;
+            min-width: 0;
+            order: 0;
+            font-size: .88rem;
+        }
+
+        .sch-pick { flex: 1 1 100%; gap: 8px; }
+        .sch-pick label { flex: 0 0 auto; }
         .sch-pick input[type=date] { flex: 1; min-width: 0; }
+        .sch-pick .sch-btn-ghost { flex: 0 0 auto; }
+
+        .sch-btn-save { margin-left: 0; flex: 1 1 100%; min-height: 46px; }
+
+        /* Every rule it listed is enforced on save, which says which one was broken
+           and where. Announcing them first is a manual, and a manual is not what
+           someone standing at a terminal is reading. */
+        .sch-hint { display: none; }
 
         .sch-days {
             display: flex;
@@ -111,10 +136,33 @@
            carries the whole week whichever day is on screen. */
         .sch-day-off { display: none; }
 
-        /* One column needs no scrolling, and the shift column has nothing to stick to. */
-        .sch-table { min-width: 0; }
-        .sch-cell-td { min-width: 0; }
-        .sch-shift-col { position: static; width: 88px; }
+        /* The whole week, at the width that makes one day readable, scrolling
+           sideways in its own box. The shift column is pinned, so a row never
+           loses the thing that names it however far across you are. */
+        .sch-table { min-width: max-content; }
+
+        /* The day columns only. Named this way so the shift column, which is a th
+           and a td as well, keeps the narrow width set for it below. */
+        .sch-table th[data-sch-day],
+        .sch-table td[data-sch-day] { min-width: 200px; }
+
+        .sch-table .sch-shift-col {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            width: 92px;
+            min-width: 92px;
+            max-width: 92px;
+            background: #FBFCFD;
+            /* Two shadows, both standing in for borders a collapsed table will not
+               paint on a cell lifted out of the flow. The first is the rule down its
+               right edge. The second fills the sliver to its left, where the table's
+               own border holds the first cell a pixel off the scroller and the day
+               columns could be seen sliding past underneath. */
+            box-shadow: 1px 0 0 #EEF1F4, -6px 0 0 #FBFCFD;
+        }
+
+        .sch-table thead .sch-shift-col { z-index: 3; }
 
         .sch-modal-overlay { padding: 0; align-items: flex-end; }
         .sch-modal { max-width: none; max-height: 92vh; overflow-y: auto;
