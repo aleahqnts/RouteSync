@@ -63,7 +63,11 @@
         padding: 0;
     }
 
-    .topbar .container-fluid > div:empty {
+    /* The box kept for a profile menu that was never built. Not :empty, because
+       that matches nothing containing so much as a newline, and this one is
+       written across three lines in the layout. It is the only child of the bar
+       with no class of its own, which is what names it here. */
+    .topbar .container-fluid > div:last-child:not([class]) {
         display: none;
     }
 

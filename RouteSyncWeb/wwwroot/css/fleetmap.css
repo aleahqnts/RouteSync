@@ -649,6 +649,9 @@
 
     .fm-topbar {
         gap: 8px;
+        /* Search takes the room, the button sits against the edge. Left to space
+           between, the gap lands wherever the search happens to end. */
+        justify-content: flex-start;
     }
 
     .fm-search-wrap {
