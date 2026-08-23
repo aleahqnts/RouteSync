@@ -48,7 +48,11 @@
                 aria-selected="false">All</button>
     </div>
 
-    <p class="sch-hint">Assign vehicle + driver per route, shift and day. Multiple buses per shift: use <strong>+ Add bus</strong>. Started/completed trips are locked. Conflicts (double-booking, back-to-back driver shifts) are blocked on save.</p>
+    <p class="sch-hint">
+        Assign a vehicle and a driver to each shift. Use <strong>+ Add bus</strong> to
+        run more than one on the same shift. Trips already under way are locked, and
+        conflicts are reported when you save.
+    </p>
 
     @foreach (var route in Model.Routes)
     {

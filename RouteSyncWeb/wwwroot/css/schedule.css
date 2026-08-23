@@ -70,11 +70,36 @@
 
         .sch-wrap { padding: 14px 12px 96px; }
 
-        .sch-toolbar { gap: 8px; }
-        .sch-week-label { min-width: 0; flex: 1 1 100%; order: -1; }
-        .sch-btn-save { margin-left: 0; flex: 1 1 100%; }
-        .sch-pick { flex: 1 1 100%; }
+        /* The toolbar is five controls of different jobs. On a phone they stack into
+           rows that each do one thing: leave, move a week, jump to a date, save. */
+        .sch-toolbar {
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .sch-toolbar > .sch-btn-ghost:first-child { flex: 1 1 100%; text-align: center; }
+
+        .sch-week-nav { flex: 1 1 100%; justify-content: space-between; gap: 8px; }
+        .sch-week-nav .sch-btn-ghost { flex: 0 0 auto; white-space: nowrap; }
+
+        .sch-week-label {
+            flex: 1;
+            min-width: 0;
+            order: 0;
+            font-size: .88rem;
+        }
+
+        .sch-pick { flex: 1 1 100%; gap: 8px; }
+        .sch-pick label { flex: 0 0 auto; }
         .sch-pick input[type=date] { flex: 1; min-width: 0; }
+        .sch-pick .sch-btn-ghost { flex: 0 0 auto; }
+
+        .sch-btn-save { margin-left: 0; flex: 1 1 100%; min-height: 46px; }
+
+        /* Every rule it listed is enforced on save, which says which one was broken
+           and where. Announcing them first is a manual, and a manual is not what
+           someone standing at a terminal is reading. */
+        .sch-hint { display: none; }
 
         .sch-days {
             display: flex;
