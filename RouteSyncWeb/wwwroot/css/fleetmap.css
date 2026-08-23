@@ -649,6 +649,9 @@
 
     .fm-topbar {
         gap: 8px;
+        /* Search takes the room, the button sits against the edge. Left to space
+           between, the gap lands wherever the search happens to end. */
+        justify-content: flex-start;
     }
 
     .fm-search-wrap {
@@ -689,14 +692,45 @@
         bottom: auto;
         top: 12px;
         right: 12px;
-        max-width: 148px;
-        padding: 6px 8px 8px;
+        /* Wide enough for the longest route name on one line. Under this the name
+           wraps, and two lines of it is the bulk that made the panel loud. */
+        max-width: 172px;
+        padding: 6px 9px 8px;
     }
 
     /* Pinching does this, and better. The buttons only take a corner of a screen
        that has none to give. */
     .leaflet-control-zoom {
         display: none;
+    }
+
+    /* The route names are set bold and in capitals, which reads well across a
+       desktop panel and heavily in a box a phone can spare 148 pixels for. Every
+       part of it comes down a step so a name wraps to one line, not two. */
+    .fm-legend-head {
+        gap: 8px;
+        font-size: .68rem;
+    }
+
+    .fm-legend-list {
+        gap: 7px;
+    }
+
+    .fm-legend-item {
+        gap: 7px;
+        font-size: .64rem;
+        font-weight: 600;
+        line-height: 1.25;
+        /* Capitals cost about a sixth of the width for nothing a route name needs,
+           and that sixth is the difference between one line and two in a box this
+           narrow. The heading above stays in capitals; it is one short word. */
+        text-transform: none;
+    }
+
+    .fm-legend-dot {
+        width: 8px;
+        height: 8px;
+        flex-shrink: 0;
     }
 
     /* The map has no sidebar to clear any more. */

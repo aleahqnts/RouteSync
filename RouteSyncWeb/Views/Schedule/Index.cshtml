@@ -48,7 +48,11 @@
                 aria-selected="false">All</button>
     </div>
 
-    <p class="sch-hint">Assign vehicle + driver per route, shift and day. Multiple buses per shift: use <strong>+ Add bus</strong>. Started/completed trips are locked. Conflicts (double-booking, back-to-back driver shifts) are blocked on save.</p>
+    <p class="sch-hint">
+        Assign a vehicle and a driver to each shift. Use <strong>+ Add bus</strong> to
+        run more than one on the same shift. Trips already under way are locked, and
+        conflicts are reported when you save.
+    </p>
 
     @foreach (var route in Model.Routes)
     {
@@ -322,11 +326,11 @@
             if (chip) schSetDay(chip.dataset.day === 'all' ? 'all' : Number(chip.dataset.day));
         });
 
-        // Opens on today when today is in the week being shown, since that is the day
-        // a dispatcher in the field is working. Any other week opens on its first day.
-        const today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Manila' }).split(',')[0];
-        const i = SCH_DAYS.indexOf(today);
-        schSetDay(i >= 0 ? i : 0);
+        // Opens on the whole week. The columns keep the width that makes a day
+        // readable and the grid scrolls sideways, so the week is there to be
+        // moved through rather than chosen between. A chip still narrows it to
+        // one day for anyone who would rather not scroll.
+        schSetDay('all');
     })();
 
     function schAddBus(btn) {
