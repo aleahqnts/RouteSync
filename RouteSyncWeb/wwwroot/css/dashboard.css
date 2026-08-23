@@ -615,6 +615,12 @@
         }
         }
 
+/* The wrapper exists so a phone has one panel to open. On a desk it must not be
+   a box, or the select inside it stops being an item in the bar. */
+.db-topfilters {
+    display: contents;
+}
+
 /* The card is a link to the Fleet Map, and the overlay is what says so. It faded
    in on hover, so on a phone the card looked inert. Shown outright instead. */
 @media (hover: none) and (pointer: coarse) {
@@ -681,7 +687,20 @@
 
     .db-title-tools {
         flex-wrap: wrap;
+        align-items: center;
         gap: 8px;
+    }
+
+    .db-date-badge {
+        padding: 6px 10px;
+        font-size: .78rem;
+    }
+
+    /* A line carrying only a time is a poor trade for the room it takes. The
+       button that refreshes the page says it in its tooltip instead, the same
+       way the dispatch board does. */
+    .db-updated {
+        display: none;
     }
 
     /* Both were fixed at a height that suits a wide card. Given the full width of

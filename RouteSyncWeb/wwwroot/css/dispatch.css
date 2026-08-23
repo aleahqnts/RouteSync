@@ -427,23 +427,37 @@
     }
 
     .dp-col-shift {
-        width: 16%;
+        width: 14%;
+    }
+
+    .dp-col-trip {
+        width: 13%;
     }
 
     .dp-col-bus {
-        width: 22%;
+        width: 19%;
     }
 
     .dp-col-driver {
-        width: 20%;
+        width: 17%;
     }
 
     .dp-col-status {
-        width: 18%;
+        width: 16%;
     }
 
     .dp-col-actions {
-        width: 24%;
+        width: 21%;
+    }
+
+    /* An identifier, so it is set in figures of one width and can be read down the
+       column rather than along each row. */
+    .dp-trip-id {
+        font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+        font-size: .78rem;
+        font-weight: 600;
+        color: var(--rp-text);
+        letter-spacing: -.01em;
     }
 
     .dp-shift-cell {
@@ -2205,7 +2219,10 @@
        planning tools and fold behind the button beside it. */
     .dp-toolbar {
         gap: 8px;
-        flex-wrap: nowrap;
+        /* The stamp takes a whole line of its own, so the row has to be allowed to
+           make one. Held at nowrap it pushed the tray off the side of the screen. */
+        flex-wrap: wrap;
+        row-gap: 0;
     }
 
     .dp-search-wrap {
@@ -2218,10 +2235,39 @@
     }
 
     .dp-toolbar .dp-btn-primary,
-    .dp-toolbar .dp-btn-secondary,
-    .dp-toolbar .dp-btn-refresh,
+    .dp-toolbar .dp-btn-secondary {
+        display: none;
+    }
+
+    .dp-toolbar .dp-btn-refresh {
+        flex: 0 0 44px;
+        height: 44px;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        overflow: hidden;
+        /* Icon only: the word beside it is what the icon already says. */
+        font-size: 0;
+    }
+
+    .dp-toolbar .dp-btn-refresh i {
+        font-size: 1.15rem;
+    }
+
+    /* A whole line for a timestamp is a poor trade on a screen this size, and it
+       cannot share the row: the search, the tray and the refresh already fill it.
+       The refresh button carries the time in its tooltip instead. */
     .dp-updated {
         display: none;
+    }
+
+    /* Tray first, refresh on the outside. */
+    .dp-more {
+        order: 1;
+    }
+
+    .dp-toolbar .dp-btn-refresh {
+        order: 2;
     }
 
     .dp-more {
@@ -2317,6 +2363,15 @@
     .dp-table thead,
     .dp-table colgroup {
         display: none;
+    }
+
+    .dp-col-shift,
+    .dp-col-trip,
+    .dp-col-bus,
+    .dp-col-driver,
+    .dp-col-status,
+    .dp-col-actions {
+        width: auto;
     }
 
     /* Written against the table as well, or the rule that makes every cell a row
@@ -2424,6 +2479,20 @@
         padding: 3px 0;
         border: none;
         text-align: left;
+    }
+
+    /* Up on the shift line, at the other end, so the card is headed by when the
+       trip runs and which trip it is. */
+    .dp-table td[data-label="Trip ID"] {
+        margin-top: -21px;
+        padding: 0;
+        text-align: right;
+    }
+
+    .dp-trip-id {
+        font-size: .72rem;
+        font-weight: 700;
+        color: var(--rp-text);
     }
 
     /* Bus, Driver and Actions tell a dispatcher nothing that V001 and a person's

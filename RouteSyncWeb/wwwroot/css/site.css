@@ -515,3 +515,68 @@
 .rs-id-list option {
     font-family: ui-monospace, "Cascadia Mono", "Consolas", "Courier New", monospace;
 }
+
+/* ===========================================================================
+   Page headings.
+
+   Poppins, heavy, set in capitals. A geometric face with circular bowls and flat
+   ends, which is the weight and shape a board like this is usually titled in.
+   Segoe UI still carries everything that is actually read.
+
+   Named per page because each one styles its own heading; the family and the
+   treatment live here so they cannot drift apart.
+   =========================================================================== */
+
+/* Each of these is named twice on purpose. The page that owns the heading sets
+   its own font-family, and that stylesheet loads after this one, so a single
+   class ranks equal and loses. */
+.db-title.db-title,
+.rp-title.rp-title,
+.vh-title.vh-title,
+.us-title.us-title,
+.au-title.au-title,
+.sch-week-label.sch-week-label,
+.rs-bar-title.rs-bar-title {
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+    text-transform: uppercase;
+    /* A heavy geometric face sets tight; the airier tracking a lighter one
+       needs pulls these letters apart. */
+    letter-spacing: .015em;
+}
+
+/* Named twice for the same reason as the family above: the page that owns the
+   heading sets its own weight, from a stylesheet that loads after this one. */
+.db-title.db-title,
+.rp-title.rp-title,
+.vh-title.vh-title,
+.us-title.us-title,
+.au-title.au-title {
+    font-weight: 800;
+}
+
+/* The bar carries the page name only where the heading below it has been taken
+   away, which is on a phone. */
+.rs-bar-title {
+    display: none;
+}
+
+@media (max-width: 599px) {
+
+    .rs-bar-title {
+        display: block;
+        flex: 0 0 auto;
+        white-space: nowrap;
+        font-size: 1.02rem;
+        font-weight: 800;
+        color: #1a2a4a;
+    }
+
+    /* The heading is in the bar now, where it costs no height at all. */
+    .db-title,
+    .rp-title,
+    .vh-title,
+    .us-title,
+    .au-title {
+        display: none;
+    }
+}
