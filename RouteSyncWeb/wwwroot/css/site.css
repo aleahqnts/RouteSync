@@ -376,6 +376,9 @@
 @media (max-width: 599px) {
 
     .rs-filter-toggle {
+        /* Top right of the bar. The page's own controls sit on the left, and a
+           filter is a thing you reach for, not a thing you read. */
+        margin-left: auto;
         display: inline-flex;
         align-items: center;
         gap: 6px;

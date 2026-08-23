@@ -116,6 +116,8 @@
     </button>
 </div>
 
+<p class="dp-empty-state" id="dpEmptyState" hidden></p>
+
 @* ROUTE BLOCKS *@
 <div id="dpRoutes">
 @foreach (var route in Model.Routes)
@@ -433,6 +435,7 @@
             const s = document.getElementById('searchInput');
             if (s && s.value) filterRows();
             if (window.dpChipsRecount) window.dpChipsRecount();
+            if (window.dpSayIfEmpty) window.dpSayIfEmpty();
             dpStamp();
         } catch (e) {
             console.warn('dispatch refresh failed', e);
@@ -647,7 +650,30 @@
             statusSel.value = chip.dataset.chip;
             applyFilters();
             mark();
+            sayIfEmpty();
         });
+
+        // What an empty page means depends on what was asked for. "Nothing was
+        // missed" is worth reading; a blank screen is not.
+        var EMPTY = {
+            '': 'No trips scheduled for this operational day.',
+            'Assignment Issue': 'No assignment issues. Every trip has a bus and a driver.',
+            'Missed': 'Nothing was missed today.',
+            'Active': 'No trips are running right now.'
+        };
+
+        function sayIfEmpty() {
+            var note = document.getElementById('dpEmptyState');
+            if (!note) return;
+            var showing = Array.prototype.filter.call(
+                document.querySelectorAll('.dp-route-card'),
+                function (c) { return c.style.display !== 'none'; }).length;
+            note.textContent = EMPTY[statusSel.value] || 'No trips match this filter.';
+            note.hidden = showing > 0;
+        }
+
+        window.dpSayIfEmpty = sayIfEmpty;
+        sayIfEmpty();
 
         statusSel.addEventListener('change', mark);
 

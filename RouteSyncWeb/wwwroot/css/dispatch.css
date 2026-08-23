@@ -2048,6 +2048,7 @@
 /* The chips and the More button exist in the markup on every screen and are shown
    only where the page has to be worked one-handed. A desk keeps its stat cards,
    its toolbar and its legend exactly as they are. */
+.dp-empty-state,
 .dp-route-caret,
 .dp-chips,
 .dp-more,
@@ -2114,9 +2115,27 @@
         display: flex;
         gap: 8px;
         overflow-x: auto;
-        margin-bottom: 12px;
+        /* Clear of the date above and the search below, so the three rows read as
+           three things rather than one block of controls. */
+        margin: 12px 0;
         padding-bottom: 2px;
         -webkit-overflow-scrolling: touch;
+    }
+
+    .dp-empty-state {
+        display: block;
+        margin: 28px 12px;
+        padding: 22px 18px;
+        border: 1px dashed var(--rp-border);
+        border-radius: 12px;
+        color: var(--rp-muted);
+        font-family: 'Segoe UI', sans-serif;
+        font-size: .85rem;
+        text-align: center;
+    }
+
+    .dp-empty-state[hidden] {
+        display: none;
     }
 
     .dp-chip {
@@ -2308,12 +2327,35 @@
         box-shadow: 0 1px 0 rgba(15, 23, 42, .04);
     }
 
+    .dp-route-header {
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+
     .dp-route-name {
         flex: 1;
         min-width: 0;
         font-size: .92rem;
         font-weight: 800;
         color: #1F5F5B;
+    }
+
+    /* Second line, so the name keeps the first one to itself. */
+    .dp-route-header-right {
+        flex: 1 0 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .dp-needs-badge {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+    }
+
+    .dp-btn-route-msg {
+        flex: 0 0 auto;
     }
 
     .dp-route-caret {
