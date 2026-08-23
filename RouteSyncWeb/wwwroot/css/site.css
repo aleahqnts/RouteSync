@@ -519,9 +519,9 @@
 /* ===========================================================================
    Page headings.
 
-   Manrope, set in capitals. Rounded ends and open counters, so it reads as a
-   heading without shouting, which a condensed face does at this size. Segoe UI
-   still carries everything that is actually read.
+   Poppins, heavy, set in capitals. A geometric face with circular bowls and flat
+   ends, which is the weight and shape a board like this is usually titled in.
+   Segoe UI still carries everything that is actually read.
 
    Named per page because each one styles its own heading; the family and the
    treatment live here so they cannot drift apart.
@@ -537,17 +537,21 @@
 .au-title.au-title,
 .sch-week-label.sch-week-label,
 .rs-bar-title.rs-bar-title {
-    font-family: 'Manrope', 'Segoe UI', sans-serif;
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
     text-transform: uppercase;
-    letter-spacing: .04em;
+    /* A heavy geometric face sets tight; the airier tracking a lighter one
+       needs pulls these letters apart. */
+    letter-spacing: .015em;
 }
 
-.db-title,
-.rp-title,
-.vh-title,
-.us-title,
-.au-title {
-    font-weight: 700;
+/* Named twice for the same reason as the family above: the page that owns the
+   heading sets its own weight, from a stylesheet that loads after this one. */
+.db-title.db-title,
+.rp-title.rp-title,
+.vh-title.vh-title,
+.us-title.us-title,
+.au-title.au-title {
+    font-weight: 800;
 }
 
 /* The bar carries the page name only where the heading below it has been taken
@@ -562,8 +566,8 @@
         display: block;
         flex: 0 0 auto;
         white-space: nowrap;
-        font-size: 1.05rem;
-        font-weight: 700;
+        font-size: 1.02rem;
+        font-weight: 800;
         color: #1a2a4a;
     }
 
