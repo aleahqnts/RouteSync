@@ -2462,6 +2462,10 @@
 
     .dp-tooltip {
         position: static;
+        /* It is a flex item, and a flex item honours z-index whether or not it is
+           positioned. Left at the fifty it needs as a floating tooltip on a desk, it
+           painted over the bars that hold the top of the page. */
+        z-index: auto;
         order: 9;
         flex-basis: 100%;
         opacity: 1;
