@@ -325,8 +325,14 @@
         // AJAX refresh (manual button + silent 30s poll).
         let dbBusy = false;
         function dbStamp() {
+        const at = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const el = document.getElementById('dbUpdated');
-        if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (el) el.textContent = 'Updated ' + at;
+
+        // A phone has no room for a line that only carries a time, so the button
+        // that refreshes the page says how old it is instead.
+        const btn = document.getElementById('dbRefreshBtn');
+        if (btn) btn.title = 'Updated ' + at + '. Auto-refreshes every 30 seconds.';
         }
         async function dbRefresh(manual) {
         if (dbBusy) return;
@@ -376,8 +382,18 @@
 
     @section TopbarContent {
         @* One form, which sends the route on every submission. *@
+        <button type="button" class="rs-filter-toggle" data-filter-toggle="dbFilters"
+                aria-expanded="false" aria-controls="dbFilters">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 5h18M6 12h12M10 19h4" />
+            </svg>
+            Filters
+        </button>
+
         <form id="filterForm" method="get" action="@Url.Action("Index", "Dashboard")" style="display:contents;">
 
+            <div class="db-topfilters rs-filters" id="dbFilters">
             <div class="db-route-wrap">
                 <span class="db-route-label">Route:</span>
                 <div class="db-route-select-wrap">
@@ -402,6 +418,7 @@
                         </svg>
                     </span>
                 </div>
+            </div>
             </div>
 
         </form>

@@ -615,6 +615,12 @@
         }
         }
 
+/* The wrapper exists so a phone has one panel to open. On a desk it must not be
+   a box, or the select inside it stops being an item in the bar. */
+.db-topfilters {
+    display: contents;
+}
+
 /* The card is a link to the Fleet Map, and the overlay is what says so. It faded
    in on hover, so on a phone the card looked inert. Shown outright instead. */
 @media (hover: none) and (pointer: coarse) {
@@ -685,19 +691,16 @@
         gap: 8px;
     }
 
-    /* Beside the button it describes, not stranded on a line of its own below it.
-       The date and the time both come down a step to make that fit with room to
-       spare: at their desk sizes the three of them needed 376 of the 380 a phone
-       has, which is not a fit, it is a coincidence. */
     .db-date-badge {
         padding: 6px 10px;
         font-size: .78rem;
     }
 
+    /* A line carrying only a time is a poor trade for the room it takes. The
+       button that refreshes the page says it in its tooltip instead, the same
+       way the dispatch board does. */
     .db-updated {
-        flex: 0 1 auto;
-        margin: 0;
-        font-size: .68rem;
+        display: none;
     }
 
     /* Both were fixed at a height that suits a wide card. Given the full width of
