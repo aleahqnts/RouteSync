@@ -519,10 +519,9 @@
 /* ===========================================================================
    Page headings.
 
-   Barlow Semi Condensed, set in capitals. It was drawn for signage, which is
-   what a heading on an operations board is: read at a glance, from a distance,
-   by someone who is not sitting still. Segoe UI still carries everything that
-   is actually read.
+   Manrope, set in capitals. Rounded ends and open counters, so it reads as a
+   heading without shouting, which a condensed face does at this size. Segoe UI
+   still carries everything that is actually read.
 
    Named per page because each one styles its own heading; the family and the
    treatment live here so they cannot drift apart.
@@ -538,9 +537,9 @@
 .au-title.au-title,
 .sch-week-label.sch-week-label,
 .rs-bar-title.rs-bar-title {
-    font-family: 'Barlow Semi Condensed', 'Segoe UI', sans-serif;
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
     text-transform: uppercase;
-    letter-spacing: .045em;
+    letter-spacing: .04em;
 }
 
 .db-title,
@@ -561,10 +560,7 @@
 
     .rs-bar-title {
         display: block;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        flex: 0 0 auto;
         white-space: nowrap;
         font-size: 1.05rem;
         font-weight: 700;

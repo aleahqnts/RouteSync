@@ -2240,14 +2240,20 @@
         font-size: 1.15rem;
     }
 
+    /* A whole line for a timestamp is a poor trade on a screen this size, and it
+       cannot share the row: the search, the tray and the refresh already fill it.
+       The refresh button carries the time in its tooltip instead. */
     .dp-updated {
-        /* Last, whatever its place in the markup: it takes a whole line, and left
-           where it is written it pushed the tray onto a line of its own. */
-        order: 9;
-        flex: 1 0 100%;
-        margin-top: 2px;
-        text-align: right;
-        font-size: .68rem;
+        display: none;
+    }
+
+    /* Tray first, refresh on the outside. */
+    .dp-more {
+        order: 1;
+    }
+
+    .dp-toolbar .dp-btn-refresh {
+        order: 2;
     }
 
     .dp-more {
