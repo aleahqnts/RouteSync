@@ -122,6 +122,7 @@
 {
     <div class="rp-card rp-card--table dp-route-card" data-route-id="@route.RouteId">
         <div class="dp-route-header">
+            <span class="dp-route-caret" aria-hidden="true"></span>
             <span class="dp-route-name">@route.RouteName</span>
             <div class="dp-route-header-right">
                 @if (route.NeedsAssignment)
@@ -613,7 +614,7 @@
     // one place that decides what a filter means. The counts are read from the rows
     // on the page rather than the server, which keeps them right after a refresh
     // replaces those rows.
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         var chipBar = document.getElementById('dpChips');
         var statusSel = document.getElementById('statusFilter');
         if (!chipBar || !statusSel) return;
@@ -628,7 +629,9 @@
                 totals[''] = (totals[''] || 0) + 1;
             });
             chipBar.querySelectorAll('.dp-chip').forEach(function (chip) {
-                chip.querySelector('.dp-chip-n').textContent = totals[chip.dataset.chip] || 0;
+                var n = totals[chip.dataset.chip] || 0;
+                chip.querySelector('.dp-chip-n').textContent = n > 0 ? n : '';
+                chip.classList.toggle('dp-chip--empty', n === 0);
             });
         }
 
@@ -648,7 +651,18 @@
 
         statusSel.addEventListener('change', mark);
 
-        // More actions.
+        // A whole route folds away, so a dispatcher working one route can put the
+        // other out of sight. Header taps only; the Route Message button inside it
+        // has its own job.
+        document.addEventListener('click', function (e) {
+            var head = e.target.closest && e.target.closest('.dp-route-header');
+            if (!head) return;
+            if (e.target.closest('button, a')) return;
+            head.closest('.dp-route-card').classList.toggle('dp-route-card--shut');
+        });
+
+        // More actions. Its sheet is written further down the page than this script,
+        // which is why the whole block waits for the document to finish.
         var moreBtn = document.getElementById('dpMoreBtn');
         var moreSheet = document.getElementById('dpMoreSheet');
         var moreBack = document.getElementById('dpMoreBackdrop');
@@ -667,7 +681,7 @@
         });
         window.dpChipsRecount = function () { countChips(); mark(); };
         countChips();
-    })();
+    });
 
     // A phone loses the page whenever another app comes forward, and the poll above
     // stops with it. Returning would otherwise show whatever was true up to thirty

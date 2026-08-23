@@ -58,6 +58,11 @@
 
     .main-content {
         padding: 16px;
+        /* The document is what scrolls on a phone: this box has no bounded height,
+           so it grows instead of scrolling. Leaving overflow on auto still makes it
+           the nearest scroll container, which is what a sticky child anchors to, so
+           nothing inside it could ever stick. */
+        overflow: visible;
     }
 }
 
@@ -346,7 +351,11 @@
        Set on both, because which one carries the overflow depends on the page. */
     html,
     body {
-        overflow-x: hidden;
+        /* clip, not hidden. Hidden on one axis forces the other to compute as auto,
+           which makes the document a scroll container and stops position:sticky
+           working anywhere inside it, the app bar included. Clip does the same
+           clipping without creating one. */
+        overflow-x: clip;
         max-width: 100%;
     }
 }

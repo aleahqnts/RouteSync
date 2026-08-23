@@ -2048,6 +2048,7 @@
 /* The chips and the More button exist in the markup on every screen and are shown
    only where the page has to be worked one-handed. A desk keeps its stat cards,
    its toolbar and its legend exactly as they are. */
+.dp-route-caret,
 .dp-chips,
 .dp-more,
 .dp-more-sheet,
@@ -2085,6 +2086,23 @@
     .dp-date-nav {
         width: 100%;
         justify-content: space-between;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .dp-date-badge {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+    }
+
+    .dp-date-arrow,
+    .dp-date-today {
+        flex: 0 0 auto;
+    }
+
+    .dp-title-row {
+        gap: 10px;
     }
 
     /* The badge already carries the date; the operating window does not fit. */
@@ -2125,6 +2143,17 @@
         margin-left: 4px;
         opacity: .75;
         font-weight: 700;
+    }
+
+    .dp-chip--empty {
+        color: var(--rp-muted);
+        border-color: #EDF1F5;
+    }
+
+    .dp-chip--empty.dp-chip--on {
+        background: #EDF1F5;
+        border-color: #EDF1F5;
+        color: var(--rp-muted);
     }
 
     /* Search is the reacting path: find one bus, one driver. The rest are
@@ -2259,15 +2288,51 @@
     /* The route a card belongs to, held at the top while its trips scroll past. */
     .dp-route-card {
         overflow: visible;
+        border: none;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+        margin-bottom: 6px;
     }
 
     .dp-route-header {
         position: sticky;
-        top: 0;
+        /* Under the app bar, which is sticky at the top of every page. */
+        top: 56px;
         z-index: 5;
-        padding: 10px 14px;
-        background: #fff;
-        border-bottom: 1px solid var(--rp-border);
+        gap: 8px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        background: #EEF4F4;
+        border: 1px solid #DCE8E7;
+        box-shadow: 0 1px 0 rgba(15, 23, 42, .04);
+    }
+
+    .dp-route-name {
+        flex: 1;
+        min-width: 0;
+        font-size: .92rem;
+        font-weight: 800;
+        color: #1F5F5B;
+    }
+
+    .dp-route-caret {
+        display: block;
+        flex: 0 0 auto;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid #4d8a86;
+        border-bottom: 2px solid #4d8a86;
+        transform: rotate(45deg) translate(-2px, -2px);
+        transition: transform 160ms ease;
+    }
+
+    .dp-route-card--shut .dp-route-caret {
+        transform: rotate(-45deg) translate(-1px, -1px);
+    }
+
+    .dp-route-card--shut .rp-table-wrap {
+        display: none;
     }
 
     .dp-trip-row {
