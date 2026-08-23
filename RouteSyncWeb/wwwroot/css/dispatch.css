@@ -2600,3 +2600,61 @@
         border-radius: 16px 16px 0 0;
     }
 }
+
+/* ===========================================================================
+   Which shift a trip belongs to.
+
+   Three tints, following the hours themselves: morning warm, afternoon cool,
+   evening dark. Light enough to sit under text without fighting the status
+   badges, and different enough in hue to tell apart at a glance rather than by
+   reading the word.
+
+   No key: the word is written in the cell it colours, so the colour is a second
+   way of saying the same thing rather than a code to look up.
+   =========================================================================== */
+
+.dp-shift-cell[data-shift-type="Morning"] {
+    background: #FFF7E6;
+    box-shadow: inset 3px 0 0 #F0A32C;
+}
+
+.dp-shift-cell[data-shift-type="Afternoon"] {
+    background: #EAF6FB;
+    box-shadow: inset 3px 0 0 #3B93C4;
+}
+
+.dp-shift-cell[data-shift-type="Evening"] {
+    background: #EFEDFA;
+    box-shadow: inset 3px 0 0 #6C5CE7;
+}
+
+@media (max-width: 599px) {
+
+    /* On a card the tint runs behind the line that names the shift, which is the
+       card's heading, so the whole card is placed by its top edge. */
+    .dp-trip-row[data-shift-label]::before {
+        margin: -10px -14px 8px;
+        padding: 7px 14px;
+        border-radius: 11px 11px 0 0;
+    }
+
+    .dp-trip-row[data-shift-type="Morning"]::before {
+        background: #FFF7E6;
+        color: #96631A;
+    }
+
+    .dp-trip-row[data-shift-type="Afternoon"]::before {
+        background: #EAF6FB;
+        color: #256C93;
+    }
+
+    .dp-trip-row[data-shift-type="Evening"]::before {
+        background: #EFEDFA;
+        color: #4C3FBF;
+    }
+
+    /* The number sits on that strip, so it comes down with it. */
+    .dp-table td[data-label="Trip ID"] {
+        margin-top: -29px;
+    }
+}
