@@ -154,8 +154,12 @@
             min-width: 92px;
             max-width: 92px;
             background: #FBFCFD;
-            /* A collapsed border does not paint on a cell lifted out of the flow. */
-            box-shadow: 1px 0 0 #EEF1F4;
+            /* Two shadows, both standing in for borders a collapsed table will not
+               paint on a cell lifted out of the flow. The first is the rule down its
+               right edge. The second fills the sliver to its left, where the table's
+               own border holds the first cell a pixel off the scroller and the day
+               columns could be seen sliding past underneath. */
+            box-shadow: 1px 0 0 #EEF1F4, -6px 0 0 #FBFCFD;
         }
 
         .sch-table thead .sch-shift-col { z-index: 3; }
