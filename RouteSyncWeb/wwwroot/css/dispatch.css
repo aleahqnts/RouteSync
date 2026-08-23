@@ -2060,7 +2060,8 @@
 /* The wrapper exists so a phone has one panel to open and close. On a desk it must
    not exist at all, or the two selects it holds become one item in the bar and stack
    instead of sitting side by side. The phone rule outranks this on specificity. */
-.dp-topfilters {
+.dp-topfilters,
+.dp-sticky-head {
     display: contents;
 }
 
@@ -2114,23 +2115,29 @@
     .dp-chips {
         display: flex;
         gap: 8px;
-        overflow-x: auto;
-        /* Clear of the date above and the search below, so the three rows read as
-           three things rather than one block of controls. */
+        /* Room above for the count badges, which sit off the top edge of a chip. */
         margin: 12px 0;
-        padding-bottom: 2px;
-        -webkit-overflow-scrolling: touch;
+        padding-top: 6px;
+    }
+
+    .dp-sticky-head {
+        display: block;
+        position: sticky;
+        /* Under the app bar. */
+        top: 56px;
+        z-index: 30;
+        margin: 0 -16px;
+        padding: 4px 16px 8px;
+        background: var(--rp-bg, #F8F9FA);
     }
 
     .dp-empty-state {
         display: block;
-        margin: 28px 12px;
-        padding: 22px 18px;
-        border: 1px dashed var(--rp-border);
-        border-radius: 12px;
+        margin: 40px 12px;
         color: var(--rp-muted);
         font-family: 'Segoe UI', sans-serif;
-        font-size: .85rem;
+        font-size: 1rem;
+        font-weight: 600;
         text-align: center;
     }
 
@@ -2139,9 +2146,11 @@
     }
 
     .dp-chip {
-        flex: 0 0 auto;
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
         min-height: 40px;
-        padding: 0 14px;
+        padding: 0 8px;
         border: 1.5px solid var(--rp-border);
         border-radius: 999px;
         background: #fff;
@@ -2158,10 +2167,27 @@
         color: #fff;
     }
 
-    .dp-chip-n {
-        margin-left: 4px;
-        opacity: .75;
+    .dp-chip-n:not(:empty) {
+        position: absolute;
+        top: -7px;
+        right: -6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 19px;
+        height: 19px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #94A3B8;
+        color: #fff;
+        font-size: .66rem;
         font-weight: 700;
+        line-height: 1;
+    }
+
+    .dp-chip[data-chip="Assignment Issue"] .dp-chip-n:not(:empty),
+    .dp-chip[data-chip="Missed"] .dp-chip-n:not(:empty) {
+        background: #E74C3C;
     }
 
     .dp-chip--empty {
@@ -2316,9 +2342,9 @@
 
     .dp-route-header {
         position: sticky;
-        /* Under the app bar, which is sticky at the top of every page. */
-        top: 56px;
-        z-index: 5;
+        /* Under the block of controls, whose height is measured on the page. */
+        top: calc(56px + var(--dp-head, 108px));
+        z-index: 20;
         gap: 8px;
         padding: 11px 14px;
         border-radius: 10px;
@@ -2340,18 +2366,15 @@
         color: #1F5F5B;
     }
 
-    /* Second line, so the name keeps the first one to itself. */
+    /* The wrapper stops being a box, so its two children lay out in the header
+       itself: the button beside the name, the badge on a line of its own. */
     .dp-route-header-right {
-        flex: 1 0 100%;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        display: contents;
     }
 
     .dp-needs-badge {
-        flex: 1;
-        min-width: 0;
-        justify-content: center;
+        order: 9;
+        flex: 1 0 100%;
     }
 
     .dp-btn-route-msg {

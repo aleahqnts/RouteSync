@@ -56,6 +56,17 @@
         padding: 0 16px;
     }
 
+    /* The bar is spaced for a desk, and ends with an empty box kept for a profile
+       menu that is not built. Both push a right-aligned control off the corner. */
+    .topbar .container-fluid {
+        gap: 8px;
+        padding: 0;
+    }
+
+    .topbar .container-fluid > div:empty {
+        display: none;
+    }
+
     .main-content {
         padding: 16px;
         /* The document is what scrolls on a phone: this box has no bounded height,

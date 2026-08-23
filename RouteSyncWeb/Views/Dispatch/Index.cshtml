@@ -82,6 +82,9 @@
 
 </div>
 
+@* Phone only: this block holds at the top of the page while the trips scroll. *@
+<div class="dp-sticky-head" id="dpStickyHead">
+
 @* STATUS CHIPS. Phone only: the stat cards above carry these counts on a desk. *@
 <div class="dp-chips" id="dpChips" role="group" aria-label="Filter trips by status">
     <button type="button" class="dp-chip dp-chip--on" data-chip="">All <span class="dp-chip-n"></span></button>
@@ -114,6 +117,8 @@
             <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
         </svg>
     </button>
+</div>
+
 </div>
 
 <p class="dp-empty-state" id="dpEmptyState" hidden></p>
@@ -656,10 +661,10 @@
         // What an empty page means depends on what was asked for. "Nothing was
         // missed" is worth reading; a blank screen is not.
         var EMPTY = {
-            '': 'No trips scheduled for this operational day.',
-            'Assignment Issue': 'No assignment issues. Every trip has a bus and a driver.',
-            'Missed': 'Nothing was missed today.',
-            'Active': 'No trips are running right now.'
+            '': 'No trips today.',
+            'Assignment Issue': 'No assignment issues.',
+            'Missed': 'Nothing missed today.',
+            'Active': 'Nothing running right now.'
         };
 
         function sayIfEmpty() {
@@ -674,6 +679,28 @@
 
         window.dpSayIfEmpty = sayIfEmpty;
         sayIfEmpty();
+
+        // The route bars park under this block, whose height depends on how the
+        // chips and the search wrap. Measured rather than assumed, and again
+        // whenever the width changes.
+        var head = document.getElementById('dpStickyHead');
+        function measureHead() {
+            if (!head) return;
+            var h = Math.round(head.getBoundingClientRect().height);
+            // Zero means it has not been laid out yet, or the width is one where
+            // this block does not exist. Either way the stylesheet's own figure is
+            // a better answer than none.
+            if (h > 0) document.documentElement.style.setProperty('--dp-head', h + 'px');
+        }
+
+        // Watched rather than measured once: the chips and the search wrap at
+        // different widths, and a font arriving late changes the height again.
+        if (head && window.ResizeObserver) {
+            new ResizeObserver(measureHead).observe(head);
+        } else {
+            window.addEventListener('resize', measureHead);
+        }
+        requestAnimationFrame(measureHead);
 
         statusSel.addEventListener('change', mark);
 
