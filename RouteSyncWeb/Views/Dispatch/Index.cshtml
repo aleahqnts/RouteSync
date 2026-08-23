@@ -144,6 +144,7 @@
             <table class="rp-table dp-table">
                 <colgroup>
                     <col class="dp-col-shift" />
+                    <col class="dp-col-trip" />
                     <col class="dp-col-bus" />
                     <col class="dp-col-driver" />
                     <col class="dp-col-status" />
@@ -152,6 +153,7 @@
                 <thead>
                     <tr>
                         <th>Shift</th>
+                        <th>Trip ID</th>
                         <th>Bus ID</th>
                         <th>Driver</th>
                         <th>Trip Status</th>
@@ -162,7 +164,7 @@
                     @if (!route.Shifts.Any())
                     {
                         <tr class="dp-trip-row dp-empty-row" data-trip-status="">
-                            <td colspan="5" class="dp-empty-cell">No trips scheduled for this operational day.</td>
+                            <td colspan="6" class="dp-empty-cell">No trips scheduled for this operational day.</td>
                         </tr>
                     }
                     else
@@ -229,6 +231,9 @@
                                             }
                                         </td>
                                     }
+                                    <td data-label="Trip ID">
+                                        <span class="dp-trip-id">@trip.TripId</span>
+                                    </td>
                                     <td data-label="Bus">
                                         <div class="dp-status-wrap">
                                             <span class="dp-status-dot @vDotClass"></span>

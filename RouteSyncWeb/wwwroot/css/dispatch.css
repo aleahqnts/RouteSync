@@ -427,23 +427,37 @@
     }
 
     .dp-col-shift {
-        width: 16%;
+        width: 14%;
+    }
+
+    .dp-col-trip {
+        width: 13%;
     }
 
     .dp-col-bus {
-        width: 22%;
+        width: 19%;
     }
 
     .dp-col-driver {
-        width: 20%;
+        width: 17%;
     }
 
     .dp-col-status {
-        width: 18%;
+        width: 16%;
     }
 
     .dp-col-actions {
-        width: 24%;
+        width: 21%;
+    }
+
+    /* An identifier, so it is set in figures of one width and can be read down the
+       column rather than along each row. */
+    .dp-trip-id {
+        font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+        font-size: .78rem;
+        font-weight: 600;
+        color: var(--rp-text);
+        letter-spacing: -.01em;
     }
 
     .dp-shift-cell {
@@ -2351,6 +2365,15 @@
         display: none;
     }
 
+    .dp-col-shift,
+    .dp-col-trip,
+    .dp-col-bus,
+    .dp-col-driver,
+    .dp-col-status,
+    .dp-col-actions {
+        width: auto;
+    }
+
     /* Written against the table as well, or the rule that makes every cell a row
        outranks it and the shift prints twice: once as the heading of the card and
        again as the cell it came from. */
@@ -2456,6 +2479,20 @@
         padding: 3px 0;
         border: none;
         text-align: left;
+    }
+
+    /* Up on the shift line, at the other end, so the card is headed by when the
+       trip runs and which trip it is. */
+    .dp-table td[data-label="Trip ID"] {
+        margin-top: -21px;
+        padding: 0;
+        text-align: right;
+    }
+
+    .dp-trip-id {
+        font-size: .72rem;
+        font-weight: 700;
+        color: var(--rp-text);
     }
 
     /* Bus, Driver and Actions tell a dispatcher nothing that V001 and a person's
