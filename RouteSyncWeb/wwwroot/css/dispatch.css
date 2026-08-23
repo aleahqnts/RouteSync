@@ -2045,49 +2045,264 @@
     }
 }
 
+/* The chips and the More button exist in the markup on every screen and are shown
+   only where the page has to be worked one-handed. A desk keeps its stat cards,
+   its toolbar and its legend exactly as they are. */
+.dp-empty-state,
+.dp-route-caret,
+.dp-chips,
+.dp-more,
+.dp-more-sheet,
+.dp-more-backdrop {
+    display: none;
+}
+
+/* The wrapper exists so a phone has one panel to open and close. On a desk it must
+   not exist at all, or the two selects it holds become one item in the bar and stack
+   instead of sitting side by side. The phone rule outranks this on specificity. */
+.dp-topfilters,
+.dp-sticky-head {
+    display: contents;
+}
+
 /* ===========================================================================
    Phone.
 
-   The trip grid becomes a list of cards. Scrolling a table sideways to reach the
-   Reassign button is not something anyone should have to do while standing at a
-   terminal, so the columns are stacked and each value is named.
+   A dispatcher opening this on a phone is reacting to something: a driver has
+   called in, a bus is flagged, a trip has been missed. The page is arranged so
+   the trips are the first thing on screen and the broken one is one tap away.
 
-   The shift is the one thing that cannot come from the header, because its cell
-   spans every trip in the shift. It rides on the row instead and prints as the
-   card's heading.
+   Everything below is a media query. None of it reaches a desk.
    =========================================================================== */
 
 @media (max-width: 599px) {
 
+    /* --- Above the fold ------------------------------------------------- */
+
+    /* Three cards spending four hundred pixels on three numbers nobody can act
+       on. The numbers live on the chips now, where tapping one does something. */
+    .dp-stat-grid {
+        display: none;
+    }
+
     .dp-date-nav {
         width: 100%;
         justify-content: space-between;
+        gap: 8px;
+        flex-wrap: nowrap;
     }
 
+    .dp-date-badge {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+    }
+
+    .dp-date-arrow,
+    .dp-date-today {
+        flex: 0 0 auto;
+    }
+
+    .dp-title-row {
+        gap: 10px;
+    }
+
+    /* The badge already carries the date; the operating window does not fit. */
     .dp-cycle-range {
         display: none;
     }
 
+    .dp-chips {
+        display: flex;
+        gap: 8px;
+        /* Room above for the count badges, which sit off the top edge of a chip. */
+        margin: 12px 0;
+        padding-top: 6px;
+    }
+
+    .dp-sticky-head {
+        display: block;
+        position: sticky;
+        /* Under the app bar. */
+        top: 56px;
+        z-index: 30;
+        margin: 0 -16px;
+        padding: 4px 16px 8px;
+        background: var(--rp-bg, #F8F9FA);
+    }
+
+    .dp-empty-state {
+        display: block;
+        margin: 40px 12px;
+        color: var(--rp-muted);
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .dp-empty-state[hidden] {
+        display: none;
+    }
+
+    .dp-chip {
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 40px;
+        padding: 0 8px;
+        border: 1.5px solid var(--rp-border);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--rp-text);
+        font-family: 'Segoe UI', sans-serif;
+        font-size: .8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .dp-chip--on {
+        border-color: var(--rp-teal);
+        background: var(--rp-teal);
+        color: #fff;
+    }
+
+    .dp-chip-n:not(:empty) {
+        position: absolute;
+        top: -7px;
+        right: -6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 19px;
+        height: 19px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #94A3B8;
+        color: #fff;
+        font-size: .66rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .dp-chip[data-chip="Assignment Issue"] .dp-chip-n:not(:empty),
+    .dp-chip[data-chip="Missed"] .dp-chip-n:not(:empty) {
+        background: #E74C3C;
+    }
+
+    .dp-chip--empty {
+        color: var(--rp-muted);
+        border-color: #EDF1F5;
+    }
+
+    .dp-chip--empty.dp-chip--on {
+        background: #EDF1F5;
+        border-color: #EDF1F5;
+        color: var(--rp-muted);
+    }
+
+    /* Search is the reacting path: find one bus, one driver. The rest are
+       planning tools and fold behind the button beside it. */
     .dp-toolbar {
         gap: 8px;
+        flex-wrap: nowrap;
     }
 
     .dp-search-wrap {
-        order: -1;
-        flex: 1 1 100%;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .dp-search-input {
+        width: 100%;
     }
 
     .dp-toolbar .dp-btn-primary,
     .dp-toolbar .dp-btn-secondary,
-    .dp-toolbar .dp-btn-refresh {
-        flex: 1 1 calc(50% - 4px);
-        justify-content: center;
+    .dp-toolbar .dp-btn-refresh,
+    .dp-updated {
+        display: none;
     }
 
-    .dp-updated {
-        flex: 1 1 100%;
-        text-align: center;
+    .dp-more {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+        height: 44px;
+        border: 1.5px solid var(--rp-border);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--rp-text);
     }
+
+    .dp-more svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .dp-more-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1010;
+        background: rgba(15, 23, 42, .45);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 180ms ease, visibility 0s 180ms;
+    }
+
+    .dp-more-backdrop--open {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 180ms ease;
+    }
+
+    .dp-more-sheet {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1020;
+        padding: 8px 0 calc(16px + env(safe-area-inset-bottom, 0));
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 30px rgba(15, 23, 42, .22);
+        transform: translateY(100%);
+        transition: transform 220ms cubic-bezier(.2, .8, .3, 1);
+    }
+
+    .dp-more-sheet--open {
+        transform: translateY(0);
+    }
+
+    .dp-more-grip {
+        width: 38px;
+        height: 4px;
+        margin: 4px auto 10px;
+        border-radius: 2px;
+        background: var(--rp-border);
+    }
+
+    .dp-more-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        min-height: 52px;
+        padding: 0 22px;
+        border: none;
+        background: none;
+        color: var(--rp-text);
+        font-family: 'Segoe UI', sans-serif;
+        font-size: .92rem;
+        font-weight: 600;
+        text-align: left;
+        text-decoration: none;
+    }
+
+    /* --- The trips ------------------------------------------------------ */
 
     /* Cards, not columns. Nothing scrolls sideways. */
     .dp-table,
@@ -2100,8 +2315,14 @@
     }
 
     .dp-table thead,
-    .dp-table colgroup,
-    .dp-shift-cell {
+    .dp-table colgroup {
+        display: none;
+    }
+
+    /* Written against the table as well, or the rule that makes every cell a row
+       outranks it and the shift prints twice: once as the heading of the card and
+       again as the cell it came from. */
+    .dp-table td.dp-shift-cell {
         display: none;
     }
 
@@ -2109,16 +2330,85 @@
         overflow-x: visible;
     }
 
+    /* The route a card belongs to, held at the top while its trips scroll past. */
+    .dp-route-card {
+        overflow: visible;
+        border: none;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+        margin-bottom: 6px;
+    }
+
+    .dp-route-header {
+        position: sticky;
+        /* Under the block of controls, whose height is measured on the page. */
+        top: calc(56px + var(--dp-head, 108px));
+        z-index: 20;
+        gap: 8px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        background: #EEF4F4;
+        border: 1px solid #DCE8E7;
+        box-shadow: 0 1px 0 rgba(15, 23, 42, .04);
+    }
+
+    .dp-route-header {
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+
+    .dp-route-name {
+        flex: 1;
+        min-width: 0;
+        font-size: .92rem;
+        font-weight: 800;
+        color: #1F5F5B;
+    }
+
+    /* The wrapper stops being a box, so its two children lay out in the header
+       itself: the button beside the name, the badge on a line of its own. */
+    .dp-route-header-right {
+        display: contents;
+    }
+
+    .dp-needs-badge {
+        order: 9;
+        flex: 1 0 100%;
+    }
+
+    .dp-btn-route-msg {
+        flex: 0 0 auto;
+    }
+
+    .dp-route-caret {
+        display: block;
+        flex: 0 0 auto;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid #4d8a86;
+        border-bottom: 2px solid #4d8a86;
+        transform: rotate(45deg) translate(-2px, -2px);
+        transition: transform 160ms ease;
+    }
+
+    .dp-route-card--shut .dp-route-caret {
+        transform: rotate(-45deg) translate(-1px, -1px);
+    }
+
+    .dp-route-card--shut .rp-table-wrap {
+        display: none;
+    }
+
     .dp-trip-row {
-        position: relative;
-        margin: 0 12px 10px;
-        padding: 8px 14px 10px;
+        margin: 10px 12px;
+        padding: 10px 14px;
         border: 1px solid var(--rp-border);
         border-radius: 12px;
         background: #fff;
     }
 
-    /* The shift the card belongs to, carried on the row itself. */
+    /* The shift, carried on the row because its own cell spans every trip in it. */
     .dp-trip-row[data-shift-label]::before {
         content: attr(data-shift-label);
         display: block;
@@ -2131,47 +2421,51 @@
     }
 
     .dp-table td {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 7px 0;
+        padding: 3px 0;
         border: none;
-        text-align: right;
-    }
-
-    .dp-table td + td {
-        border-top: 1px solid #F1F5F9;
-    }
-
-    .dp-table td[data-label]::before {
-        content: attr(data-label);
-        flex: 0 0 auto;
-        color: var(--rp-muted);
-        font-size: .72rem;
-        font-weight: 600;
         text-align: left;
     }
 
-    /* The empty state spans the card rather than sitting against its right edge. */
-    .dp-empty-row {
-        margin: 0 12px 10px;
+    /* Bus, Driver and Actions tell a dispatcher nothing that V001 and a person's
+       name do not. Four repeated words on every card. */
+    .dp-table td[data-label]::before {
+        content: none;
     }
 
-    .dp-empty-cell {
-        justify-content: center;
-        text-align: center;
+    /* The badge rides up beside the bus, where the eye already is. */
+    .dp-table td[data-label="Status"] {
+        margin-top: -44px;
+        text-align: right;
+        pointer-events: none;
+    }
+
+    .dp-table td[data-label="Status"] .dp-badge {
+        pointer-events: auto;
+    }
+
+    .dp-table td[data-label="Driver"] {
+        padding-bottom: 6px;
     }
 
     .dp-status-wrap {
         flex-wrap: wrap;
-        justify-content: flex-end;
-        row-gap: 2px;
+        row-gap: 1px;
+        max-width: 72%;
     }
 
-    /* The dot's meaning was only available by hovering it, which a finger cannot do. */
+    /* Only what is wrong gets words. A green or blue dot means nothing is, and
+       naming it costs a line on every card while hiding the ones that matter. */
+    .dp-status-wrap:has(.dp-dot--green) .dp-tooltip,
+    .dp-status-wrap:has(.dp-dot--blue) .dp-tooltip {
+        display: none;
+    }
+
     .dp-tooltip {
         position: static;
+        /* It is a flex item, and a flex item honours z-index whether or not it is
+           positioned. Left at the fifty it needs as a floating tooltip on a desk, it
+           painted over the bars that hold the top of the page. */
+        z-index: auto;
         order: 9;
         flex-basis: 100%;
         opacity: 1;
@@ -2180,15 +2474,14 @@
         border-radius: 0;
         color: var(--rp-muted);
         font-size: .68rem;
-        text-align: right;
+        text-align: left;
         white-space: normal;
     }
 
-    /* Three actions across the card, each wide enough to hit. */
     .dp-actions-cell {
         display: flex;
-        flex: 1;
         gap: 8px;
+        margin-top: 6px;
     }
 
     .dp-actions-cell > button {
@@ -2201,10 +2494,21 @@
         flex: 0 0 44px;
     }
 
-    /* The legend is a reference, not something to read on the way past. */
-    .dp-legend-card {
-        margin: 0 12px 12px;
+    .dp-empty-row {
+        margin: 10px 12px;
     }
+
+    .dp-empty-cell {
+        text-align: center;
+    }
+
+    /* The key explained a code that no longer needs decoding: every dot that
+       means something now prints what it means beside it. */
+    .dp-legend-card {
+        display: none;
+    }
+
+    /* --- Dialogs -------------------------------------------------------- */
 
     .tdm-overlay,
     .atm-overlay,

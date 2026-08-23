@@ -56,8 +56,24 @@
         padding: 0 16px;
     }
 
+    /* The bar is spaced for a desk, and ends with an empty box kept for a profile
+       menu that is not built. Both push a right-aligned control off the corner. */
+    .topbar .container-fluid {
+        gap: 8px;
+        padding: 0;
+    }
+
+    .topbar .container-fluid > div:empty {
+        display: none;
+    }
+
     .main-content {
         padding: 16px;
+        /* The document is what scrolls on a phone: this box has no bounded height,
+           so it grows instead of scrolling. Leaving overflow on auto still makes it
+           the nearest scroll container, which is what a sticky child anchors to, so
+           nothing inside it could ever stick. */
+        overflow: visible;
     }
 }
 
@@ -346,7 +362,11 @@
        Set on both, because which one carries the overflow depends on the page. */
     html,
     body {
-        overflow-x: hidden;
+        /* clip, not hidden. Hidden on one axis forces the other to compute as auto,
+           which makes the document a scroll container and stops position:sticky
+           working anywhere inside it, the app bar included. Clip does the same
+           clipping without creating one. */
+        overflow-x: clip;
         max-width: 100%;
     }
 }
@@ -367,6 +387,9 @@
 @media (max-width: 599px) {
 
     .rs-filter-toggle {
+        /* Top right of the bar. The page's own controls sit on the left, and a
+           filter is a thing you reach for, not a thing you read. */
+        margin-left: auto;
         display: inline-flex;
         align-items: center;
         gap: 6px;

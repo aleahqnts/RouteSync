@@ -194,10 +194,7 @@
         Model.Vehicles.Where(v => v.Offered).Select(v => new { id = v.VehicleId, label = $"{v.VehicleId} · {v.PlateNumber}" })));
     const SCH_DRIVERS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Drivers.Where(d => d.Offered)
-             .Select(d => new { id = d.DriverId, name = d.DriverName })));
-    // Names padded to a shared width so the identifiers line up down the list.
-    rsIdLabels(SCH_DRIVERS.map(function (d) { return { name: d.name, id: d.id }; }))
-        .forEach(function (label, i) { SCH_DRIVERS[i].label = label; });
+             .Select(d => new { id = d.DriverId, label = DriverLabel(d.DriverName, d.DriverId, true) })));
 
     // One <select>, built from the data above. textContent, never innerHTML.
     function schBuildSelect(cls, placeholder, items) {
