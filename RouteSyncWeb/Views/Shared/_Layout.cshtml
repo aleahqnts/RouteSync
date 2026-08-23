@@ -6,6 +6,8 @@
     <title>@ViewData["Title"] - RouteSync</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@fontsource/barlow-semi-condensed@@5.0.13/600.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@fontsource/barlow-semi-condensed@@5.0.13/700.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/FleetWise.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
@@ -28,6 +30,7 @@
 
                 <header class="topbar">
                     <div class="container-fluid d-flex align-items-center gap-5">
+                        <span class="rs-bar-title">@ViewData["Title"]</span>
                         @if (IsSectionDefined("TopbarContent"))
                         {
                             @await RenderSectionAsync("TopbarContent", required: false)

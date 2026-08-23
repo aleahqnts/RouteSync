@@ -2205,7 +2205,10 @@
        planning tools and fold behind the button beside it. */
     .dp-toolbar {
         gap: 8px;
-        flex-wrap: nowrap;
+        /* The stamp takes a whole line of its own, so the row has to be allowed to
+           make one. Held at nowrap it pushed the tray off the side of the screen. */
+        flex-wrap: wrap;
+        row-gap: 0;
     }
 
     .dp-search-wrap {
@@ -2218,10 +2221,33 @@
     }
 
     .dp-toolbar .dp-btn-primary,
-    .dp-toolbar .dp-btn-secondary,
-    .dp-toolbar .dp-btn-refresh,
-    .dp-updated {
+    .dp-toolbar .dp-btn-secondary {
         display: none;
+    }
+
+    .dp-toolbar .dp-btn-refresh {
+        flex: 0 0 44px;
+        height: 44px;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        overflow: hidden;
+        /* Icon only: the word beside it is what the icon already says. */
+        font-size: 0;
+    }
+
+    .dp-toolbar .dp-btn-refresh i {
+        font-size: 1.15rem;
+    }
+
+    .dp-updated {
+        /* Last, whatever its place in the markup: it takes a whole line, and left
+           where it is written it pushed the tray onto a line of its own. */
+        order: 9;
+        flex: 1 0 100%;
+        margin-top: 2px;
+        text-align: right;
+        font-size: .68rem;
     }
 
     .dp-more {
