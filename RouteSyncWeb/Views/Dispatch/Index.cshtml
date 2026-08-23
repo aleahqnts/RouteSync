@@ -219,10 +219,12 @@
                                 <tr class="dp-trip-row"
                                     data-trip-status="@trip.TripStatus"
                                     data-shift-id="@shiftId"
+                                    data-shift-type="@shift.ShiftType"
                                     data-shift-label="@shift.ShiftType @(shift.ShiftStartTime) to @(shift.ShiftEndTime)@(shift.IsOvernight ? " +1" : "")">
                                     @if (i == 0)
                                     {
-                                        <td class="dp-shift-cell" rowspan="@shiftTrips.Count">
+                                        <td class="dp-shift-cell" data-shift-type="@shift.ShiftType"
+                                            rowspan="@shiftTrips.Count">
                                             @shift.ShiftType<br />
                                             <span class="dp-shift-time">(@shift.ShiftStartTime – @shift.ShiftEndTime@(shift.IsOvernight ? " +1" : ""))</span>
                                             @if (shift.IsOvernight)
