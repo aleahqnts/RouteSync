@@ -136,10 +136,29 @@
            carries the whole week whichever day is on screen. */
         .sch-day-off { display: none; }
 
-        /* One column needs no scrolling, and the shift column has nothing to stick to. */
-        .sch-table { min-width: 0; }
-        .sch-cell-td { min-width: 0; }
-        .sch-shift-col { position: static; width: 88px; }
+        /* The whole week, at the width that makes one day readable, scrolling
+           sideways in its own box. The shift column is pinned, so a row never
+           loses the thing that names it however far across you are. */
+        .sch-table { min-width: max-content; }
+
+        /* The day columns only. Named this way so the shift column, which is a th
+           and a td as well, keeps the narrow width set for it below. */
+        .sch-table th[data-sch-day],
+        .sch-table td[data-sch-day] { min-width: 200px; }
+
+        .sch-table .sch-shift-col {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            width: 92px;
+            min-width: 92px;
+            max-width: 92px;
+            background: #FBFCFD;
+            /* A collapsed border does not paint on a cell lifted out of the flow. */
+            box-shadow: 1px 0 0 #EEF1F4;
+        }
+
+        .sch-table thead .sch-shift-col { z-index: 3; }
 
         .sch-modal-overlay { padding: 0; align-items: flex-end; }
         .sch-modal { max-width: none; max-height: 92vh; overflow-y: auto;

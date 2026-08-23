@@ -326,11 +326,11 @@
             if (chip) schSetDay(chip.dataset.day === 'all' ? 'all' : Number(chip.dataset.day));
         });
 
-        // Opens on today when today is in the week being shown, since that is the day
-        // a dispatcher in the field is working. Any other week opens on its first day.
-        const today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Manila' }).split(',')[0];
-        const i = SCH_DAYS.indexOf(today);
-        schSetDay(i >= 0 ? i : 0);
+        // Opens on the whole week. The columns keep the width that makes a day
+        // readable and the grid scrolls sideways, so the week is there to be
+        // moved through rather than chosen between. A chip still narrows it to
+        // one day for anyone who would rather not scroll.
+        schSetDay('all');
     })();
 
     function schAddBus(btn) {
