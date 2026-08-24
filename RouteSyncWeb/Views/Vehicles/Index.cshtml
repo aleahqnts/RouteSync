@@ -16,13 +16,17 @@
     <div class="vh-alert vh-alert--error" role="alert">@errorMsg</div>
 }
 
+@* The chips and the search share one block that stays under the app bar on a
+   phone. On a desk the wrapper is display:contents and lays out nothing. *@
+<div class="vh-sticky-head">
+
 @* SUMMARY CARDS *@
 <div class="vh-cards">
     <a href="@Url.Action("Index")"
        class="vh-card vh-card--click @(string.IsNullOrEmpty(Model.SelectedStatus)
                                         && string.IsNullOrEmpty(Model.SelectedCondition)
                                         && string.IsNullOrEmpty(Model.SelectedRoute)
-                                        && string.IsNullOrEmpty(Model.SearchTerm) ? "vh-card--active" : "")"
+                                        && string.IsNullOrEmpty(Model.SearchTerm) ? "vh-card--active" : "") @(Model.ActiveVehicles == 0 ? "vh-card--empty" : "")"
        title="Show every vehicle">
         <div class="vh-card-icon vh-card-icon--green">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -34,6 +38,7 @@
         </div>
         <div class="vh-card-text">
             <span class="vh-card-label">Total Active Vehicles</span>
+            <span class="vh-card-short">All</span>
             <span class="vh-card-value">@Model.ActiveVehicles</span>
             @if (Model.RetiredVehicles > 0)
             {
@@ -44,7 +49,7 @@
 
     <a href="@Url.Action("Index", new { status = "Flagged", route = Model.SelectedRoute, search = Model.SearchTerm })"
        @* condition is deliberately omitted: a card sets one filter, not two. *@
-       class="vh-card vh-card--click @(Model.SelectedStatus == "Flagged" ? "vh-card--active" : "")"
+       class="vh-card vh-card--click @(Model.SelectedStatus == "Flagged" ? "vh-card--active" : "") @(Model.FlaggedVehicles == 0 ? "vh-card--empty" : "")"
        title="Show only flagged vehicles">
         <div class="vh-card-icon vh-card-icon--red">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -54,12 +59,13 @@
         </div>
         <div class="vh-card-text">
             <span class="vh-card-label">Flagged Vehicles</span>
+            <span class="vh-card-short">Flagged</span>
             <span class="vh-card-value">@Model.FlaggedVehicles</span>
         </div>
     </a>
 
     <a href="@Url.Action("Index", new { condition = "Under Repair", route = Model.SelectedRoute, search = Model.SearchTerm })"
-       class="vh-card vh-card--click @(Model.SelectedCondition == "Under Repair" ? "vh-card--active" : "")"
+       class="vh-card vh-card--click @(Model.SelectedCondition == "Under Repair" ? "vh-card--active" : "") @(Model.ScheduledMaintenance == 0 ? "vh-card--empty" : "")"
        title="Show only vehicles under repair">
         <div class="vh-card-icon vh-card-icon--amber">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -69,6 +75,7 @@
         </div>
         <div class="vh-card-text">
             <span class="vh-card-label">Scheduled Maintenance</span>
+            <span class="vh-card-short">Maintenance</span>
             <span class="vh-card-value">@Model.ScheduledMaintenance</span>
         </div>
     </a>
@@ -77,7 +84,7 @@
 
 @* TOOLBAR *@
 <div class="vh-toolbar">
-    <button type="button" class="vh-btn vh-btn--primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">+ Add Vehicle</button>
+    <button type="button" class="vh-btn vh-btn--primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal"><span class="vh-btn-ico" aria-hidden="true">+</span><span class="vh-btn-txt">&nbsp;Add Vehicle</span></button>
 
     <form method="get" class="vh-search-form">
         <input type="hidden" name="route" value="@Model.SelectedRoute" />
@@ -96,6 +103,8 @@
     </form>
 </div>
 
+</div>
+
 @* VEHICLE INFORMATION TABLE CARD *@
 <div class="vh-card-table">
     <div class="vh-card-header">
@@ -111,7 +120,7 @@
     </div>
 
     <div class="vh-table-wrap">
-        <table class="vh-table rs-cards rs-collapse">
+        <table class="vh-table rs-cards">
             <thead>
                 <tr>
                     <th>Vehicle ID</th>

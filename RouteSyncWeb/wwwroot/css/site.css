@@ -480,6 +480,10 @@
         font-weight: 700;
     }
 
+    .rs-collapse tbody tr td:first-child::before {
+        content: none;
+    }
+
     .rs-collapse tbody tr td:first-child::after {
         content: "";
         width: 8px;
