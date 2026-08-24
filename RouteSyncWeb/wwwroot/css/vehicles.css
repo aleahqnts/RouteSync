@@ -1299,39 +1299,392 @@
         .vh-form-row { grid-template-columns: 1fr; }
     }
 
-    @media (max-width: 599px) {
+/* ===========================================================================
+   Phone.
 
-        .vh-action-overlay,
-        .cam-overlay {
-            padding: 0;
-            align-items: flex-end;
-        }
+   The board is read the way the dispatch board is: filter chips carrying their
+   counts, one search line, then a stack of cards. A card names the bus once and
+   says what state it is in, so a fleet of twenty reads as twenty lines rather
+   than a hundred.
+   =========================================================================== */
 
-        .vh-action-box,
-        .vh-action-box--wide,
-        .cam-panel {
-            max-width: none;
-            width: 100%;
-            max-height: 92vh;
-            overflow-y: auto;
-            border-radius: 16px 16px 0 0;
-        }
+/* The short name a chip carries. The desk reads the full label instead. */
+.vh-card-short {
+    display: none;
+}
+
+/* The wrapper exists so a phone has one block to hold under the app bar. On a
+   desk it must not exist at all, or the summary cards and the toolbar become one
+   item in the page and lose the spacing between them. */
+.vh-sticky-head {
+    display: contents;
+}
+
+@media (max-width: 599px) {
+
+    /* --- Controls ------------------------------------------------------- */
+
+    .vh-sticky-head {
+        display: block;
+        position: sticky;
+        /* Under the app bar. */
+        top: 56px;
+        z-index: 30;
+        margin: 0 -16px;
+        padding: 6px 16px 8px;
+        background: var(--vh-bg);
     }
 
-    @media (max-width: 599px) {
-
-        /* Rows and headings ran to the edge of a full-width sheet, so the text sat
-           against the frame with nothing around it. */
-        .vh-section-header,
-        .vh-detail-row,
-        .vh-detail-pair,
-        .vh-modal-body > * {
-            padding-left: 16px;
-            padding-right: 16px;
-        }
-
-        .vh-detail-row {
-            padding-top: 10px;
-            padding-bottom: 10px;
-        }
+    /* Three cards spending three hundred pixels on three numbers. The numbers ride
+       on the filters they belong to, where tapping one does something. */
+    .vh-cards {
+        display: flex;
+        gap: 8px;
+        /* Room above for the counts, which sit off the top edge of a chip. */
+        margin: 0 0 10px;
+        padding-top: 6px;
     }
+
+    .vh-card {
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
+        justify-content: center;
+        gap: 0;
+        min-height: 40px;
+        padding: 0 8px;
+        border-width: 1.5px;
+        border-radius: 999px;
+        box-shadow: none;
+    }
+
+    .vh-card-icon,
+    .vh-card-label,
+    .vh-card-sub {
+        display: none;
+    }
+
+    .vh-card-text {
+        min-width: 0;
+    }
+
+    .vh-card-short {
+        display: block;
+        overflow: hidden;
+        color: var(--vh-text);
+        font-size: .8rem;
+        font-weight: 600;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    /* The count rides off the top corner of the chip it belongs to. */
+    .vh-card-value {
+        position: absolute;
+        top: -7px;
+        right: -6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 19px;
+        height: 19px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #94A3B8;
+        color: #fff;
+        font-size: .66rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    /* Flagged is the one count that is a problem rather than a total. */
+    .vh-card:has(.vh-card-icon--red) .vh-card-value {
+        background: #E53E3E;
+    }
+
+    /* Nothing to show is not the same as something to look at. */
+    .vh-card--empty {
+        border-color: #EDF1F5;
+    }
+
+        .vh-card--empty .vh-card-short {
+            color: var(--vh-muted);
+        }
+
+        .vh-card--empty .vh-card-value {
+            display: none;
+        }
+
+    .vh-card--active {
+        background: var(--vh-teal);
+        border-color: var(--vh-teal);
+        box-shadow: none;
+    }
+
+        .vh-card--active .vh-card-short {
+            color: #fff;
+        }
+
+    .vh-card--empty.vh-card--active {
+        background: #EDF1F5;
+        border-color: #EDF1F5;
+    }
+
+        .vh-card--empty.vh-card--active .vh-card-short {
+            color: var(--vh-muted);
+        }
+
+    /* Search is what the page is opened for. Adding a bus is one tap beside it
+       rather than a bar of its own. */
+    .vh-toolbar {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0;
+    }
+
+    .vh-search-form {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .vh-search-input {
+        width: 100%;
+        height: 44px;
+    }
+
+    .vh-toolbar .vh-btn--primary {
+        order: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 10px;
+    }
+
+    .vh-btn-ico {
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    /* The plus is what the button already says. */
+    .vh-btn-txt {
+        display: none;
+    }
+
+    /* --- The list ------------------------------------------------------- */
+
+    /* The cards are the panel. A frame drawn around them costs an inset on both
+       sides and a heading the app bar already carries. */
+    .vh-card-table {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    .vh-card-header {
+        display: none;
+    }
+
+    .vh-table-wrap {
+        overflow-x: visible;
+    }
+
+    /* Bus and plate on the left, the two badges down the right, the buttons across
+       the foot. Placed rather than stacked, so a card is three lines whatever it
+       has to say. */
+    .vh-table tbody tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 2px;
+        margin-bottom: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--vh-border);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .vh-table.vh-table td {
+        display: block;
+        padding: 0;
+        border: none;
+        text-align: left;
+    }
+
+    /* Vehicle, Route, Status and Maintenance printed on every card is four words
+       twenty times over, and none of them is read after the first. Named twice, or
+       the shared rule that writes them ranks higher and they all print anyway. */
+    .vh-table.vh-table td[data-label]::before {
+        content: none;
+    }
+
+    /* A cell with nothing in it holds a row of the card open against nothing. */
+    .vh-table.vh-table td:empty {
+        display: none;
+    }
+
+    .vh-table.vh-table td:first-child {
+        display: flex;
+        align-items: baseline;
+        /* The shared card rule sets space-between, which throws the plate against
+           the far edge with the width of the card between it and its own bus. */
+        justify-content: flex-start;
+        gap: 8px;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .vh-id {
+        font-size: .95rem;
+        font-weight: 700;
+    }
+
+    .vh-table td[data-label="Status"] {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    .vh-table td[data-label="Route"] {
+        grid-column: 1;
+        grid-row: 2;
+        color: var(--vh-muted);
+        font-size: .76rem;
+    }
+
+    .vh-table td[data-label="Maintenance"] {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+    }
+
+    /* A bus with nothing wrong with it does not need a badge saying so. */
+    .vh-table td[data-label="Maintenance"]:has(.vh-badge--ok) {
+        display: none;
+    }
+
+    /* View and Edit are secondary to reading the card. Given the shared rule they
+       inherit they take the full width at desk height, two slabs to a bus, and a
+       list of twenty is forty of them. */
+    .vh-table.vh-table td[data-label="Actions"] {
+        display: flex;
+        justify-content: flex-end;
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin-top: 6px;
+    }
+
+        .vh-table.vh-table td[data-label="Actions"] .vh-actions-cell {
+            flex: 0 0 auto;
+            /* The shared rule holds this box open at desk height, and the buttons
+               inside it stretch to whatever it is. */
+            min-height: 0;
+            gap: 8px;
+        }
+
+        .vh-table.vh-table td[data-label="Actions"] .vh-btn-action {
+            flex: 0 0 auto;
+            min-height: 34px;
+            padding: 0 18px;
+            font-size: .78rem;
+        }
+
+    .vh-badge {
+        padding: 4px 11px;
+        font-size: .72rem;
+    }
+
+    /* The spinner and the empty state span the table and have no column. */
+    .vh-table.vh-table td:not([data-label]) {
+        grid-column: 1 / -1;
+        padding: 22px 0;
+        text-align: center;
+    }
+
+    /* --- Dialogs -------------------------------------------------------- */
+
+    .vh-action-overlay,
+    .cam-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .vh-action-box,
+    .vh-action-box--wide,
+    .cam-panel {
+        max-width: none;
+        width: 100%;
+        max-height: 92vh;
+        overflow-y: auto;
+        border-radius: 16px 16px 0 0;
+    }
+
+    /* A full-width sheet has no margin of its own, so the desk inset comes down
+       rather than being added to. Header and body take the same one, or the values
+       sit further from the edge than the heading that names them.
+
+       Maintenance Log carries a button and a badge beside its title, which on this
+       width crushed all three together and wrapped the heading. The badge stays with
+       the title, as it does in every other section, and the button takes the line
+       under them. */
+    .vh-section-header {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        padding: 7px 16px;
+        font-size: .78rem;
+    }
+
+    .vh-maint-head-right {
+        display: contents;
+    }
+
+    .vh-section-header .vh-btn-mini {
+        order: 9;
+        flex: 1 0 100%;
+        min-height: 32px;
+    }
+
+    /* Room that reads as generous on a desk reads as scrolling here. */
+    .vh-section-body {
+        padding: 11px 16px;
+    }
+
+    .vh-detail-row {
+        margin-bottom: 5px;
+        font-size: .85rem;
+    }
+
+    .vh-detail-pair {
+        gap: 5px;
+    }
+
+    .vh-action-hint {
+        margin-bottom: 8px;
+        font-size: .76rem;
+        line-height: 1.45;
+    }
+
+    .vh-review-actions {
+        margin-bottom: 8px;
+    }
+}
+
+/* A tap leaves the hover state behind on a touch screen, so one card and one chip
+   stay lit until something else is touched. */
+@media (hover: none) and (pointer: coarse) {
+
+    .vh-table tbody tr:hover {
+        background: transparent;
+    }
+
+    .vh-card--click:hover {
+        box-shadow: none;
+        transform: none;
+    }
+}
