@@ -32,7 +32,6 @@
                         {
                             var isActive = Model.RoleId == r.RoleId;
                             <button type="button" class="us-role-item @(isActive ? "us-role-item--active" : "")" data-role-id="@r.RoleId" data-role-name="@r.RoleName"
-                                    data-access-level="@r.AccessLevel"
                                     data-web-perms='@System.Text.Json.JsonSerializer.Serialize(r.WebPermissions)'
                                     data-mobile-perms='@System.Text.Json.JsonSerializer.Serialize(r.MobilePermissions)'>
                                 @r.RoleName
@@ -48,12 +47,6 @@
                             <input asp-for="RoleName" id="roleFormName" class="us-form-input us-form-input--plain" />
                             <span asp-validation-for="RoleName" class="us-field-error"></span>
                         </div>
-                        <div class="us-form-row">
-                            <label asp-for="AccessLevel">Access Level:</label>
-                            <input asp-for="AccessLevel" id="roleFormAccessLevel" class="us-form-input us-form-input--plain" />
-                            <span asp-validation-for="AccessLevel" class="us-field-error"></span>
-                        </div>
-
                         <div class="us-section-header">Permissions</div>
 
                         <div class="us-perm-section">

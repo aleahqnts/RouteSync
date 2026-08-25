@@ -685,16 +685,42 @@
         gap: 10px;
     }
 
+    /* The date and the button that reloads it sat together at the left with the rest
+       of the line empty behind them. One at each end reads as a bar; both at one end
+       reads as a mistake. */
     .db-title-tools {
-        flex-wrap: wrap;
+        display: flex;
+        width: 100%;
+        flex-wrap: nowrap;
         align-items: center;
         gap: 8px;
     }
 
     .db-date-badge {
-        padding: 6px 10px;
-        font-size: .78rem;
+        min-width: 0;
+        overflow: hidden;
+        padding: 8px 14px;
+        font-size: .8rem;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
+
+    /* Icon only, at the far edge, the same square the report board ends its line
+       with. The word beside it is what the icon already says. */
+    .db-btn-refresh {
+        flex: 0 0 44px;
+        height: 44px;
+        margin-left: auto;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        overflow: hidden;
+        font-size: 0;
+    }
+
+        .db-btn-refresh .db-refresh-ico {
+            font-size: 1.15rem;
+        }
 
     /* A line carrying only a time is a poor trade for the room it takes. The
        button that refreshes the page says it in its tooltip instead, the same

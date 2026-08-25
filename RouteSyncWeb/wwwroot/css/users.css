@@ -1,4 +1,4 @@
-/* Users/Index.cshtml */
+﻿/* Users/Index.cshtml */
     :root {
         --us-teal: #4AADA8;
         --us-teal-light: #E8F6F5;
@@ -693,3 +693,285 @@
             grid-column: 1;
         }
     }
+
+
+/* ===========================================================================
+   Phone.
+
+   A person is read by name, by what they may do, and by whether the account
+   works. The list is arranged around those three, with the account number and
+   the address kept where they can still be matched against a log entry.
+   =========================================================================== */
+
+/* The wrapper is one row of the filter panel on a phone and nothing at all on a
+   desk, where the label and the control lay out in the bar themselves. */
+.us-filter {
+    display: contents;
+}
+
+@media (max-width: 599px) {
+
+    /* --- Controls -------------------------------------------------------- */
+
+    /* Search is what the page is opened for. Adding a person is one tap beside it,
+       and managing roles, which is done once a term, takes the line below. */
+    .us-toolbar {
+        /* Below 768px this is a column, which turns every width below into a height:
+           the search box sizes down its own axis and the buttons shrink to the width
+           of their text. It is a row again here, and wraps once. */
+        flex-direction: row;
+        flex-wrap: wrap;
+        /* The desk spreads two groups to opposite ends of one line. Here the line
+           wraps, and space-between would push the search box and the button beside
+           it apart to the two edges of the screen. */
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    /* Both buttons become items of the toolbar itself, so one can sit beside the
+       search box and the other can be sent to a line of its own. */
+    .us-actions {
+        display: contents;
+    }
+
+    .us-search-form {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* The form is a flex row of its own, so the box inside it has to be told to take
+       the width as well. Left alone it shrinks to the placeholder and leaves a hundred
+       pixels of nothing between the field and the button beside it. */
+    .us-search-wrap {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .us-search-input {
+        width: 100%;
+        height: 44px;
+        /* The desk fills this the same grey as the page. On a phone the page is that
+           grey, so the field disappeared into it and read as a slab rather than
+           something to type in. */
+        background: var(--us-white);
+    }
+
+    /* A square with a plus in it. The words are set to nothing rather than hidden,
+       so the button reads the same whether or not its label is wrapped in a span. */
+    .us-toolbar .us-btn--primary {
+        order: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 10px;
+        font-size: 0;
+    }
+
+        .us-toolbar .us-btn--primary::before {
+            content: "+";
+            font-size: 1.5rem;
+            font-weight: 400;
+            line-height: 1;
+        }
+
+    .us-toolbar .us-btn--outline {
+        order: 3;
+        flex: 1 0 100%;
+        min-height: 40px;
+    }
+
+    .us-alert {
+        padding: 10px 14px;
+        font-size: .82rem;
+    }
+
+    /* --- The list -------------------------------------------------------- */
+
+    /* The cards are the panel. A frame drawn around them costs an inset on both
+       sides and a heading the app bar already carries. */
+    .us-card {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    .us-card-header {
+        display: none;
+    }
+
+    .us-table-wrap {
+        overflow-x: visible;
+    }
+
+    /* Two lines. Who they are and what they may do on the first, how to reach them
+       and what can be done about them on the second. Placed rather than stacked, so
+       a card is the same two lines whatever it holds. */
+    .us-table.rs-cards tbody tr {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        align-items: center;
+        column-gap: 8px;
+        row-gap: 4px;
+        margin-bottom: 8px;
+        padding: 9px 12px;
+        border: 1px solid var(--us-border);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .us-table.rs-cards td {
+        display: block;
+        padding: 0;
+        border: none;
+        text-align: left;
+    }
+
+    /* ID, Name, Email, Role and Status printed on every card is five words twenty
+       times over, and none of them is read after the first. */
+    .us-table.rs-cards td[data-label]::before {
+        content: none;
+    }
+
+    .us-table.rs-cards td.us-id {
+        grid-column: 1;
+        grid-row: 1;
+        width: auto;
+        font-size: .74rem;
+    }
+
+    /* A name long enough to reach the badges is cut rather than allowed to push
+       them off the card. */
+    .us-table.rs-cards td[data-label="Name"] {
+        grid-column: 2;
+        grid-row: 1;
+        overflow: hidden;
+        font-size: .92rem;
+        font-weight: 700;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .us-table.rs-cards td[data-label="Role"] {
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    .us-table.rs-cards td[data-label="Status"] {
+        grid-column: 4;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    /* The address runs under the name and takes the width of all three columns
+       above it, cut at the edge rather than wrapping the card open. */
+    .us-table.rs-cards td[data-label="Email"] {
+        grid-column: 1 / 4;
+        grid-row: 2;
+        overflow: hidden;
+        color: var(--us-muted);
+        font-size: .76rem;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    /* One button, sized as the secondary action it is rather than stretched across
+       a line of its own. */
+    .us-table.rs-cards td[data-label="Actions"] {
+        display: flex;
+        justify-content: flex-end;
+        grid-column: 4;
+        grid-row: 2;
+    }
+
+        .us-table.rs-cards td[data-label="Actions"] .us-btn-edit {
+            flex: 0 0 auto;
+            min-height: 30px;
+            padding: 0 14px;
+            font-size: .76rem;
+        }
+
+    /* The spinner and the empty state span the table and have no column. */
+    .us-table.rs-cards td:not([data-label]) {
+        grid-column: 1 / -1;
+        padding: 22px 0;
+        text-align: center;
+    }
+
+    .us-role-badge,
+    .us-status {
+        padding: 3px 10px;
+        font-size: .7rem;
+    }
+
+    /* --- The dialogs ----------------------------------------------------- */
+
+    /* A full-width sheet has no margin of its own, so the desk inset comes down
+       rather than being added to. Header and body take the same one, or the values
+       sit further from the edge than the heading that names them. */
+    .us-section-header {
+        padding: 7px 16px;
+        font-size: .78rem;
+    }
+
+    .us-section-body {
+        padding: 12px 16px;
+    }
+
+    .us-modal-title {
+        font-size: 1.05rem;
+    }
+
+    /* Label above field, both tight. Fourteen fields at desk spacing is most of a
+       screen of scrolling before the first one can be typed in. */
+    .us-form-row {
+        gap: 4px;
+        margin-bottom: 10px;
+    }
+
+        .us-form-row label {
+            font-size: .78rem;
+        }
+
+    .us-form-input,
+    .us-form-select {
+        padding: 9px 12px;
+        font-size: .875rem;
+    }
+
+    .us-field-hint,
+    .us-field-error {
+        font-size: .72rem;
+    }
+
+    /* The button that starts a reset, and the warning under it, read as one block
+       rather than two things sharing a line. */
+    .us-reset-row {
+        gap: 8px;
+    }
+
+    .us-reset-confirm-text {
+        margin-bottom: 10px;
+        font-size: .82rem;
+    }
+
+    .us-reset-confirm-actions {
+        gap: 8px;
+    }
+}
+
+/* A tap leaves the hover state behind on a touch screen, so one card stays lit
+   until something else is touched. */
+@media (hover: none) and (pointer: coarse) {
+
+    .us-table tbody tr:hover {
+        background: transparent;
+    }
+}

@@ -1,4 +1,4 @@
-// Names each cell after its column, so a table can be read as a stack of cards on a
+﻿// Names each cell after its column, so a table can be read as a stack of cards on a
 // phone where its columns will not fit.
 //
 // The name is copied from the table's own header rather than written onto each cell in
@@ -48,21 +48,38 @@
         labelAll();
 
         // Rows replaced by a fetch or by the live refresh arrive unlabelled. Watching for
-        // added rows covers both without either having to know this exists.
+        // added nodes covers both without either having to know this exists.
+        //
+        // The whole document is watched rather than each tbody: the audit log replaces
+        // the block its table sits in, so the tbody an observer had been given is thrown
+        // away with it and a watcher attached to that node would never fire again.
         //
         // Only childList is watched, never attributes, so writing the labels cannot
         // trigger the observer that wrote them.
         var observer = new MutationObserver(function (records) {
             var tables = [];
-            records.forEach(function (r) {
-                var table = r.target.closest && r.target.closest('table.rs-cards');
+
+            function add(table) {
                 if (table && tables.indexOf(table) === -1) tables.push(table);
+            }
+
+            records.forEach(function (r) {
+                // A row added to a table that was already here.
+                if (r.target.closest) add(r.target.closest('table.rs-cards'));
+
+                // Or a whole table swapped in with the block around it.
+                Array.prototype.forEach.call(r.addedNodes, function (node) {
+                    if (node.nodeType !== 1) return;
+                    if (node.matches && node.matches('table.rs-cards')) add(node);
+                    if (node.querySelectorAll) {
+                        node.querySelectorAll('table.rs-cards').forEach(add);
+                    }
+                });
             });
+
             tables.forEach(label);
         });
 
-        document.querySelectorAll('table.rs-cards tbody').forEach(function (tbody) {
-            observer.observe(tbody, { childList: true, subtree: true });
-        });
+        observer.observe(document.body, { childList: true, subtree: true });
     });
 })();
