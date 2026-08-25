@@ -364,6 +364,14 @@
                         </span>
                     </div>
                 </div>
+
+                @* What the current filters have caught. A phone has no room for the
+                   preview beside this, so the figures it ends with are shown here
+                   instead: enough to tell an export worth taking from an empty one. *@
+                <div class="rg-glance" id="rgGlance" aria-live="polite">
+                    <div class="rg-glance-head">In this export</div>
+                    <div class="rg-glance-body" id="rgGlanceBody"></div>
+                </div>
             </div>
 
             @* RIGHT: Preview *@
@@ -446,7 +454,7 @@
             <div id="statModalContent" style="display:none;">
                 <div class="tr-section tr-section--last">
                     <div class="rp-table-wrap">
-                        <table class="rp-table"><thead id="statModalHead"></thead><tbody id="statModalBody"></tbody></table>
+                        <table class="rp-table rs-cards"><thead id="statModalHead"></thead><tbody id="statModalBody"></tbody></table>
                     </div>
                     <div class="st-empty" id="statModalEmpty" style="display:none;">Nothing to show for this day.</div>
                 </div>
@@ -1161,10 +1169,65 @@
     previewDebounce = setTimeout(loadPreview, 350);
     }
 
+    const glanceBody = document.getElementById('rgGlanceBody');
+
+    /** One line per figure, or a word about why there are none. */
+    function renderGlance(state, data) {
+    glanceBody.replaceChildren();
+
+    if (state !== 'content') {
+    const note = document.createElement('div');
+    note.className = 'rg-glance-note';
+    note.textContent = state === 'loading' ? 'Counting\u2026' : 'Could not read the totals.';
+    glanceBody.appendChild(note);
+    return;
+    }
+
+    const totals = data.totals;
+    const empty  = !data.groups || data.groups.length === 0 || !totals || !totals.trips;
+
+    if (empty) {
+    const note = document.createElement('div');
+    note.className = 'rg-glance-note rg-glance-note--empty';
+    note.textContent = 'No trips match these filters. The file would be empty.';
+    glanceBody.appendChild(note);
+    return;
+    }
+
+    const rows = [['Trips', formatNumber(totals.trips)]];
+    if (currentReportType !== 'Revenue')   rows.push(['Passengers', formatNumber(totals.passengers)]);
+    if (currentReportType !== 'Passenger') rows.push(['Revenue', formatCurrencyCompact(totals.revenue)]);
+
+    rows.forEach(pair => {
+    const row = document.createElement('div');
+    row.className = 'rg-glance-row';
+
+    const label = document.createElement('span');
+    label.className = 'rg-glance-label';
+    label.textContent = pair[0];
+
+    const value = document.createElement('span');
+    value.className = 'rg-glance-value';
+    value.textContent = pair[1];
+
+    row.appendChild(label);
+    row.appendChild(value);
+    glanceBody.appendChild(row);
+    });
+
+    if (data.period) {
+    const period = document.createElement('div');
+    period.className = 'rg-glance-period';
+    period.textContent = data.period;
+    glanceBody.appendChild(period);
+    }
+    }
+
     function showPreviewLoading() {
     previewLoading.style.display = 'flex';
     previewContent.style.display = 'none';
     previewError.style.display   = 'none';
+    renderGlance('loading');
     }
 
     function showPreviewContent() {
@@ -1177,6 +1240,7 @@
     previewLoading.style.display = 'none';
     previewContent.style.display = 'none';
     previewError.style.display   = 'block';
+    renderGlance('error');
     }
 
     async function loadPreview() {
@@ -1204,6 +1268,7 @@
     }
 
     function renderPreview(data) {
+    renderGlance('content', data);
     previewMeta.textContent  = data.period || '';
     previewTitle.textContent = REPORT_CONFIG[currentReportType].title + ' Summary';
     previewTables.innerHTML  = '';
@@ -1499,6 +1564,18 @@
 }
 
 @section TopbarContent {
+    <button type="button" class="rs-filter-toggle" data-filter-toggle="rpFilters"
+            aria-expanded="false" aria-controls="rpFilters">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18M6 12h12M10 19h4" />
+        </svg>
+        Filters
+    </button>
+
+    @* The wrapper gives a phone one panel to open. On a desk it is display:contents
+       and the select sits in the bar exactly as it did. *@
+    <div class="rp-topfilters rs-filters" id="rpFilters">
     <div class="rp-route-wrap">
         <span class="rp-filter-label">Route:</span>
         <div class="rp-select-wrap">
@@ -1512,5 +1589,6 @@
                 </svg>
             </span>
         </div>
+    </div>
     </div>
 }

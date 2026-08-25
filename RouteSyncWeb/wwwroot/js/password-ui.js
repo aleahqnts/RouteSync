@@ -11,11 +11,36 @@
         var input = document.getElementById(btn.getAttribute('data-for'));
         if (!input) return;
 
+        // Pressing the button is what takes focus off the field, and on a phone that
+        // closes the keyboard and costs a second tap to get it back. The press is
+        // cancelled before focus moves; the click still fires.
+        var keepFocus = function (e) { e.preventDefault(); };
+        if (window.PointerEvent) btn.addEventListener('pointerdown', keepFocus);
+        else btn.addEventListener('mousedown', keepFocus);
+
         btn.addEventListener('click', function () {
             var reveal = input.type === 'password';
+            var typing = document.activeElement === input;
+            var start = input.selectionStart;
+            var end = input.selectionEnd;
+
             input.type = reveal ? 'text' : 'password';
             btn.classList.toggle('showing', reveal);
             btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+
+            // Changing the type collapses the caret to the front of the field, so
+            // the next character typed lands before the password rather than after
+            // it. The browser does that at the end of the press, after this handler,
+            // so yielding once puts the restore behind it.
+            //
+            // Only for someone who was already typing: a toggle before the field is
+            // touched must not summon a keyboard.
+            if (typing && start !== null) {
+                setTimeout(function () {
+                    if (document.activeElement !== input) input.focus();
+                    try { input.setSelectionRange(start, end); } catch (err) { }
+                }, 0);
+            }
         });
     });
 

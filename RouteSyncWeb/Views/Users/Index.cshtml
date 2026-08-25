@@ -27,7 +27,7 @@
 @* TOOLBAR *@
 <div class="us-toolbar">
     <div class="us-actions">
-        <button type="button" class="us-btn us-btn--primary" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
+        <button type="button" class="us-btn us-btn--primary" data-bs-toggle="modal" data-bs-target="#addUserModal"><span class="us-btn-ico" aria-hidden="true">+</span><span class="us-btn-txt">&nbsp;Add User</span></button>
         <button type="button" class="us-btn us-btn--outline us-btn--dashed" data-bs-toggle="modal" data-bs-target="#manageRolesModal">Manage Roles</button>
     </div>
 
@@ -41,7 +41,7 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
             </span>
-            <input type="text" name="search" value="@searchTerm" class="us-search-input" placeholder="Search by name or email" />
+            <input type="text" name="search" value="@searchTerm" class="us-search-input" placeholder="Search by ID, name or email" />
         </div>
     </form>
 </div>
@@ -150,28 +150,58 @@
                     document.getElementById('roleFormRoleId').value = roleId;
                     form.action = '@Url.Action("UpdateRole", "Users")';
                     document.getElementById('roleFormName').value = item.dataset.roleName;
-                    document.getElementById('roleFormAccessLevel').value = item.dataset.accessLevel;
                     applyRolePermissions(JSON.parse(item.dataset.webPerms || '{}'), JSON.parse(item.dataset.mobilePerms || '{}'));
                 } else {
                     document.getElementById('roleFormRoleId').value = '';
                     form.action = '@Url.Action("CreateRole", "Users")';
                     document.getElementById('roleFormName').value = '';
-                    document.getElementById('roleFormAccessLevel').value = '';
                     applyRolePermissions({}, {});
                 }
             });
         });
     });
 
+    /** The filters as they stand, rather than as the address bar last left them. */
+    function currentUserQuery() {
+        const params = new URLSearchParams();
+        const role = document.querySelector('#usFilters select[name="role"]');
+        const search = document.querySelector('.us-search-input');
+        if (role && role.value) params.set('role', role.value);
+        if (search && search.value.trim()) params.set('search', search.value.trim());
+        const query = params.toString();
+        return query ? '?' + query : '';
+    }
+
     function loadUserRows() {
         const tbody = document.getElementById('usersTableBody');
-        fetch('@Url.Action("UserRows", "Users")' + window.location.search)
+        fetch('@Url.Action("UserRows", "Users")' + currentUserQuery())
             .then(function (response) { return response.text(); })
             .then(function (html) { tbody.innerHTML = html; })
             .catch(function () {
                 tbody.innerHTML = '<tr><td colspan="6" class="us-empty">Failed to load users.</td></tr>';
             });
     }
+
+    // Searching used to mean submitting the form and reloading the page, which on a
+    // phone closes the keyboard on every attempt. The rows are fetched on their own
+    // anyway, so the box asks for them again as the name is typed.
+    document.addEventListener('DOMContentLoaded', function () {
+        const box = document.querySelector('.us-search-input');
+        const form = document.querySelector('.us-search-form');
+        if (!box) return;
+
+        let pending;
+        box.addEventListener('input', function () {
+            clearTimeout(pending);
+            pending = setTimeout(loadUserRows, 200);
+        });
+
+        if (form) form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            clearTimeout(pending);
+            loadUserRows();
+        });
+    });
 </script>
 
 @section Styles {
@@ -179,11 +209,23 @@
 }
 
 @section TopbarContent {
-    <form method="get" class="us-role-filter">
+    <button type="button" class="rs-filter-toggle" data-filter-toggle="usFilters"
+            aria-expanded="false" aria-controls="usFilters">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18M6 12h12M10 19h4" />
+        </svg>
+        Filters
+    </button>
+
+    <form method="get" class="us-role-filter rs-filters" id="usFilters">
         <input type="hidden" name="search" value="@searchTerm" />
+        @* Label and control are one row of the panel, so they are wrapped as one.
+           The wrapper is display:contents on a desk and lays out nothing. *@
+        <div class="us-filter">
         <label class="us-role-filter-label">Roles:</label>
         <div class="us-select-wrap">
-            <select name="role" class="us-select" onchange="this.form.submit()">
+            <select name="role" class="us-select" onchange="loadUserRows()">
                 <option value="">All Roles</option>
                 @foreach (var r in roles)
                 {
@@ -196,6 +238,7 @@
                     <polyline points="6 9 12 15 18 9" />
                 </svg>
             </span>
+        </div>
         </div>
     </form>
 }

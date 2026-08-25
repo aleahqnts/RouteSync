@@ -223,7 +223,7 @@ namespace FleetWise.Controllers
             var role = new Role
             {
                 RoleName = model.RoleName.Trim(),
-                AccessLevel = model.AccessLevel.Trim(),
+                AccessLevel = "custom",
                 WebPermissions = NormalizePermissions(model.WebPermissions, WebPermissionKeys),
                 MobilePermissions = NormalizePermissions(model.MobilePermissions, MobilePermissionKeys),
             };
@@ -277,7 +277,6 @@ namespace FleetWise.Controllers
             }
 
             role.RoleName = model.RoleName.Trim();
-            role.AccessLevel = model.AccessLevel.Trim();
             role.WebPermissions = NormalizePermissions(model.WebPermissions, WebPermissionKeys);
             role.MobilePermissions = NormalizePermissions(model.MobilePermissions, MobilePermissionKeys);
 
@@ -319,6 +318,7 @@ namespace FleetWise.Controllers
             {
                 var term = search.Trim();
                 users = users.Where(u =>
+                    u.UserId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) ||
                     (u.FirstName?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (u.LastName?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (u.EmailAddress?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));

@@ -1,4 +1,4 @@
-/* Audit/Index.cshtml */
+﻿/* Audit/Index.cshtml */
     :root {
         --au-teal: #4AADA8;
         --au-text: #2D3748;
@@ -380,6 +380,242 @@
         color: var(--au-muted);
         font-family: 'Segoe UI', sans-serif;
     }
+
+/* The reload control that belongs to the card heading rather than the title row.
+   Only a phone has a use for it. */
+.au-refresh--inline {
+    display: none;
+}
+
+/* ===========================================================================
+   Phone.
+
+   A log is scanned for three things: when it happened, whether it was allowed,
+   and who did it. Each entry becomes a card headed by those, with the sentence
+   describing it underneath and the rest a tap away.
+   =========================================================================== */
+
+@media (max-width: 599px) {
+
+    /* --- The head -------------------------------------------------------- */
+
+    /* The heading is in the app bar, and the line under it explains a rule that is
+       read once and never again. */
+    .au-subtitle {
+        display: none;
+    }
+
+    /* The heading, the line under it and the stamp are all gone, which left this row
+       holding one button and three hundred pixels of nothing. The card heading below
+       has room for the button and a title to sit it beside. */
+    .au-head {
+        display: none;
+    }
+
+    .au-updated {
+        display: none;
+    }
+
+    /* Icon only, the same square the other boards end their line with. */
+    .au-btn--icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+        height: 44px;
+        padding: 0;
+        overflow: hidden;
+        font-size: 0;
+    }
+
+        .au-btn--icon .ti {
+            font-size: 1.15rem;
+        }
+
+    /* --- The list -------------------------------------------------------- */
+
+    /* The cards are the panel. A frame drawn around them costs an inset on both sides
+       and a heading the app bar already carries. */
+    .au-card {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    /* The heading of the page, in effect, so it is sized as one. */
+    .au-card-header {
+        gap: 8px;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+
+    .au-count {
+        font-size: .72rem;
+    }
+
+    /* Last on the line, past the count, where the other boards keep theirs. */
+    .au-refresh--inline {
+        display: flex;
+        order: 9;
+        margin-left: 8px;
+    }
+
+    .au-table-wrap {
+        overflow-x: visible;
+    }
+
+    /* When and how it ended head the card, who did it and the sentence describing it
+       run underneath. Placed rather than stacked, so an entry is the same shape
+       however much it has to say. */
+    .au-table.rs-cards tbody tr.au-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        column-gap: 8px;
+        row-gap: 4px;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--au-border);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .au-table.rs-cards td {
+        display: block;
+        padding: 0;
+        border: none;
+        text-align: left;
+    }
+
+    /* When, Who, What happened and Result on every card is four words twenty times
+       over, and none of them is read after the first.
+    
+       The cells below are placed by position rather than by the name the shared script
+       writes on them: this page replaces its whole results block on every refresh, so
+       those names are not there to rely on. */
+    .au-table.rs-cards td::before {
+        content: none;
+    }
+
+    /* The date and the time read as one stamp rather than two lines. */
+    .au-table.rs-cards td.au-when {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        color: var(--au-muted);
+        font-size: .74rem;
+    }
+
+        .au-table.rs-cards .au-when-date,
+        .au-table.rs-cards .au-when-time {
+            display: inline;
+            font-size: .74rem;
+            font-weight: 600;
+        }
+
+        .au-table.rs-cards .au-when-time {
+            font-weight: 400;
+        }
+
+    .au-table.rs-cards td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    .au-table.rs-cards td.au-toggle-cell {
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+        width: auto;
+    }
+
+    .au-table.rs-cards td.au-who {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        overflow: hidden;
+        font-size: .88rem;
+        font-weight: 700;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .au-table.rs-cards td:nth-child(3) {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+
+    .au-summary {
+        font-size: .82rem;
+    }
+
+    .au-meta {
+        margin-top: 4px;
+        row-gap: 4px;
+    }
+
+    /* The panel belongs to the card above it, so it carries the card's edges and none
+       of its own frame. */
+    .au-table.rs-cards tbody tr.au-detail-row {
+        display: block;
+        /* The card above has already given up its bottom margin, so there is no gap
+           left to pull closed. */
+        margin: 0 0 8px;
+        padding: 0 12px 10px;
+        border: 1px solid var(--au-border);
+        border-top: none;
+        border-radius: 0 0 12px 12px;
+        background: #fff;
+    }
+
+        .au-table.rs-cards tr.au-detail-row > td {
+            padding: 0;
+        }
+
+    /* The card above it loses its own bottom edge while the panel is open, so the two
+       read as one box. */
+    .au-table.rs-cards tbody tr.au-row--open {
+        margin-bottom: 0;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    /* The empty state and the failure notice span the table and have no column. */
+    .au-table.rs-cards td.au-empty {
+        padding: 22px 12px;
+        text-align: center;
+    }
+
+    .au-pager {
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+    }
+
+    .au-pager-info {
+        flex: 1 0 100%;
+        text-align: center;
+    }
+}
+
+/* A tap leaves the hover state behind on a touch screen, so one entry stays lit until
+   something else is touched. */
+@media (hover: none) and (pointer: coarse) {
+
+    .au-row--clickable:hover {
+        background: transparent;
+    }
+
+    .au-row--open:hover,
+    .au-row--open {
+        background: #fff;
+    }
+}
 
 @media (max-width: 599px) {
 

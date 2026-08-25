@@ -327,23 +327,32 @@
        destinations either side stay evenly spaced around it. */
     .fw-bar__more {
         flex: 0 0 auto;
-        align-self: center;
+        /* Held to the top of the bar rather than centred in it: centring halves the
+           negative margin and the button barely clears the edge. */
+        align-self: flex-start;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 54px;
-        height: 46px;
-        margin: -14px 10px 0;
+        width: 50px;
+        height: 50px;
+        margin: -20px 14px 0;
         border: none;
-        border-radius: 15px;
-        background: var(--fw-teal-light);
-        color: var(--fw-teal);
-        box-shadow: 0 4px 14px rgba(74, 173, 168, .3);
+        border-radius: 50%;
+        background: var(--fw-teal);
+        color: #fff;
+        /* A pale ring standing the button off the bar, and a shadow under it so it
+           reads as lifted rather than cut out. */
+        box-shadow: 0 0 0 6px var(--fw-teal-light),
+                    0 6px 14px rgba(74, 173, 168, .35);
+    }
+
+    .fw-bar__more:active {
+        transform: translateY(1px);
     }
 
     .fw-bar__more svg {
-        width: 24px;
-        height: 24px;
+        width: 23px;
+        height: 23px;
         display: block;
     }
 
@@ -400,15 +409,15 @@
         background: var(--fw-divider);
     }
 
+    /* A heading, not a card. Filled and inset it competed with the links under it,
+       and gave the sheet two different gutters to read. */
     .fw-sheet__account {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         gap: 12px;
-        margin: 0 16px 8px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: #F8FAFB;
+        margin: 0 16px 10px;
+        padding: 0 6px 12px;
+        border-bottom: 1px solid var(--fw-divider);
     }
 
     .fw-sheet__who {
@@ -431,40 +440,55 @@
         color: var(--fw-text-muted);
     }
 
+    /* Below the navigation, behind a rule of its own. */
+    .fw-sheet__signout {
+        margin: 10px 16px 0;
+        padding-top: 10px;
+        border-top: 1px solid var(--fw-divider);
+    }
+
     .fw-sheet__logout {
-        flex-shrink: 0;
-        min-height: 44px;
-        padding: 9px 16px;
-        border: 1px solid var(--fw-divider);
-        border-radius: 10px;
-        background: #fff;
+        width: 100%;
+        min-height: 48px;
+        padding: 0 16px;
+        border: none;
+        border-radius: 12px;
+        background: none;
         color: #C0392B;
-        font-size: .8rem;
+        font-size: .88rem;
         font-weight: 600;
         white-space: nowrap;
     }
 
+    .fw-sheet__logout:active {
+        background: #FDECEC;
+    }
+
+    /* The rows share the gutter the heading above them uses, rather than running to
+       the edges of the sheet while everything else is inset. */
     .fw-sheet__list {
         list-style: none;
         margin: 0;
-        padding: 0;
+        padding: 0 16px;
     }
 
     .fw-sheet__link {
         display: flex;
         align-items: center;
         gap: 14px;
-        min-height: 52px;
-        padding: 0 22px;
+        min-height: 50px;
+        padding: 0 12px;
+        border-radius: 12px;
         color: var(--fw-text-dark);
         font-size: .92rem;
         font-weight: 600;
         text-decoration: none;
     }
 
+    /* Filled, the way the desk rail marks the page you are on. */
     .fw-sheet__link--active {
-        color: var(--fw-teal);
-        background: var(--fw-teal-light);
+        background: var(--fw-teal);
+        color: #fff;
     }
 
     .fw-sheet__icon svg {
@@ -484,5 +508,99 @@
     .fw-sheet,
     .fw-sheet-backdrop {
         transition: none;
+    }
+}
+
+/* ===========================================================================
+   Sign out, asked rather than assumed.
+
+   Not inside the phone gate: the rail has the same one-tap control, and losing a
+   session mid-shift costs the same either way.
+   =========================================================================== */
+
+.fw-confirm {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .45);
+}
+
+.fw-confirm--open {
+    display: flex;
+}
+
+.fw-confirm__box {
+    width: 100%;
+    max-width: 340px;
+    padding: 22px 22px 18px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .28);
+}
+
+.fw-confirm__title {
+    margin: 0 0 6px;
+    color: var(--fw-text-dark);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.fw-confirm__text {
+    margin: 0 0 18px;
+    color: var(--fw-text-muted);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: .85rem;
+    line-height: 1.45;
+}
+
+/* Two equal halves. Left to flex, one of them is a form and the other a button, and
+   they size themselves against different content. */
+.fw-confirm__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.fw-confirm__cancel,
+.fw-confirm__go {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.fw-confirm__cancel {
+    border: 1px solid var(--fw-divider);
+    background: #fff;
+    color: var(--fw-text-dark);
+}
+
+.fw-confirm__go {
+    border: none;
+    background: #C0392B;
+    color: #fff;
+}
+
+@media (max-width: 599px) {
+
+    /* From the bottom edge, the way every other dialog arrives on a phone. */
+    .fw-confirm {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .fw-confirm__box {
+        max-width: none;
+        border-radius: 16px 16px 0 0;
+        padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
     }
 }
