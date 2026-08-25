@@ -529,6 +529,7 @@
         flex-direction: column;
         gap: 6px;
         max-height: 64vh;
+        max-height: 64dvh;
         overflow-y: auto;
     }
 
@@ -568,6 +569,7 @@
         min-width: 0;
         padding: 20px 24px;
         max-height: 72vh;
+        max-height: 72dvh;
         overflow-y: auto;
     }
 
@@ -727,7 +729,18 @@
         justify-content: flex-start;
         align-items: center;
         gap: 8px;
-        margin-bottom: 12px;
+
+        /* Held under the bar while the list moves. Searching a long list means typing,
+           reading, and typing again, and the box for it was three screens up.
+
+           The negative margin and the padding that answers it let the block reach the
+           edges of the screen, so cards pass behind it rather than beside it. */
+        position: sticky;
+        top: var(--rs-bar, 56px);
+        z-index: 30;
+        margin: 0 -16px 12px;
+        padding: 8px 16px;
+        background: var(--us-bg);
     }
 
     /* Both buttons become items of the toolbar itself, so one can sit beside the

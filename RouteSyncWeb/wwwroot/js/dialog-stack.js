@@ -1,4 +1,4 @@
-// Keyboard behaviour for stacked dialogs, and holding the page still behind them.
+﻿// Keyboard behaviour for stacked dialogs, and holding the page still behind them.
 //
 // Bootstrap listens for Escape on the dialog element, so a dialog that does not trap
 // focus never sees the key until something inside is clicked. Several here deliberately
@@ -47,11 +47,9 @@
        top of it.
        --------------------------------------------------------------------------- */
 
-    var main = null;
-
+    /** The box whose scrollbar disappears when the lock goes on. */
     function scroller() {
-        if (!main) main = document.querySelector('.main-content');
-        return main;
+        return document.documentElement;
     }
 
     function anythingOpen() {

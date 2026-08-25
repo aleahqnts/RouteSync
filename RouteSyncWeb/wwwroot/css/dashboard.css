@@ -124,8 +124,8 @@
         }
 
         .db-btn-refresh:hover { background: #EAF7F5; }
-        .db-btn-refresh.spinning .db-refresh-ico { display:inline-block; animation: dbSpin .7s linear infinite; }
-        .db-refresh-ico { font-size: 1rem; line-height: 1; }
+        .db-btn-refresh.spinning .db-refresh-ico { animation: dbSpin .7s linear infinite; }
+        .db-refresh-ico { display: flex; align-items: center; font-size: 1rem; line-height: 1; }
         @keyframes dbSpin { to { transform: rotate(360deg); } }
         .db-updated { font-size: .78rem; color: var(--db-muted); font-family: 'Segoe UI', sans-serif; }
 
@@ -151,6 +151,7 @@
         width: 100%;
         max-width: 720px;
         max-height: 80vh;
+        max-height: 80dvh;
         display: flex;
         flex-direction: column;
         box-shadow: 0 14px 44px rgba(0,0,0,.28);
@@ -748,6 +749,7 @@
         max-width: none;
         width: 100%;
         max-height: 92vh;
+        max-height: 92dvh;
         border-radius: 16px 16px 0 0;
     }
 
