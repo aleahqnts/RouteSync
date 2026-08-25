@@ -120,7 +120,28 @@
 
     var first = Model.Total == 0 ? 0 : ((Model.Page - 1) * Model.PageSize) + 1;
     var last = Math.Min(Model.Page * Model.PageSize, Model.Total);
+
+    // The pages worth showing: the first, the last, and the ones either side of
+    // the one being read. Eleven pages of a log is a lot of Next.
+    var totalPages = Model.TotalPages;
+    var current = Model.Page;
+    var pageWindow = new List<int>();
+
+    void WantPage(int n)
+    {
+        if (n >= 1 && n <= totalPages && !pageWindow.Contains(n)) pageWindow.Add(n);
+    }
+
+    WantPage(1);
+    for (var n = current - 1; n <= current + 1; n++) WantPage(n);
+    WantPage(totalPages);
+    pageWindow.Sort();
 }
+
+@* Everything a reader needs while working through the log: what page this is, what
+   it is filtered to, and the headings of the columns. Held at the top of the screen
+   on a desk so only the entries move. *@
+<div class="au-sticky-head" id="auStickyHead">
 
 @* Refresh sits with the title, not with Apply: it is not a filter, and down in the filter
    row it was the first thing to wrap onto a line of its own. *@
@@ -133,7 +154,12 @@
         <span class="au-updated" id="auUpdated" title="Refreshes on its own every 30 seconds"></span>
         <button type="button" class="au-btn au-btn--outline au-btn--icon au-refresh" id="auRefreshBtn"
                 onclick="auRefresh(true)" title="Load new entries without losing your filters">
-            <i class="ti ti-refresh" aria-hidden="true"></i> Refresh
+            <span class="au-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+            </svg></span> Refresh
         </button>
     </div>
 </div>
@@ -204,6 +230,8 @@
     </div>
 </form>
 
+</div>
+
 @* TABLE *@
 <div id="auResults">
 <div class="au-card">
@@ -218,7 +246,12 @@
            above carries nothing but this button. *@
         <button type="button" class="au-btn au-btn--outline au-btn--icon au-refresh au-refresh--inline"
                 onclick="auRefresh(true)" title="Load new entries without losing your filters">
-            <i class="ti ti-refresh" aria-hidden="true"></i> Refresh
+            <span class="au-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+            </svg></span> Refresh
         </button>
         @if (!Model.LoadFailed && Model.Total > 0)
         {
@@ -226,8 +259,8 @@
         }
     </div>
 
-    <div class="au-table-wrap">
-        <table class="au-table rs-cards">
+    <div class="au-table-wrap rs-list-wrap">
+        <table class="au-table rs-cards rs-list">
             <thead>
                 <tr>
                     <th style="width:150px">When</th>
@@ -358,27 +391,64 @@
 
 @if (!Model.LoadFailed && Model.TotalPages > 1)
 {
-    <div class="au-pager">
-        @if (Model.Page > 1)
+    <nav class="au-pager" aria-label="Pages">
+        @if (current > 1)
         {
-            <a href="@PageUrl(Model.Page - 1)" class="au-btn au-btn--outline">Previous</a>
+            <a href="@PageUrl(current - 1)" class="au-page au-page--nav" rel="prev" aria-label="Previous page">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6" />
+                </svg>
+            </a>
         }
         else
         {
-            <span class="au-btn au-btn--outline au-btn--off">Previous</span>
+            <span class="au-page au-page--nav au-page--off" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6" />
+                </svg>
+            </span>
         }
 
-        <span class="au-pager-info">Page @Model.Page of @Model.TotalPages</span>
-
-        @if (Model.Page < Model.TotalPages)
+        @for (var i = 0; i < pageWindow.Count; i++)
         {
-            <a href="@PageUrl(Model.Page + 1)" class="au-btn au-btn--outline">Next</a>
+            @* A gap in the run is shown rather than closed, so the first and last pages
+               can sit beside the ones around the current one. *@
+            if (i > 0 && pageWindow[i] > pageWindow[i - 1] + 1)
+            {
+                <span class="au-page-gap" aria-hidden="true">&hellip;</span>
+            }
+
+            if (pageWindow[i] == current)
+            {
+                <span class="au-page au-page--current" aria-current="page">@pageWindow[i]</span>
+            }
+            else
+            {
+                <a href="@PageUrl(pageWindow[i])" class="au-page" aria-label="Page @pageWindow[i]">@pageWindow[i]</a>
+            }
+        }
+
+        @if (current < totalPages)
+        {
+            <a href="@PageUrl(current + 1)" class="au-page au-page--nav" rel="next" aria-label="Next page">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+            </a>
         }
         else
         {
-            <span class="au-btn au-btn--outline au-btn--off">Next</span>
+            <span class="au-page au-page--nav au-page--off" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+            </span>
         }
-    </div>
+    </nav>
 }
 </div>
 
@@ -453,6 +523,23 @@
     }, 30000);
 
     auStamp();
+
+    // What the column headings and the card heading stick beneath. The filter row
+    // wraps at narrower widths, so the height above them is not a number that can be
+    // written down.
+    function auStickyOffsets() {
+        const head = document.getElementById('auStickyHead');
+        const cardHead = document.querySelector('.au-card-header');
+        if (!head) return;
+
+        const root = document.documentElement;
+        const headH = head.offsetHeight;
+        root.style.setProperty('--au-sticky-head', headH + 'px');
+        root.style.setProperty('--au-sticky-card', (headH + (cardHead ? cardHead.offsetHeight : 0)) + 'px');
+    }
+
+    auStickyOffsets();
+    window.addEventListener('resize', auStickyOffsets);
 </script>
 
 @section Styles {

@@ -10,11 +10,13 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .app-body {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 /* Main area offset by the collapsed sidebar width */
@@ -43,9 +45,15 @@
 /* Content fills remaining space */
 .main-content {
     flex: 1;
+    /* The height of the bar pinned at the top of the window, which is where anything
+       sticky in this column has to stop. */
+    --rs-bar: 80px;
     padding: 40px 90px;
     background: #f8f9fa;
-    overflow-y: auto;
+    /* Deliberately not a scroll container. Nothing above this has a height, so it
+       could never scroll anyway, and being one made every sticky heading inside it
+       measure against a box that never moves. */
+    overflow: visible;
 }
 
 /* Phone. The desktop padding above is wider than a handset can spare, and the topbar
@@ -72,6 +80,7 @@
     }
 
     .main-content {
+        --rs-bar: 56px;
         padding: 16px;
         /* The document is what scrolls on a phone: this box has no bounded height,
            so it grows instead of scrolling. Leaving overflow on auto still makes it
@@ -343,6 +352,7 @@
     .modal-content {
         width: 100%;
         max-height: 92vh;
+        max-height: 92dvh;
         border-radius: 16px 16px 0 0;
         /* The sheet's own ground and its rounded top. Without this a body taller than
            the sheet paints past both. */
@@ -484,6 +494,7 @@ html.rs-dialog-open .main-content {
        itself rather than running off the bottom with its buttons out of reach. */
     .rs-filters.rs-filters {
         max-height: calc(100vh - 56px);
+        max-height: calc(100dvh - 56px);
         overflow-y: auto;
         overscroll-behavior: contain;
     }
@@ -638,5 +649,66 @@ html.rs-dialog-open .main-content {
     .us-title,
     .au-title {
         display: none;
+    }
+}
+
+/* ===========================================================================
+   The refresh mark.
+
+   Two arcs, drawn rather than set from an icon font, so it takes the colour of
+   the button around it and sits on the middle of its own box instead of on a
+   font's baseline.
+   =========================================================================== */
+
+.rs-ico-refresh {
+    width: 1.05em;
+    height: 1.05em;
+    display: block;
+    flex-shrink: 0;
+}
+
+/* ===========================================================================
+   Column headings that stay put.
+
+   A list of two hundred rows loses its headings within one turn of the wheel,
+   and every column after the second becomes a guess. Marked per list, because
+   it only suits the long ones.
+
+   The list scrolls inside its own box rather than with the page. It has to: a
+   heading sticks to the nearest scrolling ancestor, and these boxes already
+   scroll sideways for the tables too wide to fit, which makes them that
+   ancestor whether or not they were asked to be.
+
+   Phones are not included. There the headings are gone entirely and each row is
+   a card that names its own values.
+   =========================================================================== */
+
+@media (min-width: 600px) {
+
+    /* The page is the only thing that scrolls. Named twice so it outranks the page's
+       own rule for the same box, which sets overflow-x and loads after this file.
+
+       That rule is why the heading would not stick on its own: a box told to scroll
+       on one axis scrolls on both, which made it the nearest scrolling ancestor and
+       gave the heading a box of its own to stick inside. Two scrollbars for one list. */
+    .rs-list-wrap.rs-list-wrap {
+        overflow: visible;
+    }
+
+    .rs-list thead th {
+        position: sticky;
+        /* Under the bar, and under whatever else the page has pinned beneath it. */
+        top: calc(var(--rs-bar, 0px) + var(--rs-stick, 0px));
+        z-index: 2;
+        /* Lifted out of the flow, so it needs a ground of its own or the rows
+           travel through it. */
+        background: #fff;
+        /* A collapsed table will not paint a border on a cell that has been lifted
+           out of it, so the rule under the headings is drawn as a shadow. */
+        box-shadow: inset 0 -1.5px 0 #E8ECF0;
+        /* Headings held on one line are what made these tables wider than the card
+           they sit in. Allowed to wrap, the table compresses instead of needing a
+           scrollbar of its own. */
+        white-space: normal;
     }
 }

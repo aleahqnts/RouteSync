@@ -95,7 +95,8 @@
     .rp-date-today:hover { background:#2e7d72; color:#fff; }
     .rp-btn-refresh { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; background:#fff; color:#2e7d72; border:1px solid #CDE9E4; font-weight:700; font-size:.86rem; cursor:pointer; }
     .rp-btn-refresh:hover { background:#EAF7F5; }
-    .rp-btn-refresh.spinning .ti { animation:rpSpin .7s linear infinite; }
+    .rp-refresh-ico { display: flex; align-items: center; font-size: 1rem; line-height: 1; }
+    .rp-btn-refresh.spinning .rp-refresh-ico { animation:rpSpin .7s linear infinite; }
     @keyframes rpSpin { to { transform:rotate(360deg); } }
     .rp-updated { font-size:.78rem; color:#8a98a3; }
     .rp-hidden-date { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
@@ -623,6 +624,17 @@
     box-shadow: 0 3px 10px rgba(0,0,0,.08);
     }
 
+    /* Nine columns at desk spacing need more width than a laptop has, and the last
+       of them then hangs out of the card. The cells give up four pixels a side
+       between there and a full-width screen, where nothing is tight. */
+    @media (min-width: 600px) and (max-width: 1279px) {
+        .rp-table th,
+        .rp-table td {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+    }
+
     /* Responsive. */
     @media (max-width: 1100px) {
     .rp-stat-grid {
@@ -709,6 +721,7 @@
     width: 100%;
     max-width: 700px;
     max-height: 90vh;
+    max-height: 90dvh;
     overflow-y: auto;
     box-shadow: 0 8px 40px rgba(0,0,0,.18);
     display: flex;
@@ -882,6 +895,7 @@
     width: 100%;
     max-width: min(1240px, 96vw);
     max-height: 92vh;
+    max-height: 92dvh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 12px 48px rgba(0,0,0,.2);
@@ -1374,7 +1388,7 @@
         font-size: 0;
     }
 
-        .rp-btn-refresh .ti {
+        .rp-btn-refresh .rp-refresh-ico {
             font-size: 1.15rem;
         }
 
@@ -1733,6 +1747,7 @@
             max-width: none;
             width: 100%;
             max-height: 92vh;
+            max-height: 92dvh;
             border-radius: 16px 16px 0 0;
         }
 

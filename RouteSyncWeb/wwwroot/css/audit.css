@@ -101,8 +101,16 @@
         gap: 6px;
     }
 
-    .au-btn--icon i { font-size: 15px; line-height: 1; }
-    .au-btn--icon.spinning i { animation: auSpin .7s linear infinite; }
+    .au-refresh-ico { display: flex; align-items: center; font-size: 15px; line-height: 1; }
+    .au-btn--icon.spinning .au-refresh-ico { animation: auSpin .7s linear infinite; }
+
+    /* The reload control is the same teal as the one on every other board. */
+    .au-btn--icon.au-refresh {
+        border-color: #CDE9E4;
+        color: #2e7d72;
+    }
+
+    .au-btn--icon.au-refresh:hover { background: #EAF7F5; }
 
     @keyframes auSpin { to { transform: rotate(360deg); } }
 
@@ -367,24 +375,114 @@
 
 
     /* Pager. */
+    /* Pages, numbered.
+
+       A pair of Previous and Next buttons with a count between them tells you where
+       you are and gives you one step in each direction. The numbers let you get to
+       the far end of a log in one tap. */
     .au-pager {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 14px;
+        flex-wrap: wrap;
+        gap: 6px;
         margin-top: 18px;
     }
 
-    .au-pager-info {
+    .au-page {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        padding: 0 8px;
+        border: 1.5px solid var(--au-border);
+        border-radius: 9px;
+        background: var(--au-white);
+        color: var(--au-text);
+        font-family: 'Segoe UI', sans-serif;
         font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color 180ms, color 180ms, background 180ms;
+    }
+
+    .au-page:hover {
+        border-color: var(--au-teal);
+        color: var(--au-teal);
+    }
+
+    .au-page--current {
+        border-color: var(--au-teal);
+        background: var(--au-teal);
+        color: #fff;
+    }
+
+    .au-page--nav svg {
+        width: 15px;
+        height: 15px;
+        display: block;
+    }
+
+    /* The end of the run. Shown rather than removed, so the row does not shift by the
+       width of a button as the pages are stepped through. */
+    .au-page--off {
+        opacity: .4;
+        pointer-events: none;
+    }
+
+    .au-page-gap {
+        padding: 0 2px;
         color: var(--au-muted);
         font-family: 'Segoe UI', sans-serif;
+        font-size: 0.82rem;
     }
 
 /* The reload control that belongs to the card heading rather than the title row.
    Only a phone has a use for it. */
 .au-refresh--inline {
     display: none;
+}
+
+/* ===========================================================================
+   The head of the page, held while the entries move.
+
+   Three layers, each pinned under the one above it: the title and the filters,
+   then the card's heading and its count, then the column names. Everything that
+   says what is being looked at stays; only the log itself travels.
+
+   The offsets come from auStickyOffsets(), which measures them, because the
+   filter row wraps to two lines on a narrow window.
+   =========================================================================== */
+
+@media (min-width: 600px) {
+
+    .au-sticky-head {
+        position: sticky;
+        top: var(--rs-bar, 0px);
+        z-index: 4;
+        /* Its own ground, and the gap under it, or entries show through both as they
+           pass behind. */
+        background: var(--au-bg);
+        padding-bottom: 18px;
+    }
+
+        /* The gap below the filters belongs to the block now. */
+        .au-sticky-head .au-filters {
+            margin-bottom: 0;
+        }
+
+    .au-card-header {
+        position: sticky;
+        top: calc(var(--rs-bar, 0px) + var(--au-sticky-head, 0px));
+        z-index: 3;
+        background: var(--au-white);
+    }
+
+    /* Under both of them. The shared rule reads this and sets everything else. */
+    .au-table.rs-list {
+        --rs-stick: var(--au-sticky-card, 0px);
+    }
 }
 
 /* ===========================================================================
@@ -424,12 +522,54 @@
         flex: 0 0 44px;
         height: 44px;
         padding: 0;
+        /* The label beside the mark is set to nothing rather than removed, and the gap
+           meant for it would still push the mark off centre. */
+        gap: 0;
         overflow: hidden;
         font-size: 0;
     }
 
-        .au-btn--icon .ti {
+        .au-btn--icon .au-refresh-ico {
             font-size: 1.15rem;
+        }
+
+    /* --- The filter panel ------------------------------------------------ */
+
+    /* Each field is a column on a desk, label above control. The shared panel makes
+       every one of its children a flex row and centres them, which on a column means
+       centred across the screen: six labels and six controls all floating in the
+       middle with nothing to line up against. A row each, read left to right. */
+    .au-filters.rs-filters .au-filter {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+        .au-filters.rs-filters .au-filter label {
+            flex: 0 0 auto;
+            text-align: left;
+        }
+
+        .au-filters.rs-filters .au-input {
+            flex: 1;
+            min-width: 0;
+            max-width: 62%;
+            min-height: 40px;
+        }
+
+    /* Apply and Clear take the width between them rather than sitting in the middle
+       of it. */
+    .au-filters.rs-filters .au-filter-actions {
+        justify-content: stretch;
+        gap: 10px;
+        margin-top: 2px;
+    }
+
+        .au-filters.rs-filters .au-filter-actions > .au-btn {
+            flex: 1;
+            min-height: 44px;
+            text-align: center;
         }
 
     /* --- The list -------------------------------------------------------- */
@@ -592,14 +732,14 @@
     }
 
     .au-pager {
-        gap: 10px;
+        gap: 5px;
         margin-top: 12px;
-        flex-wrap: wrap;
     }
 
-    .au-pager-info {
-        flex: 1 0 100%;
-        text-align: center;
+    .au-page {
+        min-width: 34px;
+        height: 34px;
+        padding: 0 6px;
     }
 }
 
