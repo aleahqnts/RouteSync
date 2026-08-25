@@ -20,6 +20,7 @@
 
 body {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -28,6 +29,7 @@ body {
 .bg-wrapper {
     width: 100vw;
     min-height: 100vh;
+    min-height: 100dvh;
     background: url('/images/login-bg.png') no-repeat center center;
     background-size: cover;
     display: flex;

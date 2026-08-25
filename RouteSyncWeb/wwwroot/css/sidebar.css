@@ -18,6 +18,7 @@
         top: 0;
         left: 0;
         height: 100vh;
+        height: 100dvh;
         width: var(--fw-sidebar-collapsed);
         background: var(--fw-bg);
         box-shadow: 2px 0 12px rgba(0, 0, 0, .08);
@@ -279,11 +280,30 @@
         right: 0;
         bottom: 0;
         z-index: 1000;
-        background: var(--fw-bg);
-        border-top: 1px solid var(--fw-divider);
         /* Clears the home indicator on a phone that has one. */
         padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    /* The bar's own surface, drawn behind its links so the round button in the middle
+       is not cut away with it, and scooped out around that button so the page shows
+       through the gap rather than the bar running flat underneath. */
+    .fw-bar::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--fw-bg);
+        border-top: 1px solid var(--fw-divider);
         box-shadow: 0 -2px 12px rgba(15, 23, 42, .08);
+        /* Centred on the top edge, so the hole is the half of a circle that the button
+           sits in, a few pixels wider than the button to leave a gap around it.
+
+           The ramp between the two stops is the edge of the cut. Held at one pixel it
+           steps; given three it reads as a drawn curve without going soft. */
+        -webkit-mask-image: radial-gradient(circle 31px at 50% 0,
+                                            transparent 0 90%, rgba(0, 0, 0, .55) 95%, #000 100%);
+        mask-image: radial-gradient(circle 31px at 50% 0,
+                                    transparent 0 90%, rgba(0, 0, 0, .55) 95%, #000 100%);
     }
 
     .fw-bar__link {
@@ -335,15 +355,18 @@
         justify-content: center;
         width: 50px;
         height: 50px;
-        margin: -20px 14px 0;
+        /* Half the button's height, so its centre lands exactly on the bar's top edge
+           and it sits in the middle of the scoop cut there. */
+        margin: -25px 14px 0;
         border: none;
         border-radius: 50%;
         background: var(--fw-teal);
         color: #fff;
-        /* A pale ring standing the button off the bar, and a shadow under it so it
-           reads as lifted rather than cut out. */
-        box-shadow: 0 0 0 6px var(--fw-teal-light),
-                    0 6px 14px rgba(74, 173, 168, .35);
+        /* Only a shadow under it. A ring in a solid colour reads as a disc laid on
+           whatever is behind, which over the map was a pale circle punched through
+           the streets; a shadow alone lets the page run under the button. */
+        box-shadow: 0 4px 12px rgba(15, 23, 42, .18),
+                    0 2px 4px rgba(15, 23, 42, .10);
     }
 
     .fw-bar__more:active {
@@ -381,6 +404,7 @@
         bottom: 0;
         z-index: 1020;
         max-height: 76vh;
+        max-height: 76dvh;
         overflow-y: auto;
         padding: 8px 0 calc(16px + env(safe-area-inset-bottom, 0));
         background: var(--fw-bg);

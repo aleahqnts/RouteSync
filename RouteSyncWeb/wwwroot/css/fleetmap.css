@@ -654,13 +654,29 @@
         justify-content: flex-start;
     }
 
+    /* The bar on this page carries a search box, and the page name was taking a third
+       of it for something the map and the lit tab below already say. */
+    .rs-bar-title {
+        display: none;
+    }
+
     .fm-search-wrap {
         flex: 1;
         min-width: 0;
     }
 
+    /* Both controls on this row are the same height, or the shorter one reads as
+       sitting in a dent. */
+    .fm-topbar .rs-filter-toggle {
+        min-height: 44px;
+    }
+
     .fm-search-input {
         width: 100%;
+        height: 44px;
+        /* The desk fills this the same grey as the page behind it. Here it floats on
+           the bar, where that grey reads as a disabled field. */
+        background: var(--fm-white, #fff);
     }
 
     /* Bus detail arrives from the bottom, where a thumb is, instead of taking a
@@ -672,6 +688,7 @@
         bottom: 0;
         width: 100%;
         max-height: 58vh;
+        max-height: 58dvh;
         /* Over the navigation button, which sits at the foot of every screen.
            Beneath it, the button would float on top of the bus being read. */
         z-index: 1300;

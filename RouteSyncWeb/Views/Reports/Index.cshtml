@@ -14,7 +14,12 @@
             <button type="button" class="rp-date-today" id="rpTodayBtn" style="display:none;">Today</button>
         </div>
         <button type="button" class="rp-btn-refresh" id="rpRefreshBtn" title="Refresh report data">
-            <i class="ti ti-refresh"></i> Refresh
+            <span class="rp-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+            </svg></span> Refresh
         </button>
         <span class="rp-updated" id="rpUpdated" title="Auto-refreshes every 30 seconds"></span>
         <input type="date" id="dateFilter" class="rp-hidden-date" />
@@ -106,8 +111,8 @@
         <span class="rp-card-title">Daily Trip Reports</span>
     </div>
 
-    <div class="rp-table-wrap">
-        <table class="rp-table rs-cards rs-collapse">
+    <div class="rp-table-wrap rs-list-wrap">
+        <table class="rp-table rs-cards rs-collapse rs-list">
             <thead>
                 <tr>
                     <th>Trip ID</th>

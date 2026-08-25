@@ -12,7 +12,12 @@
     <div class="db-title-tools">
         <span class="db-date-badge">@Model.Today.ToString("ddd, dd MMM yyyy")</span>
         <button class="db-btn-refresh" id="dbRefreshBtn" onclick="dbRefresh(true)" title="Refresh this page only">
-            <span class="db-refresh-ico">&#x21bb;</span> Refresh
+            <span class="db-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+            </svg></span> Refresh
         </button>
         <span class="db-updated" id="dbUpdated" title="Auto-refreshes every 30 seconds"></span>
     </div>

@@ -165,6 +165,6 @@
         .sch-table thead .sch-shift-col { z-index: 3; }
 
         .sch-modal-overlay { padding: 0; align-items: flex-end; }
-        .sch-modal { max-width: none; max-height: 92vh; overflow-y: auto;
+        .sch-modal { max-width: none; max-height: 92vh; max-height: 92dvh; overflow-y: auto;
                      border-radius: 16px 16px 0 0; }
     }
