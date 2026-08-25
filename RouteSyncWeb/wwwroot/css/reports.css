@@ -554,6 +554,14 @@
     font-weight: 500;
     }
 
+    /* A glance at what the filters have caught.
+
+       The preview beside it says all of this on a desk, at length, so this is only
+       ever seen where the preview is not. */
+    .rg-glance {
+        display: none;
+    }
+
     /* Report templates. */
     .rp-card--templates {
     margin-bottom: 0;
@@ -1290,6 +1298,425 @@
     }
     }
 
+/* The wrapper exists so a phone has one panel to open. On a desk it must not exist at
+   all, or the label and the select become one item in the bar and stack instead of
+   sitting side by side. */
+.rp-topfilters {
+    display: contents;
+}
+
+/* ===========================================================================
+   Phone.
+
+   A report is read down: the day's four figures, the trips behind them, then the
+   summaries. Everything below takes the furniture built for a desk and sizes it
+   for a hand, and turns the nine-column table into a stack of cards.
+   =========================================================================== */
+
+@media (max-width: 599px) {
+
+    /* --- The day ------------------------------------------------------- */
+
+    .rp-title-row {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .rp-toolbar-right {
+        display: flex;
+        width: 100%;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .rp-date-nav {
+        flex: 1;
+        min-width: 0;
+        justify-content: space-between;
+    }
+
+    /* Given a share of the row rather than its natural width, and told to keep to it:
+       nowrap alone let the date print straight over the arrow beside it. */
+    .rp-date-badge {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+        overflow: hidden;
+        padding: 7px 10px;
+        font-size: .78rem;
+        text-overflow: ellipsis;
+    }
+
+        /* The badge is the only date on the row; a calendar drawn beside it is a
+           second way of saying so, at the cost of the room the date needs. */
+        .rp-date-badge i {
+            display: none;
+        }
+
+    .rp-date-today {
+        padding: 7px 11px;
+        font-size: .78rem;
+    }
+
+    .rp-date-arrow,
+    .rp-date-today {
+        flex: 0 0 auto;
+    }
+
+    /* Icon only: the word beside it is what the icon already says. */
+    .rp-btn-refresh {
+        flex: 0 0 44px;
+        height: 44px;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        overflow: hidden;
+        font-size: 0;
+    }
+
+        .rp-btn-refresh .ti {
+            font-size: 1.15rem;
+        }
+
+    /* A line carrying only a time is a poor trade for the room it takes. The button
+       that refreshes the page says it in its tooltip instead. */
+    .rp-updated {
+        display: none;
+    }
+
+    /* --- The four figures ---------------------------------------------- */
+
+    /* One card per screen width is four screens of scrolling to read four numbers.
+       Two across, and the number sized for a glance rather than a poster. */
+    .rp-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .rp-stat-card {
+        padding: 12px 12px 14px;
+    }
+
+    .rp-stat-header {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .rp-stat-icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    .rp-stat-label {
+        font-size: .74rem;
+        line-height: 1.2;
+    }
+
+    .rp-stat-value {
+        font-size: 1.4rem;
+    }
+
+    .rp-stat-sub,
+    .rp-stat-delta {
+        font-size: .68rem;
+    }
+
+    /* --- Cards --------------------------------------------------------- */
+
+    .rp-card {
+        padding: 14px 14px 16px;
+        margin-bottom: 12px;
+    }
+
+    .rp-card-header {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .rp-card-icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* --- The trips ------------------------------------------------------ */
+
+    /* The table is nine columns wide and cannot be made narrow by reflowing, so each
+       row becomes a card. Closed it carries what a report is scanned for: which trip,
+       how it ended, and the two figures it contributed. The rest is a tap away. */
+    .rp-table-wrap {
+        overflow-x: visible;
+    }
+
+    .rp-table.rs-collapse tbody tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 2px;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--rp-border);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    /* Desk cell padding indents every value inside a card that is padded already,
+       and rules a line under it the card does not need. Both tables want this. */
+    .rp-table.rs-cards td {
+        display: block;
+        padding: 0;
+        border: none;
+        text-align: left;
+    }
+
+    /* Trip and status head the card; the two figures sit under them. Placed rather
+       than stacked, so the closed card is two lines whatever it holds. */
+    .rp-table.rs-collapse tbody td:first-child {
+        display: flex;
+        align-items: baseline;
+        justify-content: flex-start;
+        gap: 8px;
+        grid-column: 1;
+        grid-row: 1;
+        font-weight: 700;
+    }
+
+    .rp-table.rs-collapse td[data-label="Status"] {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    /* How the trip ended and what it carried stay on the closed card. Named three
+       times over, or the shared rule that hides every value but the first outranks
+       these and the card shows a trip number and nothing else. */
+    .rp-table.rp-table.rs-collapse tbody tr:not(.rs-open) td[data-label="Status"],
+    .rp-table.rp-table.rs-collapse tbody tr:not(.rs-open) td[data-label="Revenue"] {
+        display: block;
+    }
+
+    /* The count keeps the row it needs to hold its word and its figure apart. */
+    .rp-table.rp-table.rs-collapse tbody tr:not(.rs-open) td[data-label="Passengers"] {
+        display: flex;
+    }
+
+    /* The badge says what it is. */
+    .rp-table.rs-collapse td[data-label="Status"]::before {
+        content: none;
+    }
+
+    .rp-table.rs-collapse td[data-label="Passengers"] {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .rp-table.rs-collapse td[data-label="Revenue"] {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+    }
+
+    /* Everything the closed card does not show lands under the two lines above it. */
+    /* What opens is a record rather than a heading: the name of each field held
+       quietly on the left, the value it carries reading back from the right. */
+    .rp-table.rs-collapse td[data-label="Driver"],
+    .rp-table.rs-collapse td[data-label="Bus ID"],
+    .rp-table.rs-collapse td[data-label="Route"],
+    .rp-table.rs-collapse td[data-label="Shift"] {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        grid-column: 1 / -1;
+        padding: 4px 0;
+        color: var(--rp-text);
+        font-size: .82rem;
+        font-weight: 600;
+        text-align: right;
+    }
+
+        .rp-table.rs-collapse td[data-label="Driver"]::before,
+        .rp-table.rs-collapse td[data-label="Bus ID"]::before,
+        .rp-table.rs-collapse td[data-label="Route"]::before,
+        .rp-table.rs-collapse td[data-label="Shift"]::before {
+            flex: 0 0 auto;
+            color: var(--rp-muted);
+            font-size: .72rem;
+            font-weight: 500;
+            text-align: left;
+        }
+
+    /* The button closes the card off rather than sitting in the column of values. */
+    .rp-table.rs-collapse td[data-label="Actions"] {
+        display: flex;
+        justify-content: stretch;
+        grid-column: 1 / -1;
+    }
+
+    .rp-table.rs-collapse td[data-label="Driver"] {
+        margin-top: 8px;
+        border-top: 1px solid var(--rp-border);
+        padding-top: 10px;
+    }
+
+    /* The bus is written on two lines, which a flex row spreads across the width.
+       The name holds the left edge and the two of them stay together on the right. */
+    .rp-table.rs-collapse td[data-label="Bus ID"] {
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+        .rp-table.rs-collapse td[data-label="Bus ID"]::before {
+            margin-right: auto;
+        }
+
+    .rp-table.rs-collapse td[data-label="Bus ID"] br {
+        display: none;
+    }
+
+    /* The chevron holds the right edge of the trip line. */
+    .rp-table.rs-collapse tbody tr td:first-child::after {
+        margin-left: auto;
+    }
+
+    /* The peso sign names the takings; a count on its own names nothing, so that one
+       keeps the word in front of it. */
+    .rp-table.rs-collapse td[data-label="Revenue"]::before,
+    .rp-table.rs-collapse td[data-label="Actions"]::before {
+        content: none;
+    }
+
+    .rp-table.rs-collapse td[data-label="Passengers"],
+    .rp-table.rs-collapse td[data-label="Revenue"] {
+        color: var(--rp-muted);
+        font-size: .78rem;
+    }
+
+    .rp-table.rs-collapse td[data-label="Passengers"] {
+        display: flex;
+        align-items: baseline;
+        /* The shared card rule sets space-between, which throws the count to the far
+           side of its column with the word stranded on the other. */
+        justify-content: flex-start;
+        gap: 0;
+    }
+
+        /* Held apart by a margin rather than a gap, which only separates the two of
+           them while the cell is a flex row and leaves them touching when it is not. */
+        .rp-table.rs-collapse td[data-label="Passengers"]::before {
+            margin-right: 6px;
+        }
+
+    /* A closed card shows a trip and how it ended, not a button. */
+    .rp-table.rs-collapse tbody tr:not(.rs-open) td[data-label="Actions"] {
+        display: none;
+    }
+
+    .rp-table.rs-collapse td[data-label="Actions"] .rp-btn-view {
+        flex: 1;
+        min-height: 38px;
+        margin-top: 8px;
+        padding: 0 18px;
+        font-weight: 600;
+    }
+
+    /* The loading line and the empty state span the table and have no column. */
+    .rp-table.rs-cards td:not([data-label]) {
+        grid-column: 1 / -1;
+        text-align: center;
+    }
+
+    /* The dialog behind a figure holds a table of its own, six columns wide. It reads
+       as cards on the same terms as the board does, from its own headings. */
+    .tr-modal-header {
+        padding: 16px 16px 12px;
+    }
+
+    .tr-modal-title {
+        font-size: 1rem;
+    }
+
+    .tr-section {
+        padding: 12px 14px;
+    }
+
+    .st-count {
+        display: block;
+    }
+
+    .rp-pagination {
+        justify-content: center;
+        margin-top: 12px;
+        gap: 8px;
+    }
+
+    .rp-pagination-info {
+        flex: 1 0 100%;
+        text-align: center;
+    }
+
+    /* --- Summaries ------------------------------------------------------ */
+
+    /* The figure and its chart share a row on a desk. Given the width of a phone
+       neither has enough of it, so the chart takes the line below. */
+    .rp-summary-body {
+        flex-direction: column;
+        /* The desk lays these side by side and lets each size itself. Stacked, the
+           chart has to be told to take the width or it measures out at nothing. */
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .rp-mini-chart-wrap {
+        height: 120px;
+    }
+
+    /* Fixed at a height that suits a wide card. Given the full width of a phone it
+       takes a third of the screen. */
+    .rp-bar-canvas {
+        height: 190px !important;
+    }
+
+    .rp-bar-section {
+        padding-top: 12px;
+    }
+
+    /* --- Templates ------------------------------------------------------ */
+
+    .rp-templates-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .rp-template-btns {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .rp-template-btn {
+        width: 100%;
+        padding: 12px 18px;
+        font-size: .85rem;
+    }
+}
+
+/* A tap leaves the hover state behind on a touch screen, so one card stays lit until
+   something else is touched. */
+@media (hover: none) and (pointer: coarse) {
+
+    .rp-table tbody tr:hover {
+        background: transparent;
+    }
+
+    .rp-template-btn:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
     @media (max-width: 599px) {
 
         /* Trip detail, the figure behind a summary card, and the export dialog all
@@ -1312,5 +1739,128 @@
         /* Paired facts read as one column when there is no room for two. */
         .tr-grid {
             grid-template-columns: minmax(0, 1fr);
+        }
+
+        /* Cancel, the format switch and Download were a single row held at the right
+           edge. Given less width than they need the row does not wrap, it overhangs,
+           and Cancel leaves the screen on the left. Two rows, and every control keeps
+           its place. */
+        .rg-footer {
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0));
+        }
+
+        /* Ahead of both buttons, so the two of them share the line below it rather
+           than taking one each. */
+        .rg-format-toggle {
+            order: -1;
+            flex: 1 0 100%;
+            margin-right: 0;
+            justify-content: space-between;
+        }
+
+        .rg-toggle-group {
+            flex: 1;
+            max-width: 60%;
+        }
+
+        .rg-toggle-btn {
+            flex: 1;
+            justify-content: center;
+            min-height: 38px;
+        }
+
+        .rg-btn-cancel {
+            flex: 0 0 auto;
+            min-height: 40px;
+        }
+
+        .rg-btn-download {
+            flex: 1;
+            justify-content: center;
+            min-height: 40px;
+        }
+
+        /* A page of a report shrunk to this width is unreadable, and a preview nobody
+           can read is a screen of scrolling between the filters and the button that
+           downloads the thing itself. The file is what is wanted here. */
+        .rg-preview {
+            display: none;
+        }
+
+        /* What the preview was for: knowing the file is worth taking before taking it. */
+        .rg-glance {
+            display: block;
+            margin-top: 2px;
+            padding: 12px 14px;
+            border: 1px solid var(--rp-border);
+            border-radius: 12px;
+            background: #F7FAFA;
+        }
+
+        .rg-glance-head {
+            margin-bottom: 8px;
+            color: var(--rp-muted);
+            font-family: 'Segoe UI', sans-serif;
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .rg-glance-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 3px 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .rg-glance-label {
+            color: var(--rp-muted);
+            font-size: .8rem;
+        }
+
+        .rg-glance-value {
+            color: var(--rp-text);
+            font-size: .95rem;
+            font-weight: 700;
+        }
+
+        .rg-glance-period {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--rp-border);
+            color: var(--rp-muted);
+            font-family: 'Segoe UI', sans-serif;
+            font-size: .72rem;
+        }
+
+        .rg-glance-note {
+            color: var(--rp-muted);
+            font-family: 'Segoe UI', sans-serif;
+            font-size: .82rem;
+        }
+
+        /* Nothing to download is the one thing worth interrupting for. */
+        .rg-glance-note--empty {
+            color: #E74C3C;
+            font-weight: 600;
+        }
+
+        /* The filter column carries desk padding on three sides of a screen that has
+           none to give, and is now the whole of the dialog body. */
+        .rg-filters {
+            padding: 14px;
+            gap: 12px;
+            border-right: none;
+            background: #fff;
+        }
+
+        .rg-modal-header {
+            padding: 14px 16px;
         }
     }

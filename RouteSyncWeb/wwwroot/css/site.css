@@ -344,13 +344,39 @@
         width: 100%;
         max-height: 92vh;
         border-radius: 16px 16px 0 0;
+        /* The sheet's own ground and its rounded top. Without this a body taller than
+           the sheet paints past both. */
+        overflow: hidden;
+    }
+
+    /* Several of these wrap the header, the body and the footer in one form, which
+       leaves the body inside a plain block with no bounded height to scroll within.
+       The form becomes the column instead. Not the hidden ones, which are posted by
+       a button elsewhere and must stay out of the layout. */
+    .modal-content > form:not([hidden]) {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: 100%;
     }
 
     .modal-body {
+        /* A flex child will not shrink below its content unless it is allowed to. Left
+           at auto the body keeps its full height, spills out of the sheet, and every
+           field below the fold renders over the page with no background behind it. */
+        min-height: 0;
         overflow-y: auto;
+        /* The page behind is already held still; this stops a flick at the end of the
+           list handing the scroll back to it. */
+        overscroll-behavior: contain;
     }
 
-    /* Footer buttons share the width rather than crowding the right edge. */
+    /* Footer buttons share the width rather than crowding the right edge, and clear
+       the home indicator on a phone that has one. */
+    .modal-footer {
+        padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0));
+    }
+
     .modal-footer > .btn {
         flex: 1 1 auto;
     }
@@ -373,6 +399,24 @@
         overflow-x: clip;
         max-width: 100%;
     }
+}
+
+/* ===========================================================================
+   The page behind a dialog.
+
+   Written on the root element by dialog-stack.js while anything covers the page.
+   Both boxes are named because which one scrolls depends on the width: the document
+   on a phone, the content column on a desk. Bootstrap locks the body, which is
+   neither of them here.
+   =========================================================================== */
+
+html.rs-dialog-open,
+html.rs-dialog-open body {
+    overflow: hidden;
+}
+
+html.rs-dialog-open .main-content {
+    overflow: hidden;
 }
 
 /* ===========================================================================
@@ -434,6 +478,14 @@
 
     .rs-filters.rs-filters--open {
         display: flex;
+    }
+
+    /* A panel of six fields is taller than the screen it drops onto. It scrolls inside
+       itself rather than running off the bottom with its buttons out of reach. */
+    .rs-filters.rs-filters {
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
     }
 
     /* Label on the left, control on the right, one row each. */

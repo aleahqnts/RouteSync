@@ -131,7 +131,7 @@
     </div>
     <div class="au-head-actions">
         <span class="au-updated" id="auUpdated" title="Refreshes on its own every 30 seconds"></span>
-        <button type="button" class="au-btn au-btn--outline au-btn--icon" id="auRefreshBtn"
+        <button type="button" class="au-btn au-btn--outline au-btn--icon au-refresh" id="auRefreshBtn"
                 onclick="auRefresh(true)" title="Load new entries without losing your filters">
             <i class="ti ti-refresh" aria-hidden="true"></i> Refresh
         </button>
@@ -139,7 +139,10 @@
 </div>
 
 @* FILTERS *@
-<form method="get" class="au-filters">
+@* Six fields and two buttons are most of a phone screen before a single entry is
+   read. The shared rules fold them behind the button in the bar; on a desk the
+   class carries nothing and the row lays out where it always did. *@
+<form method="get" class="au-filters rs-filters" id="auFilters" data-filter-stay>
     <div class="au-filter">
         <label for="auQuery">Search</label>
         <input type="text" id="auQuery" name="q" value="@Model.Query" class="au-input"
@@ -211,6 +214,12 @@
             <polyline points="9 12 11 14 15 10" />
         </svg>
         <span>Recorded activity</span>
+        @* Rendered at every width and shown only on a phone, where the title row
+           above carries nothing but this button. *@
+        <button type="button" class="au-btn au-btn--outline au-btn--icon au-refresh au-refresh--inline"
+                onclick="auRefresh(true)" title="Load new entries without losing your filters">
+            <i class="ti ti-refresh" aria-hidden="true"></i> Refresh
+        </button>
         @if (!Model.LoadFailed && Model.Total > 0)
         {
             <span class="au-count">@first to @last of @Model.Total</span>
@@ -404,8 +413,8 @@
     async function auRefresh(manual) {
         if (auBusy) return;
         auBusy = true;
-        const btn = document.getElementById('auRefreshBtn');
-        if (manual && btn) btn.classList.add('spinning');
+        const buttons = document.querySelectorAll('.au-refresh');
+        if (manual) buttons.forEach(function (b) { b.classList.add('spinning'); });
         try {
             // Rows the reader had expanded. Ids are audit_log ids and the table is
             // append-only, so a row that is still on the page is still the same row.
@@ -434,7 +443,7 @@
             console.warn('audit refresh failed', e);
         } finally {
             auBusy = false;
-            if (btn) btn.classList.remove('spinning');
+            buttons.forEach(function (b) { b.classList.remove('spinning'); });
         }
     }
 
@@ -448,4 +457,15 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/audit.css" asp-append-version="true" />
+}
+
+@section TopbarContent {
+    <button type="button" class="rs-filter-toggle" data-filter-toggle="auFilters"
+            aria-expanded="false" aria-controls="auFilters">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18M6 12h12M10 19h4" />
+        </svg>
+        Filters
+    </button>
 }
