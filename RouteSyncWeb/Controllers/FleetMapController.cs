@@ -286,6 +286,11 @@ namespace FleetWise.Controllers
             // Parked buses: every vehicle not on a trip, shown stationary at its terminal.
             foreach (var vehicle in vehiclesResponse.Models)
             {
+                // A retired bus is out of the fleet. The registry leaves it out of its
+                // counts, and a map showing one more bus than the registry has is read as
+                // a bus nobody can account for.
+                if (vehicle.RetiredAt != null)
+                    continue;
                 if (movingVehicleIds.Contains(vehicle.VehicleId))
                     continue;
                 if (routeId.HasValue && vehicle.RouteId != routeId.Value)

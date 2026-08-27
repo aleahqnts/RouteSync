@@ -712,3 +712,84 @@ html.rs-dialog-open .main-content {
         white-space: normal;
     }
 }
+
+/* ===========================================================================
+   The head of a list page, held while its rows move.
+
+   Up to three layers, each pinned under the one above it: the block of controls
+   the page opens with, the heading of the card the list sits in, then the column
+   names. Everything that says what is being looked at stays; only the list itself
+   travels.
+
+   A page marks its own blocks and needs nothing else. The heights they stop at are
+   measured by sticky-head.js, because a row of filters wraps at narrower widths and
+   a heading takes a second line when a count is long.
+
+   Phones are left out. There the controls are held by rules of their own, and the
+   column headings do not exist.
+   =========================================================================== */
+
+:root {
+    /* Air between the bar and the first thing held under it. Without it a button
+       held at the top sits against the bar's edge. */
+    --rs-lead: 12px;
+}
+
+@media (min-width: 600px) {
+
+    [data-sticky-head] {
+        position: sticky;
+        top: calc(var(--rs-bar, 0px) + var(--rs-lead, 0px));
+        z-index: 4;
+        /* The ground of the content column, or what is above passes through it. */
+        background: #f8f9fa;
+        /* Neither the air above nor the gap below is part of the box, and neither
+           paints anything, so rows would show in both. Repeated above and below in
+           the same colour they are covered, and nothing has to move to do it. Both
+           are measured with the block. */
+        box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 #f8f9fa,
+                    0 var(--rs-head-gap, 0px) 0 #f8f9fa;
+    }
+
+    [data-sticky-card] {
+        position: sticky;
+        top: calc(var(--rs-bar, 0px) + var(--rs-head, 0px));
+        z-index: 3;
+
+        /* Grown out to the card's own edge and pulled back by as much, so nothing
+           moves. The box is now the top of the card rather than a band inside it,
+           and held at the bar it keeps the card's corner and border instead of
+           reading as a white slab where the card was cut off.
+
+           The card's own padding is 20px against a 1px border on every page here.
+           A card built to other measurements sets these two on its heading. */
+        --rs-card-inset: 21px;
+        --rs-card-inset-x: 23px;
+        margin-top: calc(var(--rs-card-inset) * -1);
+        margin-left: calc(var(--rs-card-inset-x) * -1);
+        margin-right: calc(var(--rs-card-inset-x) * -1);
+        padding-top: calc(var(--rs-card-inset) - 1px);
+        padding-left: calc(var(--rs-card-inset-x) - 1px);
+        padding-right: calc(var(--rs-card-inset-x) - 1px);
+        border: 1px solid #E8ECF0;
+        /* Whatever rule the heading draws under itself is its own; a card without
+           one keeps none. */
+        border-bottom: 0;
+        border-radius: 14px 14px 0 0;
+        background: #fff;
+        box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 #f8f9fa;
+    }
+
+    /* The gap below the heading, carrying the card's sides through it. */
+    [data-sticky-card]::after {
+        content: "";
+        position: absolute;
+        top: calc(100% + var(--rs-card-edge, 0px));
+        left: -1px;
+        right: -1px;
+        height: var(--rs-card-gap, 0px);
+        background: #fff;
+        border-left: 1px solid #E8ECF0;
+        border-right: 1px solid #E8ECF0;
+    }
+}

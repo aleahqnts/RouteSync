@@ -142,7 +142,9 @@
     }
 
     .us-search-input {
-        width: 260px;
+        /* Room for a full name and a work address, which is what is typed here.
+           Wider than that and it takes the toolbar over. */
+        width: 340px;
         padding: 7px 14px 7px 36px;
         border: 1.5px solid var(--us-border);
         border-radius: 10px;

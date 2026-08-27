@@ -698,6 +698,11 @@
     .vh-badge--repair    { background: #FEF9E7; color: #B7950B; }
     .vh-badge--default   { background: var(--vh-bg); color: var(--vh-text); }
 
+    /* A bus that is out of the fleet rather than off the road, which is why this
+       is not the slate the grounded ones wear. It had been falling to the default,
+       whose ground is the colour of the page and so said nothing at all. */
+    .vh-badge--retired   { background: #E4E7EC; color: #4B5563; }
+
     /* Action buttons. */
     .vh-actions-cell { display: flex; gap: 8px; }
 
@@ -1615,6 +1620,13 @@
     .cam-overlay {
         padding: 0;
         align-items: flex-end;
+        /* A fixed box measures against a viewport that does not shrink when the
+           browser raises its own bar, so a sheet laid against the bottom of it ends
+           up behind that bar with its buttons out of reach. This is the height
+           actually on screen. */
+        bottom: auto;
+        height: 100vh;
+        height: 100dvh;
     }
 
     .vh-action-box,
@@ -1626,6 +1638,8 @@
         max-height: 92dvh;
         overflow-y: auto;
         border-radius: 16px 16px 0 0;
+        /* Clear of the home indicator on a phone that has one. */
+        padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
     }
 
     /* A full-width sheet has no margin of its own, so the desk inset comes down

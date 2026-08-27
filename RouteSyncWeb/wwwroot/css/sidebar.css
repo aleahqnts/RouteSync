@@ -9,6 +9,7 @@
         --fw-text-muted:        #9AA5B4;
         --fw-bg:                #FFFFFF;
         --fw-divider:           #E8ECF0;
+        --fw-bar-edge:          #DDE3EA;
         --fw-transition:        220ms ease;
     }
 
@@ -286,24 +287,65 @@
 
     /* The bar's own surface, drawn behind its links so the round button in the middle
        is not cut away with it, and scooped out around that button so the page shows
-       through the gap rather than the bar running flat underneath. */
+       through the gap rather than the bar running flat underneath.
+
+       Built from four pieces, because a phone's bar is as wide as the screen and the
+       scoop is not: a drawn shape in the middle at its own size, the two lengths of
+       bar either side of it, and the whole of the bar below them. Only the middle
+       piece knows anything about the shape.
+
+       That piece is a path rather than a gradient. A gradient can only cut a circle
+       out of the edge, which leaves the scoop meeting the bar at two points as sharp
+       as a pin; the path carries a curve into each of them, and carries the bar's
+       edge around the scoop as well. A straight border cannot follow a curve, so over
+       a white page the scoop had nothing to read by and the button floated on
+       nothing. */
     .fw-bar::before {
         content: "";
         position: absolute;
         inset: 0;
         z-index: -1;
-        background: var(--fw-bg);
-        border-top: 1px solid var(--fw-divider);
-        box-shadow: 0 -2px 12px rgba(15, 23, 42, .08);
-        /* Centred on the top edge, so the hole is the half of a circle that the button
-           sits in, a few pixels wider than the button to leave a gap around it.
 
-           The ramp between the two stops is the edge of the cut. Held at one pixel it
-           steps; given three it reads as a drawn curve without going soft. */
-        -webkit-mask-image: radial-gradient(circle 31px at 50% 0,
-                                            transparent 0 90%, rgba(0, 0, 0, .55) 95%, #000 100%);
-        mask-image: radial-gradient(circle 31px at 50% 0,
-                                    transparent 0 90%, rgba(0, 0, 0, .55) 95%, #000 100%);
+        /* Wide enough for the scoop and the curves at its ends; deep enough to hold
+           the scoop and leave the rest of the bar to the piece below it. */
+        --fw-scoop-w: 96px;
+        --fw-scoop-h: 40px;
+        --fw-scoop-side: calc(50% - var(--fw-scoop-w) / 2);
+
+        /* Half a circle of radius 31 centred on the top edge, which leaves six pixels
+           around a fifty pixel button, run into the edge at either end by a curve of
+           radius 8. The figures on the path are where those curves touch. It sits half
+           a pixel down so the line drawn along it has room inside the image.
+
+           The colours are --fw-bg and --fw-bar-edge written out, because a data URI
+           cannot read a custom property. Change one and change the other. */
+        --fw-scoop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96V40H0Z' fill='%23FFFFFF'/%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96' fill='none' stroke='%23DDE3EA' stroke-width='1'/%3E%3C/svg%3E");
+        /* The bar either side of the scoop: its edge, then its surface. */
+        --fw-edge: linear-gradient(to bottom, var(--fw-bar-edge) 0 1px, var(--fw-bg) 1px);
+        --fw-fill: linear-gradient(var(--fw-bg), var(--fw-bg));
+
+        background-image: var(--fw-scoop), var(--fw-edge), var(--fw-edge), var(--fw-fill);
+        background-repeat: no-repeat;
+        /* Each piece runs a pixel into the one beside it. Half of a phone's width is
+           half a pixel, so pieces asked to meet exactly meet on a boundary no device
+           pixel sits on, and what is left between them reads as a hairline down the
+           bar. The overlap lands well inside the solid part of the drawn piece,
+           nowhere near the scoop. */
+        background-size: var(--fw-scoop-w) var(--fw-scoop-h),
+                         calc(var(--fw-scoop-side) + 1px) var(--fw-scoop-h),
+                         calc(var(--fw-scoop-side) + 1px) var(--fw-scoop-h),
+                         100% calc(100% - var(--fw-scoop-h) + 1px);
+        background-position: top center, top left, top right, bottom left;
+    }
+
+    /* A sheet that ends at the top of the bar turns the scoop into a hole: two white
+       surfaces with the map showing between them, around the button. While one is up
+       the bar is a plain surface and the button simply sits on it. The scoop is worth
+       having over the map itself, which is the only time it is seen. */
+    html:has(.fm-panel--open) .fw-bar::before {
+        background-image: none;
+        background-color: var(--fw-bg);
+        border-top: 1px solid var(--fw-bar-edge);
     }
 
     .fw-bar__link {

@@ -305,6 +305,19 @@ namespace FleetWise.Controllers
             return faults;
         }
 
+        /// <summary>The bus's open order, or nothing when it has none.</summary>
+        /// <remarks>
+        /// Separate from the version that opens one, because a caller that may still turn
+        /// the request away has to be able to look without writing.
+        /// </remarks>
+        private async Task<MaintenanceLog?> OpenOrderAsync(string vehicleId) =>
+            (await _supabase.From<MaintenanceLog>()
+                    .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
+                    .Get()).Models
+                .Where(l => l.ResolvedAt == null)
+                .OrderBy(l => l.CreatedAt)
+                .FirstOrDefault();
+
         /// <summary>The bus's open order, opening one when it has none.</summary>
         /// <remarks>
         /// A bus has at most one open order. Work raised while it already has one joins
@@ -313,12 +326,7 @@ namespace FleetWise.Controllers
         /// </remarks>
         private async Task<MaintenanceLog?> OpenOrderForAsync(string vehicleId, string workshopStatus)
         {
-            var existing = (await _supabase.From<MaintenanceLog>()
-                    .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
-                    .Get()).Models
-                .Where(l => l.ResolvedAt == null)
-                .OrderBy(l => l.CreatedAt)
-                .FirstOrDefault();
+            var existing = await OpenOrderAsync(vehicleId);
 
             if (existing is not null)
             {
@@ -904,25 +912,29 @@ namespace FleetWise.Controllers
                     return BadRequest(
                         $"{vehicleId} is on a trip. End the trip before taking it off the road.");
 
-                // One order carries the grounding, whether the bus already had faults
-                // or not. Booking it into the workshop is Schedule Maintenance, which is
-                // what promotes the order to under repair.
-                var order = await OpenOrderForAsync(vehicleId, "Needs Attention");
-                if (order is null) return BadRequest("Could not open a maintenance order.");
-
-                var hasItems = (await _supabase.From<MaintenanceItem>()
-                        .Filter("log_id", Postgrest.Constants.Operator.Equals, order.LogId.ToString())
-                        .Get()).Models.Count > 0;
+                // What the bus already carries, looked at rather than opened. An order
+                // raised for a request that is then turned away stays behind with nothing
+                // on it: the bus reads as needing attention, and Update Maintenance has no
+                // item to close, so nothing clears it.
+                var existing = await OpenOrderAsync(vehicleId);
+                var hasItems = existing is not null
+                    && (await _supabase.From<MaintenanceItem>()
+                            .Filter("log_id", Postgrest.Constants.Operator.Equals, existing.LogId.ToString())
+                            .Get()).Models.Count > 0;
 
                 // A bus grounded with nothing on its list has no record of why, and
                 // nothing to close when it comes back. The reason becomes its first item,
                 // which is why it is asked for rather than optional.
-                if (!hasItems)
-                {
-                    if (string.IsNullOrWhiteSpace(note))
-                        return BadRequest("Say why this bus is being taken out of service.");
-                    await AddOrderItemsAsync(order.LogId, new[] { note.Trim() });
-                }
+                if (!hasItems && string.IsNullOrWhiteSpace(note))
+                    return BadRequest("Say why this bus is being taken out of service.");
+
+                // One order carries the grounding, whether the bus already had faults
+                // or not. Booking it into the workshop is Schedule Maintenance, which is
+                // what promotes the order to under repair.
+                var order = existing ?? await OpenOrderForAsync(vehicleId, "Needs Attention");
+                if (order is null) return BadRequest("Could not open a maintenance order.");
+
+                if (!hasItems) await AddOrderItemsAsync(order.LogId, new[] { note!.Trim() });
 
                 effectiveLog = order.LogId;
             }
