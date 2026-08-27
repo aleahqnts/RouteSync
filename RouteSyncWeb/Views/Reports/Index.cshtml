@@ -97,7 +97,7 @@
 
 @* DAILY TRIP REPORTS TABLE *@
 <div class="rp-card rp-card--table">
-    <div class="rp-card-header">
+    <div class="rp-card-header" data-sticky-card>
         <span class="rp-card-icon rp-card-icon--purple">
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="none"
                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -459,7 +459,7 @@
             <div id="statModalContent" style="display:none;">
                 <div class="tr-section tr-section--last">
                     <div class="rp-table-wrap">
-                        <table class="rp-table rs-cards"><thead id="statModalHead"></thead><tbody id="statModalBody"></tbody></table>
+                        <table class="rp-table rs-cards rp-stat-table"><thead id="statModalHead"></thead><tbody id="statModalBody"></tbody></table>
                     </div>
                     <div class="st-empty" id="statModalEmpty" style="display:none;">Nothing to show for this day.</div>
                 </div>
@@ -498,10 +498,10 @@
                    whole trip on screen without scrolling. *@
                 <div class="tr-section">
                     <div class="tr-grid">
-                        <div class="tr-info-row"><span class="tr-info-label">Route</span><span id="mdRoute"></span></div>
+                        <div class="tr-info-row tr-info-row--wide"><span class="tr-info-label">Route</span><span id="mdRoute"></span></div>
                         <div class="tr-info-row"><span class="tr-info-label">Date</span><span id="mdDate"></span></div>
                         <div class="tr-info-row"><span class="tr-info-label">Shift</span><span id="mdShiftType"></span></div>
-                        <div class="tr-info-row"><span class="tr-info-label">Shift Time</span><span id="mdShiftTime"></span></div>
+                        <div class="tr-info-row tr-info-row--wide"><span class="tr-info-label">Shift Time</span><span id="mdShiftTime"></span></div>
                     </div>
                 </div>
 

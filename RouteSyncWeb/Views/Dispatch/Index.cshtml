@@ -11,10 +11,16 @@
         <a class="dp-date-arrow" href="@Url.Action("Index", new { date = Model.PrevDate })" title="Previous day">
             <i class="ti ti-chevron-left"></i>
         </a>
-        <span class="dp-date-badge" title="One operational day runs 6:00 AM to 5:59 AM the next morning">
+        @* The badge is the way to any other day. A field laid over it opens the
+           calendar wherever it is pressed, so the date already on screen is what is
+           pressed to change it and nothing new is added to the row. *@
+        <span class="dp-date-badge" title="One operational day runs 6:00 AM to 5:59 AM the next morning. Press to go to another day.">
             <i class="ti ti-calendar-event"></i>
             <span class="dp-cycle-main">@Model.ScheduleDate.ToString("ddd, MMM d")</span>
             <span class="dp-cycle-range">6:00 AM → @Model.ScheduleDate.AddDays(1).ToString("MMM d") 5:59 AM</span>
+            <input type="date" class="dp-date-pick" id="dpDatePick"
+                   value="@(Model.ScheduleDate.ToString("yyyy-MM-dd"))"
+                   aria-label="Go to another day" />
         </span>
         <a class="dp-date-arrow" href="@Url.Action("Index", new { date = Model.NextDate })" title="Next day">
             <i class="ti ti-chevron-right"></i>
@@ -748,6 +754,25 @@
         window.dpChipsRecount = function () { countChips(); mark(); };
         countChips();
     });
+
+    // The day the board is showing.
+    (function () {
+        const pick = document.getElementById('dpDatePick');
+        if (!pick) return;
+
+        // A date field opens its calendar from the small icon at its end and from
+        // nowhere else, which here is a few pixels of a badge the width of the date.
+        // Asked directly it opens from anywhere on it, and a browser without the
+        // call still has the field.
+        pick.addEventListener('click', function () {
+            if (typeof pick.showPicker !== 'function') return;
+            try { pick.showPicker(); } catch (e) { }
+        });
+
+        pick.addEventListener('change', function () {
+            if (pick.value) window.location = window.location.pathname + '?date=' + pick.value;
+        });
+    })();
 
     // A phone loses the page whenever another app comes forward, and the poll above
     // stops with it. Returning would otherwise show whatever was true up to thirty

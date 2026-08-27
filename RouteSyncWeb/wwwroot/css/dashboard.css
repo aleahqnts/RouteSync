@@ -645,6 +645,13 @@
         padding: 16px 14px;
     }
 
+    /* The route key covered a third of a preview that is already the size of a
+       stamp, and the map underneath is what the card is for. The full map names
+       its routes, and this card is a way to it. */
+    .db-map-legend {
+        display: none;
+    }
+
     /* Four cards, each the width of the screen and tall enough for a headline,
        is four screens of scrolling to read four numbers. Two across, and the
        number sized for a glance rather than a poster. */

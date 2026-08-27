@@ -310,6 +310,27 @@
         white-space: nowrap;
     }
 
+    /* A bus that has stopped reporting is still drawn, because where it was last seen
+       is worth knowing. It is drawn faintly and hollow, because where it was is not
+       where it is, and the two must not read alike on a board being acted on. */
+    .fm-bus-marker--stale span {
+        opacity: .55;
+        color: #374151;
+        background: #fff !important;
+        box-shadow: inset 0 0 0 2px currentColor, 0 2px 8px rgba(0, 0, 0, .12);
+    }
+
+    /* Readings arrive every few seconds. Moved straight there the buses jump from one
+       to the next; given the crossing to travel, they run. */
+    .fm-bus-marker--glide {
+        transition: transform 1s linear;
+    }
+
+    /* Not while the map itself is moving them. */
+    .fm-map--jump .fm-bus-marker--glide {
+        transition: none;
+    }
+
     /* Hover tooltip. */
     .fm-tooltip-wrap.leaflet-tooltip {
         background: transparent;
@@ -372,6 +393,17 @@
         height: 8px;
         border-radius: 50%;
         background: #16A34A;
+    }
+
+    /* Said in the tooltip as well as drawn on the pin, because a faint pin among
+       twenty is a thing you notice only once you know to look. */
+    .fm-tooltip__stale {
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid #E5E7EB;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #B45309;
     }
 
     .fm-tooltip__passengers {
@@ -685,16 +717,22 @@
         top: auto;
         right: 0;
         left: 0;
-        bottom: 0;
+        /* The navigation bar owns the foot of the screen. The sheet stops where the
+           bar starts rather than running under it, which took the last line of the
+           panel with it: the map is a fixed box of its own, so it is drawn as one
+           against the bar and nothing inside it can be raised over it. */
+        --fm-bar: calc(56px + env(safe-area-inset-bottom, 0px));
+        bottom: var(--fm-bar);
         width: 100%;
         max-height: 58vh;
         max-height: 58dvh;
-        /* Over the navigation button, which sits at the foot of every screen.
-           Beneath it, the button would float on top of the bus being read. */
         z-index: 1300;
         border-radius: 16px 16px 0 0;
         padding: 18px 0;
-        transform: translateY(100%);
+        /* Its own height takes it below where it rests, and the bar's height takes it
+           the rest of the way off the screen. Its own height alone left it parked in
+           the bar's strip, where the scoop showed white instead of the map. */
+        transform: translateY(calc(100% + var(--fm-bar)));
     }
 
     .fm-panel--open {
@@ -759,43 +797,152 @@
 
 @media (max-width: 599px) {
 
-    /* The panel was typeset for a column standing the full height of a desktop
-       map. In a sheet across the bottom of a phone the same sizes read as a
-       poster, so everything comes down a step and the padding with it. */
+    /* The panel was typeset for a column standing the full height of a desktop map.
+       In a sheet across the bottom of a phone the same sizes read as a poster: six
+       facts about one bus, each given a band of its own, filling half the screen the
+       map is supposed to be on.
+
+       Everything comes down a step, the rules between the bands go, and the two that
+       pair up share a line. */
     .fm-panel {
-        padding: 12px 0;
+        /* A grid so the revenue and its figure can sit on one line while they stay
+           two elements. Everything else takes the width. */
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-content: start;
+        /* The round button in the middle of the bar stands above it, so the last line
+           of the sheet keeps clear of where it reaches. */
+        padding: 10px 0 30px;
     }
+
+        .fm-panel > * {
+            grid-column: 1 / -1;
+        }
 
     .fm-panel__pad {
         padding: 0 16px;
     }
 
+    /* Five rules with sixteen pixels either side spend a third of the sheet keeping
+       six short facts apart. The blocks that need separating carry their own ground
+       instead. */
+    .fm-panel__divider {
+        display: none;
+    }
+
     .fm-panel__title {
-        font-size: 1.15rem;
-        margin-bottom: 6px;
+        font-size: 1.05rem;
+        margin-bottom: 2px;
     }
 
     .fm-panel__meta {
-        gap: 6px;
+        gap: 5px;
+        font-size: .76rem;
+        flex-wrap: wrap;
+    }
+
+        .fm-panel__shift {
+            padding: 1px 6px;
+        }
+
+    /* Under the bus rather than in a section of its own. */
+    .fm-panel__status {
+        gap: 7px;
+        padding: 7px 0 0;
         font-size: .8rem;
     }
 
-    .fm-panel__status {
-        gap: 8px;
-        font-size: .85rem;
+    .fm-panel__status-dot {
+        width: 9px;
+        height: 9px;
     }
 
-    .fm-panel__divider {
-        margin: 10px 0;
+    /* A driver is a name. The portrait of nobody beside it is forty-four pixels
+       saying so twice. */
+    .fm-panel__avatar {
+        display: none;
     }
 
     .fm-panel__driver {
         gap: 10px;
-        padding: 10px 16px;
+        margin-top: 9px;
+        padding: 7px 16px;
+    }
+
+        /* Reversed, so the name it exists to give ends the line and the word for what
+           the name is starts it, as every other pair on a phone reads. */
+        .fm-panel__driver-info {
+            flex: 1;
+            flex-direction: row-reverse;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 0;
+        }
+
+    .fm-panel__driver-name {
+        font-size: .85rem;
+        font-weight: 700;
+    }
+
+    /* The names of the figures, all set the same way. */
+    .fm-panel__driver-sub,
+    .fm-panel__pax-label,
+    .fm-panel__rev-head {
+        font-size: .64rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--fm-muted);
+    }
+
+    /* A number and its name on a line, not a band split down the middle. */
+    .fm-panel__pax {
+        align-items: baseline;
+        gap: 10px;
+        padding: 10px 16px 0;
+    }
+
+    .fm-panel__pax-label {
+        flex: 0 0 auto;
+        text-align: left;
+    }
+
+    .fm-panel__pax-num {
+        flex: 1;
+        border-left: none;
+        text-align: right;
+        font-size: 1rem;
+    }
+
+    /* Beside its figure rather than above it, and without a ground of its own. */
+    .fm-panel__rev-head {
+        grid-column: 1;
+        align-self: baseline;
+        padding: 10px 0 0 16px;
+        background: none;
+    }
+
+    .fm-panel__pad:has(.fm-panel__rev-val) {
+        grid-column: 2;
+        align-self: baseline;
+        padding: 10px 16px 0 0;
+    }
+
+    .fm-panel__rev-val {
+        margin-top: 0;
+        font-size: 1rem;
+    }
+
+    .fm-panel__updated {
+        padding-top: 9px;
+        font-size: .7rem;
     }
 
     .fm-panel__close {
-        min-width: 44px;
-        min-height: 44px;
+        top: 8px;
+        right: 8px;
+        min-width: 40px;
+        min-height: 40px;
     }
 }

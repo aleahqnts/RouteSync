@@ -447,22 +447,15 @@
 /* ===========================================================================
    The head of the page, held while the entries move.
 
-   Three layers, each pinned under the one above it: the title and the filters,
-   then the card's heading and its count, then the column names. Everything that
-   says what is being looked at stays; only the log itself travels.
-
-   The offsets come from auStickyOffsets(), which measures them, because the
-   filter row wraps to two lines on a narrow window.
+   Three layers: the title and the filters, then the card's heading and its count,
+   then the column names. The shared rules pin them and sticky-head.js measures
+   what each stops at. What is left here is the ground each sits on and the gaps
+   that now belong to the blocks rather than to what follows them.
    =========================================================================== */
 
 @media (min-width: 600px) {
 
     .au-sticky-head {
-        position: sticky;
-        top: var(--rs-bar, 0px);
-        z-index: 4;
-        /* Its own ground, and the gap under it, or entries show through both as they
-           pass behind. */
         background: var(--au-bg);
         padding-bottom: 18px;
     }
@@ -473,15 +466,7 @@
         }
 
     .au-card-header {
-        position: sticky;
-        top: calc(var(--rs-bar, 0px) + var(--au-sticky-head, 0px));
-        z-index: 3;
         background: var(--au-white);
-    }
-
-    /* Under both of them. The shared rule reads this and sets everything else. */
-    .au-table.rs-list {
-        --rs-stick: var(--au-sticky-card, 0px);
     }
 }
 
@@ -561,13 +546,18 @@
     /* Apply and Clear take the width between them rather than sitting in the middle
        of it. */
     .au-filters.rs-filters .au-filter-actions {
-        justify-content: stretch;
         gap: 10px;
         margin-top: 2px;
     }
 
         .au-filters.rs-filters .au-filter-actions > .au-btn {
             flex: 1;
+            /* The shared panel holds the last thing in a row to 62%, which is right for
+               a control standing beside its label and wrong here, where the buttons are
+               the whole row. Clear is the last of the two and takes the cap harmlessly;
+               with Clear gone, Apply becomes the last and shrinks to two thirds of a row
+               it should fill. */
+            max-width: none;
             min-height: 44px;
             text-align: center;
         }

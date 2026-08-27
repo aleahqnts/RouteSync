@@ -10,7 +10,22 @@
     // Route 2 = orange, …). Cycles if there are more routes than colors.
     var PALETTE = ['#2563EB', '#F97316', '#16A34A', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#CA8A04'];
 
-    var map = L.map('fleetMap');
+    // The ground the fleet covers, measured out from BGC in every direction. Past it
+    // is open sea or country with no bus in it, and a map dragged out there takes a
+    // Fit to buses to find the way back from.
+    var REACH_LAT = 0.12;
+    var REACH_LNG = 0.13;
+    var REGION = L.latLngBounds(
+        [DEFAULT_CENTER[0] - REACH_LAT, DEFAULT_CENTER[1] - REACH_LNG],
+        [DEFAULT_CENTER[0] + REACH_LAT, DEFAULT_CENTER[1] + REACH_LNG]
+    );
+
+    var map = L.map('fleetMap', {
+        maxBounds: REGION,
+        // Held at the edge rather than sprung back from it, so a drag stops where
+        // the region stops instead of bouncing off it.
+        maxBoundsViscosity: 1
+    });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -22,16 +37,50 @@
     // falls back to the default center/zoom when no bounds are available
     if (window.fleetMapBounds) {
         var b = window.fleetMapBounds;
-        map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: [60, 60], maxZoom: 16 });
+        var routeBounds = L.latLngBounds([b[0], b[1]], [b[2], b[3]]);
+        REGION.extend(routeBounds);
+        map.setMaxBounds(REGION);
+
+        map.fitBounds(routeBounds, { padding: [60, 60], maxZoom: 16 });
     } else {
         map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
     }
+
+    // Zooming out far enough is the other way of leaving the region, and bounds do
+    // not stop it. The floor is whatever zoom holds the whole region on this screen,
+    // measured rather than written down: a phone and a desk each reach it at their
+    // own, and a window that changes size reaches a different one.
+    function holdRegion() {
+        map.setMaxBounds(REGION);
+        map.setMinZoom(map.getBoundsZoom(REGION));
+    }
+
+    // Anything drawn on the map has to be reachable on it. The region is a courtesy
+    // to the operator, not a statement about where the fleet may go, so whatever is
+    // put on the map widens it: route lines, and the stops along them, which arrive
+    // separately and are not in the bounds the page is given.
+    function reachTo(points) {
+        if (!points || !points.length) return;
+        var before = REGION.toBBoxString();
+        REGION.extend(L.latLngBounds(points));
+        if (REGION.toBBoxString() !== before) holdRegion();
+    }
+
+    holdRegion();
+    map.on('resize', holdRegion);
+
+    // A zoom puts every marker somewhere new at the same moment. Letting them travel
+    // there turns one gesture into a second of drift, so the gliding is off for the
+    // length of it.
+    map.on('zoomstart', function () { map.getContainer().classList.add('fm-map--jump'); });
+    map.on('zoomend', function () { map.getContainer().classList.remove('fm-map--jump'); });
 
     var routeColors = {};        // routeName -> color, built from the routes fetch
     var routePolylines = {};     // routeId -> [polylines]
     var stopLayer = L.layerGroup().addTo(map);
     var busLayer = L.layerGroup().addTo(map);
-    var terminalLayer = L.layerGroup().addTo(map); // terminal name labels, rebuilt each poll
+    var terminalLayer = L.layerGroup().addTo(map); // terminal name labels
+    var terminalSignature = null;                  // what those labels currently say
 
     // Parked buses are grouped per terminal and spread into a centred grid (anchored on
     // the terminal point the server sends) so the pills never overlap.
@@ -119,7 +168,11 @@
         document.getElementById('fmPanelStatusDot').style.background = statusColor(bus.status);
         document.getElementById('fmPanelDriver').textContent = bus.driverName;
         document.getElementById('fmPanelPax').textContent = bus.passengers;
-        document.getElementById('fmPanelRevenue').textContent = 'P ' + pesoFmt.format(bus.estimatedRevenue);
+        // Written as an escape rather than the sign itself: this file carries no
+        // byte order mark, so it is decoded as whatever the response says, and a
+        // peso sign is the one character here that would not survive being read as
+        // anything but UTF-8.
+        document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
         document.getElementById('fmPanelUpdated').textContent = 'Last updated: ' + relativeTime(bus.timestamp);
     }
 
@@ -139,12 +192,36 @@
 
     panelClose.addEventListener('click', closePanel);
 
-    function busIcon(label, color) {
+    // A reading older than this is where the bus was, not where it is. Only a trip
+    // reports; a bus standing at its terminal is not reporting and is not late for it,
+    // and the timestamp it is given is the moment the board was drawn.
+    var STALE_AFTER_MS = 2 * 60 * 1000;
+
+    function readingAge(bus) {
+        var then = new Date(bus.timestamp + 'Z').getTime();
+        return isNaN(then) ? 0 : Math.max(0, Date.now() - then);
+    }
+
+    function isStale(bus) {
+        return bus.status === 'On Trip' && readingAge(bus) >= STALE_AFTER_MS;
+    }
+
+    function busIcon(label, color, stale) {
         return L.divIcon({
-            className: 'fm-bus-marker',
+            className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : ''),
             html: '<span style="background:' + color + '">' + label + '</span>',
             iconSize: [80, 28],
             iconAnchor: [40, 14]
+        });
+    }
+
+    // 3. Gliding is armed a frame after the marker exists. Armed at once, its first
+    // position would be animated from the corner of the map: the element is in the
+    // page before Leaflet gives it a place.
+    function armGlide(marker) {
+        requestAnimationFrame(function () {
+            var el = marker.getElement();
+            if (el) el.classList.add('fm-bus-marker--glide');
         });
     }
 
@@ -158,6 +235,9 @@
                 '<div class="fm-tooltip__plate">' + bus.plateNumber + '</div>' +
                 '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + bus.status + '</div>' +
                 '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + bus.passengers + '</strong></div>' +
+                (isStale(bus)
+                    ? '<div class="fm-tooltip__stale">Last heard from ' + relativeTime(bus.timestamp) + '</div>'
+                    : '') +
             '</div>';
     }
 
@@ -246,13 +326,29 @@
                 });
 
                 var parkedPos = {};
-                terminalLayer.clearLayers();
-                Object.keys(parkedGroups).forEach(function (key) {
+                var keys = Object.keys(parkedGroups).sort();
+                var signature = keys.map(function (key) {
+                    var g = parkedGroups[key];
+                    return key + ':' + g.name + ':' + g.list.length;
+                }).join('|');
+
+                keys.forEach(function (key) {
                     var g = parkedGroups[key];
                     g.list.sort(function (a, b) { return a.vehicleId < b.vehicleId ? -1 : 1; });
                     g.list.forEach(function (b, i) { parkedPos[b.vehicleId] = terminalSlot(g.lat, g.lng, i); });
-                    addTerminalLabel(g.lat, g.lng, g.name, g.list.length);
                 });
+
+                // The labels say a terminal name and a count, and neither changes from
+                // one poll to the next. Rebuilding them every five seconds threw away
+                // and remade every one of them for nothing.
+                if (signature !== terminalSignature) {
+                    terminalSignature = signature;
+                    terminalLayer.clearLayers();
+                    keys.forEach(function (key) {
+                        var g = parkedGroups[key];
+                        addTerminalLabel(g.lat, g.lng, g.name, g.list.length);
+                    });
+                }
 
                 var seen = {};
                 buses.forEach(function (bus) {
@@ -261,16 +357,28 @@
                     var pos = parkedPos[bus.vehicleId] || [bus.lat, bus.lng];
                     var marker = busMarkers[bus.vehicleId];
 
+                    var stale = isStale(bus);
+                    var iconKey = color + (stale ? '|stale' : '');
+
                     if (marker) {
-                        // Move in place + refresh the (live) tooltip numbers.
+                        // Moved in place, and left alone otherwise. Setting the icon
+                        // replaces the element it is drawn in, which throws away the
+                        // travel between readings and any tooltip open on it, so it is
+                        // done only when what the icon shows has changed.
                         marker.setLatLng(pos);
-                        marker.setIcon(busIcon(bus.vehicleId, color));
+                        if (marker._iconKey !== iconKey) {
+                            marker.setIcon(busIcon(bus.vehicleId, color, stale));
+                            marker._iconKey = iconKey;
+                            armGlide(marker);
+                        }
                         marker.setTooltipContent(tooltipHtml(bus));
                     } else {
-                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color) })
+                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale) })
                             .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap' })
                             .addTo(busLayer);
                         marker.on('click', function () { openPanel(this._bus.vehicleId); });
+                        marker._iconKey = iconKey;
+                        armGlide(marker);
                         busMarkers[bus.vehicleId] = marker;
                     }
                     marker._bus = bus; // keep latest data for tooltip/panel refresh
@@ -305,6 +413,8 @@
         fetch(url)
             .then(response => response.json())
             .then(stops => {
+                reachTo(stops.map(function (s) { return [s.lat, s.lng]; }));
+
                 stops.forEach(function (stop) {
                     var routeColor = colorForRoute(stop.routeName);
                     var stopIcon = L.divIcon({

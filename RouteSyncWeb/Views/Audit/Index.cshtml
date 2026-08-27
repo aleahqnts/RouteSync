@@ -141,7 +141,7 @@
 @* Everything a reader needs while working through the log: what page this is, what
    it is filtered to, and the headings of the columns. Held at the top of the screen
    on a desk so only the entries move. *@
-<div class="au-sticky-head" id="auStickyHead">
+<div class="au-sticky-head" data-sticky-head>
 
 @* Refresh sits with the title, not with Apply: it is not a filter, and down in the filter
    row it was the first thing to wrap onto a line of its own. *@
@@ -235,7 +235,7 @@
 @* TABLE *@
 <div id="auResults">
 <div class="au-card">
-    <div class="au-card-header">
+    <div class="au-card-header" data-sticky-card>
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -523,23 +523,6 @@
     }, 30000);
 
     auStamp();
-
-    // What the column headings and the card heading stick beneath. The filter row
-    // wraps at narrower widths, so the height above them is not a number that can be
-    // written down.
-    function auStickyOffsets() {
-        const head = document.getElementById('auStickyHead');
-        const cardHead = document.querySelector('.au-card-header');
-        if (!head) return;
-
-        const root = document.documentElement;
-        const headH = head.offsetHeight;
-        root.style.setProperty('--au-sticky-head', headH + 'px');
-        root.style.setProperty('--au-sticky-card', (headH + (cardHead ? cardHead.offsetHeight : 0)) + 'px');
-    }
-
-    auStickyOffsets();
-    window.addEventListener('resize', auStickyOffsets);
 </script>
 
 @section Styles {
