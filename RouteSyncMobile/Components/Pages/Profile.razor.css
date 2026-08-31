@@ -410,3 +410,146 @@
             background: #2e9e8f;
             border-color: #2e9e8f;
         }
+
+/* ---------- Leave ---------- */
+
+/* The three allowances read the way the trip figures above them do, because they are
+   the same kind of thing: a number the driver checks rather than acts on. */
+.lv-balances {
+    display: flex;
+    border: 1px solid #e6e8ee;
+    border-radius: 14px;
+    padding: 12px 0;
+    margin-bottom: 8px;
+    background: #fff;
+}
+
+.lv-bal {
+    flex: 1;
+    text-align: center;
+}
+
+.lv-bal + .lv-bal {
+    border-left: 1px solid #eef0f4;
+}
+
+.lv-bal-n {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+/* The allowance the number is out of, set quieter so the number left is what is read. */
+.lv-bal-of {
+    font-size: 13px;
+    font-weight: 700;
+    color: #8a93a2;
+}
+
+.lv-bal-l {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: #8a93a2;
+    font-weight: 600;
+}
+
+/* Days already taken off the number above but not yet granted. Named, because a day
+   waiting on a decision is neither spent nor available. */
+.lv-bal-p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b7950b;
+}
+
+.lv-note {
+    margin: 2px 0 12px;
+    font-size: 12px;
+    color: #8a93a2;
+}
+
+.lv-list {
+    border: 1px solid #e6e8ee;
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.lv-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+}
+
+.lv-row + .lv-row {
+    border-top: 1px solid #eef0f4;
+}
+
+.lv-when {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.lv-span {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1b2a56;
+}
+
+.lv-meta {
+    font-size: 12px;
+    color: #8a93a2;
+}
+
+/* Why it was turned down, or whatever was said with the decision. */
+.lv-reason {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #5b6478;
+    font-style: italic;
+}
+
+.lv-badge {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.lv-badge.pending   { background: #fef7e0; color: #b7950b; }
+.lv-badge.approved  { background: #e8f8ee; color: #27ae60; }
+.lv-badge.rejected  { background: #fdecec; color: #e53e3e; }
+.lv-badge.cancelled { background: #eef0f4; color: #6b7280; }
+
+.lv-cancel {
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 7px 12px;
+    min-height: 36px;
+    border: 1px solid #e6e8ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #d0494b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.lv-more {
+    width: 100%;
+    padding: 11px 14px;
+    border: none;
+    border-top: 1px solid #eef0f4;
+    background: #fbfcfd;
+    color: #2e9e8f;
+    font-size: 13px;
+    font-weight: 700;
+}

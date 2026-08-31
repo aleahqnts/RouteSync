@@ -127,16 +127,56 @@
         });
 
         // Manage roles, switching the right-hand pane to the selected role.
-        const WEB_PERMISSION_KEYS = ['dashboard', 'routes', 'vehicles', 'reports', 'users', 'audit'];
-        const MOBILE_PERMISSION_KEYS = ['tracking', 'messages', 'checklist'];
+        //
+        // The keys are read off the switches the modal rendered rather than written out
+        // again here. Listed twice, a permission added to the modal and forgotten here is
+        // never written when the role changes: it keeps whatever the last role left it at
+        // and never shows its own saved value, which reads as one switch that is on for
+        // every role.
+        function permKeys(prefix) {
+            return Array.prototype.map.call(
+                document.querySelectorAll('[id^="' + prefix + '"]'),
+                el => el.id.slice(prefix.length));
+        }
 
         function applyRolePermissions(webPerms, mobilePerms) {
-            WEB_PERMISSION_KEYS.forEach(k => document.getElementById('perm_web_' + k).checked = !!webPerms[k]);
-            MOBILE_PERMISSION_KEYS.forEach(k => document.getElementById('perm_mobile_' + k).checked = !!mobilePerms[k]);
+            permKeys('perm_web_').forEach(k =>
+                document.getElementById('perm_web_' + k).checked = !!webPerms[k]);
+            permKeys('perm_mobile_').forEach(k =>
+                document.getElementById('perm_mobile_' + k).checked = !!mobilePerms[k]);
+        }
+
+        // Managing roles is itself behind the Users permission, so a role that gives it up
+        // while no other role holds it shuts the door on everyone, this page included. The
+        // server refuses that save; this stops the switch offering it in the first place,
+        // which is the difference between a rule and a trap.
+        function holdLastUsersSwitch(roleId) {
+            const box = document.getElementById('perm_web_users');
+            if (!box) return;
+
+            const others = Array.prototype.filter.call(
+                document.querySelectorAll('.us-role-item[data-role-id]'),
+                el => el.dataset.roleId !== String(roleId));
+
+            const covered = others.some(el => {
+                try { return !!JSON.parse(el.dataset.webPerms || '{}').users; }
+                catch { return false; }
+            });
+
+            const last = box.checked && !covered;
+            box.disabled = last;
+            box.closest('.us-perm-row').classList.toggle('us-perm-row--held', last);
+            box.title = last
+                ? 'Currently the only role with the Users permission. Assign it to another role before removing it.'
+                : '';
         }
 
         // Load the user table rows in the background so the page itself renders instantly
         loadUserRows();
+
+        // The modal opens on a role already chosen, so the switch is settled before the
+        // first click rather than after it.
+        holdLastUsersSwitch(document.getElementById('roleFormRoleId')?.value || null);
 
         document.querySelectorAll('.us-role-item').forEach(function (item) {
             item.addEventListener('click', function () {
@@ -151,11 +191,13 @@
                     form.action = '@Url.Action("UpdateRole", "Users")';
                     document.getElementById('roleFormName').value = item.dataset.roleName;
                     applyRolePermissions(JSON.parse(item.dataset.webPerms || '{}'), JSON.parse(item.dataset.mobilePerms || '{}'));
+                    holdLastUsersSwitch(roleId);
                 } else {
                     document.getElementById('roleFormRoleId').value = '';
                     form.action = '@Url.Action("CreateRole", "Users")';
                     document.getElementById('roleFormName').value = '';
                     applyRolePermissions({}, {});
+                    holdLastUsersSwitch(null);
                 }
             });
         });

@@ -75,6 +75,103 @@ else
             }
         </div>
 
+        <p class="psec">Leave</p>
+
+        @* What is left of each allowance. Pending days are already taken off, and named
+           separately, or a request waiting on a decision reads as days still available. *@
+        <div class="lv-balances">
+            @foreach (var type in LeaveEntitlement.Types)
+            {
+                var used = LeaveEntitlement.Used(leaveRequests, type, DateTime.Today.Year);
+                var left = LeaveEntitlement.Remaining(leaveRequests, type, DateTime.Today.Year);
+                <div class="lv-bal">
+                    <p class="lv-bal-n">@left<span class="lv-bal-of">/@LeaveEntitlement.DaysPerYear[type]</span></p>
+                    <p class="lv-bal-l">@type</p>
+                    @if (used.Pending > 0)
+                    {
+                        <p class="lv-bal-p">@used.Pending pending</p>
+                    }
+                </div>
+            }
+        </div>
+
+        <button class="popt" @onclick="ToggleLeaveForm">
+            <span class="popt-left">
+                <span class="pico teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg></span>
+                <span>File leave</span>
+            </span>
+            <span class="chev @(showLeaveForm ? "open" : "")">&#8250;</span>
+        </button>
+        @if (showLeaveForm)
+        {
+            <div class="pform expanded">
+                <label>Type</label>
+                <select @bind="leaveType">
+                    @foreach (var type in LeaveEntitlement.Types)
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+
+                <label>First day off</label>
+                <input type="date" @bind="leaveStart" />
+
+                <label>Last day off</label>
+                <input type="date" @bind="leaveEnd" />
+
+                <label>Reason</label>
+                <input @bind="leaveReason" maxlength="200" placeholder="Optional" />
+
+                @* Notice is stated, not enforced. Three days is what the company asks
+                   for, and a request filed later than that still goes through. *@
+                @if (LeaveDays > 0)
+                {
+                    <p class="lv-note">
+                        @LeaveDays @(LeaveDays == 1 ? "day" : "days"), filed @NoticeText.
+                    </p>
+                }
+
+                @if (leaveMsg is not null)
+                {
+                    <p class="@(leaveOk ? "ok-msg" : "err-msg")">@leaveMsg</p>
+                }
+
+                <button class="psave" disabled="@(filingLeave || LeaveDays <= 0)" @onclick="FileLeave">
+                    @(filingLeave ? "Sending…" : "File request")
+                </button>
+            </div>
+        }
+
+        @if (leaveRequests.Count > 0)
+        {
+            <div class="lv-list">
+                @foreach (var r in leaveRequests.Take(showAllLeave ? leaveRequests.Count : 3))
+                {
+                    <div class="lv-row">
+                        <span class="lv-badge @r.Status.ToLowerInvariant()">@r.Status</span>
+                        <span class="lv-when">
+                            <span class="lv-span">@Span(r)</span>
+                            <span class="lv-meta">@r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</span>
+                            @if (!string.IsNullOrWhiteSpace(r.DecisionNote))
+                            {
+                                <span class="lv-reason">@r.DecisionNote</span>
+                            }
+                        </span>
+                        @if (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <button class="lv-cancel" @onclick="@(() => CancelLeave(r.RequestId))">Withdraw</button>
+                        }
+                    </div>
+                }
+                @if (leaveRequests.Count > 3)
+                {
+                    <button class="lv-more" @onclick="@(() => showAllLeave = !showAllLeave)">
+                        @(showAllLeave ? "Show fewer" : $"Show all {leaveRequests.Count}")
+                    </button>
+                }
+            </div>
+        }
+
         <p class="psec">Settings</p>
 
         <button class="popt" @onclick="@(() => { showInfoForm = !showInfoForm; if (showInfoForm) showPwdForm = false; })">
@@ -201,6 +298,96 @@ else
     private string Met(Func<string, bool> rule) => rule(newPwd) ? "met" : "";
     private bool savingPwd, pwdOk;
     private bool showPwdForm, showInfoForm, showLogoutConfirm;
+
+    private List<LeaveRequest> leaveRequests = new();
+    private bool showLeaveForm, showAllLeave, filingLeave, leaveOk;
+    private string leaveType = LeaveEntitlement.Vacation;
+    private string leaveReason = "";
+    private string? leaveMsg;
+    private DateTime leaveStart = DateTime.Today.AddDays(3);
+    private DateTime leaveEnd = DateTime.Today.AddDays(3);
+
+    /// <summary>Days the request covers, or zero when the dates make no sense.</summary>
+    private int LeaveDays =>
+        leaveEnd.Date < leaveStart.Date ? 0 : (int)(leaveEnd.Date - leaveStart.Date).TotalDays + 1;
+
+    /// <summary>
+    /// How much notice this carries, said plainly. The company asks for three days and
+    /// does not require them, so this reports rather than warns.
+    /// </summary>
+    private string NoticeText => (leaveStart.Date - DateTime.Today).Days switch
+    {
+        < 0 => "for a day already past",
+        0 => "for today",
+        1 => "1 day ahead",
+        var d => $"{d} days ahead"
+    };
+
+    private static string Span(LeaveRequest r) =>
+        r.StartDate.Date == r.EndDate.Date
+            ? r.StartDate.ToString("MMM d, yyyy")
+            : $"{r.StartDate:MMM d} to {r.EndDate:MMM d, yyyy}";
+
+    private void ToggleLeaveForm()
+    {
+        showLeaveForm = !showLeaveForm;
+        if (showLeaveForm) { showInfoForm = false; showPwdForm = false; }
+        leaveMsg = null;
+    }
+
+    private async Task FileLeave()
+    {
+        if (LeaveDays <= 0) return;
+
+        // Days already spoken for include the ones still waiting, so a driver cannot
+        // file past the allowance while earlier requests are undecided. This is the one
+        // thing refused here: the notice rules are advice and are not.
+        var left = LeaveEntitlement.Remaining(leaveRequests, leaveType, leaveStart.Year);
+        if (LeaveDays > left)
+        {
+            leaveOk = false;
+            leaveMsg = left == 0
+                ? $"No {leaveType.ToLowerInvariant()} leave left this year."
+                : $"That is {LeaveDays} days and you have {left} left.";
+            return;
+        }
+
+        filingLeave = true;
+        leaveMsg = null;
+        try
+        {
+            await Data.FileLeaveAsync(
+                Session.CurrentUser!.UserId, leaveType, leaveStart, leaveEnd, leaveReason);
+
+            leaveRequests = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId);
+            leaveOk = true;
+            leaveMsg = "Filed. You will be told when it is decided.";
+            leaveReason = "";
+        }
+        catch
+        {
+            leaveOk = false;
+            leaveMsg = "That could not be sent. Check your connection and try again.";
+        }
+        finally
+        {
+            filingLeave = false;
+        }
+    }
+
+    private async Task CancelLeave(long requestId)
+    {
+        try
+        {
+            await Data.CancelLeaveAsync(requestId);
+            leaveRequests = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId);
+        }
+        catch
+        {
+            leaveOk = false;
+            leaveMsg = "That could not be withdrawn. Try again.";
+        }
+    }
     private string? pwdMsg;
 
     private string Initials
@@ -248,6 +435,7 @@ else
             passengers = done.Sum(t => t.TotalBoarded);
             tripsThisMonth = done.Count(t => t.Date.Year == DateTime.Today.Year && t.Date.Month == DateTime.Today.Month);
             lastTripDate = done.OrderByDescending(t => t.Date).FirstOrDefault()?.Date;
+            leaveRequests = await Data.GetLeaveRequestsAsync(uid);
         }
         catch (Exception ex)
         {
