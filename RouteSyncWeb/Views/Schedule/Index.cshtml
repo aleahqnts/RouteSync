@@ -26,6 +26,11 @@
             <span class="sch-week-label">@Model.WeekStart.ToString("MMM d") – @Model.WeekEnd.ToString("MMM d, yyyy")</span>
             <a class="sch-btn-ghost" href="/Schedule?start=@Model.NextWeekStart">Next &#8250;</a>
         </div>
+        @* Next week is last week with edits, which is why the rotation is monthly.
+           Fills the blanks in the week on screen and writes nothing until Save. *@
+        <button type="button" class="sch-btn-ghost" id="sch-copy" onclick="schCopyLastWeek()">
+            Copy last week
+        </button>
         <div class="sch-pick">
             <label>Week starting</label>
             <input type="date" id="sch-start" value="@Model.WeekStart.ToString("yyyy-MM-dd")" />
@@ -144,7 +149,7 @@
 
     @* Save toast *@
     <div id="sch-toast" class="sch-toast">
-        <span class="sch-toast-ico">&#10003;</span> Schedule saved
+        <span class="sch-toast-ico">&#10003;</span> <span class="sch-toast-txt">Schedule saved</span>
     </div>
 
     @* Conflict popup *@
@@ -187,6 +192,7 @@
 <script>
     const SCH_WEEK_START = '@Model.WeekStart.ToString("yyyy-MM-dd")';
     const SCH_WEEK_END   = '@Model.WeekEnd.ToString("yyyy-MM-dd")';
+    const SCH_PREV_WEEK  = '@Model.PrevWeekStart';
     const SCH_DAYS = [@Html.Raw(string.Join(",", Model.Days.Select(d => $"'{d:yyyy-MM-dd}'")))];
     // Data, not markup. These used to be HTML strings glued together with Html.Raw, which
     // switches Razor's encoding OFF - so a driver named `"><script>...` (a dispatcher can
@@ -217,14 +223,20 @@
         return sel;
     }
 
+    let schToastTimer = null;
+
+    function schToast(text, ms) {
+        const t = document.getElementById('sch-toast');
+        t.querySelector('.sch-toast-txt').textContent = text;
+        t.classList.add('show');
+        clearTimeout(schToastTimer);
+        schToastTimer = setTimeout(() => t.classList.remove('show'), ms || 2600);
+    }
+
     // show save toast once after the post-save reload
     if (sessionStorage.getItem('sch_saved')) {
         sessionStorage.removeItem('sch_saved');
-        window.addEventListener('DOMContentLoaded', () => {
-            const t = document.getElementById('sch-toast');
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2600);
-        });
+        window.addEventListener('DOMContentLoaded', () => schToast('Schedule saved'));
     }
 
     function schGoWeek() {
@@ -334,7 +346,10 @@
     })();
 
     function schAddBus(btn) {
-        const tbody = btn.closest('.sch-shift-body');
+        schAddLane(btn.closest('.sch-shift-body'));
+    }
+
+    function schAddLane(tbody) {
         const route = tbody.dataset.route;
         const shift = tbody.dataset.shift;
 
@@ -362,6 +377,88 @@
         // grow the sticky shift-label rowspan to cover the new lane
         const labelCell = tbody.querySelector('.sch-shift-col');
         labelCell.rowSpan = (parseInt(labelCell.rowSpan) || 1) + 1;
+    }
+
+    // Fill this week from the one before it.
+    //
+    // Four routes across three shifts and seven days is eighty-four slots entered by
+    // hand, and next week is mostly last week with edits. Pulling rather than pushing:
+    // the button sits in the week it fills, so what arrives is in front of the planner
+    // rather than in a week they have to go and find.
+    //
+    // Blanks only. A slot already holding a bus and a driver is left alone, and a lane
+    // that has started is not editable at all. Nothing is written here either: the grid
+    // stays a draft until Save, so the planner reads what arrived, sees whatever it
+    // clashes with, and decides.
+    async function schCopyLastWeek() {
+        const btn = document.getElementById('sch-copy');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/Schedule/Week?start=' + encodeURIComponent(SCH_PREV_WEEK));
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            schPasteWeek(await res.json());
+        } catch (e) {
+            schToast('Last week could not be read. Try again.', 4200);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function schPasteWeek(src) {
+        const cells = src.cells || [];
+        if (!cells.length) {
+            schToast('Last week has no trips to copy.', 4200);
+            return;
+        }
+
+        let filled = 0, kept = 0, skipped = 0;
+
+        cells.forEach(c => {
+            const tbody = document.querySelector(
+                '.sch-shift-body[data-route="' + c.routeId + '"][data-shift="' + c.shift + '"]');
+            // A route that has since been removed has no row to fill.
+            if (!tbody) { skipped++; return; }
+
+            // Last week may have run more buses on this shift than this week has lanes
+            // for, so the lanes it needs are added the same way the button adds them.
+            while (tbody.querySelectorAll(':scope > tr').length <= c.lane) schAddLane(tbody);
+
+            const row = tbody.querySelectorAll(':scope > tr')[c.lane];
+            const td = row.querySelectorAll('.sch-cell-td')[c.dayIndex];
+            if (!td) { skipped++; return; }
+
+            // A lane under way renders as a locked block with no pickers in it.
+            const cell = td.querySelector('.sch-cell');
+            if (!cell) { skipped++; return; }
+
+            const veh = cell.querySelector('.sch-veh');
+            const drv = cell.querySelector('.sch-drv');
+            if (veh.value && drv.value) { kept++; return; }
+
+            // A bus grounded since last week, or a driver now unavailable, is not on the
+            // list at all. The slot is left empty rather than holding something that is
+            // not on offer, and the planner is told the count.
+            const has = (sel, val) => Array.prototype.some.call(sel.options, o => o.value === val);
+            if (!has(veh, c.vehicleId) || !has(drv, String(c.driverId))) { skipped++; return; }
+
+            veh.value = c.vehicleId;
+            drv.value = String(c.driverId);
+            cell.classList.add('sch-dirty');
+            filled++;
+        });
+
+        schNarrowChoices();
+
+        // A silent bulk edit is unnerving, and the count is how the planner checks it did
+        // what they meant.
+        const parts = [];
+        parts.push(filled === 1 ? 'Filled 1 slot from last week.'
+                                : 'Filled ' + filled + ' slots from last week.');
+        if (kept) parts.push(kept + (kept === 1 ? ' slot already set was' : ' slots already set were') + ' left alone.');
+        if (skipped) parts.push(skipped + (skipped === 1 ? ' could not be placed.' : ' could not be placed.'));
+        schToast(filled === 0 && kept === 0 && skipped
+            ? 'Nothing could be placed. Those buses and drivers are no longer available.'
+            : parts.join(' '), 5200);
     }
 
     const SHIFT_ADJ = { 'Morning': 'Afternoon', 'Afternoon': 'Evening' }; // back-to-back pairs

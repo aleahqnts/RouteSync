@@ -1,0 +1,237 @@
+﻿@model LeaveQueueViewModel
+@{
+    ViewData["Title"] = "Requests";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tabs = new[] { "Pending", "Approved", "Rejected", "All" };
+
+    string TypeClass(string t) => t?.ToLowerInvariant() switch
+    {
+        "vacation" => "rq-badge--vacation",
+        "sick" => "rq-badge--sick",
+        "emergency" => "rq-badge--emergency",
+        _ => "rq-badge--default"
+    };
+
+    string StatusClass(string s) => s?.ToLowerInvariant() switch
+    {
+        "approved" => "rq-badge--approved",
+        "rejected" => "rq-badge--rejected",
+        "cancelled" => "rq-badge--cancelled",
+        _ => "rq-badge--pending"
+    };
+
+    @* Notice is reported, never judged. The three days BGC asks for is practice, and a
+       word like "late" here would enforce through the wording what the system
+       deliberately does not enforce in code. *@
+    string Notice(int days) => days switch
+    {
+        < 0 => "filed after it started",
+        0 => "filed same day",
+        1 => "1 day ahead",
+        _ => $"{days} days ahead"
+    };
+}
+
+@* Everything that says what is being looked at, held while the list moves. *@
+<div class="rq-sticky-head" data-sticky-head>
+
+    <div class="rq-head">
+        <h2 class="rq-title">Requests</h2>
+        @if (Model.PendingCount > 0)
+        {
+            <span class="rq-waiting">@Model.PendingCount waiting</span>
+        }
+    </div>
+
+    <div class="rq-tabs" role="group" aria-label="Filter by status">
+        @foreach (var tab in tabs)
+        {
+            var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
+            <a class="rq-tab @(on ? "rq-tab--on" : "")"
+               href="@Url.Action("Index", new { status = tab })"
+               aria-current="@(on ? "page" : null)">@tab</a>
+        }
+    </div>
+
+</div>
+
+<div class="rq-card">
+    <div class="rq-card-header" data-sticky-card>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" />
+            <path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+            <polyline points="9 13 11 15 15 11" />
+        </svg>
+        <span>Leave requests</span>
+    </div>
+
+    <div class="rq-table-wrap rs-list-wrap">
+        <table class="rq-table rs-cards rs-list">
+            <thead>
+                <tr>
+                    <th>Driver</th>
+                    <th>Type</th>
+                    <th>Dates</th>
+                    <th>Filed</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="rq-empty">
+                            @(string.Equals(Model.Status, "Pending", StringComparison.OrdinalIgnoreCase)
+                                ? "Nothing waiting on a decision."
+                                : "No requests to show.")
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var r in Model.Rows)
+                    {
+                        <tr data-request="@r.RequestId">
+                            <td>
+                                <span class="rq-driver">@r.DriverName</span>
+                                <span class="rq-driver-id">@r.DriverId</span>
+                            </td>
+                            <td><span class="rq-badge @TypeClass(r.LeaveType)">@r.LeaveType</span></td>
+                            <td>
+                                <span class="rq-span">@r.Span</span>
+                                <span class="rq-days">@r.Days @(r.Days == 1 ? "day" : "days")</span>
+                                @if (!string.IsNullOrWhiteSpace(r.Reason))
+                                {
+                                    <span class="rq-reason">@r.Reason</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="rq-filed">@r.Filed</span>
+                                <span class="rq-notice">@Notice(r.NoticeDays)</span>
+                            </td>
+                            <td>
+                                <span class="rq-balance">@r.RemainingOfType of @r.EntitlementOfType</span>
+                                <span class="rq-balance-sub">@r.LeaveType.ToLowerInvariant() left</span>
+                            </td>
+                            <td><span class="rq-badge @StatusClass(r.Status)">@r.Status</span></td>
+                            <td>
+                                @if (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <div class="rq-actions">
+                                        <button type="button" class="rq-btn rq-btn--approve"
+                                                onclick="rqDecide(@r.RequestId, 'Approved')">Approve</button>
+                                        <button type="button" class="rq-btn rq-btn--reject"
+                                                onclick="rqDecide(@r.RequestId, 'Rejected')">Reject</button>
+                                    </div>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(r.DecisionNote))
+                                {
+                                    <span class="rq-decision-note">@r.DecisionNote</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@* Rejecting without saying why leaves the driver with a decision and no reason for it,
+   so the note is asked for there and offered on an approval. *@
+<div id="rqDecideModal" class="rq-overlay" style="display:none;" data-dialog-close="rqCancel"
+     role="dialog" aria-modal="true" aria-labelledby="rqDecideTitle">
+    <div class="rq-box">
+        <h3 class="rq-box-title" id="rqDecideTitle">Approve leave</h3>
+        <p class="rq-box-desc" id="rqDecideDesc"></p>
+        <p id="rqDecideError" class="rq-box-error" style="display:none;"></p>
+
+        <label class="rq-box-label" for="rqDecideNote">Note</label>
+        <textarea id="rqDecideNote" class="rq-box-note" rows="3" maxlength="300"></textarea>
+
+        <div class="rq-box-actions">
+            <button type="button" class="rq-btn rq-btn--outline" onclick="rqCancel()">Cancel</button>
+            <button type="button" class="rq-btn rq-btn--primary" id="rqDecideGo">Confirm</button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script>
+    (function () {
+        let pending = null;   // { id, decision }
+
+        const modal = document.getElementById('rqDecideModal');
+        const title = document.getElementById('rqDecideTitle');
+        const desc = document.getElementById('rqDecideDesc');
+        const note = document.getElementById('rqDecideNote');
+        const err = document.getElementById('rqDecideError');
+        const go = document.getElementById('rqDecideGo');
+
+        window.rqDecide = function (id, decision) {
+            const row = document.querySelector('[data-request="' + id + '"]');
+            const who = row ? row.querySelector('.rq-driver').textContent : 'this driver';
+            const span = row ? row.querySelector('.rq-span').textContent : '';
+
+            pending = { id, decision };
+            title.textContent = decision === 'Approved' ? 'Approve leave' : 'Reject leave';
+            desc.textContent = who + ' · ' + span;
+            note.value = '';
+            err.style.display = 'none';
+            go.textContent = decision === 'Approved' ? 'Approve' : 'Reject';
+            go.classList.toggle('rq-btn--reject', decision === 'Rejected');
+            modal.style.display = 'flex';
+            note.focus();
+        };
+
+        window.rqCancel = function () {
+            modal.style.display = 'none';
+            pending = null;
+        };
+
+        go.addEventListener('click', async function () {
+            if (!pending) return;
+
+            // A rejection the driver cannot account for is worse than no answer, and they
+            // are told the outcome either way.
+            if (pending.decision === 'Rejected' && !note.value.trim()) {
+                err.textContent = 'Say why this was rejected. The driver is told the reason.';
+                err.style.display = 'block';
+                return;
+            }
+
+            go.disabled = true;
+            try {
+                const body = new URLSearchParams({
+                    requestId: pending.id,
+                    decision: pending.decision,
+                    note: note.value.trim()
+                });
+                const res = await fetch('/Requests/Decide', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken':
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body
+                });
+                if (!res.ok) throw new Error(await res.text() || ('HTTP ' + res.status));
+                window.location.reload();
+            } catch (e) {
+                err.textContent = e.message || 'That could not be saved. Try again.';
+                err.style.display = 'block';
+                go.disabled = false;
+            }
+        });
+    })();
+</script>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/requests.css" asp-append-version="true" />
+}

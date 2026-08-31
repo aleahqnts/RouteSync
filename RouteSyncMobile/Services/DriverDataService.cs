@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using FleetWiseMobile.Models;
@@ -371,5 +371,57 @@ public class DriverDataService
 
         if (!string.IsNullOrEmpty(t?.VehicleId))
             await UpdateVehicleStatusAsync(t.VehicleId, "Ready to Deploy");
+    }
+
+    // --- Leave -------------------------------------------------------------
+
+    /// <summary>Everything this driver has ever filed, newest first.</summary>
+    /// <remarks>
+    /// The whole history rather than a window, because the balance is worked out from it
+    /// and a year's requests is a handful of rows.
+    /// </remarks>
+    public async Task<List<LeaveRequest>> GetLeaveRequestsAsync(int userId)
+    {
+        var r = await _supabase.From<LeaveRequest>()
+            .Filter("user_id", Operator.Equals, userId.ToString())
+            .Order("filed_at", Ordering.Descending)
+            .Get();
+        return r.Models;
+    }
+
+    /// <summary>Files a request, which starts out waiting on a decision.</summary>
+    /// <remarks>
+    /// Three days' notice is asked for and never required, so nothing here refuses a
+    /// request for being late. filed_at is left to the database default so the time of
+    /// filing is the server's, not a phone's clock that may be wrong.
+    ///
+    /// Sent as a plain insert for the same reason the rest of this class does: the
+    /// postgrest client's model round-trip corrupts date columns on Android.
+    /// </remarks>
+    public async Task FileLeaveAsync(
+        int userId, string leaveType, DateTime startDate, DateTime endDate, string? reason)
+    {
+        await PostAsync("leave_requests", new
+        {
+            user_id = userId,
+            leave_type = leaveType,
+            start_date = startDate.ToString("yyyy-MM-dd"),
+            end_date = endDate.ToString("yyyy-MM-dd"),
+            reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+            status = "Pending",
+        });
+    }
+
+    /// <summary>Withdraws a request that has not been decided yet.</summary>
+    /// <remarks>
+    /// Filtered on status as well as id, so a request decided while the phone was showing
+    /// the old list is not withdrawn out from under the decision. The row is left in place
+    /// rather than deleted: what was asked for is part of the record even when it is taken
+    /// back, and the days it was holding are freed by the status alone.
+    /// </remarks>
+    public async Task CancelLeaveAsync(long requestId)
+    {
+        await PatchAsync($"leave_requests?request_id=eq.{requestId}&status=eq.Pending",
+            new { status = "Cancelled" });
     }
 }

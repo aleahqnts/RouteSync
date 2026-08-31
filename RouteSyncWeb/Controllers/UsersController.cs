@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -11,12 +11,6 @@ namespace FleetWise.Controllers
     [RequirePermission("users")]
     public class UsersController : Controller
     {
-        // These keys match the stored permission JSON exactly, including their casing.
-        private static readonly string[] WebPermissionKeys =
-            { "dashboard", "routes", "vehicles", "reports", "users", "audit" };
-
-        private static readonly string[] MobilePermissionKeys = { "tracking", "messages", "checklist" };
-
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
 
@@ -224,11 +218,13 @@ namespace FleetWise.Controllers
             {
                 RoleName = model.RoleName.Trim(),
                 AccessLevel = "custom",
-                WebPermissions = NormalizePermissions(model.WebPermissions, WebPermissionKeys),
-                MobilePermissions = NormalizePermissions(model.MobilePermissions, MobilePermissionKeys),
+                WebPermissions = NormalizePermissions(model.WebPermissions, Permissions.WebKeys),
+                MobilePermissions = NormalizePermissions(model.MobilePermissions, Permissions.MobileKeys),
             };
 
             var newRole = (await _supabase.From<Role>().Insert(role)).Models.FirstOrDefault();
+
+            RolePermissions.Invalidate();
 
             // Roles are the permission system, and editing one changes what every account
             // holding it can reach, so creating and updating are both recorded.
@@ -276,11 +272,38 @@ namespace FleetWise.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            // Taking the last hold on "users" away locks the door from the inside. This
+            // page is itself gated on that permission, so once no role has it nobody can
+            // open Manage Roles to put it back, and the only way out is a change made
+            // straight against the database.
+            //
+            // Written against the roles rather than against a name: a role can be renamed,
+            // and what matters is that somebody keeps the permission, not which somebody.
+            if (!model.WebPermissions.GetValueOrDefault("users"))
+            {
+                var others = await GetRolesAsync();
+                var anotherHoldsUsers = others.Any(r =>
+                    r.RoleId != model.RoleId
+                    && (r.WebPermissions?.GetValueOrDefault("users") ?? false));
+
+                if (!anotherHoldsUsers)
+                {
+                    TempData["Error"] =
+                        $"\"{role.RoleName}\" is currently the only role with the Users permission. "
+                        + "Assign it to another role before removing it here.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
             role.RoleName = model.RoleName.Trim();
-            role.WebPermissions = NormalizePermissions(model.WebPermissions, WebPermissionKeys);
-            role.MobilePermissions = NormalizePermissions(model.MobilePermissions, MobilePermissionKeys);
+            role.WebPermissions = NormalizePermissions(model.WebPermissions, Permissions.WebKeys);
+            role.MobilePermissions = NormalizePermissions(model.MobilePermissions, Permissions.MobileKeys);
 
             await _supabase.From<Role>().Update(role);
+
+            // The cached copy is now wrong, and this is a change to who may reach what, so
+            // it takes effect on the next request rather than when the entry expires.
+            RolePermissions.Invalidate();
 
             await _audit.WriteAsync("role_updated",
                 $"changed the role {role.RoleName}, dashboard access is now: {DescribeAccess(role.WebPermissions)}",

@@ -1,21 +1,9 @@
-@model RoleFormViewModel
+﻿@model RoleFormViewModel
 
 @{
-    var webPermissions = new (string Key, string Label)[]
-    {
-        ("dashboard", "Dashboard"),
-        ("routes", "Routes"),
-        ("vehicles", "Vehicles"),
-        ("reports", "Reports"),
-        ("users", "Users"),
-        ("audit", "Audit Log"),
-    };
-    var mobilePermissions = new (string Key, string Label)[]
-    {
-        ("tracking", "Tracking"),
-        ("messages", "Messages"),
-        ("checklist", "Checklist"),
-    };
+    // Named once, in Permissions, because the controller saves against the same list.
+    var webPermissions = Permissions.Web;
+    var mobilePermissions = Permissions.Mobile;
 }
 
 <div class="modal fade us-modal" id="manageRolesModal" tabindex="-1" aria-labelledby="manageRolesModalLabel" aria-hidden="true">
