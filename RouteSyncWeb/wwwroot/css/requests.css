@@ -1,0 +1,377 @@
+﻿/* Requests/Index.cshtml */
+    :root {
+        --rq-teal: #4AADA8;
+        --rq-text: #2D3748;
+        --rq-muted: #9AA5B4;
+        --rq-border: #E8ECF0;
+        --rq-bg: #F8F9FA;
+        --rq-white: #FFFFFF;
+        --rq-radius: 14px;
+        --rq-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    /* --- Page head ------------------------------------------------------- */
+
+    .rq-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .rq-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--rq-text);
+        font-family: 'Segoe UI', sans-serif;
+        line-height: 1.1;
+    }
+
+    /* The count of what is waiting, which is what the page is opened for. */
+    .rq-waiting {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border-radius: 30px;
+        background: #FEF9E7;
+        color: #B7950B;
+        border: 1px solid #F5E6B8;
+        font-size: .8rem;
+        font-weight: 700;
+        font-family: 'Segoe UI', sans-serif;
+        white-space: nowrap;
+    }
+
+    .rq-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .rq-tab {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 16px;
+        border-radius: 30px;
+        border: 1.5px solid var(--rq-border);
+        background: var(--rq-white);
+        color: var(--rq-text);
+        font-size: .82rem;
+        font-weight: 600;
+        font-family: 'Segoe UI', sans-serif;
+        text-decoration: none;
+        transition: border-color 180ms, color 180ms, background 180ms;
+    }
+
+    .rq-tab:hover {
+        border-color: var(--rq-teal);
+        color: var(--rq-teal);
+    }
+
+    .rq-tab--on {
+        background: var(--rq-teal);
+        border-color: var(--rq-teal);
+        color: #fff;
+    }
+
+    /* --- Card ------------------------------------------------------------ */
+
+    .rq-card {
+        background: var(--rq-white);
+        border: 1px solid var(--rq-border);
+        border-radius: var(--rq-radius);
+        padding: 20px 22px;
+        box-shadow: var(--rq-shadow);
+    }
+
+    .rq-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--rq-text);
+        font-family: 'Segoe UI', sans-serif;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--rq-border);
+    }
+
+    .rq-card-header svg { color: var(--rq-teal); flex-shrink: 0; }
+
+    .rq-table-wrap { overflow-x: auto; }
+
+    .rq-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.875rem;
+    }
+
+    .rq-table thead tr { border-bottom: 1.5px solid var(--rq-border); }
+
+    .rq-table th {
+        padding: 10px 14px;
+        text-align: left;
+        font-size: .78rem;
+        font-weight: 700;
+        color: var(--rq-muted);
+        white-space: nowrap;
+    }
+
+    .rq-table td {
+        padding: 13px 14px;
+        color: var(--rq-text);
+        border-bottom: 1px solid var(--rq-border);
+        vertical-align: middle;
+    }
+
+    .rq-table tbody tr:last-child td { border-bottom: none; }
+
+    .rq-empty {
+        text-align: center;
+        color: var(--rq-muted);
+        padding: 34px 14px;
+    }
+
+    /* --- Cell contents --------------------------------------------------- */
+
+    .rq-driver { display: block; font-weight: 700; }
+    .rq-driver-id,
+    .rq-days,
+    .rq-notice,
+    .rq-balance-sub { display: block; font-size: .74rem; color: var(--rq-muted); }
+
+    .rq-span,
+    .rq-filed,
+    .rq-balance { display: block; }
+
+    .rq-balance { font-weight: 700; }
+
+    /* What the driver said. Wrapped rather than truncated: a reason cut in half is a
+       reason nobody can act on. */
+    .rq-reason {
+        display: block;
+        margin-top: 4px;
+        font-size: .76rem;
+        color: var(--rq-text);
+        font-style: italic;
+        max-width: 34ch;
+    }
+
+    .rq-decision-note {
+        display: block;
+        font-size: .76rem;
+        color: var(--rq-muted);
+        font-style: italic;
+        max-width: 30ch;
+    }
+
+    /* --- Badges ---------------------------------------------------------- */
+
+    .rq-badge {
+        display: inline-block;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        font-family: 'Segoe UI', sans-serif;
+        white-space: nowrap;
+    }
+
+    .rq-badge--vacation  { background: #E8F6F5; color: #2C9C96; }
+    .rq-badge--sick      { background: #E3F2FD; color: #2B6CB0; }
+    .rq-badge--emergency { background: #FDECEC; color: #E53E3E; }
+    .rq-badge--default   { background: #E4E7EC; color: #4B5563; }
+
+    .rq-badge--pending   { background: #FEF9E7; color: #B7950B; }
+    .rq-badge--approved  { background: #E8F8EE; color: #27AE60; }
+    .rq-badge--rejected  { background: #FDECEC; color: #E53E3E; }
+    .rq-badge--cancelled { background: #E4E7EC; color: #4B5563; }
+
+    /* --- Buttons --------------------------------------------------------- */
+
+    .rq-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .rq-btn {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: 1.5px solid var(--rq-border);
+        background: var(--rq-white);
+        color: var(--rq-text);
+        font-size: .82rem;
+        font-weight: 600;
+        font-family: 'Segoe UI', sans-serif;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 180ms, border-color 180ms, color 180ms;
+    }
+
+    .rq-btn:disabled { opacity: .5; cursor: default; }
+
+    .rq-btn--approve:hover { border-color: #27AE60; color: #27AE60; }
+    .rq-btn--reject:hover  { border-color: #E53E3E; color: #E53E3E; }
+
+    .rq-btn--primary {
+        background: var(--rq-teal);
+        border-color: var(--rq-teal);
+        color: #fff;
+    }
+
+    .rq-btn--reject.rq-btn--primary {
+        background: #E53E3E;
+        border-color: #E53E3E;
+    }
+
+    /* --- Decision dialog ------------------------------------------------- */
+
+    .rq-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(13,28,40,.5);
+        z-index: 4000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .rq-box {
+        background: #fff;
+        border-radius: 14px;
+        width: 100%;
+        max-width: 440px;
+        padding: 22px;
+        box-shadow: 0 14px 44px rgba(0,0,0,.28);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .rq-box-title { font-size: 1.05rem; font-weight: 700; color: var(--rq-text); }
+
+    .rq-box-desc {
+        margin-top: 4px;
+        font-size: .84rem;
+        color: var(--rq-muted);
+    }
+
+    .rq-box-error {
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #FDECEC;
+        color: #E53E3E;
+        font-size: .8rem;
+    }
+
+    .rq-box-label {
+        display: block;
+        margin: 14px 0 6px;
+        font-size: .78rem;
+        font-weight: 700;
+        color: var(--rq-muted);
+    }
+
+    .rq-box-note {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid var(--rq-border);
+        border-radius: 10px;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: .85rem;
+        color: var(--rq-text);
+        resize: vertical;
+    }
+
+    .rq-box-note:focus { outline: none; border-color: var(--rq-teal); }
+
+    .rq-box-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+/* ===========================================================================
+   Phone.
+
+   The head and the card heading are held by the shared rules; what is left here
+   is the ground each sits on. Rows become cards that name their own values, so
+   the column headings go.
+   =========================================================================== */
+
+@media (min-width: 600px) {
+
+    .rq-sticky-head {
+        background: var(--rq-bg);
+        padding-bottom: 18px;
+    }
+
+        .rq-sticky-head .rq-tabs {
+            margin-bottom: 0;
+        }
+
+    .rq-card-header {
+        background: var(--rq-white);
+    }
+}
+
+@media (max-width: 599px) {
+
+    .rq-title { font-size: 1.25rem; }
+
+    .rq-card { padding: 14px 14px 16px; }
+
+    .rq-tabs {
+        gap: 6px;
+        margin-bottom: 12px;
+        /* Four statuses do not fit across a handset, and wrapping them puts one on a
+           line of its own. They scroll instead, the way the other boards do. */
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+    }
+
+        .rq-tabs::-webkit-scrollbar { display: none; }
+
+    .rq-tab {
+        flex: 0 0 auto;
+        padding: 6px 13px;
+        font-size: .78rem;
+    }
+
+    /* Approve and Reject take the width between them rather than sitting in a corner
+       of a card. */
+    .rq-actions {
+        width: 100%;
+        gap: 8px;
+    }
+
+        .rq-actions .rq-btn {
+            flex: 1;
+            min-height: 44px;
+        }
+
+    /* A dialog on a phone rises from the bottom edge, and measures against the height
+       actually on screen rather than a viewport that does not shrink when the browser
+       raises its own bar. */
+    .rq-overlay {
+        padding: 0;
+        align-items: flex-end;
+        bottom: auto;
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    .rq-box {
+        max-width: none;
+        border-radius: 16px 16px 0 0;
+        max-height: 92vh;
+        max-height: 92dvh;
+        overflow-y: auto;
+        padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    }
+}

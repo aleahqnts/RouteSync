@@ -5,7 +5,15 @@
     .dp-trip-row.dp-row-flag { outline:2px solid #E74C3C; outline-offset:-2px; }
 
     .dp-title-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-    .dp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:#EAF7F5; color:#2e7d72; font-size:.86rem; font-weight:700; border:1px solid #CDE9E4; }
+    .dp-date-badge { position:relative; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:#EAF7F5; color:#2e7d72; font-size:.86rem; font-weight:700; border:1px solid #CDE9E4; cursor:pointer; }
+    /* The field is not read; the badge under it is. It keeps the badge's size so a
+       press anywhere on the date opens the calendar, and stays reachable by keyboard.
+       Left with its own appearance, invisible: a date field told to drop it stops
+       offering the calendar at all in some browsers. The inset reaches past the
+       badge's border, which is outside the box this is measured against. */
+    .dp-date-pick { position:absolute; inset:-1px; margin:0; padding:0; border:0; background:transparent; color:transparent; font:inherit; opacity:0; cursor:pointer; }
+    /* Focus otherwise lands on a field nobody can see. */
+    .dp-date-badge:has(.dp-date-pick:focus-visible) { outline:2px solid #2e7d72; outline-offset:2px; }
     .dp-date-badge i { font-size:1rem; }
     .dp-cycle-main { font-weight:800; }
     .dp-cycle-range { font-weight:600; font-size:.74rem; color:#3d9490; padding-left:8px; margin-left:4px; border-left:1px solid #BFE2DC; }

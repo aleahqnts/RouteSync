@@ -102,6 +102,7 @@ builder.Services.AddSingleton<LoginThrottle>();
 // database cannot tell from the shared service key, and to record the caller's address.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditLog>();
+builder.Services.AddScoped<RolePermissions>();
 
 builder.Services.AddControllersWithViews();
 
@@ -184,6 +185,12 @@ app.UseRouting();
 app.UseRateLimiter();
 
 app.UseAuthentication();
+
+// Between reading the cookie and deciding what it allows: the permissions it carries are
+// replaced with what the role holds now, so granting or revoking one takes effect without
+// waiting for the holder to sign in again.
+app.UseMiddleware<LivePermissionsMiddleware>();
+
 app.UseAuthorization();
 
 // A user still carrying the temporary-password claim is confined to the change page, plus

@@ -74,6 +74,14 @@
                     <path d='M16 3.13a4 4 0 0 1 0 7.75'/>
                   </svg>",
 
+            ["requests"] =
+                @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'
+                      stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>
+                    <path d='M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z'/>
+                    <path d='M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2'/>
+                    <polyline points='9 13 11 15 15 11'/>
+                  </svg>",
+
             ["audit"] =
                 @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'
                       stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>
@@ -99,6 +107,9 @@
         new { Label = "Dispatch",  Short = "Dispatch", Controller = "Dispatch",  Action = "Index", IconKey = "dispatch",  Perm = "routes"    },
         new { Label = "Reports",   Short = "Reports",  Controller = "Reports",   Action = "Index", IconKey = "reports",   Perm = "reports"   },
         new { Label = "Users",     Short = "Users",    Controller = "Users",     Action = "Index", IconKey = "users",     Perm = "users"     },
+        // Deciding who is off is not the same job as managing accounts, so it carries its
+        // own permission rather than riding on "users".
+        new { Label = "Requests",  Short = "Requests", Controller = "Requests",  Action = "Index", IconKey = "requests",  Perm = "requests"  },
         // Its own permission, deliberately not folded into "users": reading the trail is a
         // separate decision from managing accounts. No role has it until it is granted.
         new { Label = "Audit Log", Short = "Audit",    Controller = "Audit",     Action = "Index", IconKey = "audit",     Perm = "audit"     },

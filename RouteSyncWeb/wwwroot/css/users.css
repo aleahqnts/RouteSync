@@ -142,7 +142,9 @@
     }
 
     .us-search-input {
-        width: 260px;
+        /* Room for a full name and a work address, which is what is typed here.
+           Wider than that and it takes the toolbar over. */
+        width: 340px;
         padding: 7px 14px 7px 36px;
         border: 1.5px solid var(--us-border);
         border-radius: 10px;
@@ -567,7 +569,10 @@
     .us-roles-form {
         flex: 1;
         min-width: 0;
-        padding: 20px 24px;
+        /* No padding at the foot. A sticky child stops at the bottom of its containing
+           block, which is this box's content edge, so any padding here leaves the bar
+           hanging that far short of the bottom. The footer carries the spacing instead. */
+        padding: 20px 24px 0;
         max-height: 72vh;
         max-height: 72dvh;
         overflow-y: auto;
@@ -648,12 +653,31 @@
         transform: translateX(18px);
     }
 
+    /* Held at the foot of the pane it belongs to. Ten permissions and a name field is
+       more than the dialog shows at once, so Save sat below the fold and the switch a
+       moment ago had to be scrolled away from to reach it.
+
+       The scrolling box is .us-roles-form, which is why it has no padding at its foot:
+       a sticky child stops at the bottom of its containing block, and any padding there
+       leaves the bar hanging that far short of the bottom. The spacing lives on this
+       instead, and the negative side margins let it span the pane so rows pass behind
+       it rather than beside it. */
+    /* The switch that cannot be turned off, because turning it off would leave nobody
+       able to reach this dialog. Dimmed and unclickable, which is what disabled means. */
+    .us-perm-row--held {
+        opacity: .55;
+    }
+
     .us-roles-form-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
         display: flex;
         justify-content: flex-end;
         gap: 10px;
-        margin-top: 20px;
-        padding-top: 16px;
+        margin: 20px -24px 0;
+        padding: 16px 24px 20px;
+        background: var(--us-white);
         border-top: 1px solid var(--us-border);
     }
 

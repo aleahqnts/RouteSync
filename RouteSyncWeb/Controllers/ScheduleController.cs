@@ -115,6 +115,55 @@ namespace FleetWise.Controllers
             return View(vm);
         }
 
+        /// <summary>One week's trips, laid out the way the planner draws them.</summary>
+        /// <remarks>
+        /// The planner loads its own week and no other, so filling one from another needs
+        /// a way to read the other. Lanes are numbered here exactly as Index numbers them,
+        /// by vehicle, or a row copied forward would land in a different lane than the one
+        /// it came from.
+        /// </remarks>
+        [HttpGet]
+        public async Task<IActionResult> Week(string start)
+        {
+            if (!DateTime.TryParse(start, out var parsed))
+                return BadRequest(new { message = "That week could not be read." });
+
+            var weekStart = parsed.Date;
+            var weekEnd = weekStart.AddDays(6);
+
+            var trips = (await _supabase.From<Trip>()
+                .Filter("date", Operator.GreaterThanOrEqual, weekStart.ToString("yyyy-MM-dd"))
+                .Filter("date", Operator.LessThanOrEqual, weekEnd.ToString("yyyy-MM-dd"))
+                .Get()).Models;
+
+            var lanes = new Dictionary<string, int>();
+            var cells = new List<object>();
+
+            foreach (var t in trips.OrderBy(t => t.VehicleId))
+            {
+                var key = $"{t.RouteId}|{t.ShiftType}|{t.Date:yyyy-MM-dd}";
+                lanes.TryGetValue(key, out var lane);
+                lanes[key] = lane + 1;
+
+                cells.Add(new
+                {
+                    routeId = t.RouteId,
+                    shift = t.ShiftType,
+                    dayIndex = (int)(t.Date.Date - weekStart).TotalDays,
+                    lane,
+                    vehicleId = t.VehicleId,
+                    driverId = t.DriverId,
+                });
+            }
+
+            return Json(new
+            {
+                weekStart = weekStart.ToString("yyyy-MM-dd"),
+                weekEnd = weekEnd.ToString("yyyy-MM-dd"),
+                cells,
+            });
+        }
+
         // POST bulk save.
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] SaveScheduleRequest req)
