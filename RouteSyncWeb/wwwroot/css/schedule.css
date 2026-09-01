@@ -1,5 +1,16 @@
 ﻿/* Schedule/Index.cshtml */
     .sch-wrap { padding: 20px 24px 60px; font-family: 'Segoe UI', sans-serif; }
+
+    /* Held under the app bar. Bled out to the edges of the page and padded back, so what
+       scrolls under it is covered rather than showing down either side. */
+    .sch-sticky-top {
+        position: sticky;
+        top: var(--rs-bar, 0px);
+        z-index: 20;
+        margin: -20px -24px 0;
+        padding: 20px 24px 4px;
+        background: #F8F9FA;
+    }
     .sch-toolbar { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:10px; }
     .sch-week-nav { display:flex; align-items:center; gap:10px; }
     .sch-week-label { font-weight:700; color:#1a2a4a; font-size:.95rem; min-width:180px; text-align:center; }
@@ -12,9 +23,38 @@
     .sch-btn-save:disabled { background:#9AA5B4; cursor:not-allowed; }
     .sch-hint { font-size:.8rem; color:#9AA5B4; margin:0 0 18px; }
 
-    .sch-card { background:#fff; border:1px solid #E8ECF0; border-radius:14px; margin-bottom:20px; overflow:hidden; }
-    .sch-card-head { font-weight:700; color:#1a2a4a; padding:14px 18px; border-bottom:1px solid #E8ECF0; background:#F8F9FA; }
-    .sch-table-scroll { overflow-x:auto; }
+    /* No overflow of its own. A box that hides its overflow is a scrollport, and a
+       heading held inside one is held against that box rather than against the page, which
+       is the whole of what makes it stick. The corners it was rounding are rounded by the
+       two children instead. */
+    .sch-card { background:#fff; border:1px solid #E8ECF0; border-radius:14px; margin-bottom:20px; }
+
+    /* Each route's name stays while its own shifts are read, and is pushed off by the next
+       route's as that card arrives. Nothing here counts the routes or names them, so a
+       route added later behaves the same with no change to this. */
+    .sch-card-head {
+        position: sticky;
+        top: calc(var(--rs-bar, 0px) + var(--sch-top, 0px));
+        z-index: 10;
+        padding: 14px 18px;
+        border-radius: 13px 13px 0 0;
+        /* A band of its own rather than the ground the page is already drawn on. Held at
+           the top over rows that keep moving, it has to be read as the thing naming them,
+           and in the same grey as both the page behind it and the shift column below it,
+           there was nothing to tell it apart from either.
+
+           The suite's own teal, not a colour brought in for this. A dark slab separates
+           just as well and belongs to nothing else on the page. */
+        background: var(--fw-teal-light, #E8F6F5);
+        border-bottom: 1px solid #CDE9E4;
+        color: #1a2a4a;
+        font-weight: 700;
+        letter-spacing: .01em;
+        /* Reads as a divider at rest and as a lift once it is holding. */
+        box-shadow: 0 2px 6px rgba(13, 28, 40, .08);
+    }
+
+    .sch-table-scroll { overflow-x:auto; border-radius: 0 0 13px 13px; }
     .sch-table { width:100%; border-collapse:collapse; min-width:900px; }
     .sch-table th, .sch-table td { border:1px solid #EEF1F4; padding:8px; text-align:center; vertical-align:top; }
     .sch-table thead th { background:#FBFCFD; font-size:.78rem; color:#4A5568; }
@@ -22,7 +62,10 @@
     .sch-day-name { font-weight:700; color:#2D3748; }
     .sch-day-num { font-size:.72rem; color:#9AA5B4; }
     .sch-today { background:#EAF7F5 !important; }
-    .sch-shift-col { background:#FBFCFD; font-weight:700; color:#2D3748; font-size:.82rem; text-align:left; width:104px; position:sticky; left:0; z-index:1; vertical-align:middle; }
+    /* Above the conflict figures, which are drawn on the cells and would otherwise pass
+       over the top of this column as the grid is scrolled sideways: both stood at the same
+       level, and the figures come later in the row, so they won. */
+    .sch-shift-col { background:#FBFCFD; font-weight:700; color:#2D3748; font-size:.82rem; text-align:left; width:104px; position:sticky; left:0; z-index:4; vertical-align:middle; }
     .sch-shift-name { margin-bottom:8px; }
     .sch-add-bus { display:inline-block; padding:4px 9px; border:1px dashed #B7D9D5; border-radius:7px; background:#F2FAF9; color:#3d9490; font-size:.72rem; font-weight:700; cursor:pointer; }
     .sch-add-bus:hover { background:#E4F3F1; border-color:#4AADA8; }
@@ -95,7 +138,10 @@
         .sch-modal-overlay--free .sch-modal-item--go { cursor: pointer; }
         .sch-modal-overlay--free .sch-modal-btn { cursor: pointer; }
 
-        .sch-modal-grab {
+        /* Written against both classes so it outranks the rule that hides it, which sits
+           further down the file. */
+        .sch-modal-overlay--free .sch-modal-grab {
+            display: block;
             margin-left: auto;
             color: #B6C2CF;
             font-size: 1.1rem;
@@ -165,6 +211,45 @@
     .sch-modal-btn-override { background:#fff; color:#B7791F; border:1.5px solid #E6B800; }
     .sch-modal-btn-override:hover { background:#FFF8E6; }
 
+    /* The mark that says the panel can be taken hold of. Drawn only where it can be:
+       on a phone the panel is the bottom sheet every other dialog is, with nowhere to be
+       moved to. */
+    .sch-modal-grab { display: none; }
+
+    /* Says the grid is holding work that is not in the database, which is the one thing
+       the grid itself cannot show. */
+    .sch-draft {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 10px;
+        padding: 9px 14px;
+        border: 1px solid #E6D6A8;
+        border-radius: 10px;
+        background: #FEF9E7;
+        color: #7a6412;
+        font-size: .84rem;
+    }
+
+    .sch-draft[hidden] { display: none; }
+
+    .sch-draft-ico { font-size: 1rem; }
+
+    .sch-draft-drop {
+        margin-left: auto;
+        border: 1px solid #E6D6A8;
+        border-radius: 8px;
+        padding: 5px 12px;
+        background: #fff;
+        color: #7a6412;
+        font-size: .8rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .sch-draft-drop:hover { background: #FFF3D0; }
+
     .sch-toast {
         position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
         background:#1f7a6e; color:#fff; font-size:.9rem; font-weight:700;
@@ -182,6 +267,12 @@
     @media (max-width: 599px) {
 
         .sch-wrap { padding: 14px 12px 96px; }
+
+        /* The same bleed, against the padding a phone uses. */
+        .sch-sticky-top {
+            margin: -14px -12px 0;
+            padding: 14px 12px 4px;
+        }
 
         /* The toolbar is five controls of different jobs. On a phone they stack into
            rows that each do one thing: leave, move a week, jump to a date, save. */
@@ -261,8 +352,10 @@
 
         .sch-table .sch-shift-col {
             position: sticky;
-            left: 0;
-            z-index: 2;
+            /* A pixel past the scroller's edge, so the boundary between the two is covered
+               by the cell itself rather than by a shadow the scroller clips. */
+            left: -1px;
+            z-index: 4;
             width: 92px;
             min-width: 92px;
             max-width: 92px;
@@ -275,7 +368,7 @@
             box-shadow: 1px 0 0 #EEF1F4, -6px 0 0 #FBFCFD;
         }
 
-        .sch-table thead .sch-shift-col { z-index: 3; }
+        .sch-table thead .sch-shift-col { z-index: 5; }
 
         .sch-modal-overlay { padding: 0; align-items: flex-end; }
         .sch-modal { max-width: none; max-height: 92vh; max-height: 92dvh; overflow-y: auto;

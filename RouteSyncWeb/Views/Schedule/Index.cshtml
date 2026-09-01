@@ -20,6 +20,10 @@
 
 <div class="sch-wrap">
 
+    @* Held at the top of the screen. The week being planned, the way to another week and
+       the way to save are wanted at every point of a grid several screens long. *@
+    <div class="sch-sticky-top" id="schStickyTop">
+
     @* Toolbar *@
     <div class="sch-toolbar">
         <a class="sch-btn-ghost" href="/Dispatch">&#8592; Back to Dispatch</a>
@@ -55,10 +59,19 @@
                 aria-selected="false">All</button>
     </div>
 
+    </div>@* /sch-sticky-top *@
+
+    @* Shown when a week is opened on edits that were made and never saved. *@
+    <div class="sch-draft" id="schDraft" hidden>
+        <span class="sch-draft-ico" aria-hidden="true">&#9998;</span>
+        <span id="schDraftText"></span>
+        <button type="button" class="sch-draft-drop" onclick="schDiscardDraft()">Discard them</button>
+    </div>
+
     <p class="sch-hint">
-        Assign a vehicle and a driver to each shift. Use <strong>+ Add bus</strong> to
-        run more than one on the same shift. Trips already under way cannot be edited.
-        Conflicts are reported on save.
+        Each shift requires both a vehicle and a driver. Use <strong>+ Add bus</strong> to
+        run more than one bus on the same shift. Trips already under way are locked.
+        Conflicts are reported when the schedule is saved.
     </p>
 
     @foreach (var route in Model.Routes)
@@ -239,6 +252,24 @@
         Model.Drivers.Where(d => !d.Offered).Select(d => d.DriverId.ToString())));
     const SCH_TODAY = '@(Model.TodayInWeek ?? "")';
 
+    /* The height of the block held at the top, written where the stylesheet can read it,
+       so every route heading knows what to come to rest under.
+       Measured rather than written down: the toolbar wraps onto a second line on a narrow
+       window, and a figure typed into the stylesheet would be wrong the moment it did. */
+    (function () {
+        const top = document.getElementById('schStickyTop');
+        if (!top) return;
+
+        function measure() {
+            document.documentElement.style.setProperty(
+                '--sch-top', top.getBoundingClientRect().height + 'px');
+        }
+
+        measure();
+        if (window.ResizeObserver) new ResizeObserver(measure).observe(top);
+        window.addEventListener('resize', measure);
+    })();
+
     // Why a driver cannot take a shift on a given day, or an empty string when they can.
     //
     // Leave carries its dates, so it is asked about the day the cell sits on. The
@@ -303,6 +334,116 @@
         return sel;
     }
 
+    // Edits held between weeks.
+    //
+    // Prev, Next and the date picker are links: they load the page again, and everything
+    // entered and not yet saved went with it, silently. A week's worth of work can be
+    // twenty pickers, and losing it to a mis-click on Next is not a thing anyone should
+    // have to be careful about.
+    //
+    // Kept per week, so moving between two half-planned weeks keeps both. Kept for the tab
+    // rather than the browser: this is a draft of what is on screen, not a second copy of
+    // the schedule, and a draft that outlives the sitting would be restored days later
+    // over a week somebody else has since saved.
+    let schRestoring = false;
+
+    function schDraftKey() { return 'sch_draft_' + SCH_WEEK_START; }
+
+    /* Every cell that has been touched, and where it sits. Lanes are counted over all of
+       them in the order they are drawn, so a lane added by + Add bus is found again. */
+    function schSaveDraft() {
+        if (schRestoring) return;
+
+        const lanes = {};
+        const out = [];
+
+        document.querySelectorAll('.sch-cell').forEach(function (cell) {
+            const slot = cell.dataset.route + '|' + cell.dataset.shift + '|' + cell.dataset.date;
+            lanes[slot] = (lanes[slot] === undefined ? 0 : lanes[slot] + 1);
+            if (!cell.classList.contains('sch-dirty')) return;
+
+            out.push({
+                r: cell.dataset.route,
+                s: cell.dataset.shift,
+                d: cell.dataset.date,
+                lane: lanes[slot],
+                veh: cell.querySelector('.sch-veh').value,
+                drv: cell.querySelector('.sch-drv').value
+            });
+        });
+
+        // A tab that refuses storage is a tab without drafts, not a tab that stops working.
+        try {
+            if (out.length) sessionStorage.setItem(schDraftKey(), JSON.stringify(out));
+            else sessionStorage.removeItem(schDraftKey());
+        } catch (e) { /* private browsing, or the quota */ }
+    }
+
+    function schLanesFor(route, shift, date) {
+        return document.querySelectorAll(
+            '.sch-cell[data-route="' + route + '"][data-shift="' + shift + '"][data-date="' + date + '"]');
+    }
+
+    function schDiscardDraft() {
+        try { sessionStorage.removeItem(schDraftKey()); } catch (e) { }
+        window.location.reload();
+    }
+
+    /* Put back where they were. A bus or a driver that has since stopped being on offer is
+       left out rather than forced in, and the count says how many. */
+    function schRestoreDraft() {
+        let saved = null;
+        try { saved = JSON.parse(sessionStorage.getItem(schDraftKey()) || 'null'); }
+        catch (e) { return; }
+        if (!Array.isArray(saved) || !saved.length) return;
+
+        schRestoring = true;
+        let put = 0, lost = 0;
+
+        saved.forEach(function (c) {
+            const tbody = document.querySelector(
+                '.sch-shift-body[data-route="' + c.r + '"][data-shift="' + c.s + '"]');
+            if (!tbody) { lost++; return; }
+
+            let list = schLanesFor(c.r, c.s, c.d);
+            let guard = 0;
+            while (list.length <= c.lane && guard++ < 20) {
+                schAddLane(tbody);
+                list = schLanesFor(c.r, c.s, c.d);
+            }
+
+            const cell = list[c.lane];
+            if (!cell) { lost++; return; }
+
+            const veh = cell.querySelector('.sch-veh');
+            const drv = cell.querySelector('.sch-drv');
+            const has = function (sel, value) {
+                return !value || Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+            };
+            if (!has(veh, c.veh) || !has(drv, c.drv)) { lost++; return; }
+
+            veh.value = c.veh;
+            drv.value = c.drv;
+            veh.dataset.prev = veh.value;
+            drv.dataset.prev = drv.value;
+            cell.classList.add('sch-dirty');
+            put++;
+        });
+
+        schRestoring = false;
+        schNarrowChoices();
+        schMarkAway();
+
+        if (!put && !lost) return;
+
+        const bar = document.getElementById('schDraft');
+        document.getElementById('schDraftText').textContent =
+            (put === 1 ? '1 unsaved change' : put + ' unsaved changes') + ' from earlier restored.'
+            + (lost ? ' ' + lost + (lost === 1 ? ' could not be put back.' : ' could not be put back.') : '')
+            + ' Nothing is written until you save.';
+        bar.hidden = false;
+    }
+
     let schToastTimer = null;
 
     function schToast(text, ms) {
@@ -341,6 +482,7 @@
                 sel.dataset.prev = sel.value;
                 schNarrowChoices();
                 schMarkAway();
+                schSaveDraft();
 
                 // The list on screen was worked out from the grid as it was. Changing a
                 // cell answers one of its lines or invalidates another, and neither is
@@ -365,11 +507,13 @@
     function schCancelAway() {
         if (schAwaySel) schAwaySel.value = schAwaySel.dataset.prev || '';
         schCloseAway();
+        schSaveDraft();
     }
 
     function schConfirmAway() {
         if (schAwaySel) schAwaySel.dataset.prev = schAwaySel.value;
         schCloseAway();
+        schSaveDraft();
     }
 
     function schCloseAway() {
@@ -583,6 +727,7 @@
 
         schNarrowChoices();
         schMarkAway();
+        schSaveDraft();
 
         // A silent bulk edit is unnerving, and the count is how the planner checks it did
         // what they meant.
@@ -782,6 +927,9 @@
         }
 
         grip.addEventListener('pointerdown', function (e) {
+            // Not on a phone. There the panel is the bottom sheet every other dialog is,
+            // there is nowhere to move it to, and a drag would fight the scroll.
+            if (window.matchMedia('(max-width: 599px)').matches) return;
             // Only the primary button, and never a text selection dragged out of the title.
             if (e.button !== 0) return;
             // A button is pressed, not dragged.
@@ -978,6 +1126,8 @@
                 }
                 return;
             }
+            // Written, so the draft of it has nothing left to hold.
+            try { sessionStorage.removeItem(schDraftKey()); } catch (e) { }
             sessionStorage.setItem('sch_saved', '1'); // survive the reload -> show toast
             window.location.reload();
         }).catch(err => schShowConflicts(
@@ -985,4 +1135,8 @@
               'Save Failed', 'Check your connection, then save again.'))
           .finally(() => { btn.disabled = false; btn.textContent = 'Save Schedule'; });
     }
+
+    // Last, because putting a draft back can add lanes, and adding one reads the day
+    // filter and the option lists set up above.
+    schRestoreDraft();
 </script>
