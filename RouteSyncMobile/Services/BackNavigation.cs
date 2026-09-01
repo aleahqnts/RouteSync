@@ -1,4 +1,4 @@
-namespace FleetWiseMobile.Services;
+﻿namespace FleetWiseMobile.Services;
 
 /// <summary>
 /// Bridge between the Android back button and Blazor's routing.
@@ -72,6 +72,7 @@ public static class BackNavigation
 
         return path switch
         {
+            "/leave" => "/profile",
             "/trips" or "/notifications" or "/profile" => "/home",
             _ => null, // /home, /, /set-password: nothing above them
         };

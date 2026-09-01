@@ -1,4 +1,4 @@
-@page "/notifications"
+﻿@page "/notifications"
 @implements IDisposable
 @inject SessionService Session
 @inject DriverDataService Data
@@ -174,8 +174,13 @@ else
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
-        items = await Data.GetMessagesAsync(Session.CurrentUser!.UserId);
-        loading = false;
+        try { items = await Data.GetMessagesAsync(Session.CurrentUser!.UserId); }
+        catch (Exception ex)
+        {
+            items = new();
+            System.Diagnostics.Debug.WriteLine($"[Notifications.Load] {ex}");
+        }
+        finally { loading = false; }
         await Watch.RefreshNow();   // sync Watch cache w/ DB (authoritative is_read)
         Watch.MarkSeenNow();        // opening the tab clears broadcast/route from the badge
         _ = PollLoop();             // background: new messages appear without pull-to-refresh

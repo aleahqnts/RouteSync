@@ -1,4 +1,4 @@
-@page "/trip-active/{TripId}"
+﻿@page "/trip-active/{TripId}"
 @layout LoginLayout
 @implements IDisposable
 @inject SessionService Session
@@ -97,7 +97,7 @@ else
             </div>
         </div>
 
-        <button class="btn-end" @onclick="@(() => showConfirm = true)">End Trip</button>
+        <button class="btn-end" @onclick="@(() => showConfirm = true)">End Shift</button>
     </div>
 
     @if (showConfirm)
@@ -107,8 +107,8 @@ else
                 <div class="flag">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#2e9e8f" stroke-width="2"><path d="M5 21V4M5 4h11l-2 4 2 4H5" /></svg>
                 </div>
-                <h2>Are you sure you want to end this trip?</h2>
-                <p class="c-sub">This will complete your trip for today.</p>
+                <h2>Are you sure you want to end this shift?</h2>
+                <p class="c-sub">This will complete your shift for today.</p>
 
                 <div class="c-card">
                     <div class="c-bus-row">
@@ -137,7 +137,7 @@ else
 
                 <div class="c-actions">
                     <button class="btn-cancel" @onclick="@(() => showConfirm = false)" disabled="@ending">Cancel</button>
-                    <button class="btn-endred" @onclick="EndTrip" disabled="@ending">End Trip</button>
+                    <button class="btn-endred" @onclick="EndTrip" disabled="@ending">End Shift</button>
                 </div>
             </div>
         </div>
@@ -267,6 +267,8 @@ else
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TripActive.Load] {ex}"); }
 
+        try
+        {
         if (trip is null) await LoadCacheAsync();
 
         // A finished trip must never reach the counting screen. Opening it here would set
@@ -313,7 +315,14 @@ else
             // Back online, so drain any queued telemetry and trip finalizations.
             _ = Queue.FlushAsync();
         }
-        loading = false;
+        }
+        finally
+        {
+            // Cleared whatever happened above. Left raised by a throw, the counting screen
+            // shows a skeleton over a trip that is already running, and the only way out is
+            // to leave the page and come back.
+            loading = false;
+        }
 
         // One tick a second for the progress bar, with a database flush every 15.
         timer = new System.Threading.Timer(_ => OnTick(), null, 1000, 1000);

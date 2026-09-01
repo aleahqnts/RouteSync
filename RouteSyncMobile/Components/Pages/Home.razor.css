@@ -1,4 +1,4 @@
-.loading {
+﻿.loading {
     min-height: 80vh;
     display: flex;
     align-items: center;
@@ -88,6 +88,7 @@
 
 .green { color: #2e9e8f; }
 .red { color: #d0494b; }
+.amber { color: #b7950b; }
 
 .status-msg {
     color: #d0494b;
