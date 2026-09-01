@@ -1,4 +1,4 @@
-@page "/trip-details/{TripId}"
+﻿@page "/trip-details/{TripId}"
 @layout LoginLayout
 @inject SessionService Session
 @inject DriverDataService Data
@@ -19,7 +19,7 @@ else
         <div class="td-header">
             <button class="back" @onclick="@(() => Nav.NavigateTo("/home"))">&#8592;</button>
             <div class="td-title">
-                <h1>Trip Details</h1>
+                <h1>Shift Details</h1>
                 <p class="td-sub">Review your assignment</p>
             </div>
             <span class="spacer"></span>
@@ -50,7 +50,7 @@ else
             <p class="err">@msg</p>
         }
 
-        <button class="btn-green" @onclick="Start" disabled="@busy">Start Trip</button>
+        <button class="btn-green" @onclick="Start" disabled="@busy">Start Shift</button>
     </div>
 }
 
@@ -82,14 +82,29 @@ else
     {
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
 
-        trip = await Data.GetTripAsync(TripId);
-        if (trip is not null)
+        try
         {
-            route = await Data.GetRouteAsync(trip.RouteId);
-            vehicle = await Data.GetVehicleAsync(trip.VehicleId);
-            checklist = await Data.GetChecklistAsync(trip.TripId);
+            trip = await Data.GetTripAsync(TripId);
+            if (trip is not null)
+            {
+                // The three that describe the trip, asked for together: none of them
+                // needs an answer from the others.
+                var routeTask = Data.GetRouteAsync(trip.RouteId);
+                var vehicleTask = Data.GetVehicleAsync(trip.VehicleId);
+                var checklistTask = Data.GetChecklistAsync(trip.TripId);
+
+                await Task.WhenAll(routeTask, vehicleTask, checklistTask);
+
+                route = routeTask.Result;
+                vehicle = vehicleTask.Result;
+                checklist = checklistTask.Result;
+            }
         }
-        loading = false;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TripDetails.Load] {ex}");
+        }
+        finally { loading = false; }
     }
 
     private async Task Start()

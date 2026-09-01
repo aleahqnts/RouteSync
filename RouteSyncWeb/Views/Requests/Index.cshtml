@@ -5,6 +5,14 @@
 
     var tabs = new[] { "Pending", "Approved", "Rejected", "All" };
 
+    // Drivers with something in the list being shown, so the filter offers names that
+    // will actually match rather than the whole roster.
+    var driversShown = Model.Rows
+        .GroupBy(r => r.DriverId)
+        .Select(g => new { Id = g.Key, Name = g.First().DriverName })
+        .OrderBy(d => d.Name)
+        .ToList();
+
     string TypeClass(string t) => t?.ToLowerInvariant() switch
     {
         "vacation" => "rq-badge--vacation",
@@ -20,28 +28,36 @@
         "cancelled" => "rq-badge--cancelled",
         _ => "rq-badge--pending"
     };
-
-    @* Notice is reported, never judged. The three days BGC asks for is practice, and a
-       word like "late" here would enforce through the wording what the system
-       deliberately does not enforce in code. *@
-    string Notice(int days) => days switch
-    {
-        < 0 => "filed after it started",
-        0 => "filed same day",
-        1 => "1 day ahead",
-        _ => $"{days} days ahead"
-    };
 }
 
 @* Everything that says what is being looked at, held while the list moves. *@
 <div class="rq-sticky-head" data-sticky-head>
 
     <div class="rq-head">
-        <h2 class="rq-title">Requests</h2>
-        @if (Model.PendingCount > 0)
-        {
-            <span class="rq-waiting">@Model.PendingCount waiting</span>
-        }
+        <div>
+            <h2 class="rq-title">Requests</h2>
+            <p class="rq-subtitle">Leave filed by drivers, and the decisions made about it.</p>
+        </div>
+        <div class="rq-head-actions">
+            <span id="rqPendingWrap">
+                @if (Model.PendingCount > 0)
+                {
+                    <span class="rq-waiting">@Model.PendingCount Pending</span>
+                }
+            </span>
+            <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 30 seconds"></span>
+            @* A queue somebody else is adding to. The list is replaced in place, so a
+               search being typed and a filter already chosen both survive it. *@
+            <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh" id="rqRefreshBtn"
+                    onclick="rqRefresh(true)" title="Load newly filed requests without losing your filters">
+                <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+                </svg></span> Refresh
+            </button>
+        </div>
     </div>
 
     <div class="rq-tabs" role="group" aria-label="Filter by status">
@@ -52,6 +68,43 @@
                href="@Url.Action("Index", new { status = tab })"
                aria-current="@(on ? "page" : null)">@tab</a>
         }
+    </div>
+
+    @* Narrowing within the status already chosen. Applied to the rows on the page rather
+       than by asking the server again, so the list answers on each keystroke and a
+       half-typed name never costs a round trip. *@
+    <div class="rq-filters rs-filters" id="rqFilters" data-filter-stay>
+        <div class="rq-filter">
+            <label for="rqSearch">Search</label>
+            <input type="search" id="rqSearch" class="rq-input" autocomplete="off"
+                   placeholder="Driver, ID or reason" aria-label="Search requests" />
+        </div>
+
+        <div class="rq-filter">
+            <label for="rqType">Type</label>
+            <select id="rqType" class="rq-input">
+                <option value="">All types</option>
+                @foreach (var t in LeaveEntitlement.Types)
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+
+        <div class="rq-filter">
+            <label for="rqDriver">Driver</label>
+            <select id="rqDriver" class="rq-input">
+                <option value="">All drivers</option>
+                @foreach (var d in driversShown)
+                {
+                    <option value="@d.Id">@d.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="rq-filter-actions">
+            <button type="button" class="rq-btn rq-btn--outline" id="rqClear">Clear</button>
+        </div>
     </div>
 
 </div>
@@ -65,6 +118,7 @@
             <polyline points="9 13 11 15 15 11" />
         </svg>
         <span>Leave requests</span>
+        <span class="rq-count" id="rqCount"></span>
     </div>
 
     <div class="rq-table-wrap rs-list-wrap">
@@ -73,18 +127,21 @@
                 <tr>
                     <th>Driver</th>
                     <th>Type</th>
-                    <th>Dates</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Days</th>
+                    <th>Reason</th>
                     <th>Filed</th>
                     <th>Balance</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="rqRows">
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="7" class="rq-empty">
+                        <td colspan="10" class="rq-empty">
                             @(string.Equals(Model.Status, "Pending", StringComparison.OrdinalIgnoreCase)
                                 ? "Nothing waiting on a decision."
                                 : "No requests to show.")
@@ -95,50 +152,122 @@
                 {
                     foreach (var r in Model.Rows)
                     {
-                        <tr data-request="@r.RequestId">
-                            <td>
+                        var pending = string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+
+                        <tr data-request="@r.RequestId"
+                            data-driver="@r.DriverId"
+                            data-type="@r.LeaveType"
+                            data-find="@($"{r.DriverName} {r.DriverId} {r.LeaveType} {r.Status} {r.Reason}".ToLowerInvariant())">
+
+                            <td data-label="Driver">
                                 <span class="rq-driver">@r.DriverName</span>
                                 <span class="rq-driver-id">@r.DriverId</span>
                             </td>
-                            <td><span class="rq-badge @TypeClass(r.LeaveType)">@r.LeaveType</span></td>
-                            <td>
-                                <span class="rq-span">@r.Span</span>
-                                <span class="rq-days">@r.Days @(r.Days == 1 ? "day" : "days")</span>
-                                @if (!string.IsNullOrWhiteSpace(r.Reason))
+
+                            <td data-label="Type"><span class="rq-badge @TypeClass(r.LeaveType)">@r.LeaveType</span></td>
+
+                            <td data-label="Start"><span class="rq-date">@r.Start</span></td>
+                            <td data-label="End"><span class="rq-date">@r.End</span></td>
+                            <td data-label="Days"><span class="rq-days-n">@r.Days</span></td>
+
+                            <td data-label="Reason">
+                                @if (string.IsNullOrWhiteSpace(r.Reason))
+                                {
+                                    <span class="rq-blank">None given</span>
+                                }
+                                else
                                 {
                                     <span class="rq-reason">@r.Reason</span>
                                 }
                             </td>
-                            <td>
-                                <span class="rq-filed">@r.Filed</span>
-                                <span class="rq-notice">@Notice(r.NoticeDays)</span>
-                            </td>
-                            <td>
-                                <span class="rq-balance">@r.RemainingOfType of @r.EntitlementOfType</span>
-                                <span class="rq-balance-sub">@r.LeaveType.ToLowerInvariant() left</span>
-                            </td>
-                            <td><span class="rq-badge @StatusClass(r.Status)">@r.Status</span></td>
-                            <td>
-                                @if (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+
+                            <td data-label="Filed"><span class="rq-filed">@r.Filed</span></td>
+
+                            @* What has been granted so far, out of the allowance. Days on
+                               other requests still undecided are marked beside it, because
+                               approving this one without noticing them is how an allowance
+                               is overdrawn. *@
+                            <td data-label="Balance">
+                                <span class="rq-balance"
+                                      title="@r.LeaveType.ToLowerInvariant() days granted so far this year">@r.RemainingOfType of @r.EntitlementOfType</span>
+                                @if (r.OtherPendingDays > 0)
                                 {
-                                    <div class="rq-actions">
+                                    <span class="rq-balance-pending"
+                                          title="Days of the same leave on other requests still awaiting a decision">+@r.OtherPendingDays awaiting</span>
+                                }
+                            </td>
+
+                            @* A decision that came with a note carries it here, on the word
+                               it explains, rather than as a second line under the buttons. *@
+                            <td data-label="Status">
+                                <span class="rq-badge @StatusClass(r.Status)"
+                                      title="@(pending ? null : r.DecisionNote)">@r.Status</span>
+                            </td>
+
+                            <td data-label="Actions">
+                                <div class="rq-actions">
+                                    @if (pending)
+                                    {
                                         <button type="button" class="rq-btn rq-btn--approve"
                                                 onclick="rqDecide(@r.RequestId, 'Approved')">Approve</button>
                                         <button type="button" class="rq-btn rq-btn--reject"
                                                 onclick="rqDecide(@r.RequestId, 'Rejected')">Reject</button>
-                                    </div>
-                                }
-                                else if (!string.IsNullOrWhiteSpace(r.DecisionNote))
-                                {
-                                    <span class="rq-decision-note">@r.DecisionNote</span>
-                                }
+                                    }
+                                    <button type="button" class="rq-btn rq-btn--history"
+                                            onclick="rqHistory(@r.RequestId)">History</button>
+                                </div>
                             </td>
                         </tr>
                     }
                 }
+
+                @* Shown when the filters match none of the rows on the page, which is a
+                   different thing from the queue being empty. *@
+                <tr id="rqNoMatch" hidden>
+                    <td colspan="10" class="rq-empty">No request matches these filters.</td>
+                </tr>
             </tbody>
         </table>
     </div>
+</div>
+
+@* What happened to each request, written out with the row it belongs to and shown when
+   asked for. Rendered here rather than fetched, because it is already on the page. *@
+<div id="rqHistoryModal" class="rq-overlay" style="display:none;" data-dialog-close="rqHistoryClose"
+     role="dialog" aria-modal="true" aria-labelledby="rqHistoryTitle">
+    <div class="rq-box">
+        <div class="rq-box-head">
+            <h3 class="rq-box-title" id="rqHistoryTitle">Request history</h3>
+            <button type="button" class="rq-box-close" onclick="rqHistoryClose()" aria-label="Close">&times;</button>
+        </div>
+        <div id="rqHistoryBody"></div>
+    </div>
+</div>
+
+<div id="rqTemplates" hidden>
+    @foreach (var r in Model.Rows)
+    {
+        <template id="rqHistory-@r.RequestId">
+            <p class="rq-hist-who">@r.DriverName · @r.Span</p>
+            <ol class="rq-hist">
+                @foreach (var e in r.History)
+                {
+                    <li class="rq-hist-item">
+                        <span class="rq-hist-dot rq-hist-dot--@e.Action.ToLowerInvariant()"></span>
+                        <span class="rq-hist-body">
+                            <span class="rq-hist-action">@e.Action</span>
+                            <span class="rq-hist-when">@e.When</span>
+                            <span class="rq-hist-by">by @e.By</span>
+                            @if (!string.IsNullOrWhiteSpace(e.Note))
+                            {
+                                <span class="rq-hist-note">@e.Note</span>
+                            }
+                        </span>
+                    </li>
+                }
+            </ol>
+        </template>
+    }
 </div>
 
 @* Rejecting without saying why leaves the driver with a decision and no reason for it,
@@ -173,21 +302,181 @@
         const err = document.getElementById('rqDecideError');
         const go = document.getElementById('rqDecideGo');
 
+        const rows = document.getElementById('rqRows');
+        const search = document.getElementById('rqSearch');
+        const typeSel = document.getElementById('rqType');
+        const driverSel = document.getElementById('rqDriver');
+        const countEl = document.getElementById('rqCount');
+
+        // ---- Filtering ---------------------------------------------------------------
+        //
+        // Over the rows already rendered. The status tabs decide what the server sends;
+        // these three narrow what is shown, and answer as the search is typed.
+
+        function rqApplyFilters() {
+            const q = search.value.trim().toLowerCase();
+            const type = typeSel.value;
+            const driver = driverSel.value;
+
+            let shown = 0, total = 0;
+
+            rows.querySelectorAll('tr[data-request]').forEach(function (tr) {
+                total++;
+                const ok = (!q || tr.dataset.find.includes(q))
+                        && (!type || tr.dataset.type === type)
+                        && (!driver || tr.dataset.driver === driver);
+                tr.hidden = !ok;
+                if (ok) shown++;
+            });
+
+            const noMatch = document.getElementById('rqNoMatch');
+            if (noMatch) noMatch.hidden = !(total > 0 && shown === 0);
+
+            countEl.textContent = total === 0 ? ''
+                : shown === total ? total + (total === 1 ? ' request' : ' requests')
+                : shown + ' of ' + total;
+        }
+
+        // The list of drivers comes from the rows, so it is rebuilt whenever they are.
+        // A driver whose last request has just been decided away keeps their place in the
+        // list while they are the one being filtered on, or the page would clear a filter
+        // the operator set.
+        function rqFillDrivers() {
+            const seen = new Map();
+            rows.querySelectorAll('tr[data-request]').forEach(function (tr) {
+                const name = tr.querySelector('.rq-driver');
+                if (name) seen.set(tr.dataset.driver, name.textContent);
+            });
+
+            const chosen = driverSel.value;
+            if (chosen && !seen.has(chosen)) {
+                const kept = driverSel.querySelector('option[value="' + chosen + '"]');
+                if (kept) seen.set(chosen, kept.textContent);
+            }
+
+            const options = [...seen.entries()].sort(function (a, b) { return a[1].localeCompare(b[1]); });
+            driverSel.replaceChildren();
+
+            const all = document.createElement('option');
+            all.value = '';
+            all.textContent = 'All drivers';
+            driverSel.appendChild(all);
+
+            options.forEach(function (pair) {
+                const opt = document.createElement('option');
+                opt.value = pair[0];
+                opt.textContent = pair[1];   // a driver's name is data, not markup
+                driverSel.appendChild(opt);
+            });
+
+            driverSel.value = chosen;
+        }
+
+        search.addEventListener('input', rqApplyFilters);
+        typeSel.addEventListener('change', rqApplyFilters);
+        driverSel.addEventListener('change', rqApplyFilters);
+
+        document.getElementById('rqClear').addEventListener('click', function () {
+            search.value = '';
+            typeSel.value = '';
+            driverSel.value = '';
+            rqApplyFilters();
+            search.focus();
+        });
+
+        rqApplyFilters();
+
+        // ---- Refresh -----------------------------------------------------------------
+        //
+        // Re-fetches this same url, so the status tab comes along, and swaps only the rows
+        // and the counts. The filters sit outside what is replaced, which is what lets a
+        // half-typed search survive both the button and the poll behind it.
+
+        let busy = false;
+
+        function rqStamp() {
+            const el = document.getElementById('rqUpdated');
+            if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        window.rqRefresh = async function (manual) {
+            if (busy) return;
+            busy = true;
+
+            const btn = document.getElementById('rqRefreshBtn');
+            if (manual && btn) btn.classList.add('spinning');
+
+            try {
+                const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } });
+                const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+
+                [['rqRows', true], ['rqTemplates', false], ['rqPendingWrap', false]].forEach(function (pair) {
+                    const fresh = doc.getElementById(pair[0]);
+                    const cur = document.getElementById(pair[0]);
+                    if (fresh && cur) cur.innerHTML = fresh.innerHTML;
+                });
+
+                rqFillDrivers();
+                rqApplyFilters();
+                rqStamp();
+            } catch (e) {
+                console.warn('requests refresh failed', e);
+            } finally {
+                busy = false;
+                if (btn) btn.classList.remove('spinning');
+            }
+        };
+
+        // Not while a dialog is open. Replacing the rows underneath a decision being
+        // written would pull the request out from under it.
+        setInterval(function () {
+            if (document.hidden) return;
+            if (modal.style.display === 'flex') return;
+            if (histModal.style.display === 'flex') return;
+            rqRefresh(false);
+        }, 30000);
+
+        rqStamp();
+
+        // ---- Deciding ----------------------------------------------------------------
+
         window.rqDecide = function (id, decision) {
             const row = document.querySelector('[data-request="' + id + '"]');
             const who = row ? row.querySelector('.rq-driver').textContent : 'this driver';
-            const span = row ? row.querySelector('.rq-span').textContent : '';
+            const span = row
+                ? row.querySelector('[data-label="Start"]').textContent.trim()
+                    + ' to ' + row.querySelector('[data-label="End"]').textContent.trim()
+                : '';
 
             pending = { id, decision };
             title.textContent = decision === 'Approved' ? 'Approve leave' : 'Reject leave';
-            desc.textContent = who + ' · ' + span;
+            desc.textContent = span ? who + ' · ' + span : who;
             note.value = '';
             err.style.display = 'none';
             go.textContent = decision === 'Approved' ? 'Approve' : 'Reject';
             go.classList.toggle('rq-btn--reject', decision === 'Rejected');
+            // Reopening is a fresh attempt. Left disabled by a previous one, the dialog
+            // opens with a button that cannot be pressed and nothing saying why.
+            go.disabled = false;
             modal.style.display = 'flex';
             note.focus();
         };
+
+        const histModal = document.getElementById('rqHistoryModal');
+        const histBody = document.getElementById('rqHistoryBody');
+
+        window.rqHistory = function (id) {
+            const tpl = document.getElementById('rqHistory-' + id);
+            if (!tpl) return;
+            histBody.replaceChildren(tpl.content.cloneNode(true));
+            histModal.style.display = 'flex';
+        };
+
+        window.rqHistoryClose = function () { histModal.style.display = 'none'; };
+
+        histModal.addEventListener('click', function (e) {
+            if (e.target === histModal) rqHistoryClose();
+        });
 
         window.rqCancel = function () {
             modal.style.display = 'none';
@@ -221,8 +510,19 @@
                     },
                     body
                 });
-                if (!res.ok) throw new Error(await res.text() || ('HTTP ' + res.status));
-                window.location.reload();
+                if (!res.ok) {
+                    // A refusal answers with a sentence; a crash answers with a page of
+                    // HTML, which is no use in a dialog box.
+                    const said = (await res.text() || '').trim();
+                    throw new Error(
+                        said && said.length < 300 && said[0] !== '<'
+                            ? said
+                            : 'The server could not save that (' + res.status + '). Try again.');
+                }
+                // The decision is stored; the list catches up on its own rather than
+                // taking the whole page down and putting the filters back to nothing.
+                rqCancel();
+                await rqRefresh(true);
             } catch (e) {
                 err.textContent = e.message || 'That could not be saved. Try again.';
                 err.style.display = 'block';
@@ -234,4 +534,15 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/requests.css" asp-append-version="true" />
+}
+
+@section TopbarContent {
+    <button type="button" class="rs-filter-toggle" data-filter-toggle="rqFilters"
+            aria-expanded="false" aria-controls="rqFilters">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18M6 12h12M10 19h4" />
+        </svg>
+        Filters
+    </button>
 }

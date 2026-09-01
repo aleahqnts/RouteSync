@@ -19,7 +19,10 @@ public class DriverDataService
 
     public DriverDataService(Supabase.Client supabase) => _supabase = supabase;
 
-    private static readonly HttpClient _http = new();
+    // Twenty seconds, not the hundred a HttpClient starts with. A phone that has drifted
+    // out of signal holds the socket open with nothing coming back, and every page that
+    // waits on one of these shows a skeleton for as long as it waits.
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20) };
 
     /// <summary>Sends a PATCH straight to the REST endpoint.</summary>
     /// <remarks>
@@ -33,7 +36,39 @@ public class DriverDataService
         req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {FleetWiseMobile.SupabaseConfig.Bearer}");
         req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         var res = await _http.SendAsync(req);
-        res.EnsureSuccessStatusCode();
+        await ThrowIfRefusedAsync(res);
+    }
+
+    /// <summary>
+    /// Sends a PATCH and reads back the rows it actually changed.
+    /// </summary>
+    /// <remarks>
+    /// A PATCH whose filter matches nothing answers 204 and succeeds. That is the right
+    /// answer to "make these rows look like this" and the wrong one to "cancel this
+    /// request", which has not happened. Asking for the rows back is what tells the two
+    /// apart, so a write that quietly changed nothing can be reported rather than passed
+    /// off as done.
+    /// </remarks>
+    private static async Task<int> PatchCountingAsync(string pathWithFilter, object body)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Patch, $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/{pathWithFilter}");
+        req.Headers.TryAddWithoutValidation("apikey", FleetWiseMobile.SupabaseConfig.Key);
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {FleetWiseMobile.SupabaseConfig.Bearer}");
+        req.Headers.TryAddWithoutValidation("Prefer", "return=representation");
+        req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+
+        var res = await _http.SendAsync(req);
+        await ThrowIfRefusedAsync(res);
+
+        var body_ = await res.Content.ReadAsStringAsync();
+        try
+        {
+            using var doc = JsonDocument.Parse(body_);
+            return doc.RootElement.ValueKind == JsonValueKind.Array
+                ? doc.RootElement.GetArrayLength()
+                : 1;
+        }
+        catch { return 0; }
     }
 
     /// <summary>Sends an insert straight to the REST endpoint, for the same reason as
@@ -45,7 +80,38 @@ public class DriverDataService
         req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {FleetWiseMobile.SupabaseConfig.Bearer}");
         req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         var res = await _http.SendAsync(req);
-        res.EnsureSuccessStatusCode();
+        await ThrowIfRefusedAsync(res);
+    }
+
+    /// <summary>Fails with what the server said, rather than with a status code.</summary>
+    /// <remarks>
+    /// EnsureSuccessStatusCode throws away the body, which is where postgrest puts the
+    /// reason: a column that does not exist, a check constraint, a row the key may not
+    /// write. Without it every refusal reaches the driver as the same sentence about
+    /// their connection, and sends them looking in the wrong place.
+    /// </remarks>
+    private static async Task ThrowIfRefusedAsync(HttpResponseMessage res)
+    {
+        if (res.IsSuccessStatusCode) return;
+
+        var body = "";
+        try { body = await res.Content.ReadAsStringAsync(); } catch { }
+
+        // postgrest answers with { code, message, details, hint }. The message is the
+        // readable part; the rest is for a log, not a phone.
+        var reason = body;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("message", out var m))
+                reason = m.GetString() ?? body;
+        }
+        catch { }
+
+        if (string.IsNullOrWhiteSpace(reason))
+            reason = $"The server refused it ({(int)res.StatusCode}).";
+
+        throw new HttpRequestException(reason, null, res.StatusCode);
     }
 
     /// <summary>Reads the first row from the REST endpoint, or null when there is none.</summary>
@@ -421,7 +487,37 @@ public class DriverDataService
     /// </remarks>
     public async Task CancelLeaveAsync(long requestId)
     {
-        await PatchAsync($"leave_requests?request_id=eq.{requestId}&status=eq.Pending",
-            new { status = "Cancelled" });
+        // decided_at is stamped here too. Withdrawing settles the request as surely as a
+        // decision does, and a history with no time against one of its entries reads as an
+        // entry nobody can place.
+        //
+        // The status filter is what stops a request being withdrawn out from under a
+        // decision already made. It also means the write can match nothing, which the
+        // server reports as a success, so the rows changed are counted and nought is
+        // treated as the refusal it is.
+        var changed = await PatchCountingAsync(
+            $"leave_requests?request_id=eq.{requestId}&status=eq.Pending",
+            new { status = "Cancelled", decided_at = PhTime.Now });
+
+        if (changed == 0)
+            throw new InvalidOperationException(
+                "That request could not be cancelled. It may already have been decided.");
+    }
+
+    /// <summary>Approved leave covering a given day, or null when there is none.</summary>
+    /// <remarks>
+    /// Asked of the server rather than filtered from the full list, because the home page
+    /// wants one answer about one day and not a driver's whole year of requests.
+    /// </remarks>
+    public async Task<LeaveRequest?> GetApprovedLeaveOnAsync(int userId, DateTime day)
+    {
+        var iso = day.ToString("yyyy-MM-dd");
+        var r = await _supabase.From<LeaveRequest>()
+            .Filter("user_id", Operator.Equals, userId.ToString())
+            .Filter("status", Operator.Equals, "Approved")
+            .Filter("start_date", Operator.LessThanOrEqual, iso)
+            .Filter("end_date", Operator.GreaterThanOrEqual, iso)
+            .Get();
+        return r.Models.FirstOrDefault();
     }
 }

@@ -1,4 +1,4 @@
-@page "/trips"
+﻿@page "/trips"
 @implements IDisposable
 @inject SessionService Session
 @inject DriverDataService Data
@@ -115,9 +115,18 @@ else
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
-        trips = await Data.GetTripsForDriverAsync(Session.CurrentUser!.UserId);
-        await FillRouteNames();
-        loading = false;
+        try
+        {
+            trips = await Data.GetTripsForDriverAsync(Session.CurrentUser!.UserId);
+            await FillRouteNames();
+        }
+        catch (Exception ex)
+        {
+            // Nothing to show is a page saying so, not a page still loading.
+            trips = new();
+            System.Diagnostics.Debug.WriteLine($"[Trips.Load] {ex}");
+        }
+        finally { loading = false; }
         _ = PollLoop(); // background: finished trips appear without pull-to-refresh
     }
 

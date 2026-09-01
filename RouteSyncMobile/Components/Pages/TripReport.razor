@@ -1,4 +1,4 @@
-@page "/trip-report/{TripId}"
+﻿@page "/trip-report/{TripId}"
 @inject SessionService Session
 @inject DriverDataService Data
 @inject NavigationManager Nav
@@ -167,12 +167,24 @@ else
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
 
         trip = await Data.GetTripAsync(TripId);
-        if (trip is not null)
+        try
         {
-            route = await Data.GetRouteAsync(trip.RouteId);
-            vehicle = await Data.GetVehicleAsync(trip.VehicleId);
-            try { checklist = await Data.GetChecklistAsync(trip.TripId); } catch { /* card shows "none" */ }
+            if (trip is not null)
+            {
+                var routeTask = Data.GetRouteAsync(trip.RouteId);
+                var vehicleTask = Data.GetVehicleAsync(trip.VehicleId);
+                await Task.WhenAll(routeTask, vehicleTask);
+
+                route = routeTask.Result;
+                vehicle = vehicleTask.Result;
+
+                try { checklist = await Data.GetChecklistAsync(trip.TripId); } catch { /* card shows "none" */ }
+            }
         }
-        loading = false;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TripReport.Load] {ex}");
+        }
+        finally { loading = false; }
     }
 }

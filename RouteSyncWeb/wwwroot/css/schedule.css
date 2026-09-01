@@ -31,6 +31,10 @@
     .sch-sel { width:100%; padding:6px 8px; border:1.5px solid #E2E8F0; border-radius:7px; font-size:.78rem; color:#2D3748; background:#fff; cursor:pointer; }
     .sch-sel:focus { outline:none; border-color:#4AADA8; }
     .sch-cell.sch-dirty .sch-sel { border-color:#4AADA8; }
+    /* A driver away on the day this cell sits in. The list itself says which, and this
+       is what finds the cell in a week of them. Kept above the conflict rule, so a cell
+       reported on save still reads as one. */
+    .sch-cell.sch-away .sch-drv { border-color:#D69E2E; background:#FFFAF0; }
     .sch-cell.sch-conflict .sch-sel { border-color:#E74C3C; background:#FEECEC; }
     .sch-locked { display:flex; flex-direction:column; gap:4px; align-items:center; padding:6px; }
     .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:#F0F2F5; color:#6B7C93; }

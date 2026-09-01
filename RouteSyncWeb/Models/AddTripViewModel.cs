@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace FleetWise.ViewModels
 {
@@ -49,6 +49,13 @@ namespace FleetWise.ViewModels
         /// already holds it, so the slot still shows what it holds.
         /// </summary>
         public bool Offered { get; set; } = true;
+
+        /// <summary>
+        /// Why this driver is not free, when they are not. Shown beside the name so the
+        /// reason is read before the choice rather than after it.
+        /// </summary>
+        public string? Unavailable { get; set; }
+
         // Shifts this driver is already booked for today.
         public List<string> BookedShifts { get; set; } = new();
     }
@@ -91,6 +98,14 @@ namespace FleetWise.ViewModels
 
         [Range(1, int.MaxValue, ErrorMessage = "That is not a driver.")]
         public int? DriverId { get; set; }   // null = keep existing
+
+        // Moving a bus to a different route. Demand does not sit still through a day, and
+        // where the buses are needed is the dispatcher's call to make while the shift is
+        // running. The driver is told when this changes, because turning up on the wrong
+        // route is the one mistake this cannot be allowed to cause.
+        [Range(1, int.MaxValue, ErrorMessage = "That is not a route.")]
+        public int? RouteId { get; set; }   // null = keep existing
+
         // Dispatcher acknowledged the conflict and chose to save the reassignment anyway.
         public bool Override { get; set; }
     }

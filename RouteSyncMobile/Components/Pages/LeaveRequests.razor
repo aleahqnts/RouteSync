@@ -1,0 +1,432 @@
+﻿@page "/leave"
+@inject SessionService Session
+@inject DriverDataService Data
+@inject NavigationManager Nav
+
+@* Shown on the page the request lands on, so the confirmation and the request itself
+   arrive together. *@
+@if (toast is not null)
+{
+    <div class="lv-toast @(toastBad ? "lv-toast--bad" : "")" role="status">@toast</div>
+}
+
+<div class="lv">
+
+    <div class="lv-header">
+        <button class="back" @onclick="@(() => Nav.NavigateTo("/profile"))">&#8592;</button>
+        <h1>My Leave Requests</h1>
+        <span class="spacer"></span>
+    </div>
+
+    @if (loading)
+    {
+        <div class="sk sk-card" style="height:96px"></div>
+        <div class="sk sk-card" style="height:96px"></div>
+        <div class="sk sk-card" style="height:96px"></div>
+    }
+    else
+    {
+        @* What is left of each allowance. Pending days are already taken off, and named
+           separately, or a request waiting on a decision reads as days still available. *@
+        <div class="lv-balances">
+            @foreach (var type in LeaveEntitlement.Types)
+            {
+                @* Days granted, not days left once the undecided ones are taken off. A
+                   number that already has the pending days removed, shown above a line
+                   naming those same days, is read as counting them twice. Filing still
+                   counts them: what can be asked for and what has been agreed are
+                   different questions. *@
+                var used = LeaveEntitlement.Used(requests, type, DateTime.Today.Year);
+                var left = Math.Max(0, LeaveEntitlement.DaysPerYear[type] - used.Approved);
+                <div class="lv-bal">
+                    <p class="lv-bal-n">@left<span class="lv-bal-of">/@LeaveEntitlement.DaysPerYear[type]</span></p>
+                    <p class="lv-bal-l">@type</p>
+                    @if (used.Pending > 0)
+                    {
+                        <p class="lv-bal-p">@used.Pending pending</p>
+                    }
+                </div>
+            }
+        </div>
+
+        <button class="lv-add" @onclick="OpenForm">+ File a leave</button>
+
+        @if (requests.Count == 0)
+        {
+            <p class="lv-empty">Nothing filed yet.</p>
+        }
+        else
+        {
+            @* Dates and outcome, and nothing else. What was asked for and what was said
+               back are both paragraphs, and a paragraph in a list row squeezes the dates
+               into a column down the left. They are read one request at a time, so they
+               live behind the button below. *@
+            <div class="lv-list">
+                @foreach (var r in requests)
+                {
+                    <div class="lv-row">
+                        <div class="lv-row-top">
+                            <span class="lv-span">@Span(r)</span>
+                            <span class="lv-badge @r.Status.ToLowerInvariant()">@r.Status</span>
+                        </div>
+                        <p class="lv-meta">@r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
+                        <div class="lv-row-actions">
+                            <button class="lv-hist-btn" @onclick="@(() => openHistory = r.RequestId)">History</button>
+                            @if (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <button class="lv-cancel" @onclick="@(() => Cancel(r.RequestId))">Cancel</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@* Everything about one request: what was asked for, what was decided, and when.
+   Who decided it is not shown. The driver is told the outcome, and naming the operator
+   turns a company decision into a personal one. *@
+@if (openHistory is long historyId
+     && requests.FirstOrDefault(r => r.RequestId == historyId) is LeaveRequest h)
+{
+    <div class="overlay" @onclick="CloseHistory">
+        <div class="lv-modal" @onclick:stopPropagation="true">
+            <div class="lv-modal-head">
+                <h2>Request details</h2>
+                <button class="lv-close" @onclick="CloseHistory" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="lv-modal-body">
+                <div class="lv-det-head">
+                    <span class="lv-det-span">@Span(h)</span>
+                    <span class="lv-badge @h.Status.ToLowerInvariant()">@h.Status</span>
+                </div>
+                <p class="lv-det-meta">
+                    @h.LeaveType · @LeaveEntitlement.Days(h) @(LeaveEntitlement.Days(h) == 1 ? "day" : "days")
+                </p>
+
+                @if (!string.IsNullOrWhiteSpace(h.Reason))
+                {
+                    <p class="lv-det-label">Your reason</p>
+                    <p class="lv-det-text">@h.Reason</p>
+                }
+
+                <p class="lv-det-label">History</p>
+                <ol class="lv-hist">
+                    <li class="lv-hist-item">
+                        <span class="lv-hist-dot filed"></span>
+                        <span class="lv-hist-body">
+                            <span class="lv-hist-action">Filed</span>
+                            <span class="lv-hist-when">@h.FiledAt.ToString("MMM d, yyyy h:mm tt")</span>
+                        </span>
+                    </li>
+                    @if (h.DecidedAt is DateTime decided
+                         && !string.Equals(h.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <li class="lv-hist-item">
+                            <span class="lv-hist-dot @h.Status.ToLowerInvariant()"></span>
+                            <span class="lv-hist-body">
+                                <span class="lv-hist-action">@h.Status</span>
+                                <span class="lv-hist-when">@decided.ToString("MMM d, yyyy h:mm tt")</span>
+                                @* Carried whichever way it went. An approval that came with
+                                   a condition on it says so here, not only a refusal. *@
+                                @if (!string.IsNullOrWhiteSpace(h.DecisionNote))
+                                {
+                                    <span class="lv-hist-note">@h.DecisionNote</span>
+                                }
+                            </span>
+                        </li>
+                    }
+                    @if (string.Equals(h.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <li class="lv-hist-item">
+                            <span class="lv-hist-dot"></span>
+                            <span class="lv-hist-body">
+                                <span class="lv-hist-action">Awaiting a decision</span>
+                            </span>
+                        </li>
+                    }
+                </ol>
+            </div>
+
+            <div class="lv-modal-foot">
+                <button class="psave" @onclick="CloseHistory">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showForm)
+{
+    <div class="overlay" @onclick="CloseForm">
+        <div class="lv-modal" @onclick:stopPropagation="true">
+            <div class="lv-modal-head">
+                <h2>File a leave</h2>
+                <button class="lv-close" @onclick="CloseForm" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="lv-modal-body">
+                @* Dates first: what a driver comes here knowing. The type is a detail of
+                   the days already chosen. *@
+                <label>Start date</label>
+                <input type="date" lang="en-US" data-picker-only inputmode="none"
+                       class="@Bad(nameof(start))" @bind="start" @bind:after="Revalidate" />
+
+                <label>End date</label>
+                <input type="date" lang="en-US" data-picker-only inputmode="none"
+                       class="@Bad(nameof(end))" @bind="end" @bind:after="Revalidate" />
+
+                @* The digits inside a date field are written by the phone, in whatever
+                   order its locale uses, and no markup here decides that. This says the
+                   same dates in a form that cannot be read two ways. *@
+                @if (end.Date >= start.Date)
+                {
+                    <p class="lv-dates-said">@Said</p>
+                }
+
+                <label>Type</label>
+                <div class="lv-select-wrap">
+                    <select class="@Bad(nameof(type))" @bind="type" @bind:after="Revalidate">
+                        @foreach (var t in LeaveEntitlement.Types)
+                        {
+                            <option value="@t">@t</option>
+                        }
+                    </select>
+                    <span class="lv-select-arrow" aria-hidden="true">&#9662;</span>
+                </div>
+
+                <label>Reason</label>
+                <input class="lv-reason-input" @bind="reason" maxlength="200" placeholder="Optional" />
+
+                @if (problem is not null)
+                {
+                    <p class="err-msg">@problem</p>
+                }
+            </div>
+
+            <div class="lv-modal-foot">
+                <button class="lv-btn-ghost" @onclick="CloseForm">Cancel</button>
+                <button class="psave" disabled="@sending" @onclick="Submit">
+                    @(sending ? "Sending…" : "File request")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private List<LeaveRequest> requests = new();
+
+    private bool showForm, sending;
+
+    private long? openHistory;
+    private string? toast;
+    private bool toastBad;
+    private CancellationTokenSource? toastCts;
+    private string type = LeaveEntitlement.Vacation;
+    private string reason = "";
+    private DateTime start = DateTime.Today;
+    private DateTime end = DateTime.Today;
+
+    /// <summary>What is wrong with the form, or null when nothing is.</summary>
+    private string? problem;
+
+    /// <summary>Which field the problem belongs to, so it can be marked.</summary>
+    private string? problemField;
+
+    private string Bad(string field) =>
+        problemField == field ? "field-bad" : "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
+        try { await Load(); }
+        finally { loading = false; }
+    }
+
+    private async Task Load()
+    {
+        try { requests = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId); }
+        catch { requests = new(); }
+    }
+
+    private void CloseHistory() => openHistory = null;
+
+    private void OpenForm()
+    {
+        // Today, not a date three days out. A driver filing at short notice should not
+        // have to correct the form before they can use it.
+        start = DateTime.Today;
+        end = DateTime.Today;
+        type = LeaveEntitlement.Vacation;
+        reason = "";
+        problem = null;
+        problemField = null;
+        showForm = true;
+    }
+
+    private void CloseForm() => showForm = false;
+
+    /// <summary>
+    /// Names the first thing wrong with the form, and which field it is about.
+    /// </summary>
+    /// <remarks>
+    /// Notice is not among these. Three days is what the company asks for and a request
+    /// filed later still goes through, so the only refusals here are a form that cannot
+    /// be read and an allowance that has run out.
+    /// </remarks>
+    private bool Validate()
+    {
+        problem = null;
+        problemField = null;
+
+        if (end.Date < start.Date)
+        {
+            problem = "The end date is before the start date.";
+            problemField = nameof(end);
+            return false;
+        }
+
+        if (!LeaveEntitlement.DaysPerYear.ContainsKey(type))
+        {
+            problem = "Choose a leave type.";
+            problemField = nameof(type);
+            return false;
+        }
+
+        // Days already asked for, of any type. Filing over them is not a second request,
+        // it is the same days twice, and the balance is spent twice with it.
+        var clash = requests.FirstOrDefault(r =>
+            (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase)
+             || string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+            && r.StartDate.Date <= end.Date
+            && r.EndDate.Date >= start.Date);
+
+        if (clash is not null)
+        {
+            problem = string.Equals(clash.Status, "Approved", StringComparison.OrdinalIgnoreCase)
+                ? $"You already have approved {clash.LeaveType.ToLowerInvariant()} leave covering {Span(clash)}."
+                : $"You already have a request covering {Span(clash)} awaiting a decision.";
+            problemField = nameof(start);
+            return false;
+        }
+
+        var days = (int)(end.Date - start.Date).TotalDays + 1;
+        var left = LeaveEntitlement.Remaining(requests, type, start.Year);
+        if (days > left)
+        {
+            problem = left == 0
+                ? $"No {type.ToLowerInvariant()} leave left for {start.Year}."
+                : $"That is {days} days and you have {left} left.";
+            problemField = nameof(type);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>Clears a complaint once the field it was about has been changed.</summary>
+    private void Revalidate()
+    {
+        if (problem is not null) Validate();
+    }
+
+    private async Task Submit()
+    {
+        if (!Validate()) return;
+
+        sending = true;
+        try
+        {
+            await Data.FileLeaveAsync(Session.CurrentUser!.UserId, type, start, end, reason);
+            await Load();
+
+            // The form has done its job, so it closes and the new request is there in the
+            // list behind it, at the top, marked pending.
+            showForm = false;
+            reason = "";
+            await Say("Leave request submitted for approval.");
+        }
+        catch (Exception ex)
+        {
+            // What the server actually said, rather than a guess about the network. A
+            // request refused for its contents and one that never arrived are different
+            // problems, and telling a driver to check their connection when the server
+            // answered sends them looking in the wrong place.
+            problem = ex.Message;
+            problemField = null;
+        }
+        finally
+        {
+            sending = false;
+        }
+    }
+
+    private async Task Cancel(long requestId)
+    {
+        try
+        {
+            await Data.CancelLeaveAsync(requestId);
+            await Load();
+            await Say("Leave request cancelled.");
+        }
+        catch (Exception ex)
+        {
+            // Said here, on the page the button is on. It used to go to the message under
+            // the filing form, which is not on screen when a request is being cancelled,
+            // so a refusal reached the driver as nothing happening at all.
+            await Say(ex.Message, bad: true);
+        }
+    }
+
+    /// <summary>
+    /// The chosen dates written out, so the order of the digits in the field above never
+    /// matters.
+    /// </summary>
+    private string Said
+    {
+        get
+        {
+            var days = (int)(end.Date - start.Date).TotalDays + 1;
+            var range = start.Date == end.Date
+                ? start.ToString("MMMM d, yyyy")
+                : $"{start:MMMM d} to {end:MMMM d, yyyy}";
+            return $"{range} · {days} {(days == 1 ? "day" : "days")}";
+        }
+    }
+
+    /// <summary>
+    /// Says something briefly at the top of the page, and takes it away again.
+    /// </summary>
+    /// <remarks>
+    /// The previous one is cancelled first, or two in quick succession leave the first
+    /// timer to clear a message it did not write.
+    /// </remarks>
+    private async Task Say(string message, bool bad = false)
+    {
+        toastCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        toastCts = cts;
+
+        toast = message;
+        toastBad = bad;
+        StateHasChanged();
+
+        try
+        {
+            // Something that went wrong is left up longer. A confirmation only needs to be
+            // caught; a refusal has to be read.
+            await Task.Delay(TimeSpan.FromSeconds(bad ? 6 : 4), cts.Token);
+            toast = null;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { /* replaced by a newer one */ }
+    }
+
+    private static string Span(LeaveRequest r) =>
+        r.StartDate.Date == r.EndDate.Date
+            ? r.StartDate.ToString("MMM d, yyyy")
+            : $"{r.StartDate:MMM d} to {r.EndDate:MMM d, yyyy}";
+}

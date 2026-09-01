@@ -34,8 +34,12 @@ namespace FleetWise.Controllers
         // GET weekly planner.
         public async Task<IActionResult> Index(string start)
         {
-            // Seven days from the selected start date, defaulting to today.
-            var weekStart = (DateTime.TryParse(start, out var s) ? s : PhClock.Today).Date;
+            // The week the chosen day falls in, always Monday to Sunday. A date picked
+            // mid-week would otherwise start the grid on that day, so the same week reads
+            // differently depending on which of its days was asked for, and Prev and Next
+            // carry the offset along with them.
+            var picked = (DateTime.TryParse(start, out var s) ? s : PhClock.Today).Date;
+            var weekStart = picked.AddDays(-(((int)picked.DayOfWeek + 6) % 7));
             var weekEnd = weekStart.AddDays(6);
 
             var routesTask = _supabase.From<BusRoute>().Get();
@@ -49,20 +53,38 @@ namespace FleetWise.Controllers
                                 .Filter("date", Operator.GreaterThanOrEqual, weekStart.ToString("yyyy-MM-dd"))
                                 .Filter("date", Operator.LessThanOrEqual, weekEnd.ToString("yyyy-MM-dd"))
                                 .Get();
+            var leaveTask = _supabase.From<LeaveRequest>()
+                                .Filter("status", Operator.Equals, "Approved")
+                                .Filter("start_date", Operator.LessThanOrEqual, weekEnd.ToString("yyyy-MM-dd"))
+                                .Filter("end_date", Operator.GreaterThanOrEqual, weekStart.ToString("yyyy-MM-dd"))
+                                .Get();
 
-            await Task.WhenAll(routesTask, vehiclesTask, driversTask, availabilityTask, tripsTask);
+            await Task.WhenAll(routesTask, vehiclesTask, driversTask, availabilityTask, tripsTask, leaveTask);
 
             // A bus or a driver already holding a slot this week stays on its list even when
             // it can no longer be booked. Dropping it would leave that slot showing nothing,
             // and a slot showing nothing is read as cleared and deleted on the next save.
             var trips = tripsTask.Result.Models;
             var bookedVehicles = trips.Select(t => t.VehicleId).ToHashSet();
-            var bookedDrivers = trips.Select(t => t.DriverId).ToHashSet();
 
             var unavailable = availabilityTask.Result.Models
                 .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable", StringComparison.OrdinalIgnoreCase))
                 .Select(a => a.UserId)
                 .ToHashSet();
+
+            // Which days of this week each driver has leave for, and of what kind. A
+            // request spans dates, and the grid asks its question one cell at a time, so it
+            // is spread out here into the days it actually covers.
+            var leaveDays = new Dictionary<int, Dictionary<string, string>>();
+            foreach (var request in leaveTask.Result.Models)
+            {
+                if (!leaveDays.TryGetValue(request.UserId, out var days))
+                    leaveDays[request.UserId] = days = new Dictionary<string, string>();
+
+                for (var day = weekStart; day <= weekEnd; day = day.AddDays(1))
+                    if (request.StartDate.Date <= day && request.EndDate.Date >= day)
+                        days[day.ToString("yyyy-MM-dd")] = request.LeaveType;
+            }
 
             var vm = new ScheduleViewModel
             {
@@ -85,10 +107,13 @@ namespace FleetWise.Controllers
                         PlateNumber = v.PlateNumber,
                         Offered = !v.OutOfService && v.RetiredAt == null,
                     }).ToList(),
+                // Everyone on the roster, marked rather than withheld. A driver is off on
+                // particular days, not for the week, and the two things that take them off
+                // are read differently: leave names its dates, while the availability flag
+                // names none and so speaks only for the day it was set on. Withholding a
+                // driver on either count took them out of Thursday's planning because they
+                // called in sick on Monday, and left the grid unable to say why.
                 Drivers = driversTask.Result.Models
-                    // A driver who has said they cannot work is not offered, for the same
-                    // reason a grounded bus is not.
-                    .Where(d => !unavailable.Contains(d.UserId) || bookedDrivers.Contains(d.UserId))
                     .OrderBy(d => d.FirstName)
                     .Select(d => new DriverOption
                     {
@@ -96,6 +121,10 @@ namespace FleetWise.Controllers
                         DriverName = $"{d.FirstName} {d.LastName}",
                         Offered = !unavailable.Contains(d.UserId),
                     }).ToList(),
+                LeaveDays = leaveDays,
+                TodayInWeek = PhClock.OperationalDay.Date >= weekStart && PhClock.OperationalDay.Date <= weekEnd
+                    ? PhClock.OperationalDay.ToString("yyyy-MM-dd")
+                    : null,
             };
 
             foreach (var t in trips.OrderBy(t => t.VehicleId))
@@ -240,6 +269,7 @@ namespace FleetWise.Controllers
             // 409 rather than a 400, the same way dispatch does, because the two mean
             // different things to the planner: one it may force past, the other it may not.
             var conflicts = FindConflicts(effective);
+            conflicts.AddRange(await DriverAwayConflictsAsync(effective));
             if (!req.Override && conflicts.Count > 0)
                 return Conflict(new { message = "This schedule breaks a booking rule.", conflicts });
 
@@ -363,15 +393,11 @@ namespace FleetWise.Controllers
                 .Filter("vehicle_id", Operator.In, vehicleIds).Get();
             var driversTask = _supabase.From<UserModel>()
                 .Filter("user_id", Operator.In, driverIds).Get();
-            var availTask = _supabase.From<DriverAvailability>()
-                .Filter("user_id", Operator.In, driverIds).Get();
 
-            await Task.WhenAll(vehiclesTask, driversTask, availTask);
+            await Task.WhenAll(vehiclesTask, driversTask);
 
             var vehicles = vehiclesTask.Result.Models.ToDictionary(v => v.VehicleId);
             var drivers = driversTask.Result.Models.ToDictionary(d => d.UserId);
-            var availability = availTask.Result.Models
-                .ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
 
             void Refuse(string message, ScheduleCellInput c) => refused.Add(new
             {
@@ -399,11 +425,11 @@ namespace FleetWise.Controllers
                 var name = $"{driver.FirstName} {driver.LastName}".Trim();
                 if (name.Length == 0) name = $"Driver {driver.UserId}";
 
+                // Being marked unavailable is not refused here. It is a flag with no date
+                // on it, so it says nothing about a day other than the one it was set on,
+                // and it is reported as a conflict for that day instead.
                 if (!string.Equals(driver.AccountStatus, "Activated", OIC))
                     Refuse($"{name}'s account is no longer active.", c);
-                else if (availability.TryGetValue(c.DriverId, out var status)
-                      && string.Equals(status, "Unavailable", OIC))
-                    Refuse($"{name} is marked unavailable.", c);
             }
 
             return refused;
@@ -418,6 +444,101 @@ namespace FleetWise.Controllers
         /// save. Each conflict carries the editable cells so the planner can highlight
         /// exactly what needs changing.
         /// </remarks>
+        /// <summary>
+        /// Cells booking a driver who is away: on approved leave for that day, or marked
+        /// unavailable now.
+        /// </summary>
+        /// <remarks>
+        /// Conflicts rather than refusals. Three days' notice is asked for and never
+        /// required, allocation is the dispatcher's to make, and a driver on leave who
+        /// offers to cover a sick call is a thing that happens. So this is said plainly
+        /// and can be saved past, like a driver working two shifts back to back.
+        ///
+        /// The two are read differently because they say different things. Leave carries
+        /// its dates and is checked against the day each cell sits on. The availability
+        /// flag carries none: it says a driver cannot work now, so it is read against the
+        /// operational day and no other.
+        /// </remarks>
+        private async Task<List<ConflictDto>> DriverAwayConflictsAsync(
+            List<(ScheduleCellInput cell, bool locked)> effective)
+        {
+            var results = new List<ConflictDto>();
+
+            var editable = effective
+                .Where(e => !e.locked && e.cell.DriverId != 0 && !string.IsNullOrEmpty(e.cell.Date))
+                .ToList();
+            if (editable.Count == 0) return results;
+
+            var days = editable
+                .Select(e => DateTime.TryParse(e.cell.Date, out var d) ? d.Date : (DateTime?)null)
+                .Where(d => d.HasValue).Select(d => d!.Value).ToList();
+            if (days.Count == 0) return results;
+
+            var driverIds = editable.Select(e => e.cell.DriverId).Distinct().Cast<object>().ToList();
+            var today = PhClock.OperationalDay.Date;
+
+            // The week being planned, so a request outside it is never read.
+            var leaveTask = _supabase.From<LeaveRequest>()
+                    .Filter("user_id", Operator.In, driverIds)
+                    .Filter("status", Operator.Equals, "Approved")
+                    .Filter("start_date", Operator.LessThanOrEqual, days.Max().ToString("yyyy-MM-dd"))
+                    .Filter("end_date", Operator.GreaterThanOrEqual, days.Min().ToString("yyyy-MM-dd"))
+                    .Get();
+            var namesTask = _supabase.From<UserModel>()
+                    .Filter("user_id", Operator.In, driverIds).Get();
+
+            await Task.WhenAll(leaveTask, namesTask);
+
+            // Worth asking only when the week being saved contains the day the flag speaks
+            // for. Any other week cannot be affected by it.
+            var unavailable = new HashSet<int>();
+            if (days.Any(d => d == today))
+            {
+                var availability = (await _supabase.From<DriverAvailability>()
+                    .Filter("user_id", Operator.In, driverIds).Get()).Models;
+
+                foreach (var a in availability)
+                    if (string.Equals(a.AvailabilityStatus, "Unavailable", StringComparison.OrdinalIgnoreCase))
+                        unavailable.Add(a.UserId);
+            }
+
+            var leave = leaveTask.Result.Models;
+            var names = namesTask.Result.Models
+                .ToDictionary(u => u.UserId, u => $"{u.FirstName} {u.LastName}".Trim());
+
+            foreach (var e in editable)
+            {
+                if (!DateTime.TryParse(e.cell.Date, out var day)) continue;
+
+                var hit = leave.FirstOrDefault(l => l.UserId == e.cell.DriverId
+                                                 && l.StartDate.Date <= day.Date
+                                                 && l.EndDate.Date >= day.Date);
+
+                string reason;
+                if (hit is not null)
+                    reason = $"on approved {hit.LeaveType.ToLowerInvariant()} leave";
+                else if (day.Date == today && unavailable.Contains(e.cell.DriverId))
+                    reason = "unable to drive";
+                else
+                    continue;
+
+                var name = names.TryGetValue(e.cell.DriverId, out var n) && n.Length > 0
+                    ? n
+                    : $"Driver {e.cell.DriverId}";
+
+                results.Add(new ConflictDto
+                {
+                    Message = $"{name} is {reason} on {FmtDate(e.cell.Date)}.",
+                    Cells = new List<CellRef>
+                    {
+                        new() { RouteId = e.cell.RouteId, Shift = e.cell.Shift, Date = e.cell.Date },
+                    },
+                });
+            }
+
+            return results;
+        }
+
         private static List<ConflictDto> FindConflicts(List<(ScheduleCellInput cell, bool locked)> all)
         {
             var results = new List<ConflictDto>();

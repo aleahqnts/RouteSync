@@ -26,8 +26,18 @@
         font-weight: 700;
         color: var(--rq-text);
         font-family: 'Segoe UI', sans-serif;
+        margin: 0;
         line-height: 1.1;
     }
+
+    .rq-subtitle {
+        font-size: 0.875rem;
+        color: var(--rq-muted);
+        font-family: 'Segoe UI', sans-serif;
+        margin: 4px 0 0;
+    }
+
+    .rq-updated { font-size: .78rem; color: var(--rq-muted); }
 
     /* The count of what is waiting, which is what the page is opened for. */
     .rq-waiting {
@@ -43,6 +53,79 @@
         font-family: 'Segoe UI', sans-serif;
         white-space: nowrap;
     }
+
+    .rq-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    /* The reload control is the same teal as the one on every other board, and it turns
+       while it is working rather than taking the page down and building it again. */
+    .rq-btn--icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        text-decoration: none;
+    }
+
+    .rq-refresh-ico { display: flex; align-items: center; line-height: 1; }
+
+    .rq-refresh-ico svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .rq-btn--icon.spinning .rq-refresh-ico { animation: rqSpin .7s linear infinite; }
+
+    @keyframes rqSpin { to { transform: rotate(360deg); } }
+
+    .rq-btn--icon.rq-refresh {
+        border-color: #CDE9E4;
+        color: #2E7D72;
+    }
+
+    .rq-btn--icon.rq-refresh:hover { background: #EAF7F5; }
+
+    /* --- Filters --------------------------------------------------------- */
+
+    .rq-filters {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .rq-filter {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .rq-filter label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--rq-muted);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .rq-input {
+        padding: 7px 12px;
+        border: 1.5px solid var(--rq-border);
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-family: 'Segoe UI', sans-serif;
+        color: var(--rq-text);
+        background: var(--rq-white);
+        outline: none;
+        transition: border-color 180ms;
+    }
+
+    .rq-input:focus { border-color: var(--rq-teal); }
+
+    #rqSearch { width: 240px; }
+    #rqType, #rqDriver { width: 180px; }
+
+    .rq-filter-actions { display: flex; gap: 8px; }
 
     .rq-tabs {
         display: flex;
@@ -102,6 +185,15 @@
 
     .rq-card-header svg { color: var(--rq-teal); flex-shrink: 0; }
 
+    /* How much of the list the filters are letting through. Sits with the heading rather
+       than above the table, where it would be read as a column. */
+    .rq-count {
+        margin-left: auto;
+        font-size: .78rem;
+        font-weight: 600;
+        color: var(--rq-muted);
+    }
+
     .rq-table-wrap { overflow-x: auto; }
 
     .rq-table {
@@ -140,35 +232,38 @@
     /* --- Cell contents --------------------------------------------------- */
 
     .rq-driver { display: block; font-weight: 700; }
-    .rq-driver-id,
-    .rq-days,
-    .rq-notice,
-    .rq-balance-sub { display: block; font-size: .74rem; color: var(--rq-muted); }
+    .rq-driver-id { display: block; font-size: .74rem; color: var(--rq-muted); }
 
-    .rq-span,
-    .rq-filed,
-    .rq-balance { display: block; }
+    .rq-date,
+    .rq-filed { display: block; white-space: nowrap; }
 
-    .rq-balance { font-weight: 700; }
+    .rq-days-n { font-weight: 600; }
 
-    /* What the driver said. Wrapped rather than truncated: a reason cut in half is a
-       reason nobody can act on. */
+    .rq-balance { font-weight: 700; white-space: nowrap; }
+
+    /* Other requests of the same type still undecided. Marked, because approving this one
+       without noticing them is how an allowance is overdrawn. */
+    .rq-balance-pending {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 7px;
+        border-radius: 20px;
+        background: #FEF9E7;
+        font-size: .7rem;
+        font-weight: 700;
+        color: #B7950B;
+        white-space: nowrap;
+    }
+
+    /* What the driver said, in a column of its own. Wrapped rather than truncated: a
+       reason cut in half is a reason nobody can act on. */
     .rq-reason {
         display: block;
-        margin-top: 4px;
-        font-size: .76rem;
         color: var(--rq-text);
-        font-style: italic;
-        max-width: 34ch;
+        max-width: 28ch;
     }
 
-    .rq-decision-note {
-        display: block;
-        font-size: .76rem;
-        color: var(--rq-muted);
-        font-style: italic;
-        max-width: 30ch;
-    }
+    .rq-blank { color: var(--rq-muted); }
 
     /* --- Badges ---------------------------------------------------------- */
 
@@ -212,8 +307,24 @@
 
     .rq-btn:disabled { opacity: .5; cursor: default; }
 
-    .rq-btn--approve:hover { border-color: #27AE60; color: #27AE60; }
-    .rq-btn--reject:hover  { border-color: #E53E3E; color: #E53E3E; }
+    /* Approve and Reject carry their colour standing still. Drawn the same as every
+       other button until hovered, the two of them were a pair of grey rectangles, and
+       which one was which had to be read rather than seen. */
+    .rq-btn--approve {
+        background: #27AE60;
+        border-color: #27AE60;
+        color: #fff;
+    }
+
+    .rq-btn--approve:hover { background: #219653; border-color: #219653; }
+
+    .rq-btn--reject {
+        background: #FDECEC;
+        border-color: #F3B7B7;
+        color: #C0392B;
+    }
+
+    .rq-btn--reject:hover { background: #FADBD8; border-color: #E53E3E; color: #E53E3E; }
 
     .rq-btn--primary {
         background: var(--rq-teal);
@@ -224,6 +335,108 @@
     .rq-btn--reject.rq-btn--primary {
         background: #E53E3E;
         border-color: #E53E3E;
+    }
+
+    /* A third action beside Approve and Reject, and the only one on a settled request.
+       Quieter than either, but still a button: with no edge and no ground of its own it
+       read as a label that happened to be clickable. */
+    .rq-btn--history {
+        background: var(--rq-white);
+        border-color: #CDE9E4;
+        color: #2E7D72;
+    }
+
+    .rq-btn--history:hover { background: #EAF7F5; border-color: var(--rq-teal); }
+
+    /* --- History --------------------------------------------------------- */
+
+    .rq-hist-who {
+        margin-top: 4px;
+        font-size: .84rem;
+        color: var(--rq-muted);
+    }
+
+    .rq-hist {
+        list-style: none;
+        margin: 16px 0 0;
+        padding: 0;
+    }
+
+    .rq-hist-item {
+        position: relative;
+        display: flex;
+        gap: 12px;
+        padding-bottom: 18px;
+    }
+
+    /* The line joining one entry to the next, stopping at the last. */
+    .rq-hist-item:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 16px;
+        bottom: 2px;
+        width: 2px;
+        background: var(--rq-border);
+    }
+
+    .rq-hist-item:last-child { padding-bottom: 0; }
+
+    .rq-hist-dot {
+        position: relative;
+        z-index: 1;
+        flex: 0 0 auto;
+        width: 12px;
+        height: 12px;
+        margin-top: 4px;
+        border-radius: 50%;
+        background: var(--rq-muted);
+    }
+
+    .rq-hist-dot--filed     { background: #2B6CB0; }
+    .rq-hist-dot--approved  { background: #27AE60; }
+    .rq-hist-dot--rejected  { background: #E53E3E; }
+    .rq-hist-dot--cancelled { background: #9AA5B4; }
+
+    .rq-hist-body {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .rq-hist-action {
+        font-size: .88rem;
+        font-weight: 700;
+        color: var(--rq-text);
+    }
+
+    .rq-hist-when { font-size: .78rem; color: var(--rq-text); }
+
+    .rq-hist-by { font-size: .76rem; color: var(--rq-muted); }
+
+    .rq-hist-note {
+        margin-top: 4px;
+        font-size: .78rem;
+        font-style: italic;
+        color: var(--rq-text);
+    }
+
+    .rq-box-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .rq-box-close {
+        border: none;
+        background: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        color: var(--rq-muted);
+        cursor: pointer;
+        padding: 0 4px;
     }
 
     /* --- Decision dialog ------------------------------------------------- */
@@ -342,6 +555,26 @@
         padding: 6px 13px;
         font-size: .78rem;
     }
+
+    .rq-subtitle { display: none; }
+
+    /* The mark alone. The word beside it costs a third of the line the title needs. */
+    .rq-refresh {
+        gap: 0;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        justify-content: center;
+        overflow: hidden;
+        font-size: 0;
+    }
+
+    /* The stamp needs the width more than the line it sits on can spare. */
+    .rq-updated { display: none; }
+
+    /* Start and End read as a pair on a card, where they are two lines rather than two
+       columns, so the second is drawn tight against the first. */
+    .rs-cards td[data-label="End"] { padding-top: 0; border-top: none; }
 
     /* Approve and Reject take the width between them rather than sitting in a corner
        of a card. */

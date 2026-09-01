@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using FleetWise.Models;
 using FleetWise.Services;
@@ -38,14 +38,14 @@ namespace FleetWise.Controllers
             var wanted = string.IsNullOrWhiteSpace(status) ? "Pending" : status.Trim();
 
             var requestsTask = _supabase.From<LeaveRequest>().Get();
-            var driversTask = _supabase.From<UserModel>()
-                .Filter("role_id", Constants.Operator.Equals, "2")
-                .Get();
+            // Everyone, not only drivers: the history names whoever decided a request, and
+            // that is an operator.
+            var usersTask = _supabase.From<UserModel>().Get();
 
-            await Task.WhenAll(requestsTask, driversTask);
+            await Task.WhenAll(requestsTask, usersTask);
 
             var all = requestsTask.Result.Models;
-            var names = driversTask.Result.Models
+            var names = usersTask.Result.Models
                 .ToDictionary(u => u.UserId, u => $"{u.FirstName} {u.LastName}");
 
             var shown = string.Equals(wanted, "All", StringComparison.OrdinalIgnoreCase)
@@ -90,9 +90,39 @@ namespace FleetWise.Controllers
             found.DecidedBy = deciderId;
             found.DecidedAt = PhClock.Now;
             found.DecisionNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
-            await _supabase.From<LeaveRequest>().Update(found);
 
-            await Notify(found, decision);
+            // Only the four columns a decision touches, named one at a time.
+            //
+            // Handing the whole model back rewrote start_date and end_date along with
+            // everything else, and those are date columns holding a value the driver's app
+            // wrote as plain text, so they come back with no timezone on them. Sent again
+            // they were read as local and converted, which moved a request filed for the
+            // second onto the first. The notice said the right day because it was built
+            // from the model still in memory; only the stored row had moved.
+            var write = _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Set(x => x.Status, found.Status)
+                .Set(x => x.DecidedAt, found.DecidedAt!.Value);
+
+            // Left out rather than written as null. Only a request still waiting is decided
+            // here, so both of these start empty, and there is nothing to clear.
+            if (found.DecidedBy.HasValue)
+                write = write.Set(x => x.DecidedBy, found.DecidedBy.Value);
+            if (found.DecisionNote is not null)
+                write = write.Set(x => x.DecisionNote, found.DecisionNote);
+
+            await write.Update();
+
+            // Best effort, and after the decision is already stored. Telling the driver is
+            // not the decision: a notice that fails must not report the whole thing failed
+            // and leave the operator looking at a request the database has already settled.
+            try { await Notify(found, decision); }
+            catch (Exception ex)
+            {
+                await _audit.WriteAsync("leave_notice_failed",
+                    $"could not notify driver {found.UserId} of the decision on request {requestId}: {ex.Message}",
+                    "requests", requestId.ToString(), outcome: "failed");
+            }
 
             await _audit.WriteAsync(
                 decision == "Approved" ? "leave_approved" : "leave_rejected",
@@ -118,7 +148,9 @@ namespace FleetWise.Controllers
             await _supabase.From<Message>().Insert(new Message
             {
                 SenderId = int.TryParse(senderStr, out var s) ? s : 0,
-                TargetAudience = "driver",
+                // Capitalised: target_audience_enum is 'All', 'Route' or 'Driver', and
+                // anything else is refused by the database rather than stored wrong.
+                TargetAudience = "Driver",
                 TargetId = r.UserId.ToString(),
                 Subject = $"Leave {decision.ToLowerInvariant()}",
                 Body = $"Your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} was "
@@ -139,10 +171,8 @@ namespace FleetWise.Controllers
         {
             var mine = all.Where(x => x.UserId == r.UserId).ToList();
 
-            // How much notice arrived with it. Shown as a fact, never as a pass or a fail:
-            // the three days is advice, and reporting it as a violation would smuggle the
-            // restriction back in through the wording.
-            var notice = (r.StartDate.Date - r.FiledAt.Date).Days;
+            var used = LeaveEntitlement.Used(mine, r.LeaveType, r.StartDate.Year);
+            var entitlement = LeaveEntitlement.DaysPerYear.TryGetValue(r.LeaveType, out var e) ? e : 0;
 
             return new LeaveRowViewModel
             {
@@ -151,15 +181,63 @@ namespace FleetWise.Controllers
                 DriverName = names.TryGetValue(r.UserId, out var n) ? n : $"Driver {r.UserId}",
                 LeaveType = r.LeaveType,
                 Span = Span(r),
+                Start = r.StartDate.ToString("MMM d, yyyy"),
+                End = r.EndDate.ToString("MMM d, yyyy"),
                 Days = LeaveEntitlement.Days(r),
                 Reason = r.Reason,
                 Status = r.Status,
                 Filed = r.FiledAt.ToString("MMM d, yyyy h:mm tt"),
-                NoticeDays = notice,
-                RemainingOfType = LeaveEntitlement.Remaining(mine, r.LeaveType, r.StartDate.Year),
-                EntitlementOfType = LeaveEntitlement.DaysPerYear.TryGetValue(r.LeaveType, out var e) ? e : 0,
+                // What the driver has actually been granted, not what is left once this
+                // request is taken off. Deducting a request from the balance shown beside
+                // it makes the number move because of the very thing being decided, and
+                // reads as though the days are already spent.
+                //
+                // The driver's own screen does deduct pending days, and should: there the
+                // question is how much more can be asked for. Here it is what has been
+                // agreed so far, with anything else outstanding named separately.
+                RemainingOfType = Math.Max(0, entitlement - used.Approved),
+                EntitlementOfType = entitlement,
+                OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),
                 DecisionNote = r.DecisionNote,
+                History = HistoryOf(r, names),
             };
+        }
+
+        /// <summary>
+        /// What happened to a request, read off the row rather than kept in a table of its
+        /// own: a request is filed once and settled once, and both moments are stored.
+        /// </summary>
+        private static List<LeaveEventViewModel> HistoryOf(
+            LeaveRequest r, IReadOnlyDictionary<int, string> names)
+        {
+            string Who(int? id) =>
+                id is int i && names.TryGetValue(i, out var n) ? n : "Unknown";
+
+            var events = new List<LeaveEventViewModel>
+            {
+                new()
+                {
+                    Action = "Filed",
+                    When = r.FiledAt.ToString("MMM d, yyyy h:mm tt"),
+                    By = Who(r.UserId),
+                    Note = r.Reason,
+                },
+            };
+
+            if (r.DecidedAt is DateTime decided
+                && !string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                events.Add(new LeaveEventViewModel
+                {
+                    Action = r.Status,
+                    When = decided.ToString("MMM d, yyyy h:mm tt"),
+                    // A withdrawal is the driver's own doing and carries no decider.
+                    By = r.DecidedBy is null ? Who(r.UserId) : Who(r.DecidedBy),
+                    Note = r.DecisionNote,
+                });
+            }
+
+            return events;
         }
     }
 }
