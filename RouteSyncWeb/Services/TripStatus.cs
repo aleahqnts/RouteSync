@@ -1,4 +1,4 @@
-using FleetWise.Models;
+﻿using FleetWise.Models;
 
 namespace FleetWise.Services
 {
@@ -58,8 +58,18 @@ namespace FleetWise.Services
                 checklist = null;
             }
 
+            // A running trip whose driver has reported they cannot drive. The trip is
+            // still active and the bus is still out, so neither of those changes. What
+            // changes is that the board can now say the driver needs relieving, which it
+            // could not while every active trip reported its driver as on trip.
             if (trip.TripStatus == "Active")
-                return new TripStatusView("On Trip", "On Trip", "Active", vehicleFlagged);
+                return new TripStatusView(
+                    "On Trip",
+                    string.Equals(driverAvailability, "Unavailable", StringComparison.OrdinalIgnoreCase)
+                        ? "Unavailable"
+                        : "On Trip",
+                    "Active",
+                    vehicleFlagged);
 
             if (trip.TripStatus == "Completed")
                 return new TripStatusView("Completed", "Available", "Completed", vehicleFlagged);
@@ -80,7 +90,12 @@ namespace FleetWise.Services
             // started".
             var tripStatus =
                 ShiftEndAt(trip) < now ? "Missed"
-                : (vehicle?.OutOfService == true || driverStatus == "Unavailable") ? "Assignment Issue"
+                : (vehicle?.OutOfService == true
+                   || driverStatus == "Unavailable"
+                   // Approved leave for this day. A driver who is rostered off cannot run
+                   // the trip, and the board has to say so while there is still time to
+                   // put somebody else on it.
+                   || driverStatus == "On Leave") ? "Assignment Issue"
                 : vehicleStatus == "Pending" ? "Pending"
                 : "Not Yet Started";
 

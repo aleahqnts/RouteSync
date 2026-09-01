@@ -38,9 +38,21 @@
                     <span class="rtm-info-label">Shift Time:</span>
                     <span class="rtm-info-value" id="rtm-shift-time">—</span>
                 </div>
-                <div class="rtm-info-row">
-                    <span class="rtm-info-label">Route:</span>
-                    <span class="rtm-info-value" id="rtm-route">—</span>
+            </div>
+
+            @* Where the bus runs. Demand moves through a day and a route can need another
+               bus on it more than the one it is on now, so this is the dispatcher's to
+               change while the shift is running. The driver is told when it does. *@
+            <div class="rtm-section-label">Route</div>
+            <div class="rtm-section">
+                <div class="rtm-field">
+                    <label class="rtm-label" for="rtm-route-sel">Route</label>
+                    <div class="rtm-select-wrap">
+                        <select id="rtm-route-sel" class="rtm-select">
+                            <option value="">Loading…</option>
+                        </select>
+                    </div>
+                    <span class="rtm-hint" id="rtm-route-hint"></span>
                 </div>
             </div>
 
@@ -148,7 +160,8 @@
         const statusText  = document.getElementById('rtm-status-text');
         const shiftTypeEl = document.getElementById('rtm-shift-type');
         const shiftTimeEl = document.getElementById('rtm-shift-time');
-        const routeEl     = document.getElementById('rtm-route');
+        const routeSel    = document.getElementById('rtm-route-sel');
+        const routeHint   = document.getElementById('rtm-route-hint');
         const vehicleSel  = document.getElementById('rtm-vehicle-id');
         const vehicleHint = document.getElementById('rtm-vehicle-hint');
         const driverSel   = document.getElementById('rtm-driver');
@@ -176,7 +189,12 @@
                 const info = _rtmOptions.tripInfo;
                 shiftTypeEl.textContent = info.shiftType ? info.shiftType + ' Shift' : '—';
                 shiftTimeEl.textContent = `${info.shiftStart} – ${info.shiftEnd}`;
-                routeEl.textContent     = info.routeName;
+                rtmFillSelect(routeSel, 'Select a route…',
+                    (_rtmOptions.routes || []).map(function (r) {
+                        return { value: r.routeId, label: r.routeName };
+                    }),
+                    info.currentRouteId);
+                rtmRouteHint();
 
                 // Status badge
                 if (info.tripStatus === 'Assignment Issue' || info.tripStatus === 'Pending') {
@@ -209,6 +227,21 @@
         overlay.addEventListener('click', e => {
             if (e.target === overlay) closeReassignModal();
         });
+
+        // Said before saving, not after. A driver already out on the road is told where to
+        // go next, and the dispatcher should know that is what pressing save does.
+        function rtmRouteHint() {
+            const moved = _rtmOptions
+                && routeSel.value
+                && String(routeSel.value) !== String(_rtmOptions.tripInfo.currentRouteId);
+
+            routeHint.textContent = moved
+                ? 'The driver will be sent a high priority notice that this shift has moved route.'
+                : '';
+            routeHint.classList.toggle('rtm-hint--visible', !!moved);
+        }
+
+        routeSel.addEventListener('change', rtmRouteHint);
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && overlay.style.display === 'flex') closeReassignModal();
@@ -286,7 +319,15 @@
             const vehicleId = vehicleSel.value || _rtmOptions.tripInfo.currentVehicleId;
             const driverId  = parseInt(driverSel.value) || _rtmOptions.tripInfo.currentDriverId;
 
-            const payload = { tripId: _rtmTripId, vehicleId: vehicleId || null, driverId, override: !!force };
+            const routeId = parseInt(routeSel.value) || _rtmOptions.tripInfo.currentRouteId;
+
+            const payload = {
+                tripId: _rtmTripId,
+                vehicleId: vehicleId || null,
+                driverId,
+                routeId,
+                override: !!force
+            };
 
             saveBtn.disabled = true;
             document.getElementById('rtm-save-label').style.display  = 'none';

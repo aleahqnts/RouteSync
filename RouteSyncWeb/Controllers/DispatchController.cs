@@ -73,6 +73,17 @@ namespace FleetWise.Controllers
             var driverDict = drivers.ToDictionary(d => d.UserId);
             var availabilityDict = availability.ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
 
+            // What each of them said. Kept apart from the status, because leave is folded
+            // into that below and carries no reason of this kind.
+            var awayReasons = availability
+                .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable", StringComparison.OrdinalIgnoreCase)
+                         && !string.IsNullOrWhiteSpace(a.Reason))
+                .ToDictionary(a => a.UserId, a => a.Reason.Trim());
+
+            // Leave approved for the day this board is showing counts the same as being
+            // unavailable, because on that day it is the same thing.
+            availabilityDict = await WithLeaveAsync(availabilityDict, selected);
+
             // One checklist per trip. Where a bus was inspected more than once, the most
             // recent submission wins.
             var checklistDict = checklists
@@ -194,10 +205,17 @@ namespace FleetWise.Controllers
                             DriverStatus = r.DriverStatus,
                             TripStatus = r.TripStatus,
                             Flagged = r.Flagged,
-                            AssignmentIssueReason = r.TripStatus == "Assignment Issue"
-                                ? BuildIssueReason(r.Vehicle, r.DriverStatus,
-                                    openIncidents.GetValueOrDefault(trip.VehicleId))
-                                : null
+                            NeedsRelief = r.TripStatus == "Active" && r.DriverStatus == "Unavailable",
+                            AssignmentIssueReason =
+                                r.TripStatus == "Assignment Issue"
+                                    ? BuildIssueReason(r.Vehicle, r.DriverStatus,
+                                        openIncidents.GetValueOrDefault(trip.VehicleId),
+                                        awayReasons.GetValueOrDefault(trip.DriverId))
+                                : r.TripStatus == "Active" && r.DriverStatus == "Unavailable"
+                                    ? "Driver reported they cannot drive"
+                                        + (awayReasons.TryGetValue(trip.DriverId, out var why) ? $": {why}" : "")
+                                        + ". Send a relief driver."
+                                    : null
                         });
                     }
 
@@ -351,6 +369,11 @@ namespace FleetWise.Controllers
             var availability = availTask.Result.Models
                                         .ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
 
+            // A trip added here is for the operational day on screen, so leave approved for
+            // that day counts the same as being unavailable. Without this the board reports
+            // an assignment issue for a trip it just let the dispatcher create.
+            availability = await WithLeaveAsync(availability, PhClock.OperationalDay);
+
             // Shifts each vehicle is already booked for today.
             var vehicleBookedShifts = todayTrips
                 .GroupBy(t => t.VehicleId)
@@ -390,16 +413,31 @@ namespace FleetWise.Controllers
                                         ? vs : new()
                     }).ToList(),
 
-                // Only drivers marked available.
+                // Everyone still on the roster. A driver who cannot be booked is listed
+                // and marked rather than dropped: a name that is simply absent reads as
+                // resigned, and leaves the dispatcher hunting for somebody who is standing
+                // in front of them.
                 Drivers = drivers
-                    .Where(d => !availability.TryGetValue(d.UserId, out var s) || s != "Unavailable")
                     .OrderBy(d => d.FirstName)
-                    .Select(d => new DriverOption
+                    .Select(d =>
                     {
-                        DriverId = d.UserId,
-                        DriverName = $"{d.FirstName} {d.LastName}",
-                        BookedShifts = driverBookedShifts.TryGetValue(d.UserId, out var ds)
-                                        ? ds : new()
+                        availability.TryGetValue(d.UserId, out var status);
+                        var reason = status switch
+                        {
+                            "On Leave" => "on approved leave",
+                            "Unavailable" => "unable to drive",
+                            _ => null,
+                        };
+
+                        return new DriverOption
+                        {
+                            DriverId = d.UserId,
+                            DriverName = $"{d.FirstName} {d.LastName}",
+                            Offered = reason is null,
+                            Unavailable = reason,
+                            BookedShifts = driverBookedShifts.TryGetValue(d.UserId, out var ds)
+                                            ? ds : new()
+                        };
                     }).ToList()
             };
 
@@ -486,9 +524,9 @@ namespace FleetWise.Controllers
                                         .Filter("account_status", Operator.Equals, "Activated")
                                         .Get();
             var availTask = _supabase.From<DriverAvailability>().Get();
-            var routeTask = _supabase.From<BusRoute>()
-                                        .Filter("route_id", Operator.Equals, trip.RouteId.ToString())
-                                        .Get();
+            // Every route, not only the one this trip is on. A bus can be moved to another
+            // one from here.
+            var routeTask = _supabase.From<BusRoute>().Get();
 
             await Task.WhenAll(tripsTask, vehiclesTask, driversTask, availTask, routeTask);
 
@@ -496,7 +534,8 @@ namespace FleetWise.Controllers
             var vehicles = vehiclesTask.Result.Models.Where(v => v.RetiredAt == null).ToList();
             var drivers = driversTask.Result.Models;
             var availability = availTask.Result.Models.ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
-            var route = routeTask.Result.Models.FirstOrDefault();
+            var routes = routeTask.Result.Models.OrderBy(r => r.RouteId).ToList();
+            var route = routes.FirstOrDefault(r => r.RouteId == trip.RouteId);
 
             // Vehicles already booked in this shift, excluding the trip being reassigned.
             var vehiclesInShift = todayTrips
@@ -548,8 +587,10 @@ namespace FleetWise.Controllers
                     routeName = route?.RouteName ?? "—",
                     tripStatus = trip.TripStatus,
                     currentVehicleId = trip.VehicleId,
-                    currentDriverId = trip.DriverId
+                    currentDriverId = trip.DriverId,
+                    currentRouteId = trip.RouteId
                 },
+                routes = routes.Select(r => new { routeId = r.RouteId, routeName = r.RouteName }),
                 vehicles = availableVehicles,
                 drivers = availableDrivers
             });
@@ -573,6 +614,7 @@ namespace FleetWise.Controllers
             // alongside what it moved away from.
             var wasVehicle = trip.VehicleId;
             var wasDriver = trip.DriverId;
+            var wasRoute = trip.RouteId;
 
             // Only fields that were explicitly changed are written.
             if (!string.IsNullOrEmpty(req.VehicleId))
@@ -580,6 +622,9 @@ namespace FleetWise.Controllers
 
             if (req.DriverId.HasValue && req.DriverId.Value > 0)
                 trip.DriverId = req.DriverId.Value;
+
+            if (req.RouteId.HasValue && req.RouteId.Value > 0)
+                trip.RouteId = req.RouteId.Value;
 
             // The same overridable conflict gate the create path uses. The check excludes
             // the trip being edited, or an already double-booked trip could never be
@@ -596,13 +641,30 @@ namespace FleetWise.Controllers
                 .Filter("trip_id", Operator.Equals, req.TripId)
                 .Set(t => t.VehicleId, trip.VehicleId)
                 .Set(t => t.DriverId, trip.DriverId)
+                .Set(t => t.RouteId, trip.RouteId)
                 .Update();
 
             await SyncTripStatuses();
 
+            // Told plainly, and marked urgent, because a driver who does not read this runs
+            // the shift on the route they were given this morning. Best effort and after
+            // the write: a notice that fails must not report the reassignment failed and
+            // leave the dispatcher looking at a trip the database has already moved.
+            if (wasRoute != trip.RouteId)
+            {
+                try { await NotifyRouteChangeAsync(trip, wasRoute); }
+                catch (Exception ex)
+                {
+                    await _audit.WriteAsync("trip_reassigned",
+                        $"could not tell driver {trip.DriverId} that trip {trip.TripId} moved route: {ex.Message}",
+                        "trips", trip.TripId, outcome: "failed");
+                }
+            }
+
             var moved = new List<string>();
             if (wasVehicle != trip.VehicleId) moved.Add($"bus {wasVehicle} to {trip.VehicleId}");
             if (wasDriver != trip.DriverId) moved.Add($"driver {wasDriver} to {trip.DriverId}");
+            if (wasRoute != trip.RouteId) moved.Add($"route {wasRoute} to {trip.RouteId}");
 
             await _audit.WriteAsync("trip_reassigned",
                 $"reassigned trip {trip.TripId}"
@@ -611,6 +673,43 @@ namespace FleetWise.Controllers
                 "trips", trip.TripId);
 
             return Ok(new { tripId = trip.TripId });
+        }
+
+        /// <summary>
+        /// Tells the driver their shift has been moved to a different route.
+        /// </summary>
+        /// <remarks>
+        /// Through the messages table, which is what the driver app's notifications page
+        /// reads, so this arrives in the same place as everything else they are told. Sent
+        /// at high priority: it is the difference between a bus running the route it is
+        /// needed on and a bus running the one it was given at the start of the day.
+        ///
+        /// Addressed to the driver the trip now has. Where the driver was swapped in the
+        /// same edit, that is the person who needs to know.
+        /// </remarks>
+        private async Task NotifyRouteChangeAsync(Trip trip, int wasRoute)
+        {
+            var routes = (await _supabase.From<BusRoute>().Get()).Models;
+            string Name(int id) => routes.FirstOrDefault(r => r.RouteId == id)?.RouteName ?? $"Route {id}";
+
+            var senderIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(senderIdClaim, out var senderId);
+
+            var window = FormatShiftWindow(trip);
+
+            await _supabase.From<Message>().Insert(new Message
+            {
+                SenderId = senderId,
+                TargetAudience = "Driver",
+                TargetId = trip.DriverId.ToString(),
+                Subject = $"Route change: {Name(trip.RouteId)}",
+                Body = $"Your {trip.ShiftType} shift on {trip.Date:MMMM d} has been moved from "
+                     + $"{Name(wasRoute)} to {Name(trip.RouteId)}. "
+                     + $"Bus {trip.VehicleId}, {window.Start} to {window.End}. "
+                     + "Run the new route from now on.",
+                Priority = "High",
+                CreatedAt = PhClock.NowForDb
+            });
         }
 
         // Removes a trip. Clearing both the bus and the driver in the reassign modal
@@ -828,7 +927,8 @@ namespace FleetWise.Controllers
         /// alone leaves a dispatcher to go hunting through the vehicles tab to find out
         /// whether this is a reassignment or something being repaired.
         /// </remarks>
-        private static string BuildIssueReason(Vehicle vehicle, string driverStatus, MaintenanceLog openIncident)
+        private static string BuildIssueReason(Vehicle vehicle, string driverStatus,
+            MaintenanceLog openIncident, string awayReason = null)
         {
             var parts = new List<string>();
             if (vehicle?.OutOfService == true)
@@ -838,7 +938,10 @@ namespace FleetWise.Controllers
                     ? $"Bus grounded by inspection: {openIncident.IssueDetails.CriticalSummary}"
                     : "Bus is out of service");
             }
-            if (driverStatus == "Unavailable") parts.Add("Driver is unavailable");
+            if (driverStatus == "Unavailable")
+                parts.Add("Driver reported they cannot drive"
+                    + (string.IsNullOrWhiteSpace(awayReason) ? "" : $": {awayReason}"));
+            if (driverStatus == "On Leave") parts.Add("Driver is on approved leave");
             return parts.Count > 0 ? string.Join(" · ", parts) : "Needs reassignment";
         }
 
@@ -873,6 +976,21 @@ namespace FleetWise.Controllers
 
             string Fmt(DateTime d) => d.ToString("MMMM d, yyyy");
 
+            // Leave approved for this day. A conflict rather than a refusal: notice is
+            // asked for and never required, allocation is the dispatcher's to make, and a
+            // driver on leave who offers to cover a sick call is a thing that happens. It
+            // is said plainly and can be confirmed past, like a driver working two shifts
+            // back to back.
+            var onLeave = (await _supabase.From<LeaveRequest>()
+                    .Filter("user_id", Operator.Equals, driverId.ToString())
+                    .Filter("status", Operator.Equals, "Approved")
+                    .Filter("start_date", Operator.LessThanOrEqual, date.ToString("yyyy-MM-dd"))
+                    .Filter("end_date", Operator.GreaterThanOrEqual, date.ToString("yyyy-MM-dd"))
+                    .Get()).Models.FirstOrDefault();
+
+            if (onLeave is not null)
+                return $"This driver is on approved {onLeave.LeaveType.ToLowerInvariant()} leave on {Fmt(date)}.";
+
             // Same shift on the same day: a duplicate driver or vehicle.
             foreach (var t in trips.Where(t => t.Date.Date == date.Date && t.ShiftType == shift))
             {
@@ -901,6 +1019,31 @@ namespace FleetWise.Controllers
             return null;
         }
 
+        /// <summary>
+        /// Drivers whose approved leave covers a day, written over their availability.
+        /// </summary>
+        /// <remarks>
+        /// Availability answers whether a driver can work right now and carries no date,
+        /// so it cannot say that somebody is off next Tuesday. Leave can, and on the day
+        /// itself the two mean the same thing to a board: this trip needs another driver.
+        /// Folded in here rather than at each place that reads availability, so the board,
+        /// the stored status and the reason shown all come from one rule.
+        /// </remarks>
+        private async Task<Dictionary<int, string>> WithLeaveAsync(
+            Dictionary<int, string> availability, DateTime day)
+        {
+            var onLeave = (await _supabase.From<LeaveRequest>()
+                    .Filter("status", Operator.Equals, "Approved")
+                    .Filter("start_date", Operator.LessThanOrEqual, day.ToString("yyyy-MM-dd"))
+                    .Filter("end_date", Operator.GreaterThanOrEqual, day.ToString("yyyy-MM-dd"))
+                    .Get()).Models;
+
+            foreach (var leave in onLeave)
+                availability[leave.UserId] = "On Leave";
+
+            return availability;
+        }
+
         private async Task SyncTripStatuses(string date = null)
         {
             date ??= PhClock.Today.ToString("yyyy-MM-dd");
@@ -918,6 +1061,9 @@ namespace FleetWise.Controllers
             var availabilityDict = availabilityTask.Result.Models
                                     .ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
 
+            if (DateTime.TryParse(date, out var syncDay))
+                availabilityDict = await WithLeaveAsync(availabilityDict, syncDay);
+
             foreach (var trip in trips)
             {
                 if (trip.TripStatus == "Active" || trip.TripStatus == "Completed")
@@ -930,7 +1076,9 @@ namespace FleetWise.Controllers
 
                 // A grounded bus or an unavailable driver blocks the assignment. A flag
                 // on its own does not.
-                if (vehicle?.OutOfService == true || driverAvail == "Unavailable")
+                if (vehicle?.OutOfService == true
+                    || driverAvail == "Unavailable"
+                    || driverAvail == "On Leave")
                     newStatus = "Assignment Issue";
                 else if (vehicle?.VehicleStatus == "Pending")
                     newStatus = "Pending";

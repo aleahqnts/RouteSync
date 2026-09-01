@@ -1,4 +1,4 @@
-@page "/checklist/{TripId}"
+﻿@page "/checklist/{TripId}"
 @layout LoginLayout
 @implements IDisposable
 @inject SessionService Session
@@ -160,13 +160,16 @@ else
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
 
         trip = await Data.GetTripAsync(TripId);
-        if (trip is not null)
+        try
         {
-            var v = await Data.GetVehicleAsync(trip.VehicleId);
-            busLabel = v is not null ? $"{v.VehicleId} ({v.PlateNumber})" : trip.VehicleId;
+            if (trip is not null)
+            {
+                var v = await Data.GetVehicleAsync(trip.VehicleId);
+                busLabel = v is not null ? $"{v.VehicleId} ({v.PlateNumber})" : trip.VehicleId;
+            }
+            await LoadItemsAsync();
         }
-        await LoadItemsAsync();
-        loading = false;
+        finally { loading = false; }
     }
 
     /// <summary>

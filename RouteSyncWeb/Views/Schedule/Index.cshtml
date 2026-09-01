@@ -9,11 +9,13 @@
     // collapse, and the select is set in a monospace face to hold the column steady.
     var driverNameWidth = Model.Drivers.Count == 0 ? 0 : Model.Drivers.Max(d => d.DriverName.Length);
 
-    string DriverLabel(string name, int id, bool offered) =>
+    // No mention of leave or availability here. Both are answers to "on which day", and
+    // one option is shown in every day of the row, so the note is written per cell in
+    // script below rather than baked into the label.
+    string DriverLabel(string name, int id) =>
         name
         + new string(' ', Math.Max(0, driverNameWidth - name.Length) + 2)
-        + id
-        + (offered ? "" : " (unavailable)");
+        + id;
 }
 
 <div class="sch-wrap">
@@ -55,8 +57,8 @@
 
     <p class="sch-hint">
         Assign a vehicle and a driver to each shift. Use <strong>+ Add bus</strong> to
-        run more than one on the same shift. Trips already under way are locked, and
-        conflicts are reported when you save.
+        run more than one on the same shift. Trips already under way cannot be edited.
+        Conflicts are reported on save.
     </p>
 
     @foreach (var route in Model.Routes)
@@ -129,9 +131,9 @@
                                                     </select>
                                                     <select class="sch-sel sch-drv rs-id-list">
                                                         <option value="">Driver…</option>
-                                                        @foreach (var dr in Model.Drivers.Where(d => d.Offered || (cell != null && cell.DriverId == d.DriverId)))
+                                                        @foreach (var dr in Model.Drivers)
                                                         {
-                                                            <option value="@dr.DriverId" selected="@(cell != null && cell.DriverId == dr.DriverId)">@DriverLabel(dr.DriverName, dr.DriverId, dr.Offered)</option>
+                                                            <option value="@dr.DriverId" selected="@(cell != null && cell.DriverId == dr.DriverId)">@DriverLabel(dr.DriverName, dr.DriverId)</option>
                                                         }
                                                     </select>
                                                 </div>
@@ -162,8 +164,23 @@
             <p id="sch-conflict-sub" class="sch-modal-sub">Review the highlighted cells before saving.</p>
             <ul id="sch-conflict-list" class="sch-modal-list"></ul>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCloseConflicts()">Go Back</button>
+                <button class="sch-modal-btn" onclick="schCloseConflicts()">Back</button>
                 <button id="sch-override-btn" class="sch-modal-btn sch-modal-btn-override" style="display:none;" onclick="schConfirmOverride()">Save Anyway</button>
+            </div>
+        </div>
+    </div>
+
+    @* Asked the moment a driver who is away is chosen for a cell. *@
+    <div id="sch-away-modal" class="sch-modal-overlay" style="display:none;">
+        <div class="sch-modal">
+            <div class="sch-modal-head">
+                <span class="sch-modal-ico">&#9888;</span>
+                <h3>Driver Is Away</h3>
+            </div>
+            <p id="sch-away-text" class="sch-modal-sub"></p>
+            <div class="sch-modal-actions">
+                <button class="sch-modal-btn" onclick="schCancelAway()">Choose Another</button>
+                <button class="sch-modal-btn sch-modal-btn-override" onclick="schConfirmAway()">Assign Anyway</button>
             </div>
         </div>
     </div>
@@ -173,13 +190,13 @@
         <div class="sch-modal">
             <div class="sch-modal-head">
                 <span class="sch-modal-ico">&#9888;</span>
-                <h3>Override These Conflicts?</h3>
+                <h3>Confirm Override</h3>
             </div>
-            <p class="sch-modal-sub">This schedule breaks the booking rules listed below. Confirm only if that is intended.</p>
+            <p class="sch-modal-sub">The following conflicts were found. Proceed only if this assignment is intended.</p>
             <ul id="sch-override-list" class="sch-modal-list"></ul>
             <div class="sch-modal-actions">
                 <button class="sch-modal-btn" onclick="schCancelOverride()">Cancel</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schSave(true)">Confirm Override</button>
+                <button class="sch-modal-btn sch-modal-btn-override" onclick="schSave(true)">Save Anyway</button>
             </div>
         </div>
     </div>
@@ -203,8 +220,65 @@
     const SCH_VEHICLES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Vehicles.Where(v => v.Offered).Select(v => new { id = v.VehicleId, label = $"{v.VehicleId} · {v.PlateNumber}" })));
     const SCH_DRIVERS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Drivers.Where(d => d.Offered)
-             .Select(d => new { id = d.DriverId, label = DriverLabel(d.DriverName, d.DriverId, true) })));
+        Model.Drivers.Select(d => new { id = d.DriverId, label = DriverLabel(d.DriverName, d.DriverId) })));
+    // Names on their own, for the sentences below. The label above is padded out into
+    // columns and carries the identifier, which reads as a name and a number in a warning.
+    const SCH_DRIVER_NAMES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Drivers.ToDictionary(d => d.DriverId.ToString(), d => d.DriverName)));
+    // Which days of this week each driver has leave for, and of what kind.
+    const SCH_LEAVE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LeaveDays));
+    // Drivers who have said they cannot work. The flag carries no date, so it is read
+    // against the day below and no other.
+    const SCH_UNAVAILABLE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Drivers.Where(d => !d.Offered).Select(d => d.DriverId.ToString())));
+    const SCH_TODAY = '@(Model.TodayInWeek ?? "")';
+
+    // Why a driver cannot take a shift on a given day, or an empty string when they can.
+    //
+    // Leave carries its dates, so it is asked about the day the cell sits on. The
+    // availability flag carries none: it says a driver cannot work now, which is a
+    // statement about today and about no other day of the week.
+    function schAwayNote(driverId, date) {
+        const days = SCH_LEAVE[driverId];
+        const type = days && days[date];
+        if (type) return 'on ' + type.toLowerCase() + ' leave';
+        if (date === SCH_TODAY && SCH_UNAVAILABLE.indexOf(String(driverId)) !== -1)
+            return 'unable to drive';
+        return '';
+    }
+
+    // Writes that note into every driver list, one cell at a time.
+    //
+    // The same driver reads differently in two cells of the same row, so the note cannot
+    // be part of the option as it is built. The label it was made with is kept on the
+    // option and rewritten from, or a second pass would append a note to a note.
+    //
+    // A closed select shows the text of whatever is selected, so a cell already holding a
+    // driver who is away says so without being opened, and the cell is marked besides.
+    function schMarkAway() {
+        document.querySelectorAll('.sch-cell').forEach(function (cell) {
+            const sel = cell.querySelector('.sch-drv');
+            if (!sel) return;
+            const date = cell.dataset.date;
+
+            Array.from(sel.options).forEach(function (opt) {
+                if (!opt.value) return;
+                if (opt.dataset.base === undefined) opt.dataset.base = opt.textContent;
+                const note = schAwayNote(opt.value, date);
+                // Spaced with the same character the identifier column is padded with,
+                // which does not collapse the way a run of ordinary spaces would.
+                opt.textContent = note
+                    ? opt.dataset.base + '\u00a0\u00a0(' + note + ')'
+                    : opt.dataset.base;
+            });
+
+            cell.classList.toggle('sch-away', !!(sel.value && schAwayNote(sel.value, date)));
+        });
+    }
+
+    function schDriverName(id) {
+        return SCH_DRIVER_NAMES[id] || 'This driver';
+    }
 
     // One <select>, built from the data above. textContent, never innerHTML.
     function schBuildSelect(cls, placeholder, items) {
@@ -245,11 +319,52 @@
     }
 
     function schWireCell(cell) {
-        cell.querySelectorAll('.sch-sel').forEach(sel =>
-            sel.addEventListener('change', () => {
+        cell.querySelectorAll('.sch-sel').forEach(function (sel) {
+            sel.dataset.prev = sel.value;
+            sel.addEventListener('change', function () {
                 cell.classList.add('sch-dirty');
+
+                // Asked here rather than at save. The dispatcher has this cell in front of
+                // them and the rest of the list still open; hearing it at the end of the
+                // week's planning means going back to find which cell it was about.
+                if (sel.classList.contains('sch-drv') && sel.value) {
+                    const note = schAwayNote(sel.value, cell.dataset.date);
+                    if (note) { schAskAway(sel, cell.dataset.date, note); return; }
+                }
+
+                sel.dataset.prev = sel.value;
                 schNarrowChoices();
-            }));
+                schMarkAway();
+            });
+        });
+    }
+
+    // The list waiting on an answer, so declining can put back what it held.
+    let schAwaySel = null;
+
+    function schAskAway(sel, date, note) {
+        schAwaySel = sel;
+        document.getElementById('sch-away-text').textContent =
+            schDriverName(sel.value) + ' is ' + note + ' on ' + schFmtDate(date)
+            + '. Assign them to this shift anyway?';
+        document.getElementById('sch-away-modal').style.display = 'flex';
+    }
+
+    function schCancelAway() {
+        if (schAwaySel) schAwaySel.value = schAwaySel.dataset.prev || '';
+        schCloseAway();
+    }
+
+    function schConfirmAway() {
+        if (schAwaySel) schAwaySel.dataset.prev = schAwaySel.value;
+        schCloseAway();
+    }
+
+    function schCloseAway() {
+        document.getElementById('sch-away-modal').style.display = 'none';
+        schAwaySel = null;
+        schNarrowChoices();
+        schMarkAway();
     }
 
     // A bus is in one place at a time and so is a driver, so once a slot on a given day
@@ -300,6 +415,7 @@
 
     document.querySelectorAll('.sch-cell').forEach(schWireCell);
     schNarrowChoices();
+    schMarkAway();
 
     // Add a new bus lane (empty row) to a shift, across all 7 days.
     // Showing one day at a time.
@@ -373,6 +489,7 @@
         tbody.appendChild(tr);
         schApplyDay();
         schNarrowChoices();
+        schMarkAway();
 
         // grow the sticky shift-label rowspan to cover the new lane
         const labelCell = tbody.querySelector('.sch-shift-col');
@@ -435,19 +552,25 @@
             const drv = cell.querySelector('.sch-drv');
             if (veh.value && drv.value) { kept++; return; }
 
-            // A bus grounded since last week, or a driver now unavailable, is not on the
+            // A bus grounded since last week, or a driver off the roster, is not on the
             // list at all. The slot is left empty rather than holding something that is
-            // not on offer, and the planner is told the count.
+            // not on offer, and the planner is told the count. A driver who is away is
+            // still placed and then marked: last week is not the week this lands in.
             const has = (sel, val) => Array.prototype.some.call(sel.options, o => o.value === val);
             if (!has(veh, c.vehicleId) || !has(drv, String(c.driverId))) { skipped++; return; }
 
             veh.value = c.vehicleId;
             drv.value = String(c.driverId);
+            // Set in script, so what each list now holds is recorded here. Otherwise
+            // declining a later change would put back the blank this replaced.
+            veh.dataset.prev = veh.value;
+            drv.dataset.prev = drv.value;
             cell.classList.add('sch-dirty');
             filled++;
         });
 
         schNarrowChoices();
+        schMarkAway();
 
         // A silent bulk edit is unnerving, and the count is how the planner checks it did
         // what they meant.
@@ -536,9 +659,9 @@
         });
         if (partial) {
             // Data integrity, not a scheduling rule -> never overridable.
-            schShowConflicts(['Each slot needs both a bus and a driver. Pick both or leave it blank.'],
-                             false, 'Incomplete Slots',
-                             'Review the highlighted cells before saving.');
+            schShowConflicts(['Each assigned shift requires both a vehicle and a driver.'],
+                             false, 'Incomplete Assignment',
+                             'Complete or clear the highlighted cells, then save again.');
             return;
         }
 
@@ -581,6 +704,18 @@
             });
         });
 
+        // A driver away on the day their cell sits in. Named here as well as by the
+        // server, so a cell changed after the leave was approved is reported without
+        // waiting for the round trip. Changed cells only, like every other rule here: one
+        // already saved has been decided.
+        filled.forEach(r => {
+            if (!r.dirty) return;
+            const note = schAwayNote(r.drv, r.date);
+            if (!note) return;
+            flag(r.el);
+            messages.push(`${schDriverName(r.drv)} is ${note} on ${schFmtDate(r.date)}.`);
+        });
+
         // Soft conflicts -> offer override, unless the dispatcher already confirmed (force).
         if (!force && messages.length) { schShowConflicts([...new Set(messages)], true); return; }
 
@@ -612,17 +747,17 @@
                     const overridable = res.status === 409;
                     schShowConflicts(
                         [...new Set(msgs)], overridable,
-                        overridable ? 'Schedule Conflicts' : 'Cannot Be Booked',
+                        overridable ? 'Schedule Conflicts' : 'Assignment Unavailable',
                         overridable
                             ? 'Review the highlighted cells before saving.'
-                            : 'These assignments are unavailable. Correct the highlighted cells to continue.');
+                            : 'The following assignments cannot be booked. Correct the highlighted cells, then save again.');
                 } else {
                     // A bare string body is still a reason worth reading; a page that is not
                     // JSON at all leaves only the status, which beats saying nothing.
                     const reason = (data && data.message)
                         || (typeof data === 'string' && data)
                         || `The server answered ${res.status} ${res.statusText || ''}`.trim() + '.';
-                    schShowConflicts([reason], false, 'Could Not Save',
+                    schShowConflicts([reason], false, 'Save Failed',
                         'This cannot be overridden. Correct the issue below, then save again.');
                 }
                 return;
@@ -631,7 +766,7 @@
             window.location.reload();
         }).catch(err => schShowConflicts(
               ['The server could not be reached: ' + err.message], false,
-              'Could Not Save', 'Check your connection, then save again.'))
+              'Save Failed', 'Check your connection, then save again.'))
           .finally(() => { btn.disabled = false; btn.textContent = 'Save Schedule'; });
     }
 </script>

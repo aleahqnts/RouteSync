@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace FleetWise.ViewModels
 {
@@ -20,6 +20,24 @@ namespace FleetWise.ViewModels
 
         public string PrevWeekStart { get; set; }
         public string NextWeekStart { get; set; }
+
+        /// <summary>
+        /// Approved leave falling inside this week: the driver, then each day, then what
+        /// kind of leave it is.
+        /// </summary>
+        /// <remarks>
+        /// Spread out by day rather than left as a span, because the grid asks about one
+        /// day at a time and a driver is off on some of a week's cells and not others.
+        /// </remarks>
+        public Dictionary<int, Dictionary<string, string>> LeaveDays { get; set; } = new();
+
+        /// <summary>The operational day, when it falls inside the week on screen.</summary>
+        /// <remarks>
+        /// The driver availability flag has no date on it. It says a driver cannot work
+        /// now, which is a statement about this day and about no other, so this is the only
+        /// column the grid marks it on.
+        /// </remarks>
+        public string TodayInWeek { get; set; }
     }
 
     public class ScheduleCell

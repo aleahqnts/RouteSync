@@ -1,4 +1,4 @@
-@page "/checklist-log/{TripId}"
+﻿@page "/checklist-log/{TripId}"
 @layout LoginLayout
 @implements IDisposable
 @inject SessionService Session
@@ -126,13 +126,24 @@ else
         BackNavigation.PageHandler = HandleHardwareBack;
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
 
-        checklist = await Data.GetChecklistAsync(TripId);
-        var trip = await Data.GetTripAsync(TripId);
-        if (trip is not null)
+        try
         {
-            var v = await Data.GetVehicleAsync(trip.VehicleId);
-            busLabel = v is not null ? $"{v.VehicleId} ({v.PlateNumber})" : trip.VehicleId;
+            var checklistTask = Data.GetChecklistAsync(TripId);
+            var tripTask = Data.GetTripAsync(TripId);
+            await Task.WhenAll(checklistTask, tripTask);
+
+            checklist = checklistTask.Result;
+            var trip = tripTask.Result;
+            if (trip is not null)
+            {
+                var v = await Data.GetVehicleAsync(trip.VehicleId);
+                busLabel = v is not null ? $"{v.VehicleId} ({v.PlateNumber})" : trip.VehicleId;
+            }
         }
-        loading = false;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ChecklistLog.Load] {ex}");
+        }
+        finally { loading = false; }
     }
 }

@@ -47,8 +47,14 @@
         // both the trip state and the flag, so neither overwrites the other.
         public bool Flagged { get; set; }
 
-        // Why a trip is an Assignment Issue (out-of-service bus / unavailable driver),
-        // shown as the badge's hover tooltip. Null when there's no issue.
+        // A trip already running whose driver has reported they cannot drive. It stays
+        // Active, because it is, but the driver has to be swapped out before the bus can
+        // finish the route.
+        public bool NeedsRelief { get; set; }
+
+        // Why a trip is an Assignment Issue (out-of-service bus, a driver who cannot
+        // drive), or why a running one needs relieving. Shown as the badge's tooltip.
+        // Null when there is nothing wrong.
         public string AssignmentIssueReason { get; set; }
     }
 }

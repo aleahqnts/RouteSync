@@ -296,8 +296,20 @@
         // Two drivers can share a name, so the identifier travels with it, in a
         // column of its own so the numbers can be read down the list.
         const atmLabels = rsIdLabels(drivers.map(d => ({ name: d.driverName, id: d.driverId })));
-        atmFillSelect(sel, 'Select a driver…',
-            drivers.map((d, i) => ({ value: d.driverId, label: atmLabels[i] })));
+
+        // One who cannot be booked is listed and marked, not dropped. A name simply
+        // missing reads as resigned, and sends the dispatcher hunting for somebody who is
+        // standing in front of them. The reason travels with the name so it is read
+        // before the choice, and the free ones come first.
+        const marked = drivers
+            .map((d, i) => ({
+                value: d.driverId,
+                label: atmLabels[i] + (d.unavailable ? '  (' + d.unavailable + ')' : ''),
+                free: d.offered !== false
+            }))
+            .sort((a, b) => (a.free === b.free) ? 0 : (a.free ? -1 : 1));
+
+        atmFillSelect(sel, 'Select a driver…', marked);
     }
 
     function hideHint(id) {

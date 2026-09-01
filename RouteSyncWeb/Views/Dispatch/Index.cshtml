@@ -66,7 +66,7 @@
             <span class="rp-stat-label">Assignment Issues</span>
         </div>
         <div class="rp-stat-value">@Model.UnassignedTrips</div>
-        <div class="rp-stat-sub">@(Model.UnassignedTrips > 0 ? "Tap to view affected trips" : "Flagged bus or unavailable driver")</div>
+        <div class="rp-stat-sub">@(Model.UnassignedTrips > 0 ? "Tap to view affected trips" : "Bus out of service or driver cannot drive")</div>
     </div>
 
     <div class="rp-stat-card dp-side-card">
@@ -80,7 +80,7 @@
                 }
             </a>
             <div>
-                <div class="rp-stat-label">Unavailable Drivers</div>
+                <div class="rp-stat-label">Unable to Drive</div>
                 <div class="rp-stat-value dp-side-value--red">@Model.UnavailableDrivers</div>
             </div>
         </div>
@@ -206,7 +206,7 @@
                                 {
                                     "On Trip" => ("dp-dot--green", "On trip"),
                                     "Available" => ("dp-dot--blue", "Available"),
-                                    "Unavailable" => ("dp-dot--red", "Unavailable"),
+                                    "Unavailable" => ("dp-dot--red", "Cannot drive"),
                                     _ => ("dp-dot--gray", trip.DriverStatus)
                                 };
 
@@ -262,7 +262,10 @@
                                         </div>
                                     </td>
                                     <td data-label="Status">
-                                        @if (trip.TripStatus == "Assignment Issue" && !string.IsNullOrEmpty(trip.AssignmentIssueReason))
+                                        @* Also carried by a running trip whose driver has reported
+                                           they cannot drive, which is why this no longer asks the
+                                           status first. *@
+                                        @if (!string.IsNullOrEmpty(trip.AssignmentIssueReason))
                                         {
                                             <span class="dp-badge @badgeClass dp-badge--hint" data-tip="@trip.AssignmentIssueReason"
                                                   tabindex="0" role="button"
@@ -276,11 +279,15 @@
                                     <td data-label="Actions">
                                         <div class="dp-actions-cell">
                                             <button class="rp-btn-view" onclick="openTripModal('@trip.TripId')">View</button>
+                                            @* Open while a trip is running. A driver taken ill, a bus that
+                                               has to come off the road and a route that needs another bus on
+                                               it all happen mid-shift, and each is answered here. A trip
+                                               already finished or missed is history and stays closed. *@
                                             <button class="dp-btn-reassign"
                                                     data-trip-id="@trip.TripId"
                                                     data-status="@trip.TripStatus"
                                                     onclick="handleReassignClick(this)"
-                                                @(trip.TripStatus == "Active" || trip.TripStatus == "Completed" || trip.TripStatus == "Missed" ? "disabled" : "")>
+                                                @(trip.TripStatus == "Completed" || trip.TripStatus == "Missed" ? "disabled" : "")>
                                                 Reassign
                                             </button>
                                             <button class="dp-btn-msg" title="Message" onclick="openTripMessageModal('@trip.TripId', '@trip.VehicleId', '@trip.DriverName')"><i class="ti ti-message"></i></button>
@@ -307,7 +314,7 @@
         <span class="dp-legend-item"><span class="dp-status-dot dp-dot--green"></span> On trip</span>
         <span class="dp-legend-item"><span class="dp-status-dot dp-dot--blue"></span> Bus: ready to deploy &nbsp;|&nbsp; Driver: available</span>
         <span class="dp-legend-item"><span class="dp-status-dot dp-dot--yellow"></span> Bus: pending checklist</span>
-        <span class="dp-legend-item"><span class="dp-status-dot dp-dot--red"></span> Bus: flagged &nbsp;|&nbsp; Driver: unavailable</span>
+        <span class="dp-legend-item"><span class="dp-status-dot dp-dot--red"></span> Bus: flagged &nbsp;|&nbsp; Driver: cannot drive</span>
         <span class="dp-legend-item"><span class="dp-status-dot dp-dot--slate"></span> Trip completed</span>
         <span class="dp-legend-item"><span class="dp-status-dot dp-dot--missed"></span> Missed Trip</span>
     </div>
@@ -628,7 +635,7 @@
 
     function handleReassignClick(btn) {
         const status = btn.dataset.status;
-        if (status === 'Active' || status === 'Completed') return;
+        if (status === 'Completed' || status === 'Missed') return;
         openReassignModal(btn.dataset.tripId);
     }
 

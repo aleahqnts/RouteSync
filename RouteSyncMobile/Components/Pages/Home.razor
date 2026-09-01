@@ -1,4 +1,4 @@
-@page "/home"
+﻿@page "/home"
 @implements IDisposable
 @inject SessionService Session
 @inject DriverDataService Data
@@ -32,38 +32,25 @@ else
             <p class="status-msg">@statusMsg</p>
         }
 
-        @if (!IsAvailable)
+        @* How the driver stands with dispatch, shown whether or not a shift is
+           attached to it.
+
+           Leave is asked about first. A driver rostered off today is off today whatever
+           the availability flag says about them, and it is the one of the three they most
+           need to see without going looking for it. *@
+        @if (leaveToday is not null)
         {
             <div class="status-card">
                 <span class="status-ico">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#d0494b" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M9 9l6 6M15 9l-6 6" /></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#b7950b" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /><path d="M9 15l2 2 4-4" /></svg>
                 </span>
                 <div>
-                    <p class="s-title red">You are unavailable</p>
-                    <p class="s-sub">You are unable to receive assignments</p>
+                    <p class="s-title amber">You are on leave today</p>
+                    <p class="s-sub">@LeaveLabel</p>
                 </div>
             </div>
-
-            <div class="prompt-card green-bg">
-                <div>
-                    <p class="s-title">Need to be available?</p>
-                    <p class="s-sub">You can set yourself as available</p>
-                </div>
-                <button class="toggle off" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
-            </div>
-
-            @if (lastTrip is not null)
-            {
-                <div class="info-card row">
-                    <div>
-                        <p class="s-title">Last Trip</p>
-                        <p class="s-sub">@lastTrip.Date.ToString("MMMM d, yyyy")</p>
-                    </div>
-                    <button class="link-btn" @onclick="@(() => Nav.NavigateTo("/trips"))">View Trips</button>
-                </div>
-            }
         }
-        else
+        else if (IsAvailable)
         {
             <div class="status-card">
                 <span class="status-ico">
@@ -74,106 +61,153 @@ else
                     <p class="s-sub">You can receive assignments</p>
                 </div>
             </div>
+        }
+        else
+        {
+            <div class="status-card">
+                <span class="status-ico">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#d0494b" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M9 9l6 6M15 9l-6 6" /></svg>
+                </span>
+                <div>
+                    <p class="s-title red">You cannot drive</p>
+                    <p class="s-sub">Dispatch has been told and will not assign you until you are ready</p>
+                </div>
+            </div>
+        }
 
-            @if (assignment is not null)
-            {
-                <h2 class="section">@(PhTime.Now >= ShiftStart ? "Current Assignment" : "Upcoming Assignment")</h2>
-                <div class="assign-card">
-                    <div class="line">
-                        <span class="i cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg></span>
-                        @DateLabel
-                    </div>
-                    <div class="line">
-                        <span class="i sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19" /></svg></span>
-                        @assignment.ShiftType Shift
-                    </div>
-                    <div class="line">
-                        <span class="i clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></span>
-                        @TimeRange
-                    </div>
-                    <div class="line">
-                        <span class="i pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
-                        @(route?.RouteName ?? $"Route {assignment.RouteId}")
-                    </div>
+        @* The shift stays on screen after a driver reports they cannot drive. They are
+           still with the bus until somebody arrives to take over, and hiding the trip
+           leaves them nothing to hand across. *@
+        @if (assignment is not null)
+        {
+            <h2 class="section">@(PhTime.Now >= ShiftStart ? "Current Assignment" : "Upcoming Assignment")</h2>
+            <div class="assign-card">
+                <div class="line">
+                    <span class="i cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg></span>
+                    @DateLabel
+                </div>
+                <div class="line">
+                    <span class="i sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19" /></svg></span>
+                    @assignment.ShiftType Shift
+                </div>
+                <div class="line">
+                    <span class="i clock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></span>
+                    @TimeRange
+                </div>
+                <div class="line">
+                    <span class="i pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
+                    @(route?.RouteName ?? $"Route {assignment.RouteId}")
+                </div>
 
-                    <div class="divider"></div>
-                    <p class="s-sub">Bus to Drive</p>
-                    <div class="bus-row">
-                        <span class="bus-ico"><svg viewBox="0 0 49 52" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.25 45.4997C11.6715 45.4997 11.1866 45.292 10.7953 44.8768C10.404 44.4615 10.2083 43.9469 10.2083 43.333V38.8913C9.59579 38.1691 9.10239 37.3656 8.72808 36.4809C8.35378 35.5962 8.16663 34.6302 8.16663 33.583V12.9997C8.16663 10.0025 9.4767 7.8087 12.0968 6.41842C14.717 5.02815 18.8513 4.33301 24.5 4.33301C30.3527 4.33301 34.5382 5.00106 37.0562 6.33717C39.5743 7.67329 40.8333 9.89412 40.8333 12.9997V33.583C40.8333 34.6302 40.6461 35.5962 40.2718 36.4809C39.8975 37.3656 39.4041 38.1691 38.7916 38.8913V43.333C38.7916 43.9469 38.596 44.4615 38.2046 44.8768C37.8133 45.292 37.3284 45.4997 36.75 45.4997H34.7083C34.1298 45.4997 33.6449 45.292 33.2536 44.8768C32.8623 44.4615 32.6666 43.9469 32.6666 43.333V41.1663H16.3333V43.333C16.3333 43.9469 16.1376 44.4615 15.7463 44.8768C15.355 45.292 14.8701 45.4997 14.2916 45.4997H12.25ZM12.25 21.6663H36.75V15.1663H12.25V21.6663ZM17.3541 34.6663C18.2048 34.6663 18.9279 34.3504 19.5234 33.7184C20.1189 33.0865 20.4166 32.3191 20.4166 31.4163C20.4166 30.5136 20.1189 29.7462 19.5234 29.1143C18.9279 28.4823 18.2048 28.1663 17.3541 28.1663C16.5034 28.1663 15.7803 28.4823 15.1849 29.1143C14.5894 29.7462 14.2916 30.5136 14.2916 31.4163C14.2916 32.3191 14.5894 33.0865 15.1849 33.7184C15.7803 34.3504 16.5034 34.6663 17.3541 34.6663ZM31.6458 34.6663C32.4965 34.6663 33.2196 34.3504 33.8151 33.7184C34.4106 33.0865 34.7083 32.3191 34.7083 31.4163C34.7083 30.5136 34.4106 29.7462 33.8151 29.1143C33.2196 28.4823 32.4965 28.1663 31.6458 28.1663C30.7951 28.1663 30.072 28.4823 29.4765 29.1143C28.881 29.7462 28.5833 30.5136 28.5833 31.4163C28.5833 32.3191 28.881 33.0865 29.4765 33.7184C30.072 34.3504 30.7951 34.6663 31.6458 34.6663ZM13.1687 10.833H36.0354C35.525 10.2191 34.4276 9.70454 32.7432 9.28926C31.0588 8.87398 28.3451 8.66634 24.602 8.66634C20.9611 8.66634 18.2984 8.89204 16.614 9.34342C14.9296 9.79481 13.7812 10.2913 13.1687 10.833ZM16.3333 36.833H32.6666C33.7895 36.833 34.7508 36.4087 35.5505 35.5601C36.3501 34.7115 36.75 33.6913 36.75 32.4997V25.9997H12.25V32.4997C12.25 33.6913 12.6498 34.7115 13.4494 35.5601C14.2491 36.4087 15.2104 36.833 16.3333 36.833Z" fill="#4BA2A3" /></svg></span>
+                <div class="divider"></div>
+                <p class="s-sub">Bus to Drive</p>
+                <div class="bus-row">
+                    <span class="bus-ico"><svg viewBox="0 0 49 52" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.25 45.4997C11.6715 45.4997 11.1866 45.292 10.7953 44.8768C10.404 44.4615 10.2083 43.9469 10.2083 43.333V38.8913C9.59579 38.1691 9.10239 37.3656 8.72808 36.4809C8.35378 35.5962 8.16663 34.6302 8.16663 33.583V12.9997C8.16663 10.0025 9.4767 7.8087 12.0968 6.41842C14.717 5.02815 18.8513 4.33301 24.5 4.33301C30.3527 4.33301 34.5382 5.00106 37.0562 6.33717C39.5743 7.67329 40.8333 9.89412 40.8333 12.9997V33.583C40.8333 34.6302 40.6461 35.5962 40.2718 36.4809C39.8975 37.3656 39.4041 38.1691 38.7916 38.8913V43.333C38.7916 43.9469 38.596 44.4615 38.2046 44.8768C37.8133 45.292 37.3284 45.4997 36.75 45.4997H34.7083C34.1298 45.4997 33.6449 45.292 33.2536 44.8768C32.8623 44.4615 32.6666 43.9469 32.6666 43.333V41.1663H16.3333V43.333C16.3333 43.9469 16.1376 44.4615 15.7463 44.8768C15.355 45.292 14.8701 45.4997 14.2916 45.4997H12.25ZM12.25 21.6663H36.75V15.1663H12.25V21.6663ZM17.3541 34.6663C18.2048 34.6663 18.9279 34.3504 19.5234 33.7184C20.1189 33.0865 20.4166 32.3191 20.4166 31.4163C20.4166 30.5136 20.1189 29.7462 19.5234 29.1143C18.9279 28.4823 18.2048 28.1663 17.3541 28.1663C16.5034 28.1663 15.7803 28.4823 15.1849 29.1143C14.5894 29.7462 14.2916 30.5136 14.2916 31.4163C14.2916 32.3191 14.5894 33.0865 15.1849 33.7184C15.7803 34.3504 16.5034 34.6663 17.3541 34.6663ZM31.6458 34.6663C32.4965 34.6663 33.2196 34.3504 33.8151 33.7184C34.4106 33.0865 34.7083 32.3191 34.7083 31.4163C34.7083 30.5136 34.4106 29.7462 33.8151 29.1143C33.2196 28.4823 32.4965 28.1663 31.6458 28.1663C30.7951 28.1663 30.072 28.4823 29.4765 29.1143C28.881 29.7462 28.5833 30.5136 28.5833 31.4163C28.5833 32.3191 28.881 33.0865 29.4765 33.7184C30.072 34.3504 30.7951 34.6663 31.6458 34.6663ZM13.1687 10.833H36.0354C35.525 10.2191 34.4276 9.70454 32.7432 9.28926C31.0588 8.87398 28.3451 8.66634 24.602 8.66634C20.9611 8.66634 18.2984 8.89204 16.614 9.34342C14.9296 9.79481 13.7812 10.2913 13.1687 10.833ZM16.3333 36.833H32.6666C33.7895 36.833 34.7508 36.4087 35.5505 35.5601C36.3501 34.7115 36.75 33.6913 36.75 32.4997V25.9997H12.25V32.4997C12.25 33.6913 12.6498 34.7115 13.4494 35.5601C14.2491 36.4087 15.2104 36.833 16.3333 36.833Z" fill="#4BA2A3" /></svg></span>
+                    <div>
+                        <p class="bus">@(vehicle?.VehicleId ?? assignment.VehicleId)</p>
+                        <p class="s-sub">Plate Number: @(vehicle?.PlateNumber ?? "—")</p>
+                    </div>
+                </div>
+
+                @* Booked over approved leave. The dispatcher can do that, and is warned
+                   before they do, so the shift is shown rather than hidden and the driver
+                   is told to settle it with them rather than simply turning up. *@
+                @if (leaveToday is not null)
+                {
+                    <div class="grounded-note">
+                        You are on approved leave today. Check with your dispatcher before running this shift.
+                    </div>
+                }
+                @* Reported unable to drive, so there is nothing here to start or
+                   resume. The shift is the dispatcher's to hand on. *@
+                else if (!IsAvailable)
+                {
+                    <div class="grounded-note">@ReliefMessage</div>
+                }
+                else if (VehicleGrounded && assignment.TripStatus != "Active")
+                {
+                    <div class="grounded-note">@GroundedMessage</div>
+                }
+                else if (!CanStart)
+                {
+                    <div class="upcoming-note">@LockLabel</div>
+                }
+                else if (checklist is not null)
+                {
+                    <div class="checklist-done">
                         <div>
-                            <p class="bus">@(vehicle?.VehicleId ?? assignment.VehicleId)</p>
-                            <p class="s-sub">Plate Number: @(vehicle?.PlateNumber ?? "—")</p>
+                            <p class="green s-title">Bus Checklist Completed</p>
+                            <p class="s-sub">@checklist.SubmittedAt.ToString("MMM d, h:mm tt")</p>
                         </div>
+                        <button class="link-btn" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{assignment.TripId}"))">View Log</button>
                     </div>
-
-                    @if (VehicleGrounded && assignment.TripStatus != "Active")
+                    @if (assignment.TripStatus == "Active")
                     {
-                        <div class="grounded-note">@GroundedMessage</div>
-                    }
-                    else if (!CanStart)
-                    {
-                        <div class="upcoming-note">@LockLabel</div>
-                    }
-                    else if (checklist is not null)
-                    {
-                        <div class="checklist-done">
-                            <div>
-                                <p class="green s-title">Bus Checklist Completed</p>
-                                <p class="s-sub">@checklist.SubmittedAt.ToString("MMM d, h:mm tt")</p>
-                            </div>
-                            <button class="link-btn" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{assignment.TripId}"))">View Log</button>
-                        </div>
-                        @if (assignment.TripStatus == "Active")
-                        {
-                            <button class="btn-green" @onclick="@(() => Nav.NavigateTo($"/trip-active/{assignment.TripId}"))">Resume Trip</button>
-                        }
-                        else
-                        {
-                            <button class="btn-green" @onclick="StartTrip">Start Trip</button>
-                        }
+                        <button class="btn-green" @onclick="@(() => Nav.NavigateTo($"/trip-active/{assignment.TripId}"))">Resume Shift</button>
                     }
                     else
                     {
-                        <button class="btn-teal" @onclick="StartChecklist">Start Bus Checklist</button>
+                        <button class="btn-green" @onclick="StartTrip">Start Shift</button>
                     }
-                </div>
-
-                @if (!CanStart || checklist is null)
-                {
-                    <div class="prompt-card">
-                        <div>
-                            <p class="s-title">Need to be unavailable?</p>
-                            <p class="s-sub">You can set yourself as unavailable</p>
-                        </div>
-                        <button class="toggle on" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
-                    </div>
                 }
-            }
-            else
+                else
+                {
+                    <button class="btn-teal" @onclick="StartChecklist">Start Bus Checklist</button>
+                }
+            </div>
+        }
+        else
+        {
+            @if (lastTrip is not null)
             {
-                @if (lastTrip is not null)
-                {
-                    <div class="info-card row">
-                        <div>
-                            <p class="s-title">Today's Summary</p>
-                            <p class="s-sub">@DateTime.Today.ToString("MMMM d, yyyy")</p>
-                        </div>
-                        <button class="link-btn" @onclick="@(() => Nav.NavigateTo("/trips"))">View Trips</button>
-                    </div>
-                }
-                <div class="info-card">
-                    <p class="s-title">No upcoming assignment</p>
-                    <p class="s-sub">Enjoy your rest. You will be notified for your next assignment.</p>
-                </div>
-
-                <div class="prompt-card">
+                <div class="info-card row">
                     <div>
-                        <p class="s-title">Need to be unavailable?</p>
-                        <p class="s-sub">You can set yourself as unavailable</p>
+                        <p class="s-title">Today's Summary</p>
+                        <p class="s-sub">@DateTime.Today.ToString("MMMM d, yyyy")</p>
                     </div>
-                    <button class="toggle on" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
+                    <button class="link-btn" @onclick="@(() => Nav.NavigateTo("/trips"))">View Trips</button>
                 </div>
             }
+            <div class="info-card">
+                <p class="s-title">No upcoming assignment</p>
+                <p class="s-sub">
+                    @(IsAvailable
+                        ? "Enjoy your rest. You will be notified for your next assignment."
+                        : "You will be notified once you are available again.")
+                </p>
+            </div>
+        }
+
+        @* Always reachable, except to a driver already rostered off, who has nothing to
+           report. Sickness, an emergency and a fault with the bus do not wait for a
+           convenient point in the shift, and the driver who most needs to report one is
+           the driver already out on the road. *@
+        @if (leaveToday is not null)
+        {
+            <div class="info-card">
+                <p class="s-title">Nothing to do today</p>
+                <p class="s-sub">Your leave has been approved. Dispatch will not assign you while you are off.</p>
+            </div>
+        }
+        else if (IsAvailable)
+        {
+            <div class="prompt-card">
+                <div>
+                    <p class="s-title">Unable to drive?</p>
+                    <p class="s-sub">Report it so dispatch can send a replacement</p>
+                </div>
+                <button class="toggle on" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
+            </div>
+        }
+        else
+        {
+            <div class="prompt-card green-bg">
+                <div>
+                    <p class="s-title">Ready to drive again?</p>
+                    <p class="s-sub">Tell dispatch you can take assignments</p>
+                </div>
+                <button class="toggle off" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
+            </div>
         }
     </div>
 
@@ -181,8 +215,8 @@ else
     {
         <div class="overlay">
             <div class="ua-modal">
-                <h2>Go unavailable?</h2>
-                <p class="ua-sub">You have an assigned shift. This flags it for your dispatcher.</p>
+                <h2>Report that you cannot drive</h2>
+                <p class="ua-sub">@ReportSub</p>
 
                 <p class="ua-label">Reason</p>
                 <div class="chips">
@@ -218,6 +252,7 @@ else
     private Vehicle? vehicle;
     private BusChecklist? checklist;
     private Trip? lastTrip;
+    private LeaveRequest? leaveToday;
 
     private bool showUnavailModal;
     private string? reasonChoice;
@@ -226,6 +261,35 @@ else
     private bool ReasonReady => reasonChoice is not null || !string.IsNullOrWhiteSpace(reasonNote);
 
     private bool IsAvailable => availability == "Available";
+
+    /// <summary>The leave being taken, and the days it covers.</summary>
+    private string LeaveLabel
+    {
+        get
+        {
+            if (leaveToday is null) return "";
+
+            var span = leaveToday.StartDate.Date == leaveToday.EndDate.Date
+                ? leaveToday.StartDate.ToString("MMMM d")
+                : $"{leaveToday.StartDate:MMMM d} to {leaveToday.EndDate:MMMM d}";
+
+            return $"Approved {leaveToday.LeaveType.ToLowerInvariant()} leave, {span}";
+        }
+    }
+
+    /// <summary>What the driver is told once they have reported it, on the shift itself.</summary>
+    private string ReliefMessage =>
+        assignment?.TripStatus == "Active"
+            ? "You reported that you cannot drive. Stay with the bus until your dispatcher confirms who is taking over."
+            : "You reported that you cannot drive. Your dispatcher will reassign this shift.";
+
+    /// <summary>What reporting it will do, said before they confirm.</summary>
+    private string ReportSub =>
+        assignment is null
+            ? "Dispatch will be told, and you will not be assigned until you are ready."
+            : assignment.TripStatus == "Active"
+                ? "Dispatch will be told and can send a relief driver to take over this trip."
+                : "Dispatch will be told and can reassign this shift.";
 
     // A bus grounded by an admin cannot have a trip started on it. An already active trip
     // can still be resumed, so a driver is never stranded mid-route.
@@ -325,9 +389,23 @@ else
         {
             var uid = Session.CurrentUser!.UserId;
 
-            availability = await Data.GetAvailabilityAsync(uid);
+            // Asked for together rather than one after another. Each of these is a request
+            // over the network, and awaited in turn they add up: seven of them on a phone
+            // with a slow connection is the skeleton sitting on screen for seconds while
+            // six of the seven are only waiting for a turn. Nothing here depends on
+            // anything else here.
+            var availabilityTask = Data.GetAvailabilityAsync(uid);
+            var todayTask = Data.GetTodayAssignmentAsync(uid);
+            var lastTripTask = Data.GetLastCompletedTripAsync(uid);
+            var leaveTask = Data.GetApprovedLeaveOnAsync(uid, DateTime.Today);
 
-            assignment = await Data.GetTodayAssignmentAsync(uid);
+            await Task.WhenAll(availabilityTask, todayTask, lastTripTask, leaveTask);
+
+            availability = availabilityTask.Result;
+            assignment = todayTask.Result;
+            lastTrip = lastTripTask.Result;
+            leaveToday = leaveTask.Result;
+
             isUpcoming = false;
             if (assignment is null)
             {
@@ -337,16 +415,25 @@ else
 
             if (assignment is not null)
             {
-                route = await Data.GetRouteAsync(assignment.RouteId);
-                vehicle = await Data.GetVehicleAsync(assignment.VehicleId);
-                checklist = isUpcoming ? null : await Data.GetChecklistAsync(assignment.TripId);
+                // The three that describe the assignment, which is now known. Independent
+                // of one another, so they go together as well.
+                var routeTask = Data.GetRouteAsync(assignment.RouteId);
+                var vehicleTask = Data.GetVehicleAsync(assignment.VehicleId);
+                var checklistTask = isUpcoming
+                    ? Task.FromResult<BusChecklist?>(null)
+                    : Data.GetChecklistAsync(assignment.TripId);
+
+                await Task.WhenAll(routeTask, vehicleTask, checklistTask);
+
+                route = routeTask.Result;
+                vehicle = vehicleTask.Result;
+                checklist = checklistTask.Result;
             }
             else
             {
                 route = null; vehicle = null; checklist = null;
             }
 
-            lastTrip = await Data.GetLastCompletedTripAsync(uid);
             statusMsg = null; // a successful (re)load clears any stale error banner
         }
         catch (Exception ex)
@@ -374,20 +461,17 @@ else
 
         if (IsAvailable)
         {
-            // Going unavailable while holding a shift warns the driver and records a reason.
-            if (assignment is not null)
-            {
-                reasonChoice = null;
-                reasonNote = "";
-                showUnavailModal = true;
-                return;
-            }
-            await ApplyAvailability("Unavailable", null);
+            // A reason every time, shift or no shift. Sickness, an emergency and a fault
+            // with the bus are what this is for, and a dispatcher cannot act on the report
+            // without knowing which of them it is. Reporting one used to be silent when
+            // nobody was rostered, which is the case where the reason is the whole message.
+            reasonChoice = null;
+            reasonNote = "";
+            showUnavailModal = true;
+            return;
         }
-        else
-        {
-            await ApplyAvailability("Available", null);
-        }
+
+        await ApplyAvailability("Available", null);
     }
 
     private async Task ConfirmUnavailable()
