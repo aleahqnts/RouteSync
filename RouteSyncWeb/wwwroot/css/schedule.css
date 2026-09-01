@@ -41,13 +41,122 @@
     .sch-lock-txt { font-size:.72rem; color:#6B7C93; }
 
     .sch-modal-overlay { position:fixed; inset:0; background:rgba(13,28,40,.5); z-index:2000; display:flex; align-items:center; justify-content:center; padding:24px; }
+
+    /* The conflict list. It opens beside the grid rather than over the middle of it, lets
+       what is behind stay readable and clickable, and can be dragged anywhere by its
+       heading. Every other dialog here asks a question and is answered before anything
+       else happens; this one is read against the thing it describes.
+
+       Only where there is room beside the grid. On a phone it stays the sheet every other
+       dialog is, rising from the bottom edge over a dimmed page. */
+    @media (min-width: 600px) {
+
+        .sch-modal-overlay--free {
+            background: none;
+            pointer-events: none;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 96px 24px 24px;
+        }
+
+        /* Capped against the window, and the list inside it is what scrolls. A week
+           copied forward can raise a dozen conflicts at once, and a box that grows with
+           them runs off the bottom of the screen taking its buttons with it. Holding the
+           heading and the buttons still also means Save Anyway does not move while the
+           list is being read. */
+        .sch-modal-overlay--free .sch-modal {
+            pointer-events: auto;
+            /* The cap is on the whole box. Left on the content, the padding was added to
+               it and the box stood taller than the room measured for it. */
+            box-sizing: border-box;
+            max-width: 400px;
+            max-height: calc(100vh - 120px);
+            max-height: calc(100dvh - 120px);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 34px rgba(13, 28, 40, .30), 0 0 0 1px rgba(13, 28, 40, .06);
+        }
+
+        .sch-modal-overlay--free .sch-modal-list {
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        /* The whole box is the handle, so the whole box says so. The lines and the
+           buttons put their own cursor back. */
+        .sch-modal-overlay--free .sch-modal {
+            cursor: move;
+            /* A drag across the box should move it, not select the words in it. */
+            user-select: none;
+            touch-action: none;
+        }
+
+        .sch-modal-overlay--free .sch-modal-item--go { cursor: pointer; }
+        .sch-modal-overlay--free .sch-modal-btn { cursor: pointer; }
+
+        .sch-modal-grab {
+            margin-left: auto;
+            color: #B6C2CF;
+            font-size: 1.1rem;
+            letter-spacing: -3px;
+            line-height: 1;
+        }
+    }
     .sch-modal { background:#fff; border-radius:16px; width:100%; max-width:440px; padding:24px; box-shadow:0 14px 44px rgba(0,0,0,.28); }
     .sch-modal-head { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
     .sch-modal-ico { font-size:1.4rem; color:#E74C3C; }
     .sch-modal-head h3 { margin:0; font-size:1.1rem; color:#1a2a4a; font-weight:800; }
     .sch-modal-sub { margin:0 0 12px; font-size:.85rem; color:#6B7C93; }
-    .sch-modal-list { margin:0 0 18px; padding-left:18px; display:flex; flex-direction:column; gap:7px; }
-    .sch-modal-list li { font-size:.85rem; color:#41505e; line-height:1.4; }
+    /* Numbered rather than bulleted, and the figure is drawn rather than counted by the
+       list, so the same one can be printed on the cells the line is about. */
+    .sch-modal-list { margin:0 0 18px; padding:0; list-style:none; display:flex; flex-direction:column; gap:9px; }
+    .sch-modal-list li { display:flex; align-items:flex-start; gap:9px; font-size:.85rem; color:#41505e; line-height:1.4; }
+
+    .sch-modal-n {
+        flex: 0 0 auto;
+        width: 20px;
+        height: 20px;
+        margin-top: 1px;
+        border-radius: 50%;
+        background: #E74C3C;
+        color: #fff;
+        font-size: .72rem;
+        font-weight: 700;
+        line-height: 20px;
+        text-align: center;
+    }
+
+    /* A line that has cells to show is worth pressing. */
+    .sch-modal-item--go { cursor: pointer; border-radius: 8px; }
+    .sch-modal-item--go:hover { background: #FDF3F2; }
+
+    /* The figures, on the cell. They sit over the corner of the box rather than inside
+       it, which would move the selects apart. */
+    .sch-conflict-ns {
+        position: absolute;
+        top: -7px;
+        right: -6px;
+        z-index: 2;
+        display: flex;
+        gap: 3px;
+    }
+
+    .sch-conflict-n {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #E74C3C;
+        color: #fff;
+        font-size: .68rem;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
+        box-shadow: 0 0 0 2px #fff;
+    }
+
+    /* Held for a moment after its line is pressed, so the eye lands on it. */
+    .sch-cell--found .sch-sel { border-color:#E74C3C; box-shadow: 0 0 0 3px rgba(231,76,60,.22); }
     /* Sized to their words and sitting at the end of the row, rather than each taking
        half the dialog and wrapping whatever will not fit. */
     .sch-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
