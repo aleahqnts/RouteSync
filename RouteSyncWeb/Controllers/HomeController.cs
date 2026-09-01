@@ -27,8 +27,22 @@ namespace FleetWise.Controllers
             _reset = reset;
         }
 
+        /// <summary>The sign-in page, or the dashboard for somebody already signed in.</summary>
+        /// <remarks>
+        /// Signing in redirects to the dashboard, which leaves the sign-in page one step
+        /// back in the browser's history. Pressing back from the dashboard therefore
+        /// landed on a sign-in form belonging to a session that is still open, which reads
+        /// as having been signed out.
+        ///
+        /// Sending them on lands them where they already were, so back does nothing rather
+        /// than something alarming. Leaving is what the sign-out button is for, and it asks
+        /// first.
+        /// </remarks>
         public IActionResult Index(int? throttled)
         {
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Index", "Dashboard");
+
             if (throttled == 1)
                 ModelState.AddModelError("", "Too many sign-in attempts. Wait a minute and try again.");
             return View();

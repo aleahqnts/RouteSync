@@ -33,12 +33,75 @@
 @* Everything that says what is being looked at, held while the list moves. *@
 <div class="rq-sticky-head" data-sticky-head>
 
-    <div class="rq-head">
-        <div>
-            <h2 class="rq-title">Requests</h2>
-            <p class="rq-subtitle">Leave filed by drivers, and the decisions made about it.</p>
+    <h2 class="rq-title">Requests</h2>
+
+    @* One row, the way the other boards lay their controls out: what is being looked at
+       on the left, what narrows it on the right. *@
+    <div class="rq-toolbar">
+
+        <div class="rq-tabs" role="group" aria-label="Filter by status">
+            @foreach (var tab in tabs)
+            {
+                var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
+                <a class="rq-tab @(on ? "rq-tab--on" : "")"
+                   href="@Url.Action("Index", new { status = tab })"
+                   aria-current="@(on ? "page" : null)">@tab</a>
+            }
         </div>
-        <div class="rq-head-actions">
+
+        @* Narrowing within the status already chosen. Applied to the rows on the page
+           rather than by asking the server again, so the list answers on each keystroke
+           and a half-typed name never costs a round trip.
+
+           The labels are for the phone, where these fold into a sheet that names each
+           field down the left. On a desk the placeholder and the resting value of a
+           select say the same thing in less room. *@
+        <div class="rq-filters rs-filters" id="rqFilters" data-filter-stay>
+            <div class="rq-filter">
+                <label for="rqSearch">Search</label>
+                <span class="rq-search-wrap">
+                    <span class="rq-search-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                             stroke="#9AA5B4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                    </span>
+                    <input type="search" id="rqSearch" class="rq-input rq-search-input" autocomplete="off"
+                           placeholder="Search driver, ID or reason" aria-label="Search requests" />
+                </span>
+            </div>
+
+            <div class="rq-filter">
+                <label for="rqType">Type</label>
+                <select id="rqType" class="rq-input">
+                    <option value="">All types</option>
+                    @foreach (var t in LeaveEntitlement.Types)
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+            </div>
+
+            <div class="rq-filter">
+                <label for="rqDriver">Driver</label>
+                <select id="rqDriver" class="rq-input">
+                    <option value="">All drivers</option>
+                    @foreach (var d in driversShown)
+                    {
+                        <option value="@d.Id">@d.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="rq-filter-actions">
+                <button type="button" class="rq-btn rq-btn--outline" id="rqClear">Clear</button>
+            </div>
+        </div>
+
+        @* A queue somebody else is adding to. The list is replaced in place, so a search
+           being typed and a filter already chosen both survive it. *@
+        <div class="rq-toolbar-end">
             <span id="rqPendingWrap">
                 @if (Model.PendingCount > 0)
                 {
@@ -46,9 +109,7 @@
                 }
             </span>
             <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 30 seconds"></span>
-            @* A queue somebody else is adding to. The list is replaced in place, so a
-               search being typed and a filter already chosen both survive it. *@
-            <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh" id="rqRefreshBtn"
+            <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
                     onclick="rqRefresh(true)" title="Load newly filed requests without losing your filters">
                 <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -58,53 +119,7 @@
                 </svg></span> Refresh
             </button>
         </div>
-    </div>
 
-    <div class="rq-tabs" role="group" aria-label="Filter by status">
-        @foreach (var tab in tabs)
-        {
-            var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
-            <a class="rq-tab @(on ? "rq-tab--on" : "")"
-               href="@Url.Action("Index", new { status = tab })"
-               aria-current="@(on ? "page" : null)">@tab</a>
-        }
-    </div>
-
-    @* Narrowing within the status already chosen. Applied to the rows on the page rather
-       than by asking the server again, so the list answers on each keystroke and a
-       half-typed name never costs a round trip. *@
-    <div class="rq-filters rs-filters" id="rqFilters" data-filter-stay>
-        <div class="rq-filter">
-            <label for="rqSearch">Search</label>
-            <input type="search" id="rqSearch" class="rq-input" autocomplete="off"
-                   placeholder="Driver, ID or reason" aria-label="Search requests" />
-        </div>
-
-        <div class="rq-filter">
-            <label for="rqType">Type</label>
-            <select id="rqType" class="rq-input">
-                <option value="">All types</option>
-                @foreach (var t in LeaveEntitlement.Types)
-                {
-                    <option value="@t">@t</option>
-                }
-            </select>
-        </div>
-
-        <div class="rq-filter">
-            <label for="rqDriver">Driver</label>
-            <select id="rqDriver" class="rq-input">
-                <option value="">All drivers</option>
-                @foreach (var d in driversShown)
-                {
-                    <option value="@d.Id">@d.Name</option>
-                }
-            </select>
-        </div>
-
-        <div class="rq-filter-actions">
-            <button type="button" class="rq-btn rq-btn--outline" id="rqClear">Clear</button>
-        </div>
     </div>
 
 </div>
@@ -119,6 +134,17 @@
         </svg>
         <span>Leave requests</span>
         <span class="rq-count" id="rqCount"></span>
+
+        @* Shown only on a phone, where the title row above is not drawn: the app bar
+           already says which page this is. The count of what is waiting still has to be
+           somewhere, so it moves onto the card heading, which is the page heading in
+           effect. *@
+        <span class="rq-inline-pending" id="rqPendingInline">
+            @if (Model.PendingCount > 0)
+            {
+                <span class="rq-waiting">@Model.PendingCount Pending</span>
+            }
+        </span>
     </div>
 
     <div class="rq-table-wrap rs-list-wrap">
@@ -403,16 +429,18 @@
             if (busy) return;
             busy = true;
 
-            const btn = document.getElementById('rqRefreshBtn');
-            if (manual && btn) btn.classList.add('spinning');
+            // One of the two is on screen, depending on the width. Marking both is
+            // cheaper than working out which.
+            const spinners = document.querySelectorAll('.rq-refresh');
+            if (manual) spinners.forEach(function (b) { b.classList.add('spinning'); });
 
             try {
                 const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } });
                 const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
 
-                [['rqRows', true], ['rqTemplates', false], ['rqPendingWrap', false]].forEach(function (pair) {
-                    const fresh = doc.getElementById(pair[0]);
-                    const cur = document.getElementById(pair[0]);
+                ['rqRows', 'rqTemplates', 'rqPendingWrap', 'rqPendingInline'].forEach(function (id) {
+                    const fresh = doc.getElementById(id);
+                    const cur = document.getElementById(id);
                     if (fresh && cur) cur.innerHTML = fresh.innerHTML;
                 });
 
@@ -423,7 +451,7 @@
                 console.warn('requests refresh failed', e);
             } finally {
                 busy = false;
-                if (btn) btn.classList.remove('spinning');
+                spinners.forEach(function (b) { b.classList.remove('spinning'); });
             }
         };
 
@@ -537,6 +565,18 @@
 }
 
 @section TopbarContent {
+    @* The reload, beside the filters, which is where a phone keeps the controls of the
+       page it is on. The copy in the title row is the desktop one and is not drawn here. *@
+    <button type="button" class="rs-filter-toggle rq-refresh rq-refresh--bar"
+            onclick="rqRefresh(true)" title="Load newly filed requests"
+            aria-label="Refresh">
+        <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+            <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+            <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+        </svg></span>
+    </button>
     <button type="button" class="rs-filter-toggle" data-filter-toggle="rqFilters"
             aria-expanded="false" aria-controls="rqFilters">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"

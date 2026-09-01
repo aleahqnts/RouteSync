@@ -155,11 +155,17 @@
     </div>
 
     @* Conflict popup *@
-    <div id="sch-conflict-modal" class="sch-modal-overlay" style="display:none;">
+    @* Movable, and it does not take the page while it is up. The grid is what the list
+       is about, and a box fixed over the middle of it meant reading a line, closing the
+       box to find the cells, then opening it again for the next line. *@
+    <div id="sch-conflict-modal" class="sch-modal-overlay sch-modal-overlay--free" style="display:none;">
         <div class="sch-modal">
-            <div class="sch-modal-head">
+            <div class="sch-modal-head" title="Drag to move">
                 <span class="sch-modal-ico">&#9888;</span>
                 <h3 id="sch-conflict-title">Schedule Conflicts</h3>
+                @* Says the box can be taken hold of. Without it the only sign was a cursor
+                   nobody looks for. *@
+                <span class="sch-modal-grab" aria-hidden="true">&#8942;&#8942;</span>
             </div>
             <p id="sch-conflict-sub" class="sch-modal-sub">Review the highlighted cells before saving.</p>
             <ul id="sch-conflict-list" class="sch-modal-list"></ul>
@@ -335,6 +341,12 @@
                 sel.dataset.prev = sel.value;
                 schNarrowChoices();
                 schMarkAway();
+
+                // The list on screen was worked out from the grid as it was. Changing a
+                // cell answers one of its lines or invalidates another, and neither is
+                // known until the next save, so it is taken down rather than left saying
+                // something that may no longer be true.
+                schCloseConflicts();
             });
         });
     }
@@ -593,36 +605,228 @@
 
     let schLastConflicts = [];   // remembered for the override confirmation modal
 
-    // allowOverride = soft scheduling rule (double-booking / back-to-back) the dispatcher
-    // may force past. Partial slots (missing bus/driver) pass false -> no override offered.
-    function schShowConflicts(messages, allowOverride, title, sub) {
-        schLastConflicts = messages;
-        document.getElementById('sch-conflict-title').textContent = title || 'Schedule Conflicts';
-        document.getElementById('sch-conflict-sub').textContent =
-            sub || 'Review the highlighted cells before saving.';
-        const ul = document.getElementById('sch-conflict-list');
+    // When the panel last finished being dragged. A drag that happens to start on one of
+    // its lines must not also be read as pressing that line, which would take the panel
+    // away in the middle of moving it. A time rather than a flag, because a drag does not
+    // always end in a click and a flag left standing would swallow the next real one.
+    let schPanelDraggedAt = 0;
+
+    // A conflict is { text, els }: what is wrong, and the cells it is about.
+    //
+    // The two used to travel separately, a list of sentences and a set of cells marked
+    // red, and a week copied forward can raise five at once. Five sentences over eleven
+    // red cells says which cells are wrong and nothing about which sentence goes with
+    // which, so each one has to be worked out from the shift and the date in its wording.
+    // Numbering them puts the same figure on the line and on the cells it names.
+
+    /* Two conflicts saying the same thing are one conflict over more cells. */
+    function schMergeConflicts(list) {
+        const byText = new Map();
+        (list || []).forEach(function (c) {
+            const found = byText.get(c.text);
+            if (!found) {
+                byText.set(c.text, { text: c.text, els: (c.els || []).slice() });
+                return;
+            }
+            (c.els || []).forEach(function (el) {
+                if (found.els.indexOf(el) === -1) found.els.push(el);
+            });
+        });
+        return [...byText.values()];
+    }
+
+    function schClearConflictMarks() {
+        document.querySelectorAll('.sch-cell').forEach(function (cell) {
+            cell.classList.remove('sch-conflict', 'sch-cell--found');
+            const tags = cell.querySelector('.sch-conflict-ns');
+            if (tags) tags.remove();
+        });
+    }
+
+    /* A cell can break more than one rule, and each figure it earns gets a circle of its
+       own. Written into one as a list of figures they read as a single number. */
+    function schMarkCell(el, number) {
+        el.classList.add('sch-conflict');
+
+        let box = el.querySelector('.sch-conflict-ns');
+        if (!box) {
+            box = document.createElement('span');
+            box.className = 'sch-conflict-ns';
+            el.appendChild(box);
+        }
+
+        if (box.querySelector('[data-n="' + number + '"]')) return;
+
+        const dot = document.createElement('span');
+        dot.className = 'sch-conflict-n';
+        dot.dataset.n = number;
+        dot.textContent = number;
+        box.appendChild(dot);
+    }
+
+    /* Takes the reader to the first cell a line is about, and holds it long enough to be
+       found. The list is over the grid, so it closes on the way. */
+    function schGoToConflict(item) {
+        const el = (item.els || [])[0];
+        if (!el) return;
+
+        schCloseConflicts();
+        el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+
+        (item.els || []).forEach(function (cell) {
+            cell.classList.add('sch-cell--found');
+            setTimeout(function () { cell.classList.remove('sch-cell--found'); }, 2000);
+        });
+    }
+
+    /* One numbered line per conflict, in either list. */
+    function schFillConflictList(ul, items) {
         ul.replaceChildren();
-        (messages || []).forEach(function (m) {
+        items.forEach(function (item, i) {
             const li = document.createElement('li');
-            li.textContent = m;   // a conflict line is data, not markup
+
+            const badge = document.createElement('span');
+            badge.className = 'sch-modal-n';
+            badge.textContent = i + 1;
+
+            const text = document.createElement('span');
+            text.textContent = item.text;   // a conflict line is data, not markup
+
+            li.append(badge, text);
+
+            if ((item.els || []).length) {
+                li.className = 'sch-modal-item--go';
+                li.title = 'Show this on the grid';
+                li.addEventListener('click', function () {
+                    if (Date.now() - schPanelDraggedAt < 250) return;
+                    schGoToConflict(item);
+                });
+            }
+
             ul.appendChild(li);
         });
+    }
+
+    // allowOverride = soft scheduling rule (double-booking / back-to-back) the dispatcher
+    // may force past. Partial slots (missing bus/driver) pass false -> no override offered.
+    function schShowConflicts(conflicts, allowOverride, title, sub) {
+        const items = schMergeConflicts(conflicts);
+        schLastConflicts = items;
+
+        schClearConflictMarks();
+        items.forEach(function (item, i) {
+            (item.els || []).forEach(function (el) { schMarkCell(el, i + 1); });
+        });
+
+        const anyCells = items.some(function (item) { return (item.els || []).length; });
+
+        document.getElementById('sch-conflict-title').textContent = title || 'Schedule Conflicts';
+        document.getElementById('sch-conflict-sub').textContent = sub
+            || (anyCells
+                ? 'Each line is numbered on the cells it is about. Tap a line to find them.'
+                : 'Review the highlighted cells before saving.');
+
+        schFillConflictList(document.getElementById('sch-conflict-list'), items);
+
         document.getElementById('sch-override-btn').style.display = allowOverride ? '' : 'none';
         document.getElementById('sch-conflict-modal').style.display = 'flex';
     }
     function schCloseConflicts() {
         document.getElementById('sch-conflict-modal').style.display = 'none';
     }
+
+    /* Dragged, and left wherever it was put. Reopening it in the middle of the grid again
+       would undo the move on every save.
+
+       Taken hold of anywhere on the box that is not itself a control: the heading, the
+       line under it, the space around the list. Restricted to the heading it was a strip
+       of about twenty pixels, and a grab that missed it landed on a line instead, which
+       reads as pressing that line. */
+    (function () {
+        const box = document.querySelector('#sch-conflict-modal .sch-modal');
+        const grip = box;
+        let x = 0, y = 0, fromX = 0, fromY = 0, holding = false, moved = false, rest = null;
+
+        /* Where the box would sit with no offset on it. Taken once, before a drag, because
+           the rect read during one already carries the offset being worked out from it. */
+        function measure() {
+            const r = box.getBoundingClientRect();
+            rest = { left: r.left - x, top: r.top - y, w: r.width, h: r.height };
+        }
+
+        // Followed on the window rather than by capturing the pointer. Capture retargets
+        // the click that ends the press onto whatever holds it, so with the whole box
+        // holding it, pressing a line stopped reaching that line.
+        function follow(e) {
+            if (!holding) return;
+
+            const toX = e.clientX - fromX;
+            const toY = e.clientY - fromY;
+
+            // A few pixels of travel is a hand resting, not a move.
+            if (Math.abs(toX - x) + Math.abs(toY - y) > 3) moved = true;
+
+            x = toX;
+            y = toY;
+            place();
+        }
+
+        function drop() {
+            if (!holding) return;
+            holding = false;
+            // Read by the lines, which are pressed and dragged from alike.
+            if (moved) schPanelDraggedAt = Date.now();
+            window.removeEventListener('pointermove', follow);
+            window.removeEventListener('pointerup', drop);
+            window.removeEventListener('pointercancel', drop);
+        }
+
+        grip.addEventListener('pointerdown', function (e) {
+            // Only the primary button, and never a text selection dragged out of the title.
+            if (e.button !== 0) return;
+            // A button is pressed, not dragged.
+            if (e.target.closest('button, a, input, select, textarea')) return;
+
+            holding = true;
+            moved = false;
+            measure();
+            fromX = e.clientX - x;
+            fromY = e.clientY - y;
+
+            window.addEventListener('pointermove', follow);
+            window.addEventListener('pointerup', drop);
+            window.addEventListener('pointercancel', drop);
+            e.preventDefault();
+        });
+
+        /* Held inside the window. A box dragged past an edge cannot be dragged back,
+           because the heading it is dragged by has gone with it. */
+        function place() {
+            if (!rest) measure();
+
+            const lowX = 8 - rest.left;
+            const highX = window.innerWidth - rest.w - 8 - rest.left;
+            const lowY = 8 - rest.top;
+            const highY = window.innerHeight - rest.h - 8 - rest.top;
+
+            x = Math.max(lowX, Math.min(x, Math.max(lowX, highX)));
+            y = Math.max(lowY, Math.min(y, Math.max(lowY, highY)));
+
+            box.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        }
+
+        // A window made smaller can leave it outside, so it is pulled back in.
+        window.addEventListener('resize', function () {
+            if (document.getElementById('sch-conflict-modal').style.display !== 'flex') return;
+            measure();
+            place();
+        });
+
+    })();
     // Step 1 -> 2: leave the conflict list, ask for explicit confirmation.
     function schConfirmOverride() {
         document.getElementById('sch-conflict-modal').style.display = 'none';
-        const ul = document.getElementById('sch-override-list');
-        ul.replaceChildren();
-        (schLastConflicts || []).forEach(function (m) {
-            const li = document.createElement('li');
-            li.textContent = m;   // a conflict line is data, not markup
-            ul.appendChild(li);
-        });
+        schFillConflictList(document.getElementById('sch-override-list'), schLastConflicts || []);
         document.getElementById('sch-override-modal').style.display = 'flex';
     }
     function schCancelOverride() {
@@ -636,13 +840,13 @@
         const btn = document.getElementById('sch-save');
         const cells = [];        // payload for server
         const filled = [];       // {el, route, shift, date, veh, drv}
-        const messages = [];
-        const flag = el => el.classList.add('sch-conflict');
+        const found = [];        // {text, els}, paired so each line can be numbered
+        const partials = [];
 
         // reset marks + gather
         let partial = false;
+        schClearConflictMarks();
         document.querySelectorAll('.sch-cell').forEach(c => {
-            c.classList.remove('sch-conflict');
             const veh = c.querySelector('.sch-veh').value;
             const drv = c.querySelector('.sch-drv').value;
             if (veh && drv) {
@@ -654,12 +858,13 @@
                 cells.push({ tripId: c.dataset.tripid || null, routeId: parseInt(c.dataset.route),
                              shift: c.dataset.shift, date: c.dataset.date, vehicleId: veh, driverId: parseInt(drv) });
             } else if ((veh && !drv) || (!veh && drv)) {
-                partial = true; flag(c);
+                partial = true; partials.push(c);
             }
         });
         if (partial) {
             // Data integrity, not a scheduling rule -> never overridable.
-            schShowConflicts(['Each assigned shift requires both a vehicle and a driver.'],
+            schShowConflicts([{ text: 'Each assigned shift requires both a vehicle and a driver.',
+                                els: partials }],
                              false, 'Incomplete Assignment',
                              'Complete or clear the highlighted cells, then save again.');
             return;
@@ -675,9 +880,11 @@
                 Object.values(seen).forEach(dups => {
                     // Skip if every colliding cell is untouched (already decided).
                     if (dups.length > 1 && dups.some(r => r.dirty)) {
-                        dups.forEach(r => flag(r.el));
                         const what = field === 'drv' ? 'driver' : 'bus';
-                        messages.push(`This ${what} is already booked for the ${dups[0].shift} shift on ${schFmtDate(dups[0].date)}.`);
+                        found.push({
+                            text: `This ${what} is already booked for the ${dups[0].shift} shift on ${schFmtDate(dups[0].date)}.`,
+                            els: dups.map(r => r.el)
+                        });
                     }
                 });
             });
@@ -692,14 +899,21 @@
             list.forEach(r => {
                 const next = SHIFT_ADJ[r.shift];
                 if (next && map[r.date + '|' + next] && (r.dirty || map[r.date + '|' + next].dirty)) {
-                    flag(r.el); flag(map[r.date + '|' + next].el);
-                    messages.push(`This driver is assigned to consecutive ${r.shift} and ${next} shifts on ${schFmtDate(r.date)}.`);
+                    found.push({
+                        text: `This driver is assigned to consecutive ${r.shift} and ${next} shifts on ${schFmtDate(r.date)}.`,
+                        els: [r.el, map[r.date + '|' + next].el]
+                    });
                 }
                 // Evening -> next-day Morning
                 if (r.shift === 'Evening') {
                     const tomo = new Date(r.date); tomo.setDate(tomo.getDate() + 1);
                     const tk = tomo.toISOString().slice(0, 10) + '|Morning';
-                    if (map[tk] && (r.dirty || map[tk].dirty)) { flag(r.el); flag(map[tk].el); messages.push(`This driver finishes the Evening shift on ${schFmtDate(r.date)} and starts the Morning shift the next day.`); }
+                    if (map[tk] && (r.dirty || map[tk].dirty)) {
+                        found.push({
+                            text: `This driver finishes the Evening shift on ${schFmtDate(r.date)} and starts the Morning shift the next day.`,
+                            els: [r.el, map[tk].el]
+                        });
+                    }
                 }
             });
         });
@@ -712,12 +926,14 @@
             if (!r.dirty) return;
             const note = schAwayNote(r.drv, r.date);
             if (!note) return;
-            flag(r.el);
-            messages.push(`${schDriverName(r.drv)} is ${note} on ${schFmtDate(r.date)}.`);
+            found.push({
+                text: `${schDriverName(r.drv)} is ${note} on ${schFmtDate(r.date)}.`,
+                els: [r.el]
+            });
         });
 
         // Soft conflicts -> offer override, unless the dispatcher already confirmed (force).
-        if (!force && messages.length) { schShowConflicts([...new Set(messages)], true); return; }
+        if (!force && found.length) { schShowConflicts(found, true); return; }
 
         btn.disabled = true; btn.textContent = 'Saving…';
         fetch('/Schedule/Save', {
@@ -735,29 +951,29 @@
                 // status only decides whether it can be forced past: a 409 is a booking
                 // rule, a 400 is a bus or a driver that cannot take the work at all.
                 if (data && Array.isArray(data.conflicts) && data.conflicts.length) {
-                    const msgs = [];
-                    data.conflicts.forEach(cf => {
-                        msgs.push(cf.message);
+                    const reported = data.conflicts.map(cf => {
+                        const els = [];
                         (cf.cells || []).forEach(ref => {
                             document.querySelectorAll(
                                 `.sch-cell[data-route="${ref.routeId}"][data-shift="${ref.shift}"][data-date="${ref.date}"]`
-                            ).forEach(flag);
+                            ).forEach(el => els.push(el));
                         });
+                        return { text: cf.message, els };
                     });
                     const overridable = res.status === 409;
                     schShowConflicts(
-                        [...new Set(msgs)], overridable,
+                        reported, overridable,
                         overridable ? 'Schedule Conflicts' : 'Assignment Unavailable',
                         overridable
-                            ? 'Review the highlighted cells before saving.'
-                            : 'The following assignments cannot be booked. Correct the highlighted cells, then save again.');
+                            ? null
+                            : 'The following assignments cannot be booked. Each line is numbered on the cells it is about.');
                 } else {
                     // A bare string body is still a reason worth reading; a page that is not
                     // JSON at all leaves only the status, which beats saying nothing.
                     const reason = (data && data.message)
                         || (typeof data === 'string' && data)
                         || `The server answered ${res.status} ${res.statusText || ''}`.trim() + '.';
-                    schShowConflicts([reason], false, 'Save Failed',
+                    schShowConflicts([{ text: reason, els: [] }], false, 'Save Failed',
                         'This cannot be overridden. Correct the issue below, then save again.');
                 }
                 return;
@@ -765,7 +981,7 @@
             sessionStorage.setItem('sch_saved', '1'); // survive the reload -> show toast
             window.location.reload();
         }).catch(err => schShowConflicts(
-              ['The server could not be reached: ' + err.message], false,
+              [{ text: 'The server could not be reached: ' + err.message, els: [] }], false,
               'Save Failed', 'Check your connection, then save again.'))
           .finally(() => { btn.disabled = false; btn.textContent = 'Save Schedule'; });
     }

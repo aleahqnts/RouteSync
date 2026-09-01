@@ -303,7 +303,13 @@
     .fw-bar::before {
         content: "";
         position: absolute;
-        inset: 0;
+        /* Carried on past the bar's bottom edge. The bar is anchored to the bottom of the
+           layout viewport, which on a phone is not always the bottom of what is on
+           screen: a browser bar that slides away, or a device inset the page is not told
+           about, leaves a strip under it that the page then shows through. The surface is
+           drawn into that strip as well, and the piece that fills it is measured from the
+           bottom, so it grows to cover whatever the strip turns out to be. */
+        inset: 0 0 -60px;
         z-index: -1;
 
         /* Wide enough for the scoop and the curves at its ends; deep enough to hold
