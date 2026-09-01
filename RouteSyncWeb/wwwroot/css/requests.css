@@ -12,29 +12,29 @@
 
     /* --- Page head ------------------------------------------------------- */
 
-    .rq-head {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-        margin-bottom: 16px;
-    }
-
+    /* Alone on its line and spaced the way every other board spaces its heading. */
     .rq-title {
         font-size: 1.6rem;
         font-weight: 700;
         color: var(--rq-text);
         font-family: 'Segoe UI', sans-serif;
-        margin: 0;
+        margin: 0 0 20px;
         line-height: 1.1;
     }
 
-    .rq-subtitle {
-        font-size: 0.875rem;
-        color: var(--rq-muted);
-        font-family: 'Segoe UI', sans-serif;
-        margin: 4px 0 0;
+    .rq-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .rq-toolbar-end {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
     }
 
     .rq-updated { font-size: .78rem; color: var(--rq-muted); }
@@ -52,13 +52,6 @@
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
         white-space: nowrap;
-    }
-
-    .rq-head-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
     }
 
     /* The reload control is the same teal as the one on every other board, and it turns
@@ -85,27 +78,54 @@
 
     .rq-btn--icon.rq-refresh:hover { background: #EAF7F5; }
 
+    /* The count that belongs to the card heading rather than the title row, and the
+       reload that belongs to the app bar. Only a phone has a use for either. */
+    .rq-inline-pending { display: none; }
+
     /* --- Filters --------------------------------------------------------- */
 
     .rq-filters {
         display: flex;
-        align-items: flex-end;
-        gap: 12px;
+        align-items: center;
+        gap: 10px;
         flex-wrap: wrap;
-        margin-bottom: 18px;
     }
 
     .rq-filter {
         display: flex;
-        flex-direction: column;
+        align-items: center;
         gap: 5px;
     }
 
+    /* Named only where the field is folded into the phone's filter sheet. */
     .rq-filter label {
+        display: none;
         font-size: 0.75rem;
         font-weight: 600;
         color: var(--rq-muted);
         font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* The search box the other boards use: the mark inside the field rather than a word
+       above it. */
+    .rq-search-wrap {
+        position: relative;
+        display: block;
+    }
+
+    .rq-search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+    }
+
+    /* Written against both classes so it outranks the shared field padding below,
+       whichever of the two the browser reads last. */
+    .rq-input.rq-search-input {
+        padding-left: 36px;
     }
 
     .rq-input {
@@ -122,8 +142,8 @@
 
     .rq-input:focus { border-color: var(--rq-teal); }
 
-    #rqSearch { width: 240px; }
-    #rqType, #rqDriver { width: 180px; }
+    #rqSearch { width: 260px; }
+    #rqType, #rqDriver { width: 150px; }
 
     .rq-filter-actions { display: flex; gap: 8px; }
 
@@ -131,7 +151,6 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
-        margin-bottom: 18px;
     }
 
     .rq-tab {
@@ -533,9 +552,76 @@
 
 @media (max-width: 599px) {
 
-    .rq-title { font-size: 1.25rem; }
+    /* The heading is in the app bar, so a second one on the page said the same word
+       twice. The stamp and the reload go with it: the reload is in the app bar too, and
+       what would be left of the row is a screen width of nothing. */
+    .rq-title,
+    .rq-toolbar-end { display: none; }
 
-    .rq-card { padding: 14px 14px 16px; }
+    /* The row lays nothing out here. The status pills keep their place in the page and
+       the fields below them are lifted into a sheet of their own, which is where they
+       were before the row existed. */
+    .rq-toolbar { display: contents; }
+
+    .rq-filters.rs-filters .rq-filter label { display: block; }
+
+    /* Every row already draws a card of its own below, so the box around them is
+       dropped rather than nesting one inside another. */
+    .rq-card {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    /* The heading of the page, in effect, so it is sized as one. */
+    .rq-card-header {
+        gap: 8px;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+
+    .rq-count { font-size: .72rem; }
+
+    .rq-inline-pending { display: inline-flex; }
+
+    .rq-waiting { padding: 4px 10px; font-size: .72rem; }
+
+    /* The reload, in the app bar beside the filters, drawn as the square the mark
+       needs rather than the pill a word needs. */
+    .rq-refresh--bar {
+        justify-content: center;
+        width: 40px;
+        padding: 0;
+        color: #2E7D72;
+        border-color: #CDE9E4;
+    }
+
+        .rq-refresh--bar + .rs-filter-toggle { margin-left: 6px; }
+
+        .rq-refresh--bar .rq-refresh-ico svg { width: 18px; height: 18px; }
+
+    /* The shared sheet gives each field a row of its own, label on the left and the
+       control on the right. This page had asked for a column, which survived into the
+       sheet and left every label centred over its own control down a very tall panel. */
+    .rq-filters.rs-filters .rq-filter {
+        flex-direction: row;
+    }
+
+    /* A button has no label beside it to leave room for, so it takes the row. */
+    .rq-filters.rs-filters .rq-filter-actions > :last-child {
+        max-width: none;
+        width: 100%;
+        min-height: 40px;
+    }
+
+    /* The field fills the row it is given rather than keeping the width it was measured
+       for on a desk, which overflowed the box the sheet caps it to. */
+    .rq-search-wrap { width: 100%; }
+
+    #rqSearch { width: 100%; }
 
     .rq-tabs {
         gap: 6px;
@@ -556,25 +642,92 @@
         font-size: .78rem;
     }
 
-    .rq-subtitle { display: none; }
+    /* One request, laid out rather than stacked.
 
-    /* The mark alone. The word beside it costs a third of the line the title needs. */
-    .rq-refresh {
-        gap: 0;
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        justify-content: center;
-        overflow: hidden;
-        font-size: 0;
+       The shared card treatment prints every column as its own labelled row, which is
+       right for a table of three or four and wrong for one of ten: a single request
+       filled the screen and two could not be compared without scrolling. The same cells
+       are placed into a grid instead, paired across two columns, and the labels are kept
+       only where the value cannot be read without one. */
+    .rq-table.rs-cards tbody tr[data-request] {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "driver  status"
+            "type    days"
+            "start   end"
+            "reason  reason"
+            "filed   balance"
+            "actions actions";
+        align-items: center;
+        gap: 4px 10px;
+        padding: 12px 14px;
     }
 
-    /* The stamp needs the width more than the line it sits on can spare. */
-    .rq-updated { display: none; }
+        .rq-table.rs-cards tbody tr[data-request] > td {
+            padding: 2px 0;
+            /* The table draws a rule under every cell and the shared card treatment draws
+               one over each cell after the first. Both are for a list of rows, and inside
+               a card they printed a line under every value. */
+            border-top: none;
+            border-bottom: none;
+        }
 
-    /* Start and End read as a pair on a card, where they are two lines rather than two
-       columns, so the second is drawn tight against the first. */
-    .rs-cards td[data-label="End"] { padding-top: 0; border-top: none; }
+        .rq-table.rs-cards td[data-label="Driver"] { grid-area: driver; }
+        .rq-table.rs-cards td[data-label="Status"] { grid-area: status; }
+        .rq-table.rs-cards td[data-label="Type"] { grid-area: type; }
+        .rq-table.rs-cards td[data-label="Days"] { grid-area: days; }
+        .rq-table.rs-cards td[data-label="Start"] { grid-area: start; }
+        .rq-table.rs-cards td[data-label="End"] { grid-area: end; }
+        .rq-table.rs-cards td[data-label="Reason"] { grid-area: reason; }
+        .rq-table.rs-cards td[data-label="Filed"] { grid-area: filed; }
+        .rq-table.rs-cards td[data-label="Balance"] { grid-area: balance; }
+        .rq-table.rs-cards td[data-label="Actions"] { grid-area: actions; }
+
+        /* Left of each pair reads as a label already, or needs no name at all. */
+        .rq-table.rs-cards td[data-label="Driver"]::before,
+        .rq-table.rs-cards td[data-label="Status"]::before,
+        .rq-table.rs-cards td[data-label="Type"]::before,
+        .rq-table.rs-cards td[data-label="Reason"]::before,
+        .rq-table.rs-cards td[data-label="Actions"]::before {
+            content: none;
+        }
+
+        /* The name leads, and the identifier sits beside it rather than under it. */
+        .rq-table.rs-cards td[data-label="Driver"] {
+            justify-content: flex-start;
+            gap: 8px;
+            text-align: left;
+        }
+
+            .rq-table.rs-cards td[data-label="Driver"] .rq-driver { display: inline; }
+            .rq-table.rs-cards td[data-label="Driver"] .rq-driver-id { display: inline; }
+
+        .rq-table.rs-cards td[data-label="Type"],
+        .rq-table.rs-cards td[data-label="Reason"] {
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .rq-table.rs-cards td[data-label="Reason"] { font-size: .82rem; }
+
+        .rq-table.rs-cards td[data-label="Reason"] .rq-reason { max-width: none; }
+
+        /* A request with nothing said about it leaves the row out rather than printing
+           a line to say so. */
+        .rq-table.rs-cards td[data-label="Reason"]:has(.rq-blank) { display: none; }
+
+        .rq-table.rs-cards td[data-label="Filed"],
+        .rq-table.rs-cards td[data-label="Balance"],
+        .rq-table.rs-cards td[data-label="Start"],
+        .rq-table.rs-cards td[data-label="End"],
+        .rq-table.rs-cards td[data-label="Days"] {
+            font-size: .78rem;
+        }
+
+        .rq-table.rs-cards td[data-label="Actions"] {
+            margin-top: 6px;
+        }
 
     /* Approve and Reject take the width between them rather than sitting in a corner
        of a card. */
