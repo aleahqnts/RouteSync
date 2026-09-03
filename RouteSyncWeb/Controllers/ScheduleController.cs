@@ -82,7 +82,7 @@ namespace FleetWise.Controllers
                     leaveDays[request.UserId] = days = new Dictionary<string, string>();
 
                 for (var day = weekStart; day <= weekEnd; day = day.AddDays(1))
-                    if (request.StartDate.Date <= day && request.EndDate.Date >= day)
+                    if (LeaveEntitlement.CoversDay(request, day))
                         days[day.ToString("yyyy-MM-dd")] = request.LeaveType;
             }
 
@@ -254,7 +254,10 @@ namespace FleetWise.Controllers
             //
             // Cells left as they were are not checked. A trip already run on a bus since
             // grounded is history, and re-checking it would leave the week unsavable.
+            var away = await DriverAwayConflictsAsync(effective);
+
             var refusal = await RefuseUnusableAsync(effective);
+            refusal.AddRange(away.Refuse);
             if (refusal.Count > 0)
             {
                 return BadRequest(new
@@ -269,7 +272,7 @@ namespace FleetWise.Controllers
             // 409 rather than a 400, the same way dispatch does, because the two mean
             // different things to the planner: one it may force past, the other it may not.
             var conflicts = FindConflicts(effective);
-            conflicts.AddRange(await DriverAwayConflictsAsync(effective));
+            conflicts.AddRange(away.Warn);
             if (!req.Override && conflicts.Count > 0)
                 return Conflict(new { message = "This schedule breaks a booking rule.", conflicts });
 
@@ -332,6 +335,34 @@ namespace FleetWise.Controllers
                         .Filter("trip_id", Operator.Equals, t.TripId)
                         .Delete();
                     deleted++;
+                }
+
+                // The week is on record as built, whether or not this save changed anything
+                // in it. The driver app cannot tell a rest day from a week nobody has
+                // touched, because it may read only its own driver's trips; this is what
+                // answers that, and a save that added nothing still means somebody has
+                // been through the week and left it as it is.
+                //
+                // Written after the trips rather than before, so a week that failed partway
+                // is not recorded as built.
+                try
+                {
+                    var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                    await _supabase.From<ScheduleWeek>().Upsert(new ScheduleWeek
+                    {
+                        WeekStart = DateTime.SpecifyKind(weekStart, DateTimeKind.Utc),
+                        SavedAt = PhClock.NowForDb,
+                        SavedBy = int.TryParse(idStr, out var by) ? by : null,
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // The schedule is saved. Losing the marker costs the driver app its
+                    // hatching for this week, which is a worse calendar and not a worse
+                    // schedule, so it is recorded and not raised.
+                    await _audit.WriteAsync("schedule_week_mark_failed",
+                        $"saved the week of {weekStart:MMM d} but could not record it as scheduled: {ex.Message}",
+                        "trips", outcome: "failed");
                 }
 
                 // One planner save can rewrite a whole week, so the audit entry carries the
@@ -436,43 +467,45 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>
-        /// Finds conflicts in the schedule as it will be after the save.
+        /// Cells booking a driver who is away, split by what may be done about it.
         /// </summary>
         /// <remarks>
-        /// A conflict is reported only when at least one cell involved is editable. Two
-        /// locked trips clashing is history that cannot be fixed, so it never blocks a
-        /// save. Each conflict carries the editable cells so the planner can highlight
-        /// exactly what needs changing.
-        /// </remarks>
-        /// <summary>
-        /// Cells booking a driver who is away: on approved leave for that day, or marked
-        /// unavailable now.
-        /// </summary>
-        /// <remarks>
-        /// Conflicts rather than refusals. Three days' notice is asked for and never
-        /// required, allocation is the dispatcher's to make, and a driver on leave who
-        /// offers to cover a sick call is a thing that happens. So this is said plainly
-        /// and can be saved past, like a driver working two shifts back to back.
+        /// Approved leave is refused, not warned about. Granting leave already refuses to
+        /// complete while the driver holds shifts on those days, and a warning that can be
+        /// saved past would let the same contradiction in through the other door: the leave
+        /// granted cleanly first, the assignment added over it afterwards. The driver's
+        /// calendar shows an approved day as leave and draws no assignment on it, so a
+        /// contradiction that survives ends with somebody staying home while their bus is
+        /// on the board.
+        ///
+        /// A driver who wants to work through their own leave is not blocked by this, they
+        /// are served by Revoke, which hands the days back and leaves a record of who did
+        /// it and why.
+        ///
+        /// The availability flag stays a warning. It says a driver cannot drive right now,
+        /// which is theirs to report and the dispatcher's to weigh, and it carries no dates
+        /// to be wrong about later.
         ///
         /// The two are read differently because they say different things. Leave carries
         /// its dates and is checked against the day each cell sits on. The availability
         /// flag carries none: it says a driver cannot work now, so it is read against the
         /// operational day and no other.
         /// </remarks>
-        private async Task<List<ConflictDto>> DriverAwayConflictsAsync(
+        private async Task<(List<ConflictDto> Refuse, List<ConflictDto> Warn)> DriverAwayConflictsAsync(
             List<(ScheduleCellInput cell, bool locked)> effective)
         {
-            var results = new List<ConflictDto>();
+            var refuse = new List<ConflictDto>();
+            var warn = new List<ConflictDto>();
 
             var editable = effective
                 .Where(e => !e.locked && e.cell.DriverId != 0 && !string.IsNullOrEmpty(e.cell.Date))
                 .ToList();
-            if (editable.Count == 0) return results;
+            if (editable.Count == 0) return (refuse, warn);
 
             var days = editable
                 .Select(e => DateTime.TryParse(e.cell.Date, out var d) ? d.Date : (DateTime?)null)
                 .Where(d => d.HasValue).Select(d => d!.Value).ToList();
-            if (days.Count == 0) return results;
+            if (days.Count == 0) return (refuse, warn);
 
             var driverIds = editable.Select(e => e.cell.DriverId).Distinct().Cast<object>().ToList();
             var today = PhClock.OperationalDay.Date;
@@ -511,33 +544,48 @@ namespace FleetWise.Controllers
                 if (!DateTime.TryParse(e.cell.Date, out var day)) continue;
 
                 var hit = leave.FirstOrDefault(l => l.UserId == e.cell.DriverId
-                                                 && l.StartDate.Date <= day.Date
-                                                 && l.EndDate.Date >= day.Date);
-
-                string reason;
-                if (hit is not null)
-                    reason = $"on approved {hit.LeaveType.ToLowerInvariant()} leave";
-                else if (day.Date == today && unavailable.Contains(e.cell.DriverId))
-                    reason = "unable to drive";
-                else
-                    continue;
+                                                 && LeaveEntitlement.CoversDay(l, day));
 
                 var name = names.TryGetValue(e.cell.DriverId, out var n) && n.Length > 0
                     ? n
                     : $"Driver {e.cell.DriverId}";
 
-                results.Add(new ConflictDto
+                var cells = new List<CellRef>
                 {
-                    Message = $"{name} is {reason} on {FmtDate(e.cell.Date)}.",
-                    Cells = new List<CellRef>
+                    new() { RouteId = e.cell.RouteId, Shift = e.cell.Shift, Date = e.cell.Date },
+                };
+
+                if (hit is not null)
+                {
+                    refuse.Add(new ConflictDto
                     {
-                        new() { RouteId = e.cell.RouteId, Shift = e.cell.Shift, Date = e.cell.Date },
-                    },
-                });
+                        Message = $"{name} is on approved {hit.LeaveType.ToLowerInvariant()} leave on "
+                                + $"{FmtDate(e.cell.Date)}. Revoke the leave first, or book another driver.",
+                        Cells = cells,
+                    });
+                }
+                else if (day.Date == today && unavailable.Contains(e.cell.DriverId))
+                {
+                    warn.Add(new ConflictDto
+                    {
+                        Message = $"{name} is unable to drive on {FmtDate(e.cell.Date)}.",
+                        Cells = cells,
+                    });
+                }
             }
 
-            return results;
+            return (refuse, warn);
         }
+
+        /// <summary>
+        /// Finds conflicts in the schedule as it will be after the save.
+        /// </summary>
+        /// <remarks>
+        /// A conflict is reported only when at least one cell involved is editable. Two
+        /// locked trips clashing is history that cannot be fixed, so it never blocks a
+        /// save. Each conflict carries the editable cells so the planner can highlight
+        /// exactly what needs changing.
+        /// </remarks>
 
         private static List<ConflictDto> FindConflicts(List<(ScheduleCellInput cell, bool locked)> all)
         {

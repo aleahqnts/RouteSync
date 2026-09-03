@@ -26,27 +26,83 @@
         "approved" => "rq-badge--approved",
         "rejected" => "rq-badge--rejected",
         "cancelled" => "rq-badge--cancelled",
+        "awaitingchange" => "rq-badge--held",
         _ => "rq-badge--pending"
     };
+
+    // The stored word is one token because the column is checked against a list. What is
+    // read here is a sentence.
+    string StatusLabel(string s) =>
+        string.Equals(s, "AwaitingChange", StringComparison.OrdinalIgnoreCase)
+            ? "Awaiting schedule change"
+            : s;
 }
 
 @* Everything that says what is being looked at, held while the list moves. *@
 <div class="rq-sticky-head" data-sticky-head>
 
-    <h2 class="rq-title">Requests</h2>
+    @* The heading, and on its right the state of the queue. The heading had a line of
+       its own with nothing else on it, while the controls below wrapped onto a second
+       line for want of the room. *@
+    <div class="rq-titlerow">
+
+        <h2 class="rq-title">Requests</h2>
+
+        @* A queue somebody else is adding to. The list is replaced in place, so a search
+           being typed and a filter already chosen both survive it. *@
+        <div class="rq-toolbar-end">
+            <span id="rqPendingWrap">
+                @if (Model.PendingCount > 0)
+                {
+                    <span class="rq-waiting">@Model.PendingCount Pending</span>
+                }
+            </span>
+            <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 30 seconds"></span>
+            <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
+                    onclick="rqRefresh(true)" title="Load newly filed requests without losing your filters">
+                <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+                </svg></span> Refresh
+            </button>
+        </div>
+
+    </div>
 
     @* One row, the way the other boards lay their controls out: what is being looked at
        on the left, what narrows it on the right. *@
     <div class="rq-toolbar">
 
-        <div class="rq-tabs" role="group" aria-label="Filter by status">
-            @foreach (var tab in tabs)
-            {
-                var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
-                <a class="rq-tab @(on ? "rq-tab--on" : "")"
-                   href="@Url.Action("Index", new { status = tab })"
-                   aria-current="@(on ? "page" : null)">@tab</a>
-            }
+        @* The pills, and on a phone the reload beside them. A wrapper that lays nothing
+           out on a desk, where the pills are a toolbar item on their own and the reload
+           belongs with the rest of the controls at the far end of the row. *@
+        <div class="rq-tabrow">
+
+            <div class="rq-tabs" role="group" aria-label="Filter by status">
+                @foreach (var tab in tabs)
+                {
+                    var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
+                    <a class="rq-tab @(on ? "rq-tab--on" : "")"
+                       href="@Url.Action("Index", new { status = tab })"
+                       aria-current="@(on ? "page" : null)">@tab</a>
+                }
+            </div>
+
+            @* Drawn only on a phone. The desktop reload is the one in the row's far end,
+               which carries a word beside the mark and the time of the last check. *@
+            <button type="button" class="rq-btn rq-btn--outline rq-refresh rq-refresh--pills"
+                    onclick="rqRefresh(true)" title="Load newly filed requests"
+                    aria-label="Refresh">
+                <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+                </svg></span>
+            </button>
+
         </div>
 
         @* Narrowing within the status already chosen. Applied to the rows on the page
@@ -99,30 +155,14 @@
             </div>
         </div>
 
-        @* A queue somebody else is adding to. The list is replaced in place, so a search
-           being typed and a filter already chosen both survive it. *@
-        <div class="rq-toolbar-end">
-            <span id="rqPendingWrap">
-                @if (Model.PendingCount > 0)
-                {
-                    <span class="rq-waiting">@Model.PendingCount Pending</span>
-                }
-            </span>
-            <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 30 seconds"></span>
-            <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
-                    onclick="rqRefresh(true)" title="Load newly filed requests without losing your filters">
-                <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true">
-                    <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
-                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
-                </svg></span> Refresh
-            </button>
-        </div>
 
     </div>
 
 </div>
+
+@* The page could only speak from inside the decision dialog, so anything that went
+   wrong on a row had nowhere to be said. *@
+<div id="rqToast" class="rq-toast" role="status" hidden></div>
 
 <div class="rq-card">
     <div class="rq-card-header" data-sticky-card>
@@ -158,7 +198,7 @@
                     <th>Days</th>
                     <th>Reason</th>
                     <th>Filed</th>
-                    <th>Balance</th>
+                    <th>Balance after</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -179,6 +219,7 @@
                     foreach (var r in Model.Rows)
                     {
                         var pending = string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+                        var held = string.Equals(r.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase);
 
                         <tr data-request="@r.RequestId"
                             data-driver="@r.DriverId"
@@ -190,7 +231,12 @@
                                 <span class="rq-driver-id">@r.DriverId</span>
                             </td>
 
-                            <td data-label="Type"><span class="rq-badge @TypeClass(r.LeaveType)">@r.LeaveType</span></td>
+                            <td data-label="Type">
+                                <span class="rq-badge @TypeClass(r.LeaveType)">@r.LeaveType</span>
+                                @* Both dates as one phrase, for the phone. The columns
+                                   either side of this one are not drawn there. *@
+                                <span class="rq-span">@r.Span</span>
+                            </td>
 
                             <td data-label="Start"><span class="rq-date">@r.Start</span></td>
                             <td data-label="End"><span class="rq-date">@r.End</span></td>
@@ -209,13 +255,13 @@
 
                             <td data-label="Filed"><span class="rq-filed">@r.Filed</span></td>
 
-                            @* What has been granted so far, out of the allowance. Days on
-                               other requests still undecided are marked beside it, because
-                               approving this one without noticing them is how an allowance
-                               is overdrawn. *@
-                            <td data-label="Balance">
+                            @* What the allowance stands at once this request is counted.
+                               Days on other requests still undecided are marked beside it,
+                               because approving this one without noticing them is how an
+                               allowance is overdrawn. *@
+                            <td data-label="Balance after" class="rq-c-balance">
                                 <span class="rq-balance"
-                                      title="@r.LeaveType.ToLowerInvariant() days granted so far this year">@r.RemainingOfType of @r.EntitlementOfType</span>
+                                      title="@r.LeaveType.ToLowerInvariant() days left after this request">@r.BalanceAfter of @r.EntitlementOfType</span>
                                 @if (r.OtherPendingDays > 0)
                                 {
                                     <span class="rq-balance-pending"
@@ -227,7 +273,14 @@
                                it explains, rather than as a second line under the buttons. *@
                             <td data-label="Status">
                                 <span class="rq-badge @StatusClass(r.Status)"
-                                      title="@(pending ? null : r.DecisionNote)">@r.Status</span>
+                                      title="@(pending || held ? null : r.DecisionNote)">@StatusLabel(r.Status)</span>
+                                @* Approved leave with days pulled out of it still reads as
+                                   approved, because most of it is. This says the rest. *@
+                                @if (r.RevokedCount > 0)
+                                {
+                                    <span class="rq-revoked"
+                                          title="Days of this leave taken back by dispatch">@r.RevokedCount revoked</span>
+                                }
                             </td>
 
                             <td data-label="Actions">
@@ -238,6 +291,25 @@
                                                 onclick="rqDecide(@r.RequestId, 'Approved')">Approve</button>
                                         <button type="button" class="rq-btn rq-btn--reject"
                                                 onclick="rqDecide(@r.RequestId, 'Rejected')">Reject</button>
+                                    }
+                                    else if (held)
+                                    {
+                                        @* The approval was begun. This runs the check again
+                                           against the schedule as it now stands. *@
+                                        <button type="button" class="rq-btn rq-btn--approve"
+                                                onclick="rqDecide(@r.RequestId, 'Approved')">Continue approval</button>
+                                        <button type="button" class="rq-btn rq-btn--reject"
+                                                onclick="rqDecide(@r.RequestId, 'Rejected')">Reject</button>
+                                        <button type="button" class="rq-btn rq-btn--outline"
+                                                onclick="rqRelease(@r.RequestId)"
+                                                title="Put this back in the queue without deciding it">Back to queue</button>
+                                    }
+                                    @* Only where there is something left to take back.
+                                       Leave already in the past offers nothing. *@
+                                    @if (r.RevokableDays.Count > 0)
+                                    {
+                                        <button type="button" class="rq-btn rq-btn--reject"
+                                                onclick="rqRevoke(@r.RequestId)">Revoke</button>
                                     }
                                     <button type="button" class="rq-btn rq-btn--history"
                                             onclick="rqHistory(@r.RequestId)">History</button>
@@ -259,6 +331,31 @@
 
 @* What happened to each request, written out with the row it belongs to and shown when
    asked for. Rendered here rather than fetched, because it is already on the page. *@
+@* Taking back leave already granted. Its own dialog rather than the decision one,
+   because it asks a different question: not whether, but which days. *@
+<div id="rqRevokeModal" class="rq-overlay" style="display:none;" data-dialog-close="rqRevokeClose"
+     role="dialog" aria-modal="true" aria-labelledby="rqRevokeTitle">
+    <div class="rq-box">
+        <div class="rq-box-head">
+            <h3 class="rq-box-title" id="rqRevokeTitle">Revoke leave</h3>
+            <button type="button" class="rq-box-close" onclick="rqRevokeClose()" aria-label="Close">&times;</button>
+        </div>
+
+        <div id="rqRevokeBody"></div>
+
+        <p id="rqRevokeError" class="rq-box-error" style="display:none;"></p>
+
+        <label class="rq-box-label" for="rqRevokeNote">Reason</label>
+        <textarea id="rqRevokeNote" class="rq-box-note" rows="3" maxlength="300"
+                  placeholder="The driver is told this."></textarea>
+
+        <div class="rq-box-actions">
+            <button type="button" class="rq-btn rq-btn--outline" onclick="rqRevokeClose()">Cancel</button>
+            <button type="button" class="rq-btn rq-btn--reject" id="rqRevokeGo">Revoke</button>
+        </div>
+    </div>
+</div>
+
 <div id="rqHistoryModal" class="rq-overlay" style="display:none;" data-dialog-close="rqHistoryClose"
      role="dialog" aria-modal="true" aria-labelledby="rqHistoryTitle">
     <div class="rq-box">
@@ -273,6 +370,28 @@
 <div id="rqTemplates" hidden>
     @foreach (var r in Model.Rows)
     {
+        @if (r.RevokableDays.Count > 0)
+        {
+            <template id="rqRevokeDays-@r.RequestId">
+                <p class="rq-box-desc">@r.DriverName · @r.Span</p>
+                <p class="rq-revoke-hint">
+                    Leave every day ticked to take the whole leave back, or untick the days
+                    the driver keeps.
+                </p>
+                <ul class="rq-daylist">
+                    @foreach (var d in r.RevokableDays)
+                    {
+                        <li>
+                            <label class="rq-day">
+                                <input type="checkbox" value="@d.Iso" checked />
+                                <span>@d.Label</span>
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </template>
+        }
+
         <template id="rqHistory-@r.RequestId">
             <p class="rq-hist-who">@r.DriverName · @r.Span</p>
             <ol class="rq-hist">
@@ -304,6 +423,18 @@
         <h3 class="rq-box-title" id="rqDecideTitle">Approve leave</h3>
         <p class="rq-box-desc" id="rqDecideDesc"></p>
         <p id="rqDecideError" class="rq-box-error" style="display:none;"></p>
+
+        @* What is standing in the way, when an approval cannot complete. Each shift links
+           into the planner at the week it belongs to, so clearing it is one press away
+           rather than a date to remember and find. *@
+        <div id="rqBlocking" class="rq-blocking" style="display:none;">
+            <p class="rq-blocking-t">Clear these shifts before approving</p>
+            <ul class="rq-blocking-list" id="rqBlockingList"></ul>
+            <p class="rq-blocking-s">
+                This request is held until they are cleared. The driver still sees it as
+                pending.
+            </p>
+        </div>
 
         <label class="rq-box-label" for="rqDecideNote">Note</label>
         <textarea id="rqDecideNote" class="rq-box-note" rows="3" maxlength="300"></textarea>
@@ -434,6 +565,13 @@
             const spinners = document.querySelectorAll('.rq-refresh');
             if (manual) spinners.forEach(function (b) { b.classList.add('spinning'); });
 
+            // A queue this size comes back in a few tens of milliseconds, which is faster
+            // than the mark can be seen to turn. On a phone the turning mark is the whole
+            // of the answer, because the stamp saying when it last looked is not drawn
+            // there, so a press that finishes too quickly reads as a press that did
+            // nothing. Held long enough to be seen, and only when a person asked.
+            const startedAt = Date.now();
+
             try {
                 const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } });
                 const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
@@ -450,6 +588,10 @@
             } catch (e) {
                 console.warn('requests refresh failed', e);
             } finally {
+                const spun = Date.now() - startedAt;
+                if (manual && spun < 450)
+                    await new Promise(function (go) { setTimeout(go, 450 - spun); });
+
                 busy = false;
                 spinners.forEach(function (b) { b.classList.remove('spinning'); });
             }
@@ -461,6 +603,7 @@
             if (document.hidden) return;
             if (modal.style.display === 'flex') return;
             if (histModal.style.display === 'flex') return;
+            if (revModal.style.display === 'flex') return;
             rqRefresh(false);
         }, 30000);
 
@@ -481,6 +624,7 @@
             desc.textContent = span ? who + ' · ' + span : who;
             note.value = '';
             err.style.display = 'none';
+            document.getElementById('rqBlocking').style.display = 'none';
             go.textContent = decision === 'Approved' ? 'Approve' : 'Reject';
             go.classList.toggle('rq-btn--reject', decision === 'Rejected');
             // Reopening is a fresh attempt. Left disabled by a previous one, the dialog
@@ -502,6 +646,86 @@
 
         window.rqHistoryClose = function () { histModal.style.display = 'none'; };
 
+        // ---- Revoking ----------------------------------------------------------------
+
+        const revModal = document.getElementById('rqRevokeModal');
+        const revBody = document.getElementById('rqRevokeBody');
+        const revNote = document.getElementById('rqRevokeNote');
+        const revErr = document.getElementById('rqRevokeError');
+        const revGo = document.getElementById('rqRevokeGo');
+        let revoking = null;
+
+        window.rqRevoke = function (id) {
+            const tpl = document.getElementById('rqRevokeDays-' + id);
+            if (!tpl) return;
+
+            revoking = id;
+            revBody.replaceChildren(tpl.content.cloneNode(true));
+            revNote.value = '';
+            revErr.style.display = 'none';
+            revGo.disabled = false;
+            revModal.style.display = 'flex';
+            revNote.focus();
+        };
+
+        window.rqRevokeClose = function () {
+            revModal.style.display = 'none';
+            revoking = null;
+        };
+
+        revModal.addEventListener('click', function (e) {
+            if (e.target === revModal) rqRevokeClose();
+        });
+
+        revGo.addEventListener('click', async function () {
+            if (revoking === null) return;
+
+            const ticked = [...revBody.querySelectorAll('input[type=checkbox]:checked')]
+                .map(function (b) { return b.value; });
+
+            if (!ticked.length) {
+                revErr.textContent = 'Tick at least one day to revoke.';
+                revErr.style.display = 'block';
+                return;
+            }
+
+            if (!revNote.value.trim()) {
+                revErr.textContent = 'Say why this leave was revoked. The driver is told the reason.';
+                revErr.style.display = 'block';
+                return;
+            }
+
+            revGo.disabled = true;
+            try {
+                const res = await fetch('/Requests/Revoke', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken':
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: new URLSearchParams({
+                        requestId: revoking,
+                        dates: ticked.join(','),
+                        note: revNote.value.trim()
+                    })
+                });
+                if (!res.ok) {
+                    const said = (await res.text() || '').trim();
+                    throw new Error(
+                        said && said.length < 300 && said[0] !== '<'
+                            ? said
+                            : 'The server could not save that (' + res.status + '). Try again.');
+                }
+                rqRevokeClose();
+                await rqRefresh(true);
+            } catch (e) {
+                revErr.textContent = e.message || 'That could not be saved. Try again.';
+                revErr.style.display = 'block';
+                revGo.disabled = false;
+            }
+        });
+
         histModal.addEventListener('click', function (e) {
             if (e.target === histModal) rqHistoryClose();
         });
@@ -509,6 +733,56 @@
         window.rqCancel = function () {
             modal.style.display = 'none';
             pending = null;
+        };
+
+        let rqToastTimer = null;
+
+        window.rqToast = function (text, bad) {
+            const el = document.getElementById('rqToast');
+            el.textContent = text;
+            el.classList.toggle('rq-toast--bad', !!bad);
+            el.hidden = false;
+            clearTimeout(rqToastTimer);
+            rqToastTimer = setTimeout(function () { el.hidden = true; }, 4000);
+        };
+
+        function rqShowBlocking(message, shifts) {
+            err.textContent = message;
+            err.style.display = 'block';
+
+            const list = document.getElementById('rqBlockingList');
+            list.replaceChildren();
+
+            shifts.forEach(function (s) {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '/Schedule?start=' + encodeURIComponent(s.week);
+                a.textContent = s.date + ', ' + s.shift + ' shift';
+                li.appendChild(a);
+                list.appendChild(li);
+            });
+
+            document.getElementById('rqBlocking').style.display = 'block';
+        }
+
+        // Gives up on an approval without deciding the request, so it goes back to the
+        // queue instead of sitting held with nobody looking at it.
+        window.rqRelease = async function (id) {
+            try {
+                const res = await fetch('/Requests/ReleaseHold', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken':
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: new URLSearchParams({ requestId: id })
+                });
+                if (!res.ok) throw new Error();
+                await rqRefresh(true);
+            } catch (e) {
+                rqToast('That could not be put back. Try again.', true);
+            }
         };
 
         go.addEventListener('click', async function () {
@@ -538,6 +812,18 @@
                     },
                     body
                 });
+                // The approval cannot complete yet: the driver is still booked on days
+                // the leave covers. The request is held, and what is in the way is listed
+                // here rather than left for the dispatcher to go looking for.
+                if (res.status === 409) {
+                    const said = await res.json();
+                    rqShowBlocking(said.message, said.blocking || []);
+                    go.disabled = false;
+                    // The row now reads as held, so the list is brought up to date.
+                    await rqRefresh(true);
+                    return;
+                }
+
                 if (!res.ok) {
                     // A refusal answers with a sentence; a crash answers with a page of
                     // HTML, which is no use in a dialog box.
@@ -565,18 +851,6 @@
 }
 
 @section TopbarContent {
-    @* The reload, beside the filters, which is where a phone keeps the controls of the
-       page it is on. The copy in the title row is the desktop one and is not drawn here. *@
-    <button type="button" class="rs-filter-toggle rq-refresh rq-refresh--bar"
-            onclick="rqRefresh(true)" title="Load newly filed requests"
-            aria-label="Refresh">
-        <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             aria-hidden="true">
-            <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
-            <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
-        </svg></span>
-    </button>
     <button type="button" class="rs-filter-toggle" data-filter-toggle="rqFilters"
             aria-expanded="false" aria-controls="rqFilters">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"

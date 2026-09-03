@@ -48,14 +48,19 @@ namespace FleetWise.Controllers
             var names = usersTask.Result.Models
                 .ToDictionary(u => u.UserId, u => $"{u.FirstName} {u.LastName}");
 
+            // An approval part way through still belongs in the queue. It is work
+            // somebody has started and not finished, and the one place it must not be
+            // filed under is Approved, which it is not.
             var shown = string.Equals(wanted, "All", StringComparison.OrdinalIgnoreCase)
                 ? all
-                : all.Where(r => string.Equals(r.Status, wanted, StringComparison.OrdinalIgnoreCase)).ToList();
+                : string.Equals(wanted, "Pending", StringComparison.OrdinalIgnoreCase)
+                    ? all.Where(r => LeaveEntitlement.IsOpen(r.Status)).ToList()
+                    : all.Where(r => string.Equals(r.Status, wanted, StringComparison.OrdinalIgnoreCase)).ToList();
 
             var vm = new LeaveQueueViewModel
             {
                 Status = wanted,
-                PendingCount = all.Count(r => string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase)),
+                PendingCount = all.Count(r => LeaveEntitlement.IsOpen(r.Status)),
                 Rows = shown
                     // A queue is worked oldest first; history reads newest first. Filing
                     // order serves both better than the dates being asked for.
@@ -80,8 +85,49 @@ namespace FleetWise.Controllers
 
             if (found is null) return NotFound();
 
-            if (!string.Equals(found.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            if (!LeaveEntitlement.IsOpen(found.Status))
                 return BadRequest($"This request was already {found.Status.ToLowerInvariant()}.");
+
+            // Granting leave over days the driver is still booked to drive is what puts a
+            // bus on the road with nobody in it: approving does not touch the schedule, so
+            // the assignment survives the approval and the driver, told they are off, stays
+            // home.
+            //
+            // So an approval is two steps. The first reports what is in the way and holds
+            // the request. The dispatcher clears those shifts in the planner, where a
+            // driver on leave already highlights. The second runs this check again against
+            // the schedule as it stands by then, and only a clean answer grants the leave.
+            //
+            // The check at the second step is what carries the safety, not the holding.
+            // Nothing is believed from the first.
+            if (decision == "Approved")
+            {
+                var blocking = await BlockingTripsAsync(found);
+                if (blocking.Count > 0)
+                {
+                    if (!string.Equals(found.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await _supabase.From<LeaveRequest>()
+                            .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                            .Set(x => x.Status, "AwaitingChange")
+                            .Update();
+
+                        await _audit.WriteAsync("leave_approval_held",
+                            $"began approving {found.LeaveType.ToLowerInvariant()} leave for driver "
+                                + $"{found.UserId} covering {Span(found)}, held because they are still "
+                                + $"assigned on {blocking.Count} {(blocking.Count == 1 ? "shift" : "shifts")}",
+                            "requests", requestId.ToString());
+                    }
+
+                    return Conflict(new
+                    {
+                        message = blocking.Count == 1
+                            ? "This driver is still assigned to a shift during this leave."
+                            : $"This driver is still assigned to {blocking.Count} shifts during this leave.",
+                        blocking,
+                    });
+                }
+            }
 
             var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var deciderId = int.TryParse(idStr, out var i) ? i : (int?)null;
@@ -135,6 +181,211 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>
+        /// Takes back leave already granted, whole or a day at a time.
+        /// </summary>
+        /// <remarks>
+        /// The planner refuses to book a driver on approved leave, which without this
+        /// would leave no way to put them back on a day they are off for. A driver who
+        /// agrees to come in could not be assigned at all, and the only move left would be
+        /// editing the row by hand.
+        ///
+        /// The dispatcher's to make and not the driver's to refuse. The driver is told,
+        /// and the days return to their allowance on their own, because the balance is
+        /// derived from what is granted rather than counted into a column.
+        ///
+        /// Days already past are not offered: a day off that has been taken cannot be
+        /// handed back.
+        /// </remarks>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Revoke(long requestId, string? dates, string? note)
+        {
+            if (string.IsNullOrWhiteSpace(note))
+                return BadRequest("Say why this leave was revoked. The driver is told the reason.");
+
+            var found = (await _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Get()).Models.FirstOrDefault();
+
+            if (found is null) return NotFound();
+
+            if (!string.Equals(found.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                return BadRequest($"Only approved leave can be revoked. This request is {found.Status.ToLowerInvariant()}.");
+
+            // Every day the request still grants, which is what may be taken back.
+            var open = new List<DateTime>();
+            for (var d = found.StartDate.Date; d <= found.EndDate.Date; d = d.AddDays(1))
+                if (!LeaveEntitlement.IsRevokedOn(found, d) && d >= PhClock.OperationalDay.Date)
+                    open.Add(d);
+
+            if (open.Count == 0)
+                return BadRequest("There is nothing left to revoke on this request.");
+
+            // No days named means the whole of what is left.
+            var asked = (dates ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => DateTime.TryParse(s, out var d) ? d.Date : (DateTime?)null)
+                .Where(d => d.HasValue).Select(d => d!.Value)
+                .Distinct()
+                .ToList();
+
+            var taking = asked.Count == 0 ? open : asked.Where(open.Contains).ToList();
+
+            if (taking.Count == 0)
+                return BadRequest("Those days are not part of this leave, or have already been revoked.");
+
+            var whole = taking.Count == open.Count;
+            var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var by = int.TryParse(idStr, out var i) ? i : (int?)null;
+
+            var write = _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Set(x => x.RevokedAt, PhClock.Now)
+                .Set(x => x.RevokeNote, note.Trim());
+
+            if (by.HasValue) write = write.Set(x => x.RevokedBy, by.Value);
+
+            if (whole)
+            {
+                // Nothing of it stands, so the request itself is the thing revoked and the
+                // day list has nothing left to say.
+                write = write.Set(x => x.Status, "Revoked");
+            }
+            else
+            {
+                var kept = (found.RevokedDates ?? new List<string>())
+                    .Concat(taking.Select(d => d.ToString("yyyy-MM-dd")))
+                    .Distinct()
+                    .OrderBy(s => s)
+                    .ToList();
+
+                write = write.Set(x => x.RevokedDates, kept);
+            }
+
+            await write.Update();
+
+            try { await NotifyRevoked(found, taking, whole, note.Trim()); }
+            catch (Exception ex)
+            {
+                await _audit.WriteAsync("leave_notice_failed",
+                    $"could not notify driver {found.UserId} that leave on request {requestId} was revoked: {ex.Message}",
+                    "requests", requestId.ToString(), outcome: "failed");
+            }
+
+            await _audit.WriteAsync("leave_revoked",
+                $"revoked {(whole ? "all" : taking.Count.ToString())} "
+                    + $"{(taking.Count == 1 ? "day" : "days")} of {found.LeaveType.ToLowerInvariant()} leave for driver "
+                    + $"{found.UserId} covering {Span(found)}: "
+                    + string.Join(", ", taking.OrderBy(d => d).Select(d => d.ToString("MMM d")))
+                    + $". {note.Trim()}",
+                "requests", requestId.ToString());
+
+            return Ok();
+        }
+
+        /// <summary>Tells the driver which days were taken back, and why.</summary>
+        private async Task NotifyRevoked(
+            LeaveRequest r, List<DateTime> taken, bool whole, string note)
+        {
+            var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var which = whole
+                ? $"your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)}"
+                : $"{taken.Count} {(taken.Count == 1 ? "day" : "days")} of your "
+                  + $"{r.LeaveType.ToLowerInvariant()} leave: "
+                  + string.Join(", ", taken.OrderBy(d => d).Select(d => d.ToString("MMM d")));
+
+            await _supabase.From<Message>().Insert(new Message
+            {
+                SenderId = int.TryParse(senderStr, out var s) ? s : 0,
+                TargetAudience = "Driver",
+                TargetId = r.UserId.ToString(),
+                Subject = "Leave revoked",
+                Body = $"Dispatch has revoked {which}. Reason: {note} "
+                     + "Check your schedule for any shifts now assigned to you, "
+                     + "and contact your dispatcher if you have questions.",
+                Priority = "High",
+                CreatedAt = PhClock.NowForDb,
+            });
+        }
+
+        /// <summary>One shift standing in the way of an approval.</summary>
+        public sealed class BlockingShift
+        {
+            public string Date { get; set; } = "";
+            public string Shift { get; set; } = "";
+
+            /// <summary>The Monday of the week it sits in, for the link into the planner.</summary>
+            public string Week { get; set; } = "";
+        }
+
+        /// <summary>
+        /// Shifts the driver is still booked for inside the leave, which an approval must
+        /// clear first.
+        /// </summary>
+        /// <remarks>
+        /// Trips already running or already driven are left out. Those days happened, and
+        /// no decision made now can un-drive them; counting them would leave a request that
+        /// can never be approved.
+        /// </remarks>
+        private async Task<List<BlockingShift>> BlockingTripsAsync(LeaveRequest r)
+        {
+            var trips = await _supabase.From<Trip>()
+                .Filter("driver_id", Constants.Operator.Equals, r.UserId.ToString())
+                .Filter("date", Constants.Operator.GreaterThanOrEqual, r.StartDate.ToString("yyyy-MM-dd"))
+                .Filter("date", Constants.Operator.LessThanOrEqual, r.EndDate.ToString("yyyy-MM-dd"))
+                .Get();
+
+            return trips.Models
+                .Where(t => !string.Equals(t.TripStatus, "Active", StringComparison.OrdinalIgnoreCase)
+                         && !string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                // A day already handed back is not leave, so a shift on it blocks nothing.
+                .Where(t => !LeaveEntitlement.IsRevokedOn(r, t.Date))
+                .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
+                .Select(t => new BlockingShift
+                {
+                    Date = t.Date.ToString("MMM d"),
+                    Shift = t.ShiftType,
+                    Week = t.Date.AddDays(-(((int)t.Date.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd"),
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Puts a held approval back in the queue.
+        /// </summary>
+        /// <remarks>
+        /// An approval begun and abandoned would otherwise sit in AwaitingChange for ever,
+        /// with the driver reading Pending and nobody looking at it. This is the way out
+        /// that does not require deciding it.
+        /// </remarks>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReleaseHold(long requestId)
+        {
+            var found = (await _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Get()).Models.FirstOrDefault();
+
+            if (found is null) return NotFound();
+
+            if (!string.Equals(found.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("This request is not waiting on a schedule change.");
+
+            await _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Set(x => x.Status, "Pending")
+                .Update();
+
+            await _audit.WriteAsync("leave_approval_released",
+                $"put the approval of {found.LeaveType.ToLowerInvariant()} leave for driver "
+                    + $"{found.UserId} covering {Span(found)} back in the queue",
+                "requests", requestId.ToString());
+
+            return Ok();
+        }
+
+        /// <summary>
         /// Tells the driver what was decided, through the channel their app already reads.
         /// </summary>
         /// <remarks>
@@ -174,6 +425,28 @@ namespace FleetWise.Controllers
             var used = LeaveEntitlement.Used(mine, r.LeaveType, r.StartDate.Year);
             var entitlement = LeaveEntitlement.DaysPerYear.TryGetValue(r.LeaveType, out var e) ? e : 0;
 
+            // The allowance as this request left it. Days granted on the same allowance
+            // earlier in the year are taken off first, then this request itself when it
+            // is one that spends days.
+            //
+            // Ordered by the day the leave starts, with the request number to settle two
+            // that start together. Decisions are made in whatever order they are reached,
+            // so ordering by them would have a ledger that jumps about; ordering by the
+            // leave itself reads down the year.
+            var ledger = mine
+                .Where(x => string.Equals(x.LeaveType, r.LeaveType, StringComparison.OrdinalIgnoreCase)
+                            && x.StartDate.Year == r.StartDate.Year);
+
+            var granted = ledger
+                .Where(x => string.Equals(x.Status, "Approved", StringComparison.OrdinalIgnoreCase)
+                            && (x.StartDate.Date, x.RequestId).CompareTo((r.StartDate.Date, r.RequestId)) < 0)
+                .Sum(LeaveEntitlement.EffectiveDays);
+
+            // Refused and withdrawn requests spend nothing, so they leave the allowance
+            // where the request before them left it.
+            var spends = string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)
+                         || LeaveEntitlement.IsOpen(r.Status);
+
             return new LeaveRowViewModel
             {
                 RequestId = r.RequestId,
@@ -187,20 +460,45 @@ namespace FleetWise.Controllers
                 Reason = r.Reason,
                 Status = r.Status,
                 Filed = r.FiledAt.ToString("MMM d, yyyy h:mm tt"),
-                // What the driver has actually been granted, not what is left once this
-                // request is taken off. Deducting a request from the balance shown beside
-                // it makes the number move because of the very thing being decided, and
-                // reads as though the days are already spent.
-                //
-                // The driver's own screen does deduct pending days, and should: there the
-                // question is how much more can be asked for. Here it is what has been
-                // agreed so far, with anything else outstanding named separately.
-                RemainingOfType = Math.Max(0, entitlement - used.Approved),
+                BalanceAfter = Math.Max(0, entitlement - granted - (spends ? LeaveEntitlement.EffectiveDays(r) : 0)),
                 EntitlementOfType = entitlement,
                 OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),
                 DecisionNote = r.DecisionNote,
+                RevokedCount = r.RevokedDates?.Count ?? 0,
+                RevokableDays = RevokableDaysOf(r),
                 History = HistoryOf(r, names),
             };
+        }
+
+        /// <summary>
+        /// Days of an approved leave that could still be taken back.
+        /// </summary>
+        /// <remarks>
+        /// Empty for anything not approved, and for approved leave whose days have all
+        /// passed or already been revoked. The board draws Revoke only where this has
+        /// something in it, so a request with nothing to take back offers no button.
+        /// </remarks>
+        private static List<LeaveDayOption> RevokableDaysOf(LeaveRequest r)
+        {
+            if (!string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                return new List<LeaveDayOption>();
+
+            var days = new List<LeaveDayOption>();
+            var today = PhClock.OperationalDay.Date;
+
+            for (var d = r.StartDate.Date; d <= r.EndDate.Date; d = d.AddDays(1))
+            {
+                if (d < today) continue;
+                if (LeaveEntitlement.IsRevokedOn(r, d)) continue;
+
+                days.Add(new LeaveDayOption
+                {
+                    Iso = d.ToString("yyyy-MM-dd"),
+                    Label = d.ToString("ddd, MMM d"),
+                });
+            }
+
+            return days;
         }
 
         /// <summary>
@@ -234,6 +532,24 @@ namespace FleetWise.Controllers
                     // A withdrawal is the driver's own doing and carries no decider.
                     By = r.DecidedBy is null ? Who(r.UserId) : Who(r.DecidedBy),
                     Note = r.DecisionNote,
+                });
+            }
+
+            // After the decision, not instead of it. Leave that was granted and then taken
+            // back has two things that happened to it, and a history showing only the
+            // second reads as though it was never granted.
+            if (r.RevokedAt is DateTime revoked)
+            {
+                var which = r.RevokedDates is { Count: > 0 }
+                    ? $"{r.RevokedDates.Count} {(r.RevokedDates.Count == 1 ? "day" : "days")} taken back"
+                    : "All days taken back";
+
+                events.Add(new LeaveEventViewModel
+                {
+                    Action = "Revoked",
+                    When = revoked.ToString("MMM d, yyyy h:mm tt"),
+                    By = Who(r.RevokedBy),
+                    Note = string.IsNullOrWhiteSpace(r.RevokeNote) ? which : $"{which}. {r.RevokeNote}",
                 });
             }
 

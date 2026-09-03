@@ -67,12 +67,22 @@
                     <div class="lv-row">
                         <div class="lv-row-top">
                             <span class="lv-span">@Span(r)</span>
-                            <span class="lv-badge @r.Status.ToLowerInvariant()">@r.Status</span>
+                            <span class="lv-badge @Shown(r.Status).ToLowerInvariant()">@Shown(r.Status)</span>
                         </div>
                         <p class="lv-meta">@r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
+
+                        @* Said only while the approval is part way through. The badge stays
+                           Pending, because nothing has been granted and nothing refused, and
+                           a status that moved and could move back would read as a decision.
+                           This says what is happening without promising an outcome. *@
+                        @if (string.Equals(r.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <p class="lv-checking">Being checked against your schedule.</p>
+                        }
+
                         <div class="lv-row-actions">
                             <button class="lv-hist-btn" @onclick="@(() => openHistory = r.RequestId)">History</button>
-                            @if (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                            @if (LeaveEntitlement.IsOpen(r.Status))
                             {
                                 <button class="lv-cancel" @onclick="@(() => Cancel(r.RequestId))">Cancel</button>
                             }
@@ -100,7 +110,7 @@
             <div class="lv-modal-body">
                 <div class="lv-det-head">
                     <span class="lv-det-span">@Span(h)</span>
-                    <span class="lv-badge @h.Status.ToLowerInvariant()">@h.Status</span>
+                    <span class="lv-badge @Shown(h.Status).ToLowerInvariant()">@Shown(h.Status)</span>
                 </div>
                 <p class="lv-det-meta">
                     @h.LeaveType · @LeaveEntitlement.Days(h) @(LeaveEntitlement.Days(h) == 1 ? "day" : "days")
@@ -122,7 +132,7 @@
                         </span>
                     </li>
                     @if (h.DecidedAt is DateTime decided
-                         && !string.Equals(h.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                         && !LeaveEntitlement.IsOpen(h.Status))
                     {
                         <li class="lv-hist-item">
                             <span class="lv-hist-dot @h.Status.ToLowerInvariant()"></span>
@@ -138,7 +148,7 @@
                             </span>
                         </li>
                     }
-                    @if (string.Equals(h.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    @if (LeaveEntitlement.IsOpen(h.Status))
                     {
                         <li class="lv-hist-item">
                             <span class="lv-hist-dot"></span>
@@ -216,6 +226,18 @@
 }
 
 @code {
+    /// <summary>The word for a status, as the driver should read it.</summary>
+    /// <remarks>
+    /// A request held while the dispatcher clears the schedule is stored as
+    /// AwaitingChange, and shown here as Pending. Nothing has been granted and nothing
+    /// has been refused; from the driver's side the request is where it was, and a word
+    /// that looks like an outcome would read as one.
+    /// </remarks>
+    private static string Shown(string status) =>
+        string.Equals(status, "AwaitingChange", StringComparison.OrdinalIgnoreCase)
+            ? "Pending"
+            : status;
+
     private bool loading = true;
     private List<LeaveRequest> requests = new();
 
@@ -299,7 +321,7 @@
         // Days already asked for, of any type. Filing over them is not a second request,
         // it is the same days twice, and the balance is spent twice with it.
         var clash = requests.FirstOrDefault(r =>
-            (string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase)
+            (LeaveEntitlement.IsOpen(r.Status)
              || string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase))
             && r.StartDate.Date <= end.Date
             && r.EndDate.Date >= start.Date);

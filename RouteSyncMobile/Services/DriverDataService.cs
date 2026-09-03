@@ -495,13 +495,81 @@ public class DriverDataService
         // decision already made. It also means the write can match nothing, which the
         // server reports as a success, so the rows changed are counted and nought is
         // treated as the refusal it is.
+        //
+        // AwaitingChange counts as open. It is an approval begun and not finished, so
+        // nothing has been granted yet and the request is still the driver's to withdraw.
+        // The row policy allows the same two, and a filter narrower than the policy would
+        // refuse a withdrawal the database would have accepted.
         var changed = await PatchCountingAsync(
-            $"leave_requests?request_id=eq.{requestId}&status=eq.Pending",
+            $"leave_requests?request_id=eq.{requestId}&status=in.(Pending,AwaitingChange)",
             new { status = "Cancelled", decided_at = PhTime.Now });
 
         if (changed == 0)
             throw new InvalidOperationException(
                 "That request could not be cancelled. It may already have been decided.");
+    }
+
+    /// <summary>Every trip assigned to a driver between two days, whatever its status.</summary>
+    /// <remarks>
+    /// The calendar draws a month at a time, so it asks for a month at a time rather than
+    /// a request per day. Completed and Active trips are included: a driver looking back
+    /// over the month wants the days they worked as much as the days they are booked for.
+    /// </remarks>
+    public async Task<List<Trip>> GetTripsBetweenAsync(int userId, DateTime from, DateTime to)
+    {
+        var r = await _supabase.From<Trip>()
+            .Filter("driver_id", Operator.Equals, userId.ToString())
+            .Filter("date", Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-dd"))
+            .Filter("date", Operator.LessThanOrEqual, to.ToString("yyyy-MM-dd"))
+            .Order("date", Ordering.Ascending)
+            .Get();
+        return r.Models;
+    }
+
+    /// <summary>Approved leave overlapping a span of days.</summary>
+    /// <remarks>
+    /// Overlapping, not contained: a leave that starts in August and ends in September
+    /// covers days in both, and asking for requests that begin inside the month would
+    /// miss it.
+    /// </remarks>
+    public async Task<List<LeaveRequest>> GetApprovedLeaveBetweenAsync(int userId, DateTime from, DateTime to)
+    {
+        var r = await _supabase.From<LeaveRequest>()
+            .Filter("user_id", Operator.Equals, userId.ToString())
+            .Filter("status", Operator.Equals, "Approved")
+            .Filter("start_date", Operator.LessThanOrEqual, to.ToString("yyyy-MM-dd"))
+            .Filter("end_date", Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-dd"))
+            .Get();
+        return r.Models;
+    }
+
+    /// <summary>The Mondays of the weeks the planner has saved, within a span.</summary>
+    /// <remarks>
+    /// What separates a rest day from a day nobody has scheduled yet. Returned as the set
+    /// of week starts rather than a set of days, because the planner saves a week at a
+    /// time and every day in a saved week is answered.
+    /// </remarks>
+    public async Task<HashSet<DateTime>> GetScheduledWeeksAsync(DateTime from, DateTime to)
+    {
+        var r = await _supabase.From<ScheduleWeek>()
+            .Filter("week_start", Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-dd"))
+            .Filter("week_start", Operator.LessThanOrEqual, to.ToString("yyyy-MM-dd"))
+            .Get();
+        return r.Models.Select(w => w.WeekStart.Date).ToHashSet();
+    }
+
+    /// <summary>The latest week the planner has saved, or null if it has saved none.</summary>
+    /// <remarks>
+    /// Bounds how far forward the calendar will page. Without it a driver walks into empty
+    /// months for ever and reads a blank grid as a month off.
+    /// </remarks>
+    public async Task<DateTime?> GetLastScheduledWeekAsync()
+    {
+        var r = await _supabase.From<ScheduleWeek>()
+            .Order("week_start", Ordering.Descending)
+            .Limit(1)
+            .Get();
+        return r.Models.FirstOrDefault()?.WeekStart.Date;
     }
 
     /// <summary>Approved leave covering a given day, or null when there is none.</summary>
@@ -518,6 +586,6 @@ public class DriverDataService
             .Filter("start_date", Operator.LessThanOrEqual, iso)
             .Filter("end_date", Operator.GreaterThanOrEqual, iso)
             .Get();
-        return r.Models.FirstOrDefault();
+        return r.Models.FirstOrDefault(l => LeaveEntitlement.CoversDay(l, day));
     }
 }

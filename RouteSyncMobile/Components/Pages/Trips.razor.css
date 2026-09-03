@@ -1,4 +1,4 @@
-.trips {
+﻿.trips {
     padding: 52px 22px 28px;
 }
 
@@ -169,3 +169,26 @@
     font-size: 13px;
     color: #8a93a2;
 }
+
+/* The title, and the way through to what has not been driven yet. */
+.trips-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trips-cal {
+    flex: 0 0 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    background: #fff;
+    color: #1b2a56;
+    cursor: pointer;
+}
+
+    .trips-cal svg { width: 19px; height: 19px; }

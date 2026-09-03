@@ -12,15 +12,36 @@
 
     /* --- Page head ------------------------------------------------------- */
 
-    /* Alone on its line and spaced the way every other board spaces its heading. */
+    /* The heading, and the state of the queue on the far side of it. The heading had a
+       line to itself with nothing else on it while the controls below wrapped onto a
+       second line, which spent two lines on what fits in one. */
+    .rq-titlerow {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    /* Spaced the way every other board spaces its heading. The face, the capitals and
+       the weight come from the shared rule in site.css, which is what keeps every
+       board's heading the same. */
     .rq-title {
         font-size: 1.6rem;
         font-weight: 700;
         color: var(--rq-text);
         font-family: 'Segoe UI', sans-serif;
-        margin: 0 0 20px;
-        line-height: 1.1;
+        margin: 0;
     }
+
+    /* The pills sit in the toolbar exactly as they did before they were wrapped. */
+    .rq-tabrow { display: contents; }
+
+    /* Both dates as one phrase. The board has a column for each date and one for the
+       count between them, so on a desk the phrase would only repeat them. */
+    .rq-span { display: none; }
+
+    /* The reload for a phone. The desktop one lives at the far end of the toolbar. */
+    .rq-refresh--pills { display: none; }
 
     .rq-toolbar {
         display: flex;
@@ -67,7 +88,10 @@
 
     .rq-refresh-ico svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-    .rq-btn--icon.spinning .rq-refresh-ico { animation: rqSpin .7s linear infinite; }
+    /* Keyed to the reload itself rather than to the icon-button shape it happens to
+       take on a desk. The one on a phone is shaped as a square of its own and was
+       turning nothing, which left a press with no answer at all. */
+    .rq-refresh.spinning .rq-refresh-ico { animation: rqSpin .7s linear infinite; }
 
     @keyframes rqSpin { to { transform: rotate(360deg); } }
 
@@ -305,6 +329,116 @@
     .rq-badge--approved  { background: #E8F8EE; color: #27AE60; }
     .rq-badge--rejected  { background: #FDECEC; color: #E53E3E; }
     .rq-badge--cancelled { background: #E4E7EC; color: #4B5563; }
+
+    /* An approval begun and not finished. Neither the amber of a request nobody has
+       looked at nor the green of one that has been granted, because it is neither. */
+    .rq-badge--held { background: #EAF0FB; color: #3A5BA0; }
+
+    /* Days of an approved leave that dispatch has taken back. The badge beside it still
+       reads Approved, because the rest of the leave still stands. */
+    .rq-revoked {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #FDECEC;
+        color: #C0392B;
+        font-size: .7rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    /* The days on offer in the revoke dialog. Ticked is taken back, so the whole leave
+       goes by leaving them alone. */
+    .rq-revoke-hint {
+        margin: 8px 0 10px;
+        font-size: .8rem;
+        color: var(--rq-muted);
+        line-height: 1.5;
+    }
+
+    .rq-daylist {
+        list-style: none;
+        margin: 0 0 4px;
+        padding: 0;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .rq-day {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 7px 10px;
+        border: 1px solid var(--rq-border);
+        border-radius: 9px;
+        margin-bottom: 6px;
+        font-size: .85rem;
+        color: var(--rq-text);
+        cursor: pointer;
+    }
+
+        .rq-day:hover { background: #F8FAFB; }
+
+        .rq-day input { width: 16px; height: 16px; accent-color: #C0392B; }
+
+    /* What is standing in the way of an approval, inside the decision dialog. Each
+       entry links into the planner at the week that shift belongs to. */
+    .rq-blocking {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border: 1px solid #E6D6A8;
+        border-radius: 8px;
+        background: #FEF9E7;
+    }
+
+    .rq-blocking-t {
+        margin: 0 0 6px;
+        font-size: .8rem;
+        font-weight: 700;
+        color: #7a6412;
+    }
+
+    .rq-blocking-list {
+        margin: 0;
+        padding-left: 18px;
+        font-size: .8rem;
+        color: #7a6412;
+    }
+
+        .rq-blocking-list li { margin-bottom: 2px; }
+
+        .rq-blocking-list a {
+            color: #7a6412;
+            text-decoration: underline;
+        }
+
+    .rq-blocking-s {
+        margin: 8px 0 0;
+        font-size: .75rem;
+        color: #9a8434;
+    }
+
+    /* The page had no way to say anything from outside a dialog, so a row action that
+       failed failed silently. */
+    .rq-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        z-index: 200;
+        max-width: min(520px, calc(100vw - 32px));
+        padding: 11px 18px;
+        border-radius: 10px;
+        background: #1F2937;
+        color: #fff;
+        font-size: .85rem;
+        box-shadow: 0 8px 24px rgba(13, 28, 40, .22);
+    }
+
+        .rq-toast[hidden] { display: none; }
+
+        .rq-toast--bad { background: #C0392B; }
 
     /* --- Buttons --------------------------------------------------------- */
 
@@ -550,11 +684,36 @@
     }
 }
 
+/* Wide enough for the board, not wide enough for the table.
+
+   The shared list rule leaves this box's overflow visible so the column headings can
+   stick to the top of the window, which they cannot do from inside a box that scrolls.
+   That holds while the table fits. Below this the table is wider than the window, and
+   with nothing to contain it the whole page slides sideways: the sidebar, the heading
+   and the toolbar all travel with it and the board is read through a moving window.
+   The table scrolls inside its own card instead, and gives up sticky headings for the
+   width where the alternative is a page that will not sit still. */
+@media (min-width: 600px) and (max-width: 1199px) {
+
+    .rq-table-wrap.rs-list-wrap {
+        overflow-x: auto;
+    }
+
+    /* And the headings stop sticking, because they no longer can. A box that scrolls on
+       one axis is the nearest scrolling ancestor of everything in it, so a heading told
+       to stop below the app bar stops that far down inside the card and comes to rest on
+       top of the first request instead. */
+    .rq-table.rs-list thead th {
+        position: static;
+    }
+}
+
 @media (max-width: 599px) {
 
     /* The heading is in the app bar, so a second one on the page said the same word
-       twice. The stamp and the reload go with it: the reload is in the app bar too, and
-       what would be left of the row is a screen width of nothing. */
+       twice. The stamp and the reload go with it: the reload is beside the status pills
+       here, and what would be left of the row is a screen width of nothing. */
+    .rq-titlerow,
     .rq-title,
     .rq-toolbar-end { display: none; }
 
@@ -589,19 +748,38 @@
 
     .rq-waiting { padding: 4px 10px; font-size: .72rem; }
 
-    /* The reload, in the app bar beside the filters, drawn as the square the mark
-       needs rather than the pill a word needs. */
-    .rq-refresh--bar {
-        justify-content: center;
-        width: 40px;
-        padding: 0;
-        color: #2E7D72;
-        border-color: #CDE9E4;
+    /* The pills and the reload share a line. The reload is wanted next to the thing it
+       reloads, and the app bar it used to sit in is read as belonging to the whole
+       dashboard rather than to this board. */
+    .rq-tabrow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
     }
 
-        .rq-refresh--bar + .rs-filter-toggle { margin-left: 6px; }
+    /* The same square every other board ends its line with: 44 across, the teal border
+       and mark, the corner the buttons on this page use. Held out of the scroll so it
+       stays reachable however many statuses there are. */
+    .rq-refresh--pills {
+        display: inline-flex;
+        flex: 0 0 44px;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 1px solid #CDE9E4;
+        border-radius: 10px;
+        background: var(--rq-white);
+        color: #2E7D72;
+    }
 
-        .rq-refresh--bar .rq-refresh-ico svg { width: 18px; height: 18px; }
+        .rq-refresh--pills:active { background: #EAF7F5; }
+
+        .rq-refresh--pills .rq-refresh-ico { display: flex; align-items: center; }
+
+        .rq-refresh--pills .rq-refresh-ico svg { width: 18px; height: 18px; }
 
     /* The shared sheet gives each field a row of its own, label on the left and the
        control on the right. This page had asked for a column, which survived into the
@@ -624,8 +802,14 @@
     #rqSearch { width: 100%; }
 
     .rq-tabs {
-        gap: 6px;
-        margin-bottom: 12px;
+        gap: 5px;
+        /* Carried by the line the pills share with the reload. */
+        margin-bottom: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        /* So the last pill stops short of the reload instead of ending against it
+           when the row is scrolled to its end. */
+        padding-right: 2px;
         /* Four statuses do not fit across a handset, and wrapping them puts one on a
            line of its own. They scroll instead, the way the other boards do. */
         flex-wrap: nowrap;
@@ -636,39 +820,48 @@
 
         .rq-tabs::-webkit-scrollbar { display: none; }
 
+    /* Trimmed so all four statuses and the reload fit across a narrow handset. Wider
+       than this the last of them was cut in half by the edge of its own scroller,
+       which reads as the reload sitting on top of it. */
     .rq-tab {
         flex: 0 0 auto;
-        padding: 6px 13px;
+        padding: 6px 10px;
         font-size: .78rem;
     }
 
-    /* One request, laid out rather than stacked.
+    /* One request, as a short handful of lines rather than a table squeezed onto a
+       phone.
 
-       The shared card treatment prints every column as its own labelled row, which is
-       right for a table of three or four and wrong for one of ten: a single request
-       filled the screen and two could not be compared without scrolling. The same cells
-       are placed into a grid instead, paired across two columns, and the labels are kept
-       only where the value cannot be read without one. */
+       The board has ten columns. Printed as ten labelled rows a single request filled
+       the screen; paired across two columns it fitted, but every line still read as a
+       column heading beside its value, which is a table in a card and no easier to
+       take in. What is kept here is the shape of a sentence: who, and where the
+       request stands; what kind of leave and when; why; the small print; then what can
+       be done about it.
+
+       Start, End and Days are not drawn at all. Three columns there say what one
+       phrase says, and the phrase is already written for the notifications. */
     .rq-table.rs-cards tbody tr[data-request] {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         grid-template-areas:
             "driver  status"
-            "type    days"
-            "start   end"
+            "type    type"
             "reason  reason"
-            "filed   balance"
+            "balance balance"
             "actions actions";
         align-items: center;
         gap: 4px 10px;
-        padding: 12px 14px;
+        padding: 11px 13px;
     }
 
         .rq-table.rs-cards tbody tr[data-request] > td {
+            /* So a cell shrinks with its column instead of spilling into the next. */
+            min-width: 0;
             padding: 2px 0;
-            /* The table draws a rule under every cell and the shared card treatment draws
-               one over each cell after the first. Both are for a list of rows, and inside
-               a card they printed a line under every value. */
+            /* The table draws a rule under every cell and the shared card treatment
+               draws one over each cell after the first. Both are for a list of rows,
+               and inside a card they printed a line under every value. */
             border-top: none;
             border-bottom: none;
         }
@@ -676,15 +869,24 @@
         .rq-table.rs-cards td[data-label="Driver"] { grid-area: driver; }
         .rq-table.rs-cards td[data-label="Status"] { grid-area: status; }
         .rq-table.rs-cards td[data-label="Type"] { grid-area: type; }
-        .rq-table.rs-cards td[data-label="Days"] { grid-area: days; }
-        .rq-table.rs-cards td[data-label="Start"] { grid-area: start; }
-        .rq-table.rs-cards td[data-label="End"] { grid-area: end; }
         .rq-table.rs-cards td[data-label="Reason"] { grid-area: reason; }
-        .rq-table.rs-cards td[data-label="Filed"] { grid-area: filed; }
-        .rq-table.rs-cards td[data-label="Balance"] { grid-area: balance; }
+        .rq-table.rs-cards td.rq-c-balance { grid-area: balance; }
         .rq-table.rs-cards td[data-label="Actions"] { grid-area: actions; }
 
-        /* Left of each pair reads as a label already, or needs no name at all. */
+        /* Said by the phrase on the type line. */
+        .rq-table.rs-cards td[data-label="Start"],
+        .rq-table.rs-cards td[data-label="End"],
+        .rq-table.rs-cards td[data-label="Days"] {
+            display: none;
+        }
+
+        /* When a request was filed is a line on its history, which every card can open.
+           On the card itself it is the least useful thing there: it says nothing about
+           whether to grant the leave, and on a settled request nothing at all. */
+        .rq-table.rs-cards td[data-label="Filed"] { display: none; }
+
+        /* Only the small print is named. Everything above it says what it is by the
+           way it is written: a name, a badge, a date, a sentence. */
         .rq-table.rs-cards td[data-label="Driver"]::before,
         .rq-table.rs-cards td[data-label="Status"]::before,
         .rq-table.rs-cards td[data-label="Type"]::before,
@@ -693,41 +895,105 @@
             content: none;
         }
 
-        /* The name leads, and the identifier sits beside it rather than under it. */
+        /* The name leads, and the identifier sits beside it rather than under it. A
+           long name is cut short rather than broken over two lines, which pushed the
+           badge beside it out of line and left every card a different height. */
         .rq-table.rs-cards td[data-label="Driver"] {
             justify-content: flex-start;
             gap: 8px;
             text-align: left;
         }
 
-            .rq-table.rs-cards td[data-label="Driver"] .rq-driver { display: inline; }
-            .rq-table.rs-cards td[data-label="Driver"] .rq-driver-id { display: inline; }
+            .rq-table.rs-cards td[data-label="Driver"] .rq-driver {
+                display: inline;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
 
-        .rq-table.rs-cards td[data-label="Type"],
-        .rq-table.rs-cards td[data-label="Reason"] {
+            .rq-table.rs-cards td[data-label="Driver"] .rq-driver-id {
+                display: inline;
+                flex: 0 0 auto;
+            }
+
+        .rq-table.rs-cards td[data-label="Status"] { justify-content: flex-end; }
+
+        /* The kind of leave and the days it covers, on one line, reading as a phrase. */
+        .rq-table.rs-cards td[data-label="Type"] {
             justify-content: flex-start;
+            gap: 10px;
             text-align: left;
         }
 
-        .rq-table.rs-cards td[data-label="Reason"] { font-size: .82rem; }
+            .rq-table.rs-cards .rq-span {
+                display: inline;
+                color: var(--rq-text);
+                font-size: .82rem;
+                font-weight: 600;
+            }
 
-        .rq-table.rs-cards td[data-label="Reason"] .rq-reason { max-width: none; }
+        .rq-table.rs-cards td[data-label="Reason"] {
+            justify-content: flex-start;
+            text-align: left;
+            font-size: .82rem;
+        }
 
-        /* A request with nothing said about it leaves the row out rather than printing
-           a line to say so. */
+            .rq-table.rs-cards td[data-label="Reason"] .rq-reason { max-width: none; }
+
+        /* A request with nothing said about it leaves the line out rather than printing
+           one to say so. */
         .rq-table.rs-cards td[data-label="Reason"]:has(.rq-blank) { display: none; }
 
-        .rq-table.rs-cards td[data-label="Filed"],
-        .rq-table.rs-cards td[data-label="Balance"],
-        .rq-table.rs-cards td[data-label="Start"],
-        .rq-table.rs-cards td[data-label="End"],
-        .rq-table.rs-cards td[data-label="Days"] {
-            font-size: .78rem;
+        /* What is left of the allowance. Named, because a bare pair of numbers does not
+           say what it is, and set quietly so it does not compete with the lines above
+           that carry the decision. */
+        .rq-table.rs-cards td.rq-c-balance {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 8px;
+            row-gap: 2px;
+            text-align: left;
+            font-size: .74rem;
         }
 
-        .rq-table.rs-cards td[data-label="Actions"] {
-            margin-top: 6px;
+            .rq-table.rs-cards td.rq-c-balance::before {
+                font-size: .74rem;
+                font-weight: 500;
+            }
+
+        .rq-table.rs-cards td[data-label="Actions"] { margin-top: 6px; }
+
+        /* A request already decided has one thing left to offer, and was giving a band
+           across the card to it. It goes on the end of the allowance line, which is the
+           only line under it that has room to spare. */
+        .rq-table.rs-cards tbody tr[data-request]:not(:has(.rq-btn--approve)) {
+            grid-template-areas:
+                "driver  status"
+                "type    type"
+                "reason  reason"
+                "balance actions";
         }
+
+        .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) {
+            margin-top: 0;
+        }
+
+            .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) .rq-actions {
+                justify-content: flex-end;
+                /* The shared card treatment holds an actions cell open to the height of
+                   a thumb target, and a row of buttons stretches to fill it. One quiet
+                   button does not need the room, and sets its own height. */
+                min-height: 0;
+                align-items: center;
+            }
+
+            .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) .rq-btn {
+                flex: 0 0 auto;
+                min-height: 32px;
+                padding: 4px 14px;
+                font-size: .78rem;
+            }
 
     /* Approve and Reject take the width between them rather than sitting in a corner
        of a card. */
@@ -736,10 +1002,20 @@
         gap: 8px;
     }
 
+        /* Approve and Reject share what is left after History, which is read rarely
+           and sized for its own word. Given an equal third each, the three of them
+           wrapped onto a second line on a narrow handset and the card grew a band to
+           hold a button that had been on the line above a moment earlier. */
         .rq-actions .rq-btn {
-            flex: 1;
+            flex: 1 1 0;
+            min-width: 0;
             min-height: 44px;
         }
+
+            .rq-actions .rq-btn--history {
+                flex: 0 0 auto;
+                padding-inline: 14px;
+            }
 
     /* A dialog on a phone rises from the bottom edge, and measures against the height
        actually on screen rather than a viewport that does not shrink when the browser
