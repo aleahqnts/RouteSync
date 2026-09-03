@@ -334,6 +334,51 @@
        looked at nor the green of one that has been granted, because it is neither. */
     .rq-badge--held { background: #EAF0FB; color: #3A5BA0; }
 
+    /* Something the driver wrote, shown as theirs. */
+    .rq-quote {
+        margin: 10px 0;
+        padding: 10px 12px;
+        border-left: 3px solid #CDE9E4;
+        background: #F7FAFA;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .rq-quote-l {
+        margin: 0 0 4px;
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #7C8B99;
+    }
+
+    .rq-quote-t {
+        margin: 0;
+        font-size: .85rem;
+        color: var(--rq-text);
+        line-height: 1.5;
+    }
+
+    .rq-quote-w {
+        margin: 5px 0 0;
+        font-size: .72rem;
+        color: var(--rq-muted);
+    }
+
+        .rq-quote-w:empty { display: none; }
+
+    /* A consequence worth naming, said in one line. The block used for a list of
+       blocking shifts was three lines deep for a single sentence. */
+    .rq-warn {
+        margin: 10px 0 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #FEF9E7;
+        color: #7a6412;
+        font-size: .78rem;
+        line-height: 1.45;
+    }
+
     /* Granted leave the driver has asked to hand back. Beside an Approved badge, because
        it is still approved until somebody answers. */
     .rq-asked {

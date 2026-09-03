@@ -32,6 +32,10 @@ namespace FleetWise.Controllers
             _audit = audit;
         }
 
+        /// <summary>A driver's asking that nobody has answered yet.</summary>
+        private static bool IsAskOutstanding(LeaveRequest r) =>
+            r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null;
+
         public async Task<IActionResult> Index(string? status)
         {
             // Pending first by default, because the queue is what this page is opened for.
@@ -58,14 +62,13 @@ namespace FleetWise.Controllers
             var shown = string.Equals(wanted, "All", StringComparison.OrdinalIgnoreCase)
                 ? all
                 : string.Equals(wanted, "Pending", StringComparison.OrdinalIgnoreCase)
-                    ? all.Where(r => LeaveEntitlement.IsOpen(r.Status) || r.WithdrawRequestedAt is not null).ToList()
+                    ? all.Where(r => LeaveEntitlement.IsOpen(r.Status) || IsAskOutstanding(r)).ToList()
                     : all.Where(r => string.Equals(r.Status, wanted, StringComparison.OrdinalIgnoreCase)).ToList();
 
             var vm = new LeaveQueueViewModel
             {
                 Status = wanted,
-                PendingCount = all.Count(r => LeaveEntitlement.IsOpen(r.Status)
-                                              || r.WithdrawRequestedAt is not null),
+                PendingCount = all.Count(r => LeaveEntitlement.IsOpen(r.Status) || IsAskOutstanding(r)),
                 Rows = shown
                     // A queue is worked oldest first; history reads newest first. Filing
                     // order serves both better than the dates being asked for.
@@ -306,9 +309,7 @@ namespace FleetWise.Controllers
                 TargetAudience = "Driver",
                 TargetId = r.UserId.ToString(),
                 Subject = "Leave revoked",
-                Body = $"Dispatch has revoked {which}. Reason: {note} "
-                     + "Check your schedule for any shifts now assigned to you, "
-                     + "and contact your dispatcher if you have questions.",
+                Body = WithNote($"Dispatch has revoked {which}. Check your schedule.", note),
                 Priority = "High",
                 CreatedAt = PhClock.NowForDb,
             });
@@ -338,8 +339,8 @@ namespace FleetWise.Controllers
 
             if (found is null) return NotFound();
 
-            if (found.WithdrawRequestedAt is null)
-                return BadRequest("No cancellation has been asked for on this leave.");
+            if (!IsAskOutstanding(found))
+                return BadRequest("No cancellation is waiting to be answered on this leave.");
 
             if (!string.Equals(found.Status, "Approved", StringComparison.OrdinalIgnoreCase))
                 return BadRequest($"This request is {found.Status.ToLowerInvariant()}, so there is nothing to cancel.");
@@ -349,9 +350,10 @@ namespace FleetWise.Controllers
 
             var write = _supabase.From<LeaveRequest>()
                 .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
-                // Cleared either way: the question has been answered and the mark is what
-                // put it in the queue.
-                .Set(x => x.WithdrawRequestedAt, null);
+                // Stamped, not cleared. Clearing the asking took the request out of the
+                // queue and out of its own history together, so neither the driver nor
+                // anybody else could see it had been asked about at all.
+                .Set(x => x.WithdrawAnsweredAt, PhClock.Now);
 
             if (accept)
             {
@@ -398,10 +400,9 @@ namespace FleetWise.Controllers
             var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
             var body = accept
-                ? $"Your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} has been cancelled at your "
-                  + "request. Open your calendar to see any shifts you have been given for those days."
+                ? $"Your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} is cancelled. Check your schedule."
                 : $"Your request to cancel your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} was "
-                  + "declined. The leave stands and you are not scheduled to drive.";
+                  + "declined. The leave stands.";
 
             await _supabase.From<Message>().Insert(new Message
             {
@@ -409,7 +410,7 @@ namespace FleetWise.Controllers
                 TargetAudience = "Driver",
                 TargetId = r.UserId.ToString(),
                 Subject = accept ? "Leave cancelled" : "Leave cancellation declined",
-                Body = string.IsNullOrWhiteSpace(note) ? body : $"{body} {note.Trim()}",
+                Body = WithNote(body, note),
                 Priority = "Normal",
                 CreatedAt = PhClock.NowForDb,
             });
@@ -492,6 +493,18 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>
+        /// A notice, and whatever the dispatcher wrote, kept apart.
+        /// </summary>
+        /// <remarks>
+        /// Run together into one paragraph there was no telling where the system stopped
+        /// speaking and a person started, so a note about the evening shift read as part
+        /// of the decision itself. The blank line is what separates them, and the driver's
+        /// app renders it.
+        /// </remarks>
+        private static string WithNote(string body, string? note) =>
+            string.IsNullOrWhiteSpace(note) ? body : $"{body}\n\nFrom dispatch: {note.Trim()}";
+
+        /// <summary>
         /// Tells the driver what was decided, through the channel their app already reads.
         /// </summary>
         /// <remarks>
@@ -510,9 +523,10 @@ namespace FleetWise.Controllers
                 TargetAudience = "Driver",
                 TargetId = r.UserId.ToString(),
                 Subject = $"Leave {decision.ToLowerInvariant()}",
-                Body = $"Your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} was "
-                     + $"{decision.ToLowerInvariant()}."
-                     + (string.IsNullOrWhiteSpace(r.DecisionNote) ? "" : $" {r.DecisionNote}"),
+                Body = WithNote(
+                    $"Your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} was "
+                        + $"{decision.ToLowerInvariant()}.",
+                    r.DecisionNote),
                 Priority = "Normal",
                 CreatedAt = PhClock.NowForDb,
             });
@@ -570,7 +584,7 @@ namespace FleetWise.Controllers
                 EntitlementOfType = entitlement,
                 OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),
                 DecisionNote = r.DecisionNote,
-                WithdrawAsked = r.WithdrawRequestedAt is not null,
+                WithdrawAsked = r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null,
                 WithdrawReason = r.WithdrawReason,
                 WithdrawAskedWhen = r.WithdrawRequestedAt?.ToString("MMM d, yyyy h:mm tt"),
                 RevokedCount = r.RevokedDates?.Count ?? 0,
@@ -653,6 +667,20 @@ namespace FleetWise.Controllers
                     By = Who(r.UserId),
                     Note = r.WithdrawReason,
                 });
+
+                // Accepting cancels the request, which the decision below already reports.
+                // Declining leaves the leave standing, and without this there would be
+                // nothing to say the asking was ever answered.
+                if (r.WithdrawAnsweredAt is DateTime answered
+                    && string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    events.Add(new LeaveEventViewModel
+                    {
+                        Action = "Cancellation declined",
+                        When = answered.ToString("MMM d, yyyy h:mm tt"),
+                        By = Who(r.DecidedBy),
+                    });
+                }
             }
 
             // After the decision, not instead of it. Leave that was granted and then taken

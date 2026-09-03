@@ -3,7 +3,7 @@
     ViewData["Title"] = "Requests";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    var tabs = new[] { "Pending", "Approved", "Rejected", "All" };
+    var tabs = new[] { "Pending", "Approved", "Rejected", "Cancelled", "Revoked", "All" };
 
     // Drivers with something in the list being shown, so the filter offers names that
     // will actually match rather than the whole roster.
@@ -357,20 +357,27 @@
             <button type="button" class="rq-box-close" onclick="rqAskClose()" aria-label="Close">&times;</button>
         </div>
 
-        <div id="rqAskBody"></div>
+        <p class="rq-box-desc" id="rqAskWho"></p>
+
+        @* The driver's own words, as a quotation. Run together with the dispatcher's note
+           below it, there was no telling which of the two anybody had written. *@
+        <div class="rq-quote">
+            <p class="rq-quote-l">The driver's reason</p>
+            <p class="rq-quote-t" id="rqAskReason"></p>
+            <p class="rq-quote-w" id="rqAskWhen"></p>
+        </div>
 
         @* Cancelling frees the days and staffs nobody. The schedule was built around the
            absence, so this says plainly what is left to do. *@
-        <p id="rqAskWarn" class="rq-blocking" style="display:none;">
-            These days will have no driver assigned. The schedule was built around this
-            leave, so check those days once this is done.
+        <p id="rqAskWarn" class="rq-warn" style="display:none;">
+            These days will have no driver assigned. Check the schedule once this is done.
         </p>
 
         <p id="rqAskError" class="rq-box-error" style="display:none;"></p>
 
-        <label class="rq-box-label" for="rqAskNote">Note</label>
+        <label class="rq-box-label" for="rqAskNote">Your reply to the driver</label>
         <textarea id="rqAskNote" class="rq-box-note" rows="3" maxlength="300"
-                  placeholder="The driver is told this."></textarea>
+                  placeholder="Optional"></textarea>
 
         <div class="rq-box-actions">
             <button type="button" class="rq-btn rq-btn--outline" onclick="rqAskClose()">Close</button>
@@ -817,7 +824,6 @@
         // ---- Answering a driver's cancellation ---------------------------------------
 
         const askModal = document.getElementById('rqAskModal');
-        const askBody = document.getElementById('rqAskBody');
         const askWarn = document.getElementById('rqAskWarn');
         const askNote = document.getElementById('rqAskNote');
         const askErr = document.getElementById('rqAskError');
@@ -828,17 +834,26 @@
             const row = document.querySelector('[data-request="' + id + '"]');
             const who = row ? row.querySelector('.rq-driver').textContent : 'this driver';
             const chip = row ? row.querySelector('.rq-asked') : null;
+            const span = row
+                ? ' · ' + row.querySelector('[data-label="Start"]').textContent.trim()
+                    + ' to ' + row.querySelector('[data-label="End"]').textContent.trim()
+                : '';
 
             answering = { id, accept };
 
             document.getElementById('rqAskTitle').textContent =
                 accept ? 'Cancel this leave' : 'Keep this leave';
 
-            askBody.replaceChildren();
-            const p = document.createElement('p');
-            p.className = 'rq-box-desc';
-            p.textContent = who + (chip ? ' · ' + chip.getAttribute('title') : '');
-            askBody.appendChild(p);
+            // The chip carries the asking as "Asked <when>: <reason>". Split so the two
+            // are shown as what they are rather than as one run of text.
+            const said = chip ? (chip.getAttribute('title') || '') : '';
+            const at = said.indexOf(': ');
+
+            document.getElementById('rqAskWho').textContent = who + span;
+            document.getElementById('rqAskReason').textContent =
+                at === -1 ? (said || 'No reason given.') : said.slice(at + 2);
+            document.getElementById('rqAskWhen').textContent =
+                at === -1 ? '' : said.slice(0, at);
 
             askWarn.style.display = accept ? 'block' : 'none';
             askNote.value = '';
