@@ -1,4 +1,4 @@
-namespace FleetWiseMobile.Services;
+﻿namespace FleetWiseMobile.Services;
 
 /// <summary>
 /// Philippine time, UTC+8 with no daylight saving, used everywhere the app needs the
@@ -13,6 +13,22 @@ public static class PhTime
     private static readonly TimeZoneInfo Tz = Resolve();
 
     public static DateTime Now => TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Tz).DateTime;
+
+    /// <summary>When a service day begins.</summary>
+    public static readonly TimeSpan DayStartTime = TimeSpan.FromHours(6);
+
+    /// <summary>
+    /// The service day now in progress, which runs from six in the morning to just
+    /// before six the next.
+    /// </summary>
+    /// <remarks>
+    /// The same rule as PhClock.OperationalDay on the dashboard. A shift that starts at
+    /// ten at night belongs to the day it started, so at two in the morning the day still
+    /// being worked is yesterday by the calendar, and anything asking "is this day still
+    /// live" has to agree with the board the dispatcher is looking at.
+    /// </remarks>
+    public static DateTime OperationalDay =>
+        Now.TimeOfDay < DayStartTime ? Now.Date.AddDays(-1) : Now.Date;
 
     // Philippine wall-clock time is written into timestamptz columns, which the database
     // records as +00. On the way back, postgrest converts to the device's local time,

@@ -51,16 +51,21 @@ namespace FleetWise.Controllers
             // An approval part way through still belongs in the queue. It is work
             // somebody has started and not finished, and the one place it must not be
             // filed under is Approved, which it is not.
+            // An approval part way through still belongs in the queue, and so does granted
+            // leave the driver has asked to hand back: both are work somebody has to answer.
+            // The one place either must not be filed is Approved, which the first is not and
+            // the second only still is because nobody has decided yet.
             var shown = string.Equals(wanted, "All", StringComparison.OrdinalIgnoreCase)
                 ? all
                 : string.Equals(wanted, "Pending", StringComparison.OrdinalIgnoreCase)
-                    ? all.Where(r => LeaveEntitlement.IsOpen(r.Status)).ToList()
+                    ? all.Where(r => LeaveEntitlement.IsOpen(r.Status) || r.WithdrawRequestedAt is not null).ToList()
                     : all.Where(r => string.Equals(r.Status, wanted, StringComparison.OrdinalIgnoreCase)).ToList();
 
             var vm = new LeaveQueueViewModel
             {
                 Status = wanted,
-                PendingCount = all.Count(r => LeaveEntitlement.IsOpen(r.Status)),
+                PendingCount = all.Count(r => LeaveEntitlement.IsOpen(r.Status)
+                                              || r.WithdrawRequestedAt is not null),
                 Rows = shown
                     // A queue is worked oldest first; history reads newest first. Filing
                     // order serves both better than the dates being asked for.
@@ -309,6 +314,107 @@ namespace FleetWise.Controllers
             });
         }
 
+        /// <summary>
+        /// Answers a driver asking for granted leave back.
+        /// </summary>
+        /// <remarks>
+        /// Accepting cancels the leave outright, which frees the days and staffs nothing:
+        /// the week was planned around the absence, so the answer carries a reminder that
+        /// those days now need a driver. It cannot make anybody do it, and it should not
+        /// pretend the days filled themselves.
+        ///
+        /// Declining clears the mark and leaves the leave exactly as it was. Either way
+        /// the driver is told and the audit trail keeps both the asking and the answer.
+        ///
+        /// Whole only. Handing part of a leave back is Revoke, which is the dispatcher's.
+        /// </remarks>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AnswerWithdrawal(long requestId, bool accept, string? note)
+        {
+            var found = (await _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Get()).Models.FirstOrDefault();
+
+            if (found is null) return NotFound();
+
+            if (found.WithdrawRequestedAt is null)
+                return BadRequest("No cancellation has been asked for on this leave.");
+
+            if (!string.Equals(found.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                return BadRequest($"This request is {found.Status.ToLowerInvariant()}, so there is nothing to cancel.");
+
+            var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var by = int.TryParse(idStr, out var i) ? i : (int?)null;
+
+            var write = _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                // Cleared either way: the question has been answered and the mark is what
+                // put it in the queue.
+                .Set(x => x.WithdrawRequestedAt, null);
+
+            if (accept)
+            {
+                write = write
+                    .Set(x => x.Status, "Cancelled")
+                    .Set(x => x.DecidedAt, PhClock.Now)
+                    .Set(x => x.DecisionNote,
+                         string.IsNullOrWhiteSpace(note) ? "Cancelled at the driver's request." : note.Trim());
+
+                if (by.HasValue) write = write.Set(x => x.DecidedBy, by.Value);
+            }
+
+            await write.Update();
+
+            try { await NotifyWithdrawal(found, accept, note); }
+            catch (Exception ex)
+            {
+                await _audit.WriteAsync("leave_notice_failed",
+                    $"could not tell driver {found.UserId} what was decided about cancelling request {requestId}: {ex.Message}",
+                    "requests", requestId.ToString(), outcome: "failed");
+            }
+
+            await _audit.WriteAsync(
+                accept ? "leave_withdrawal_accepted" : "leave_withdrawal_declined",
+                $"{(accept ? "accepted" : "declined")} the driver's request to cancel "
+                    + $"{found.LeaveType.ToLowerInvariant()} leave for driver {found.UserId} "
+                    + $"covering {Span(found)}"
+                    + (string.IsNullOrWhiteSpace(found.WithdrawReason) ? "" : $", asked because: {found.WithdrawReason}")
+                    + (string.IsNullOrWhiteSpace(note) ? "" : $". {note.Trim()}")
+                    + (accept ? ". Those days now have no driver assigned." : ""),
+                "requests", requestId.ToString());
+
+            return Ok(new
+            {
+                staffing = accept
+                    ? $"{Span(found)} now has no driver. Check the schedule for those days."
+                    : null,
+            });
+        }
+
+        /// <summary>Tells the driver what was decided about their cancellation.</summary>
+        private async Task NotifyWithdrawal(LeaveRequest r, bool accept, string? note)
+        {
+            var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var body = accept
+                ? $"Your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} has been cancelled at your "
+                  + "request. Open your calendar to see any shifts you have been given for those days."
+                : $"Your request to cancel your {r.LeaveType.ToLowerInvariant()} leave for {Span(r)} was "
+                  + "declined. The leave stands and you are not scheduled to drive.";
+
+            await _supabase.From<Message>().Insert(new Message
+            {
+                SenderId = int.TryParse(senderStr, out var s) ? s : 0,
+                TargetAudience = "Driver",
+                TargetId = r.UserId.ToString(),
+                Subject = accept ? "Leave cancelled" : "Leave cancellation declined",
+                Body = string.IsNullOrWhiteSpace(note) ? body : $"{body} {note.Trim()}",
+                Priority = "Normal",
+                CreatedAt = PhClock.NowForDb,
+            });
+        }
+
         /// <summary>One shift standing in the way of an approval.</summary>
         public sealed class BlockingShift
         {
@@ -464,6 +570,9 @@ namespace FleetWise.Controllers
                 EntitlementOfType = entitlement,
                 OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),
                 DecisionNote = r.DecisionNote,
+                WithdrawAsked = r.WithdrawRequestedAt is not null,
+                WithdrawReason = r.WithdrawReason,
+                WithdrawAskedWhen = r.WithdrawRequestedAt?.ToString("MMM d, yyyy h:mm tt"),
                 RevokedCount = r.RevokedDates?.Count ?? 0,
                 RevokableDays = RevokableDaysOf(r),
                 History = HistoryOf(r, names),
@@ -532,6 +641,17 @@ namespace FleetWise.Controllers
                     // A withdrawal is the driver's own doing and carries no decider.
                     By = r.DecidedBy is null ? Who(r.UserId) : Who(r.DecidedBy),
                     Note = r.DecisionNote,
+                });
+            }
+
+            if (r.WithdrawRequestedAt is DateTime asked)
+            {
+                events.Add(new LeaveEventViewModel
+                {
+                    Action = "Cancellation asked for",
+                    When = asked.ToString("MMM d, yyyy h:mm tt"),
+                    By = Who(r.UserId),
+                    Note = r.WithdrawReason,
                 });
             }
 

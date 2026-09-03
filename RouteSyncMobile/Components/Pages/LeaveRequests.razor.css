@@ -111,8 +111,8 @@
 
 .lv-add {
     width: 100%;
-    min-height: 46px;
-    margin-bottom: 14px;
+    min-height: 42px;
+    margin-bottom: 12px;
     border: 1px dashed #b9c0cc;
     border-radius: 14px;
     background: #fff;
@@ -132,6 +132,37 @@
     color: #8a93a2;
 }
 
+/* The months that hold something, scrolled rather than wrapped: a year of them would
+   otherwise stack four rows deep above the list they filter. */
+.lv-months {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+}
+
+    .lv-months::-webkit-scrollbar { display: none; }
+
+.lv-month {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border: 1px solid #e2e6ec;
+    border-radius: 999px;
+    background: #fff;
+    color: #5a6678;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .lv-month.on {
+        border-color: #2e9e8f;
+        background: #2e9e8f;
+        color: #fff;
+    }
+
 .lv-list {
     border: 1px solid #e6e8ee;
     border-radius: 14px;
@@ -139,9 +170,62 @@
     overflow: hidden;
 }
 
-.lv-row { padding: 12px 14px; }
+/* The month a run of requests belongs to, and the handle that folds it away. Sits
+   inside the list rather than above it, so a year reads as one column broken into
+   months instead of a stack of cards. */
+.lv-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 9px 14px;
+    border: none;
+    border-bottom: 1px solid #eef0f4;
+    border-radius: 0;
+    background: #f7f9fb;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #7a8699;
+    text-align: left;
+    cursor: pointer;
+}
 
-.lv-row + .lv-row { border-top: 1px solid #eef0f4; }
+    .lv-group:active { background: #eff3f7; }
+
+.lv-group-m { flex: 0 0 auto; }
+
+.lv-caret {
+    flex: 0 0 auto;
+    font-size: 10px;
+    line-height: 1;
+    color: #9aa5b4;
+    transition: transform 140ms ease;
+}
+
+    /* Pointing at the month it has folded away rather than down into it. */
+    .lv-caret.shut { transform: rotate(-90deg); }
+
+    .lv-group:not(:first-child) { border-top: 1px solid #eef0f4; }
+
+.lv-group-n {
+    margin-left: auto;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #e7ecf1;
+    color: #6b7787;
+    font-size: 10px;
+    letter-spacing: 0;
+}
+
+/* Tighter. Every request was a card's worth of height for two lines of text and a
+   button, so four of them filled a phone. */
+.lv-row { padding: 10px 14px; }
+
+.lv-row + .lv-row { border-top: 1px solid #f3f5f8; }
 
 /* The dates take the line and the outcome sits at the end of it, rather than the badge
    taking a column and pushing everything else into a narrow strip. */
@@ -153,34 +237,49 @@
 }
 
 .lv-span {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: #1b2a56;
 }
 
 .lv-meta {
-    margin: 3px 0 0;
-    font-size: 12px;
+    margin: 2px 0 0;
+    font-size: 11.5px;
     color: #8a93a2;
 }
 
+/* What the leave is, and what can be done about it, on one line. */
+.lv-row-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+    .lv-row-foot .lv-meta { margin: 0; }
+
+/* The actions sit at the end of the line rather than across it. Full width they read as
+   the point of the row, when the row is the request and the buttons are what can be done
+   about it. */
 .lv-row-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 10px;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-left: auto;
 }
 
 /* A button, with an edge and a ground of its own. Drawn as bare text it read as a label
    that happened to be tappable. */
 .lv-hist-btn {
-    flex: 1;
-    min-height: 38px;
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 14px;
     border: 1px solid #d7eae6;
-    border-radius: 10px;
+    border-radius: 9px;
     background: #f2faf8;
     color: #2e9e8f;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -302,11 +401,11 @@
 .lv-badge.cancelled { background: #eef0f4; color: #6b7280; }
 
 .lv-cancel {
-    flex: 1;
-    padding: 7px 12px;
-    min-height: 38px;
-    border: 1px solid #e6e8ee;
-    border-radius: 10px;
+    flex: 0 0 auto;
+    padding: 0 14px;
+    min-height: 32px;
+    border: 1px solid #f2d6d7;
+    border-radius: 9px;
     background: #fff;
     color: #d0494b;
     font-size: 12px;
@@ -478,4 +577,15 @@
     margin: 4px 0 0;
     font-size: 12px;
     color: #7a8699;
+}
+
+/* What the driver is agreeing to when they ask for granted leave back. */
+.lv-withdraw-note {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f4f7fa;
+    color: #5a6678;
+    font-size: 12px;
+    line-height: 1.55;
 }

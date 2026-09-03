@@ -281,6 +281,13 @@
                                     <span class="rq-revoked"
                                           title="Days of this leave taken back by dispatch">@r.RevokedCount revoked</span>
                                 }
+                                @* Granted leave the driver has asked to give back. Still
+                                   approved, because it is, until this is answered. *@
+                                @if (r.WithdrawAsked)
+                                {
+                                    <span class="rq-asked"
+                                          title="@($"Asked {r.WithdrawAskedWhen}: {r.WithdrawReason}")">Cancellation asked</span>
+                                }
                             </td>
 
                             <td data-label="Actions">
@@ -306,7 +313,17 @@
                                     }
                                     @* Only where there is something left to take back.
                                        Leave already in the past offers nothing. *@
-                                    @if (r.RevokableDays.Count > 0)
+                                    @* Answering the driver comes before taking days off
+                                       them: both end in the leave changing, and only one of
+                                       them was asked for. *@
+                                    @if (r.WithdrawAsked)
+                                    {
+                                        <button type="button" class="rq-btn rq-btn--approve"
+                                                onclick="rqWithdrawal(@r.RequestId, true)">Cancel the leave</button>
+                                        <button type="button" class="rq-btn rq-btn--outline"
+                                                onclick="rqWithdrawal(@r.RequestId, false)">Keep the leave</button>
+                                    }
+                                    else if (r.RevokableDays.Count > 0)
                                     {
                                         <button type="button" class="rq-btn rq-btn--reject"
                                                 onclick="rqRevoke(@r.RequestId)">Revoke</button>
@@ -331,6 +348,37 @@
 
 @* What happened to each request, written out with the row it belongs to and shown when
    asked for. Rendered here rather than fetched, because it is already on the page. *@
+@* Answering a driver who asked for their granted leave back. *@
+<div id="rqAskModal" class="rq-overlay" style="display:none;" data-dialog-close="rqAskClose"
+     role="dialog" aria-modal="true" aria-labelledby="rqAskTitle">
+    <div class="rq-box">
+        <div class="rq-box-head">
+            <h3 class="rq-box-title" id="rqAskTitle">Cancel this leave</h3>
+            <button type="button" class="rq-box-close" onclick="rqAskClose()" aria-label="Close">&times;</button>
+        </div>
+
+        <div id="rqAskBody"></div>
+
+        @* Cancelling frees the days and staffs nobody. The schedule was built around the
+           absence, so this says plainly what is left to do. *@
+        <p id="rqAskWarn" class="rq-blocking" style="display:none;">
+            These days will have no driver assigned. The schedule was built around this
+            leave, so check those days once this is done.
+        </p>
+
+        <p id="rqAskError" class="rq-box-error" style="display:none;"></p>
+
+        <label class="rq-box-label" for="rqAskNote">Note</label>
+        <textarea id="rqAskNote" class="rq-box-note" rows="3" maxlength="300"
+                  placeholder="The driver is told this."></textarea>
+
+        <div class="rq-box-actions">
+            <button type="button" class="rq-btn rq-btn--outline" onclick="rqAskClose()">Close</button>
+            <button type="button" class="rq-btn rq-btn--primary" id="rqAskGo">Confirm</button>
+        </div>
+    </div>
+</div>
+
 @* Taking back leave already granted. Its own dialog rather than the decision one,
    because it asks a different question: not whether, but which days. *@
 <div id="rqRevokeModal" class="rq-overlay" style="display:none;" data-dialog-close="rqRevokeClose"
@@ -604,6 +652,7 @@
             if (modal.style.display === 'flex') return;
             if (histModal.style.display === 'flex') return;
             if (revModal.style.display === 'flex') return;
+            if (askModal.style.display === 'flex') return;
             rqRefresh(false);
         }, 30000);
 
@@ -764,6 +813,92 @@
 
             document.getElementById('rqBlocking').style.display = 'block';
         }
+
+        // ---- Answering a driver's cancellation ---------------------------------------
+
+        const askModal = document.getElementById('rqAskModal');
+        const askBody = document.getElementById('rqAskBody');
+        const askWarn = document.getElementById('rqAskWarn');
+        const askNote = document.getElementById('rqAskNote');
+        const askErr = document.getElementById('rqAskError');
+        const askGo = document.getElementById('rqAskGo');
+        let answering = null;   // { id, accept }
+
+        window.rqWithdrawal = function (id, accept) {
+            const row = document.querySelector('[data-request="' + id + '"]');
+            const who = row ? row.querySelector('.rq-driver').textContent : 'this driver';
+            const chip = row ? row.querySelector('.rq-asked') : null;
+
+            answering = { id, accept };
+
+            document.getElementById('rqAskTitle').textContent =
+                accept ? 'Cancel this leave' : 'Keep this leave';
+
+            askBody.replaceChildren();
+            const p = document.createElement('p');
+            p.className = 'rq-box-desc';
+            p.textContent = who + (chip ? ' · ' + chip.getAttribute('title') : '');
+            askBody.appendChild(p);
+
+            askWarn.style.display = accept ? 'block' : 'none';
+            askNote.value = '';
+            askErr.style.display = 'none';
+            askGo.textContent = accept ? 'Cancel the leave' : 'Keep the leave';
+            askGo.classList.toggle('rq-btn--reject', !!accept);
+            askGo.disabled = false;
+            askModal.style.display = 'flex';
+            askNote.focus();
+        };
+
+        window.rqAskClose = function () {
+            askModal.style.display = 'none';
+            answering = null;
+        };
+
+        askModal.addEventListener('click', function (e) {
+            if (e.target === askModal) rqAskClose();
+        });
+
+        askGo.addEventListener('click', async function () {
+            if (!answering) return;
+
+            askGo.disabled = true;
+            try {
+                const res = await fetch('/Requests/AnswerWithdrawal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken':
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: new URLSearchParams({
+                        requestId: answering.id,
+                        accept: answering.accept ? 'true' : 'false',
+                        note: askNote.value.trim()
+                    })
+                });
+                if (!res.ok) {
+                    const said = (await res.text() || '').trim();
+                    throw new Error(
+                        said && said.length < 300 && said[0] !== '<'
+                            ? said
+                            : 'The server could not save that (' + res.status + '). Try again.');
+                }
+
+                // The days are free and nobody is on them. Said after the fact rather than
+                // in the dialog, because it is a thing to go and do next.
+                let staffing = null;
+                try { staffing = (await res.json()).staffing; } catch (e) { }
+
+                rqAskClose();
+                await rqRefresh(true);
+                if (staffing) rqToast(staffing);
+            } catch (e) {
+                askErr.textContent = e.message || 'That could not be saved. Try again.';
+                askErr.style.display = 'block';
+                askGo.disabled = false;
+            }
+        });
 
         // Gives up on an approval without deciding the request, so it goes back to the
         // queue instead of sitting held with nobody looking at it.
