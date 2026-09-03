@@ -1,4 +1,4 @@
-.page-loading {
+﻿.page-loading {
     min-height: 80vh;
     display: flex;
     align-items: center;
@@ -97,10 +97,13 @@
     cursor: pointer;
 }
 
+/* Opened out. A notice carries the decision, then a blank line, then whatever the
+   dispatcher wrote, and pre-line is what keeps the two apart on screen. Collapsed the
+   body is one clipped line, so the break only matters here. */
 .np.full {
-    white-space: normal;
+    white-space: pre-line;
     overflow: visible;
-    line-height: 1.4;
+    line-height: 1.45;
 }
 
 .ntime {

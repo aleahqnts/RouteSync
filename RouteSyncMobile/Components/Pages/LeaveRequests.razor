@@ -188,6 +188,47 @@
                             <span class="lv-hist-when">@h.FiledAt.ToString("MMM d, yyyy h:mm tt")</span>
                         </span>
                     </li>
+                    @* Asking for granted leave back, and the answer. Neither was recorded
+                       here, so a driver who asked and was answered had nothing to show it
+                       ever happened. *@
+                    @if (h.WithdrawRequestedAt is DateTime asked)
+                    {
+                        <li class="lv-hist-item">
+                            <span class="lv-hist-dot"></span>
+                            <span class="lv-hist-body">
+                                <span class="lv-hist-action">You asked to cancel</span>
+                                <span class="lv-hist-when">@asked.ToString("MMM d, yyyy h:mm tt")</span>
+                                @if (!string.IsNullOrWhiteSpace(h.WithdrawReason))
+                                {
+                                    <span class="lv-hist-note">@h.WithdrawReason</span>
+                                }
+                            </span>
+                        </li>
+
+                        @* Accepting cancels the request, which the decision below reports.
+                           Declining leaves the leave standing, and only this says so. *@
+                        @if (h.WithdrawAnsweredAt is DateTime answered
+                             && string.Equals(h.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <li class="lv-hist-item">
+                                <span class="lv-hist-dot rejected"></span>
+                                <span class="lv-hist-body">
+                                    <span class="lv-hist-action">Cancellation declined</span>
+                                    <span class="lv-hist-when">@answered.ToString("MMM d, yyyy h:mm tt")</span>
+                                </span>
+                            </li>
+                        }
+                        else if (h.WithdrawAnsweredAt is null)
+                        {
+                            <li class="lv-hist-item">
+                                <span class="lv-hist-dot"></span>
+                                <span class="lv-hist-body">
+                                    <span class="lv-hist-action">Waiting on your dispatcher</span>
+                                </span>
+                            </li>
+                        }
+                    }
+
                     @if (h.DecidedAt is DateTime decided
                          && !LeaveEntitlement.IsOpen(h.Status))
                     {
@@ -302,9 +343,9 @@
                     days off. Until then the leave stands and you are not scheduled to drive.
                 </p>
 
-                <label>Why do you want it cancelled?</label>
+                <label>Reason for cancelling</label>
                 <input class="lv-reason-input" @bind="withdrawReason" maxlength="200"
-                       placeholder="Your dispatcher reads this" />
+                       placeholder="Required" />
 
                 @if (withdrawProblem is not null)
                 {
