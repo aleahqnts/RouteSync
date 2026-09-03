@@ -216,6 +216,13 @@ namespace FleetWise.Controllers
             var existing = existingResp.Models;
             var existingById = existing.ToDictionary(t => t.TripId);
 
+            // Asked now, because this save is about to record the week as built. What it
+            // answers is whether the drivers are being told about a change or about their
+            // schedule appearing for the first time, and only the first is worth a notice.
+            var wasBuilt = (await _supabase.From<ScheduleWeek>()
+                .Filter("week_start", Operator.Equals, weekStart.ToString("yyyy-MM-dd"))
+                .Get()).Models.Count > 0;
+
             // Conflicts are validated against the schedule as it will be after this save:
             // the submitted cells, plus any locked trip the grid did not resend, since those
             // still occupy their driver, vehicle and shift.
@@ -285,6 +292,19 @@ namespace FleetWise.Controllers
                 var keptIds = new HashSet<string>();
                 int added = 0, changed = 0, deleted = 0;   // counted for the audit line
 
+                // The days each driver's own schedule moved on. A driver swapped out of a
+                // shift and the one swapped in have both had their week changed, so both
+                // are recorded against that day.
+                var moved = new Dictionary<int, SortedSet<DateTime>>();
+
+                void Moved(int driverId, DateTime day)
+                {
+                    if (driverId == 0) return;
+                    if (!moved.TryGetValue(driverId, out var days))
+                        moved[driverId] = days = new SortedSet<DateTime>();
+                    days.Add(day.Date);
+                }
+
                 foreach (var c in cells)
                 {
                     if (string.IsNullOrEmpty(c.VehicleId) || c.DriverId == 0
@@ -305,6 +325,11 @@ namespace FleetWise.Controllers
                             .Set(t => t.DriverId, c.DriverId)
                             .Update();
                         changed++;
+
+                        // Both sides of a swap. When only the bus changed these are the
+                        // same driver, and the day is recorded once.
+                        Moved(trip.DriverId, date);
+                        Moved(c.DriverId, date);
                     }
                     else
                     {
@@ -322,6 +347,7 @@ namespace FleetWise.Controllers
                             EstimatedRevenue = 0
                         });
                         added++;
+                        Moved(c.DriverId, date);
                     }
                 }
 
@@ -335,6 +361,25 @@ namespace FleetWise.Controllers
                         .Filter("trip_id", Operator.Equals, t.TripId)
                         .Delete();
                     deleted++;
+                    Moved(t.DriverId, t.Date);
+                }
+
+                // Told only where there was a schedule to change. The first save of a week
+                // writes a cell for every driver on it, and a notice each would be twenty
+                // messages for ordinary work, which is how an app gets muted before it has
+                // anything urgent to say.
+                if (wasBuilt && moved.Count > 0)
+                {
+                    try { await NotifyScheduleChangedAsync(moved); }
+                    catch (Exception ex)
+                    {
+                        // The schedule is saved. A notice that failed is worth recording and
+                        // not worth failing the save over.
+                        await _audit.WriteAsync("schedule_notice_failed",
+                            $"saved the week of {weekStart:MMM d} but could not tell "
+                                + $"{moved.Count} {(moved.Count == 1 ? "driver" : "drivers")} it changed: {ex.Message}",
+                            "trips", outcome: "failed");
+                    }
                 }
 
                 // The week is on record as built, whether or not this save changed anything
@@ -464,6 +509,61 @@ namespace FleetWise.Controllers
             }
 
             return refused;
+        }
+
+        /// <summary>
+        /// Tells each driver whose week changed, once, whatever moved.
+        /// </summary>
+        /// <remarks>
+        /// A planner save can move a dozen drivers at once, so this is one message each
+        /// naming that driver's own days rather than one per trip. Dispatch already tells a
+        /// driver when it reassigns them; a planner save used to tell nobody, so the same
+        /// change reached them or not depending on which screen was used to make it.
+        ///
+        /// Days already gone are left out. A driver cannot act on a shift that was moved
+        /// off last Tuesday, and a notice about one reads as a mistake.
+        ///
+        /// High only when a changed day is today or tomorrow. Anything further out is worth
+        /// knowing and not worth interrupting for, and a priority that means everything
+        /// means nothing.
+        /// </remarks>
+        private async Task NotifyScheduleChangedAsync(Dictionary<int, SortedSet<DateTime>> moved)
+        {
+            var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var sender = int.TryParse(senderStr, out var s) ? s : 0;
+
+            var today = PhClock.OperationalDay.Date;
+            var soon = today.AddDays(1);
+
+            foreach (var (driverId, days) in moved)
+            {
+                var ahead = days.Where(d => d >= today).ToList();
+                if (ahead.Count == 0) continue;
+
+                await _supabase.From<Message>().Insert(new Message
+                {
+                    SenderId = sender,
+                    TargetAudience = "Driver",
+                    TargetId = driverId.ToString(),
+                    Subject = "Schedule updated",
+                    Body = $"Your schedule has changed for {DayList(ahead)}. "
+                         + "Open your calendar to review the details.",
+                    Priority = ahead.Any(d => d <= soon) ? "High" : "Normal",
+                    CreatedAt = PhClock.NowForDb,
+                });
+            }
+        }
+
+        /// <summary>Days written as they would be read aloud.</summary>
+        private static string DayList(List<DateTime> days)
+        {
+            var written = days.Select(d => d.ToString("MMM d")).ToList();
+
+            if (written.Count == 1) return written[0];
+            if (written.Count == 2) return $"{written[0]} and {written[1]}";
+
+            return string.Join(", ", written.Take(written.Count - 1))
+                 + $" and {written[^1]}";
         }
 
         /// <summary>

@@ -509,6 +509,47 @@ public class DriverDataService
                 "That request could not be cancelled. It may already have been decided.");
     }
 
+    /// <summary>Calls a database function as the signed-in driver.</summary>
+    /// <remarks>
+    /// For the writes a row policy cannot express. A policy checks the row before the
+    /// change and the row after it, and cannot tie the two together, so "may mark this
+    /// only if it was already approved" is not a rule it can state. Written as a policy
+    /// wide enough to allow the mark, it would also allow a driver to set their own
+    /// pending request to approved. The function decides what changes instead, and the
+    /// driver is granted nothing beyond the right to call it.
+    /// </remarks>
+    private static async Task RpcAsync(string function, object args)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post,
+            $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/rpc/{function}");
+        req.Headers.TryAddWithoutValidation("apikey", FleetWiseMobile.SupabaseConfig.Key);
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {FleetWiseMobile.SupabaseConfig.Bearer}");
+        req.Content = new StringContent(JsonSerializer.Serialize(args), Encoding.UTF8, "application/json");
+
+        var res = await _http.SendAsync(req);
+        await ThrowIfRefusedAsync(res);
+    }
+
+    /// <summary>
+    /// Asks the dispatcher to cancel leave that has already been granted.
+    /// </summary>
+    /// <remarks>
+    /// An ask, not an act. Handing the days back does not put the driver on a shift: the
+    /// week was planned around their absence and only the dispatcher can put them back on
+    /// it. A driver who withdrew their own leave would read a rest day on the calendar,
+    /// stated with confidence, on days they expected to drive.
+    ///
+    /// The queue carries the asking, because it is the only thing a dispatcher watches.
+    /// </remarks>
+    public async Task RequestLeaveWithdrawalAsync(long requestId, string reason)
+    {
+        await RpcAsync("request_leave_withdrawal", new
+        {
+            p_request = requestId,
+            p_reason = reason,
+        });
+    }
+
     /// <summary>Every trip assigned to a driver between two days, whatever its status.</summary>
     /// <remarks>
     /// The calendar draws a month at a time, so it asks for a month at a time rather than
@@ -556,20 +597,6 @@ public class DriverDataService
             .Filter("week_start", Operator.LessThanOrEqual, to.ToString("yyyy-MM-dd"))
             .Get();
         return r.Models.Select(w => w.WeekStart.Date).ToHashSet();
-    }
-
-    /// <summary>The latest week the planner has saved, or null if it has saved none.</summary>
-    /// <remarks>
-    /// Bounds how far forward the calendar will page. Without it a driver walks into empty
-    /// months for ever and reads a blank grid as a month off.
-    /// </remarks>
-    public async Task<DateTime?> GetLastScheduledWeekAsync()
-    {
-        var r = await _supabase.From<ScheduleWeek>()
-            .Order("week_start", Ordering.Descending)
-            .Limit(1)
-            .Get();
-        return r.Models.FirstOrDefault()?.WeekStart.Date;
     }
 
     /// <summary>Approved leave covering a given day, or null when there is none.</summary>

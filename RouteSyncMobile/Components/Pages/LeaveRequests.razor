@@ -1,4 +1,5 @@
 ﻿@page "/leave"
+@implements IDisposable
 @inject SessionService Session
 @inject DriverDataService Data
 @inject NavigationManager Nav
@@ -61,15 +62,43 @@
                back are both paragraphs, and a paragraph in a list row squeezes the dates
                into a column down the left. They are read one request at a time, so they
                live behind the button below. *@
+            @* The months a request was filed in, so a driver reading back through a year
+               is not paging through one undivided list. Only months that hold something
+               are offered: an empty month is not a place to go. *@
+            @if (Months.Count > 1)
+            {
+                <div class="lv-months">
+                    <button class="lv-month @(monthFilter is null ? "on" : "")"
+                            @onclick="@(() => monthFilter = null)">All</button>
+                    @foreach (var m in Months)
+                    {
+                        <button class="lv-month @(monthFilter == m ? "on" : "")"
+                                @onclick="@(() => monthFilter = m)">@m.ToString("MMM yyyy")</button>
+                    }
+                </div>
+            }
+
             <div class="lv-list">
-                @foreach (var r in requests)
+                @foreach (var group in Grouped)
                 {
+                    var shut = collapsed.Contains(group.Key);
+
+                    <button class="lv-group" @onclick="@(() => Toggle(group.Key))"
+                            aria-expanded="@((!shut).ToString().ToLowerInvariant())">
+                        <span class="lv-caret @(shut ? "shut" : "")" aria-hidden="true">&#9662;</span>
+                        <span class="lv-group-m">@group.Key.ToString("MMMM yyyy")</span>
+                        <span class="lv-group-n">@group.Count()</span>
+                    </button>
+
+                    @if (!shut)
+                    {
+                    @foreach (var r in group)
+                    {
                     <div class="lv-row">
                         <div class="lv-row-top">
                             <span class="lv-span">@Span(r)</span>
                             <span class="lv-badge @Shown(r.Status).ToLowerInvariant()">@Shown(r.Status)</span>
                         </div>
-                        <p class="lv-meta">@r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
 
                         @* Said only while the approval is part way through. The badge stays
                            Pending, because nothing has been granted and nothing refused, and
@@ -80,14 +109,42 @@
                             <p class="lv-checking">Being checked against your schedule.</p>
                         }
 
-                        <div class="lv-row-actions">
+                        @* Granted leave the driver has asked to give back. Still granted:
+                           the days are still theirs until a dispatcher says otherwise, and
+                           the badge goes on saying Approved because that is what it is. *@
+                        @if (r.WithdrawRequestedAt is not null)
+                        {
+                            <p class="lv-checking">
+                                You asked to cancel this. Waiting on your dispatcher.
+                            </p>
+                        }
+
+                        @* The kind of leave and what can be done about it on one line. Given
+                           a line each, a request was a hundred pixels tall and four of them
+                           filled a phone. *@
+                        <div class="lv-row-foot">
+                            <p class="lv-meta">@r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
+
+                            <div class="lv-row-actions">
                             <button class="lv-hist-btn" @onclick="@(() => openHistory = r.RequestId)">History</button>
                             @if (LeaveEntitlement.IsOpen(r.Status))
                             {
                                 <button class="lv-cancel" @onclick="@(() => Cancel(r.RequestId))">Cancel</button>
                             }
+                            else if (CanAskToCancel(r))
+                            {
+                                <button class="lv-cancel" @onclick="@(() => OpenWithdraw(r))">Ask to cancel</button>
+                            }
+                            </div>
                         </div>
                     </div>
+                    }
+                    }
+                }
+
+                @if (!Grouped.Any())
+                {
+                    <p class="lv-empty">Nothing filed that month.</p>
                 }
             </div>
         }
@@ -225,6 +282,46 @@
     </div>
 }
 
+@* Asking for granted leave back. Its own dialog, because it asks for a reason the
+   dispatcher will read and it is not the same act as withdrawing a request nobody has
+   answered yet. *@
+@if (withdrawing is not null)
+{
+    <div class="overlay" @onclick="CloseWithdraw">
+        <div class="lv-modal" @onclick:stopPropagation="true">
+            <div class="lv-modal-head">
+                <h2>Ask to cancel leave</h2>
+                <button class="lv-close" @onclick="CloseWithdraw" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="lv-modal-body">
+                <p class="lv-dates-said">@Span(withdrawing) · @withdrawing.LeaveType</p>
+
+                <p class="lv-withdraw-note">
+                    Your dispatcher has to agree, because the schedule was built around your
+                    days off. Until then the leave stands and you are not scheduled to drive.
+                </p>
+
+                <label>Why do you want it cancelled?</label>
+                <input class="lv-reason-input" @bind="withdrawReason" maxlength="200"
+                       placeholder="Your dispatcher reads this" />
+
+                @if (withdrawProblem is not null)
+                {
+                    <p class="err-msg">@withdrawProblem</p>
+                }
+            </div>
+
+            <div class="lv-modal-foot">
+                <button class="lv-btn-ghost" @onclick="CloseWithdraw">Close</button>
+                <button class="psave" disabled="@sending" @onclick="SubmitWithdraw">
+                    @(sending ? "Sending…" : "Send request")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     /// <summary>The word for a status, as the driver should read it.</summary>
     /// <remarks>
@@ -243,7 +340,20 @@
 
     private bool showForm, sending;
 
+    private LeaveRequest? withdrawing;
+    private string withdrawReason = "";
+    private string? withdrawProblem;
+
     private long? openHistory;
+    private DateTime? monthFilter;
+
+    /// <summary>Months folded shut, so a long history reads as a list of months.</summary>
+    private readonly HashSet<DateTime> collapsed = new();
+
+    private void Toggle(DateTime month)
+    {
+        if (!collapsed.Remove(month)) collapsed.Add(month);
+    }
     private string? toast;
     private bool toastBad;
     private CancellationTokenSource? toastCts;
@@ -266,12 +376,73 @@
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
         try { await Load(); }
         finally { loading = false; }
+
+        _ = PollLoop(); // background: a decision made elsewhere lands without a tab change
     }
 
     private async Task Load()
     {
         try { requests = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId); }
         catch { requests = new(); }
+    }
+
+    /// <summary>The months that hold a request, newest first.</summary>
+    private List<DateTime> Months =>
+        requests.Select(r => new DateTime(r.StartDate.Year, r.StartDate.Month, 1))
+                .Distinct()
+                .OrderByDescending(m => m)
+                .ToList();
+
+    /// <summary>The requests on show, in months.</summary>
+    /// <remarks>
+    /// By the month the leave falls in rather than the month it was filed. A driver
+    /// looking for last September's leave looks under September, whatever day they
+    /// happened to ask for it.
+    /// </remarks>
+    private IEnumerable<IGrouping<DateTime, LeaveRequest>> Grouped =>
+        requests
+            .Where(r => monthFilter is null
+                        || (r.StartDate.Year == monthFilter.Value.Year
+                            && r.StartDate.Month == monthFilter.Value.Month))
+            .OrderByDescending(r => r.StartDate)
+            .ThenByDescending(r => r.RequestId)
+            .GroupBy(r => new DateTime(r.StartDate.Year, r.StartDate.Month, 1));
+
+    // Re-fetches every 15 seconds while the page is open. A decision is made on another
+    // screen by another person, so a request left on show here goes stale on its own, and
+    // the driver was having to leave the page and come back to see they had been answered.
+    private readonly CancellationTokenSource pollCts = new();
+
+    private async Task PollLoop()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+            while (await timer.WaitForNextTickAsync(pollCts.Token))
+            {
+                // Not while a dialog is open. Replacing the list under a form being filled
+                // in, or under a request being read, takes it away mid-sentence.
+                if (showForm || openHistory is not null || withdrawing is not null) continue;
+
+                try
+                {
+                    var fresh = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId);
+                    await InvokeAsync(() =>
+                    {
+                        requests = fresh;
+                        StateHasChanged();
+                    });
+                }
+                catch { /* background blip: keep showing the last good list */ }
+            }
+        }
+        catch (OperationCanceledException) { /* page closed */ }
+    }
+
+    public void Dispose()
+    {
+        pollCts.Cancel();
+        pollCts.Dispose();
     }
 
     private void CloseHistory() => openHistory = null;
@@ -379,6 +550,68 @@
             // answered sends them looking in the wrong place.
             problem = ex.Message;
             problemField = null;
+        }
+        finally
+        {
+            sending = false;
+        }
+    }
+
+    /// <summary>
+    /// Whether granted leave can still be handed back.
+    /// </summary>
+    /// <remarks>
+    /// Approved, not already asked about, and starting no earlier than the day now being
+    /// worked. Today counts: a driver who called in sick this morning and then felt able
+    /// to drive is the ordinary case, and the day is not spent until it ends.
+    ///
+    /// A leave that started before today is not offered. Part of it has been taken, and
+    /// giving the whole thing back would erase days the driver actually had off. Handing
+    /// part of a leave back is the dispatcher's, through Revoke.
+    ///
+    /// The database refuses the same cases rather than trusting this.
+    /// </remarks>
+    private static bool CanAskToCancel(LeaveRequest r) =>
+        string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)
+        && r.WithdrawRequestedAt is null
+        && r.StartDate.Date >= PhTime.OperationalDay;
+
+    private void OpenWithdraw(LeaveRequest r)
+    {
+        withdrawing = r;
+        withdrawReason = "";
+        withdrawProblem = null;
+    }
+
+    private void CloseWithdraw()
+    {
+        withdrawing = null;
+        withdrawProblem = null;
+    }
+
+    private async Task SubmitWithdraw()
+    {
+        if (withdrawing is null) return;
+
+        // Asked for, because the dispatcher has to weigh it and "no reason given" is not
+        // something they can weigh.
+        if (string.IsNullOrWhiteSpace(withdrawReason))
+        {
+            withdrawProblem = "Say why, so your dispatcher can decide.";
+            return;
+        }
+
+        sending = true;
+        try
+        {
+            await Data.RequestLeaveWithdrawalAsync(withdrawing.RequestId, withdrawReason.Trim());
+            CloseWithdraw();
+            await Load();
+            await Say("Your dispatcher has been asked to cancel this leave.");
+        }
+        catch (Exception ex)
+        {
+            withdrawProblem = ex.Message;
         }
         finally
         {
