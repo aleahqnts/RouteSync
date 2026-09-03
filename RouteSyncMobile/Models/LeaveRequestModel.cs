@@ -86,6 +86,19 @@ public class LeaveRequest : BaseModel
     [Column("withdraw_reason")]
     public string WithdrawReason { get; set; }
 
+    /// <summary>When the dispatcher answered the driver's asking, either way.</summary>
+    /// <remarks>
+    /// The asking is not cleared when it is answered. Clearing it took the request out of
+    /// the queue and out of its own history at the same time, so a driver who asked and
+    /// was answered had no record either of them ever happened. This says the question is
+    /// settled; the asking itself stays on the row.
+    ///
+    /// Only the latest asking is kept. A leave declined and asked about again keeps the
+    /// second; the audit trail keeps both.
+    /// </remarks>
+    [Column("withdraw_answered_at")]
+    public DateTime? WithdrawAnsweredAt { get; set; }
+
     [Column("filed_at")]
     public DateTime FiledAt { get; set; }
 
