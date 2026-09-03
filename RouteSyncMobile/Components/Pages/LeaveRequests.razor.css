@@ -471,3 +471,11 @@
 .psave:disabled { opacity: 0.6; }
 
 .err-msg { color: #d0494b; font-size: 13px; margin: 10px 0 0; }
+
+/* Shown under a request whose approval has been begun and not finished. Quiet, because
+   it is progress rather than an answer. */
+.lv-checking {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #7a8699;
+}

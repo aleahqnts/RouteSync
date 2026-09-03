@@ -1,0 +1,297 @@
+﻿@page "/schedule"
+@using FleetWiseMobile.Models
+@inject SessionService Session
+@inject DriverDataService Data
+@inject NavigationManager Nav
+
+<div class="cal">
+
+    <div class="cal-header">
+        <button class="back" @onclick="@(() => Nav.NavigateTo("/home"))">&#8592;</button>
+        <h1>My Schedule</h1>
+        <span class="spacer"></span>
+    </div>
+
+    @if (loading)
+    {
+        <div class="sk sk-card" style="height:64px"></div>
+        <div class="sk sk-card" style="height:300px"></div>
+        <div class="sk sk-card" style="height:120px"></div>
+    }
+    else
+    {
+        @* The month, and the way to another one. Back is open because what happened is
+           settled; forward stops at the last week the planner has built. *@
+        <div class="cal-bar">
+            <button class="cal-step" @onclick="PrevMonth" aria-label="Previous month">&#8249;</button>
+            <div class="cal-month">
+                <p class="cal-month-n">@month.ToString("MMMM yyyy")</p>
+                <p class="cal-month-s">@Pattern</p>
+            </div>
+            <button class="cal-step" @onclick="NextMonth" disabled="@(!CanGoForward)"
+                    aria-label="Next month">&#8250;</button>
+        </div>
+
+        @if (!CanGoForward)
+        {
+            <p class="cal-wall">@month.AddMonths(1).ToString("MMMM") is not scheduled yet.</p>
+        }
+
+        <div class="cal-grid" role="grid">
+            @foreach (var d in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
+            {
+                <span class="cal-dow">@d</span>
+            }
+
+            @* The blanks before the first, so the month starts under the right weekday. *@
+            @for (var i = 0; i < LeadingBlanks; i++)
+            {
+                <span class="cal-pad"></span>
+            }
+
+            @for (var day = 1; day <= DateTime.DaysInMonth(month.Year, month.Month); day++)
+            {
+                var date = new DateTime(month.Year, month.Month, day);
+                var shifts = ShiftsOn(date);
+                var onLeave = OnLeave(date);
+                var unplanned = !IsScheduled(date);
+
+                <button class="cal-day @DayClass(date, shifts, onLeave, unplanned)"
+                        style="@DayStyle(shifts, onLeave)"
+                        @onclick="@(() => Select(date))"
+                        aria-label="@AriaFor(date, shifts, onLeave, unplanned)">
+                    <span class="cal-n">@day</span>
+                    @if (shifts.Count > 2 && onLeave is null)
+                    {
+                        <span class="cal-many">@shifts.Count</span>
+                    }
+                    else if (shifts.Count == 2 && shifts[0] == shifts[1] && onLeave is null)
+                    {
+                        <span class="cal-many">2</span>
+                    }
+                </button>
+            }
+        </div>
+
+        <div class="cal-legend">
+            @foreach (var s in new[] { "Morning", "Afternoon", "Evening" })
+            {
+                <span class="cal-key"><i class="cal-swatch" style="background:@ShiftColour(s)"></i>@s</span>
+            }
+            <span class="cal-key"><i class="cal-swatch cal-swatch--leave"></i>Approved leave</span>
+            <span class="cal-key"><i class="cal-swatch cal-swatch--none"></i>Not scheduled yet</span>
+        </div>
+
+        @* The detail for whichever day is chosen, on the page rather than over it. *@
+        <div class="cal-panel">
+            <p class="cal-panel-d">@selected.ToString("dddd, MMMM d")</p>
+
+            @if (OnLeave(selected) is LeaveRequest lv)
+            {
+                <div class="cal-leave">
+                    <p class="cal-leave-t">On @lv.LeaveType.ToLowerInvariant() leave</p>
+                    <p class="cal-leave-s">Approved. You are not scheduled to drive.</p>
+                </div>
+            }
+            else if (ShiftsOn(selected).Count == 0)
+            {
+                <p class="cal-none">
+                    @(IsScheduled(selected)
+                        ? "Rest day. You have no assignment."
+                        : "This week has not been scheduled yet. Check again closer to the date.")
+                </p>
+            }
+            else
+            {
+                @foreach (var t in TripsOn(selected))
+                {
+                    <div class="cal-trip">
+                        <span class="cal-trip-bar" style="background:@ShiftColour(t.ShiftType)"></span>
+                        <div class="cal-trip-body">
+                            <p class="cal-trip-r">@RouteName(t.RouteId)</p>
+                            <p class="cal-trip-s">@t.ShiftType shift · @TimeRange(t)</p>
+                            <p class="cal-trip-m">@t.VehicleId · @t.TripStatus</p>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private DateTime month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime selected = DateTime.Today;
+
+    private List<Trip> trips = new();
+    private List<LeaveRequest> leave = new();
+    private HashSet<DateTime> scheduledWeeks = new();
+    private DateTime? lastScheduledWeek;
+    private readonly Dictionary<int, string> routeNames = new();
+
+    // The three shifts the planner writes, and nothing else. Keeping the words identical
+    // to ScheduleViewModel.Shifts is what stops the legend disagreeing with the board the
+    // dispatcher built the month on.
+    private static string ShiftColour(string shift) => shift switch
+    {
+        "Morning" => "#4AADA8",
+        "Afternoon" => "#E8A33D",
+        "Evening" => "#5B6CB8",
+        _ => "#9AA5B4",
+    };
+
+    private const string LeaveColour = "#3FA45B";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var uid = Session.CurrentUser!.UserId;
+
+        // A month plus the days either side that share its first and last weeks, so a
+        // shift on the Sunday of a week beginning in the previous month is still found.
+        var from = MondayOf(month).AddDays(-7);
+        var to = month.AddMonths(1).AddDays(6);
+
+        try
+        {
+            var tripsTask = Data.GetTripsBetweenAsync(uid, from, to);
+            var leaveTask = Data.GetApprovedLeaveBetweenAsync(uid, from, to);
+            var weeksTask = Data.GetScheduledWeeksAsync(from, to);
+            var lastTask = Data.GetLastScheduledWeekAsync();
+
+            await Task.WhenAll(tripsTask, leaveTask, weeksTask, lastTask);
+
+            trips = tripsTask.Result;
+            leave = leaveTask.Result;
+            scheduledWeeks = weeksTask.Result;
+            lastScheduledWeek = lastTask.Result;
+
+            foreach (var id in trips.Select(t => t.RouteId).Distinct().Where(id => !routeNames.ContainsKey(id)))
+            {
+                try
+                {
+                    var r = await Data.GetRouteAsync(id);
+                    if (r is not null) routeNames[id] = r.RouteName;
+                }
+                catch { /* falls back to "Route N" */ }
+            }
+        }
+        catch
+        {
+            // A month that cannot be read is an empty month rather than a broken page.
+            trips = new();
+            leave = new();
+            scheduledWeeks = new();
+        }
+
+        loading = false;
+    }
+
+    private static DateTime MondayOf(DateTime d) => d.Date.AddDays(-(((int)d.DayOfWeek + 6) % 7));
+
+    private int LeadingBlanks => ((int)new DateTime(month.Year, month.Month, 1).DayOfWeek + 6) % 7;
+
+    /// <summary>Whether the week a day belongs to has been built by the planner.</summary>
+    private bool IsScheduled(DateTime d) => scheduledWeeks.Contains(MondayOf(d));
+
+    private bool CanGoForward =>
+        lastScheduledWeek is DateTime last && MondayOf(month.AddMonths(1)) <= last;
+
+    private List<Trip> TripsOn(DateTime d) =>
+        trips.Where(t => t.Date.Date == d.Date)
+             .OrderBy(t => t.ShiftStartTime)
+             .ToList();
+
+    private List<string> ShiftsOn(DateTime d) =>
+        TripsOn(d).Select(t => t.ShiftType).ToList();
+
+    private LeaveRequest? OnLeave(DateTime d) =>
+        leave.FirstOrDefault(l => LeaveEntitlement.CoversDay(l, d));
+
+    /// <summary>
+    /// What the month is, said rather than left to be inferred. A driver is on one shift
+    /// for most of a month, so the grid is close to one colour and the legend earns its
+    /// place only where a day departs from the pattern. Naming the pattern is what makes
+    /// that day visible.
+    /// </summary>
+    private string Pattern
+    {
+        get
+        {
+            var mine = trips.Where(t => t.Date.Month == month.Month && t.Date.Year == month.Year).ToList();
+            if (mine.Count == 0) return "No assignments";
+
+            var byShift = mine.GroupBy(t => t.ShiftType).OrderByDescending(g => g.Count()).ToList();
+            var days = mine.Select(t => t.Date.Date).Distinct().Count();
+            var main = byShift[0].Key;
+
+            return byShift.Count == 1
+                ? $"{main} shift · {days} {(days == 1 ? "day" : "days")}"
+                : $"Mostly {main.ToLowerInvariant()} shift · {days} {(days == 1 ? "day" : "days")}";
+        }
+    }
+
+    private string DayClass(DateTime d, List<string> shifts, LeaveRequest? onLeave, bool unplanned)
+    {
+        var c = new List<string>();
+        if (d.Date == DateTime.Today) c.Add("cal-today");
+        if (d.Date == selected.Date) c.Add("cal-sel");
+        if (onLeave is not null) c.Add("cal-leave-day");
+        else if (shifts.Count == 0 && unplanned) c.Add("cal-unplanned");
+        else if (shifts.Count == 0) c.Add("cal-rest");
+        else c.Add("cal-on");
+        return string.Join(" ", c);
+    }
+
+    /// <summary>
+    /// The fill for one day. Leave wins outright. Two different shifts split the square
+    /// on the diagonal, which is the one case a dispatcher reaches by overriding a
+    /// consecutive-shift warning. Three or more, or the same shift twice, take a single
+    /// neutral fill and a count: a square this size cannot say more, and the panel below
+    /// can say all of it.
+    /// </summary>
+    private string DayStyle(List<string> shifts, LeaveRequest? onLeave)
+    {
+        if (onLeave is not null) return $"background:{LeaveColour}";
+        if (shifts.Count == 0) return "";
+        if (shifts.Count == 1) return $"background:{ShiftColour(shifts[0])}";
+
+        if (shifts.Count == 2 && shifts[0] != shifts[1])
+            return $"background:linear-gradient(135deg,{ShiftColour(shifts[0])} 0 50%,{ShiftColour(shifts[1])} 50% 100%)";
+
+        return "background:#6B7A8D";
+    }
+
+    private string AriaFor(DateTime d, List<string> shifts, LeaveRequest? onLeave, bool unplanned)
+    {
+        var day = d.ToString("MMMM d");
+        if (onLeave is not null) return $"{day}, approved leave";
+        if (shifts.Count > 0) return $"{day}, {string.Join(" and ", shifts.Distinct())} shift";
+        return unplanned ? $"{day}, not scheduled yet" : $"{day}, rest day";
+    }
+
+    private string RouteName(int id) => routeNames.GetValueOrDefault(id, $"Route {id}");
+
+    private static string TimeRange(Trip t) =>
+        $"{DateTime.Today.Add(t.ShiftStartTime):h:mm tt} to {DateTime.Today.Add(t.ShiftEndTime):h:mm tt}";
+
+    private void Select(DateTime d) => selected = d;
+
+    private async Task PrevMonth()
+    {
+        month = month.AddMonths(-1);
+        selected = month;
+        await Load();
+    }
+
+    private async Task NextMonth()
+    {
+        if (!CanGoForward) return;
+        month = month.AddMonths(1);
+        selected = month;
+        await Load();
+    }
+}

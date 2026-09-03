@@ -56,6 +56,18 @@
     overflow: visible;
 }
 
+/* A desk, on a window that is not the whole screen. The padding above is generous
+   because a maximised window can spare it; on a half screen it is a fifth of the width
+   spent on nothing, and it is what pushes a wide board past the edge and sets the page
+   sliding sideways. Narrowed here rather than at the boards, so every one of them gains
+   the room at the same width. */
+@media (min-width: 600px) and (max-width: 1279px) {
+
+    .topbar { padding: 0 32px; }
+
+    .main-content { padding: 28px 32px; }
+}
+
 /* Phone. The desktop padding above is wider than a handset can spare, and the topbar
    is taller than one should give up to a bar with nothing in it. */
 @media (max-width: 599px) {
@@ -605,6 +617,7 @@ html.rs-dialog-open .main-content {
 .rp-title.rp-title,
 .vh-title.vh-title,
 .us-title.us-title,
+.rq-title.rq-title,
 .au-title.au-title,
 .sch-week-label.sch-week-label,
 .rs-bar-title.rs-bar-title {
@@ -621,6 +634,7 @@ html.rs-dialog-open .main-content {
 .rp-title.rp-title,
 .vh-title.vh-title,
 .us-title.us-title,
+.rq-title.rq-title,
 .au-title.au-title {
     font-weight: 800;
 }

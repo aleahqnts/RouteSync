@@ -1,0 +1,274 @@
+﻿.cal { padding: 52px 18px calc(28px + env(safe-area-inset-bottom)); }
+
+.cal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.back {
+    border: none;
+    background: none;
+    font-size: 22px;
+    color: #1b2a56;
+    cursor: pointer;
+    width: 32px;
+}
+
+.cal-header h1 {
+    flex: 1;
+    text-align: center;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+.spacer { width: 32px; }
+
+/* --- The month, and the way to another one ------------------------------- */
+
+.cal-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.cal-step {
+    flex: 0 0 40px;
+    height: 40px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #1b2a56;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+    .cal-step:disabled {
+        color: #c2cad6;
+        background: #f6f8fa;
+        cursor: default;
+    }
+
+.cal-month { flex: 1; text-align: center; }
+
+.cal-month-n {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+/* What the month is, said in words. Most months are one shift throughout, so the grid
+   is nearly one colour and the pattern is easier to read here than to infer there. */
+.cal-month-s {
+    margin: 2px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #7a8699;
+}
+
+.cal-wall {
+    margin: -6px 0 12px;
+    padding: 8px 12px;
+    border: 1px solid #e6d6a8;
+    border-radius: 10px;
+    background: #fef9e7;
+    color: #7a6412;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* --- The grid ------------------------------------------------------------ */
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 14px;
+}
+
+.cal-dow {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9aa5b4;
+    padding-bottom: 2px;
+}
+
+.cal-pad { aspect-ratio: 1; }
+
+.cal-day {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.cal-n {
+    position: relative;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1b2a56;
+}
+
+/* A day carrying an assignment is filled, so its number is set against the fill rather
+   than against the page. */
+.cal-on .cal-n,
+.cal-leave-day .cal-n { color: #fff; }
+
+.cal-rest {
+    background: #fff;
+    border-color: #e8ecf0;
+}
+
+/* Not "no work". Nobody has built this week yet, and the two must not look alike. */
+.cal-unplanned {
+    border-color: #e8ecf0;
+    background-color: #fbfcfd;
+    background-image: repeating-linear-gradient(
+        135deg, #e4e9ef 0 2px, transparent 2px 7px);
+}
+
+    .cal-unplanned .cal-n { color: #aab4c2; }
+
+.cal-today { box-shadow: inset 0 0 0 2px #1b2a56; }
+
+.cal-sel { border-color: #1b2a56; }
+
+/* Three shifts in a day, or the same one twice. Both are reachable only by overriding a
+   warning, and a square this size cannot draw either honestly. The count sends the
+   reader to the panel below, which can. */
+.cal-many {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #fff;
+}
+
+/* --- Legend -------------------------------------------------------------- */
+
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-bottom: 16px;
+}
+
+.cal-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #5a6678;
+}
+
+.cal-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.cal-swatch--leave { background: #3fa45b; }
+
+.cal-swatch--none {
+    background-color: #fbfcfd;
+    border: 1px solid #e4e9ef;
+    background-image: repeating-linear-gradient(
+        135deg, #e4e9ef 0 2px, transparent 2px 7px);
+}
+
+/* --- The day in full ----------------------------------------------------- */
+
+.cal-panel {
+    border: 1px solid #e8ecf0;
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px 16px;
+}
+
+.cal-panel-d {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+.cal-none {
+    margin: 0;
+    font-size: 13px;
+    color: #7a8699;
+    line-height: 1.5;
+}
+
+.cal-leave {
+    border-left: 3px solid #3fa45b;
+    padding-left: 10px;
+}
+
+.cal-leave-t {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #2b7a44;
+}
+
+.cal-leave-s {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: #7a8699;
+}
+
+.cal-trip {
+    display: flex;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+    .cal-trip:first-of-type {
+        padding-top: 0;
+        border-top: none;
+    }
+
+.cal-trip-bar {
+    flex: 0 0 3px;
+    border-radius: 2px;
+}
+
+.cal-trip-body { min-width: 0; }
+
+.cal-trip-r {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1b2a56;
+}
+
+.cal-trip-s {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: #5a6678;
+}
+
+.cal-trip-m {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: #9aa5b4;
+}
