@@ -986,7 +986,7 @@ namespace FleetWise.Controllers
                     .Filter("status", Operator.Equals, "Approved")
                     .Filter("start_date", Operator.LessThanOrEqual, date.ToString("yyyy-MM-dd"))
                     .Filter("end_date", Operator.GreaterThanOrEqual, date.ToString("yyyy-MM-dd"))
-                    .Get()).Models.FirstOrDefault();
+                    .Get()).Models.FirstOrDefault(l => LeaveEntitlement.CoversDay(l, date));
 
             if (onLeave is not null)
                 return $"This driver is on approved {onLeave.LeaveType.ToLowerInvariant()} leave on {Fmt(date)}.";
@@ -1038,7 +1038,7 @@ namespace FleetWise.Controllers
                     .Filter("end_date", Operator.GreaterThanOrEqual, day.ToString("yyyy-MM-dd"))
                     .Get()).Models;
 
-            foreach (var leave in onLeave)
+            foreach (var leave in onLeave.Where(l => LeaveEntitlement.CoversDay(l, day)))
                 availability[leave.UserId] = "On Leave";
 
             return availability;

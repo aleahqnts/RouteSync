@@ -18,7 +18,16 @@
 else
 {
     <div class="trips">
-        <h1 class="trips-title">Trips</h1>
+        <div class="trips-head">
+            <h1 class="trips-title">Trips</h1>
+            @* This tab is what has been driven. A driver who came here looking for what
+               is still to come is sent on rather than left to find it on Home. *@
+            <button class="trips-cal" @onclick="@(() => Nav.NavigateTo("/schedule"))"
+                    title="My schedule" aria-label="My schedule">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            </button>
+        </div>
 
         @if (trips.Any())
         {

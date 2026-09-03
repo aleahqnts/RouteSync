@@ -43,10 +43,21 @@
         public string Filed { get; set; } = "";
 
         /// <summary>
-        /// Days of this allowance already granted this year, out of the entitlement.
-        /// Approved days only: the request being decided is not counted against itself.
+        /// Days of this allowance left once this request is counted, out of the year's
+        /// entitlement.
         /// </summary>
-        public int RemainingOfType { get; set; }
+        /// <remarks>
+        /// Read down a driver's requests it is a ledger: each row shows what the
+        /// allowance stood at after that request, rather than what it stands at now.
+        /// The live figure was the same on every row of a driver and a type, which said
+        /// nothing about any of them.
+        ///
+        /// A request still waiting counts against itself here. The question in front of
+        /// whoever is reading is whether to grant it, and the number they want is what
+        /// granting it would leave. One already refused or withdrawn takes nothing, so
+        /// its row shows the allowance as that decision left it.
+        /// </remarks>
+        public int BalanceAfter { get; set; }
 
         public int EntitlementOfType { get; set; }
 
@@ -55,6 +66,20 @@
         /// this one and forgetting those is how an allowance gets overdrawn.
         /// </summary>
         public int OtherPendingDays { get; set; }
+
+        /// <summary>Days of this leave already taken back, counted for the badge.</summary>
+        public int RevokedCount { get; set; }
+
+        /// <summary>
+        /// Days still standing that could be taken back: inside the range, not already
+        /// revoked, and not in the past.
+        /// </summary>
+        /// <remarks>
+        /// A day off that has been taken cannot be handed back, so yesterday is never
+        /// offered. An approved leave entirely in the past therefore offers nothing, and
+        /// no Revoke is drawn for it.
+        /// </remarks>
+        public List<LeaveDayOption> RevokableDays { get; set; } = new();
 
         public string? DecisionNote { get; set; }
 
@@ -68,6 +93,13 @@
     /// needs to know whose it was; a driver reading the outcome does not, and naming the
     /// person turns a company decision into a personal one.
     /// </remarks>
+    /// <summary>One day of a leave, as the revoke dialog lists it.</summary>
+    public class LeaveDayOption
+    {
+        public string Iso { get; set; } = "";
+        public string Label { get; set; } = "";
+    }
+
     public class LeaveEventViewModel
     {
         public string Action { get; set; } = "";

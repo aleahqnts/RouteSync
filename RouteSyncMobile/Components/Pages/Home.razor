@@ -178,6 +178,17 @@ else
             </div>
         }
 
+        @* The rest of the month, from the screen already showing one day of it. A driver
+           looking at today's assignment is the one asking whether they are on next
+           Thursday, and the answer was nowhere in the app. *@
+        <div class="info-card row">
+            <div>
+                <p class="s-title">My Schedule</p>
+                <p class="s-sub">Your shifts, rest days and approved leave</p>
+            </div>
+            <button class="link-btn" @onclick="@(() => Nav.NavigateTo("/schedule"))">Open</button>
+        </div>
+
         @* Always reachable, except to a driver already rostered off, who has nothing to
            report. Sickness, an emergency and a fault with the bus do not wait for a
            convenient point in the shift, and the driver who most needs to report one is
