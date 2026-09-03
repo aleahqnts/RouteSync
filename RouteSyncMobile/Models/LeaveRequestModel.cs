@@ -70,6 +70,22 @@ public class LeaveRequest : BaseModel
     [Column("revoke_note")]
     public string RevokeNote { get; set; }
 
+    /// <summary>When the driver asked for granted leave to be cancelled, and why.</summary>
+    /// <remarks>
+    /// A mark on the request rather than a status of its own. Leave waiting on a
+    /// withdrawal decision is still granted: it counts against the allowance, shows on
+    /// the calendar and refuses an assignment, exactly as it did before the driver asked.
+    /// A new status would have had to be taught to every one of those readers.
+    ///
+    /// Cleared either way. Accepting cancels the request outright; declining leaves the
+    /// leave standing with nothing to show it was ever questioned except the audit trail.
+    /// </remarks>
+    [Column("withdraw_requested_at")]
+    public DateTime? WithdrawRequestedAt { get; set; }
+
+    [Column("withdraw_reason")]
+    public string WithdrawReason { get; set; }
+
     [Column("filed_at")]
     public DateTime FiledAt { get; set; }
 

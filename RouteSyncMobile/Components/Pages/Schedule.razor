@@ -20,6 +20,8 @@
     }
     else
     {
+        <div class="cal-card">
+
         @* The month, and the way to another one. Back is open because what happened is
            settled; forward stops at the last week the planner has built. *@
         <div class="cal-bar">
@@ -31,11 +33,6 @@
             <button class="cal-step" @onclick="NextMonth" disabled="@(!CanGoForward)"
                     aria-label="Next month">&#8250;</button>
         </div>
-
-        @if (!CanGoForward)
-        {
-            <p class="cal-wall">@month.AddMonths(1).ToString("MMMM") is not scheduled yet.</p>
-        }
 
         <div class="cal-grid" role="grid">
             @foreach (var d in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
@@ -79,12 +76,18 @@
                 <span class="cal-key"><i class="cal-swatch" style="background:@ShiftColour(s)"></i>@s</span>
             }
             <span class="cal-key"><i class="cal-swatch cal-swatch--leave"></i>Approved leave</span>
+            <span class="cal-key"><i class="cal-swatch cal-swatch--rest"></i>Rest day</span>
             <span class="cal-key"><i class="cal-swatch cal-swatch--none"></i>Not scheduled yet</span>
         </div>
 
+        </div>@* /cal-card *@
+
         @* The detail for whichever day is chosen, on the page rather than over it. *@
         <div class="cal-panel">
-            <p class="cal-panel-d">@selected.ToString("dddd, MMMM d")</p>
+            <div class="cal-panel-head">
+                <p class="cal-panel-d">@selected.ToString("dddd, MMMM d")</p>
+                <span class="cal-panel-tag @PanelTagClass">@PanelTag</span>
+            </div>
 
             @if (OnLeave(selected) is LeaveRequest lv)
             {
@@ -110,7 +113,10 @@
                         <div class="cal-trip-body">
                             <p class="cal-trip-r">@RouteName(t.RouteId)</p>
                             <p class="cal-trip-s">@t.ShiftType shift · @TimeRange(t)</p>
-                            <p class="cal-trip-m">@t.VehicleId · @t.TripStatus</p>
+                            <p class="cal-trip-m">
+                                @t.VehicleId
+                                <span class="cal-trip-st @TripStateClass(t)">@TripState(t)</span>
+                            </p>
                         </div>
                     </div>
                 }
@@ -127,21 +133,47 @@
     private List<Trip> trips = new();
     private List<LeaveRequest> leave = new();
     private HashSet<DateTime> scheduledWeeks = new();
-    private DateTime? lastScheduledWeek;
     private readonly Dictionary<int, string> routeNames = new();
 
     // The three shifts the planner writes, and nothing else. Keeping the words identical
     // to ScheduleViewModel.Shifts is what stops the legend disagreeing with the board the
     // dispatcher built the month on.
+    //
+    // Read as the day runs: the light of the morning, the orange of the afternoon, the
+    // dark of the evening. A driver picks the pattern out of the grid without consulting
+    // the legend, which is the whole point of colouring it.
     private static string ShiftColour(string shift) => shift switch
     {
-        "Morning" => "#4AADA8",
-        "Afternoon" => "#E8A33D",
-        "Evening" => "#5B6CB8",
-        _ => "#9AA5B4",
+        "Morning" => "#E5DE44",
+        "Afternoon" => "#EF810E",
+        "Evening" => "#053752",
+        _ => "#8896A2",
     };
 
-    private const string LeaveColour = "#3FA45B";
+    /// <summary>Ink that can be read on a given fill.</summary>
+    /// <remarks>
+    /// Two of the three shifts are light enough that white numbers disappear on them, so
+    /// the ink follows the fill rather than being set once for every filled day.
+    /// </remarks>
+    private static string ShiftInk(string shift) => shift switch
+    {
+        "Morning" => DarkInk,
+        "Afternoon" => DarkInk,
+        _ => "#FFFFFF",
+    };
+
+    private const string DarkInk = "#001A26";
+
+    /// <summary>Days with more shifts on them than a square can draw.</summary>
+    /// <remarks>
+    /// Outside the palette on purpose. The three shift colours are the palette, and a
+    /// fourth state drawn in the darkest of them was indistinguishable from the evening,
+    /// which is the one thing this must not be mistaken for. Slate says none of the
+    /// above, which is what it means.
+    /// </remarks>
+    private const string ManyColour = "#64748B";
+
+    private const string LeaveColour = "#2E8B57";
 
     protected override async Task OnInitializedAsync() => await Load();
 
@@ -160,14 +192,12 @@
             var tripsTask = Data.GetTripsBetweenAsync(uid, from, to);
             var leaveTask = Data.GetApprovedLeaveBetweenAsync(uid, from, to);
             var weeksTask = Data.GetScheduledWeeksAsync(from, to);
-            var lastTask = Data.GetLastScheduledWeekAsync();
 
-            await Task.WhenAll(tripsTask, leaveTask, weeksTask, lastTask);
+            await Task.WhenAll(tripsTask, leaveTask, weeksTask);
 
             trips = tripsTask.Result;
             leave = leaveTask.Result;
             scheduledWeeks = weeksTask.Result;
-            lastScheduledWeek = lastTask.Result;
 
             foreach (var id in trips.Select(t => t.RouteId).Distinct().Where(id => !routeNames.ContainsKey(id)))
             {
@@ -197,8 +227,31 @@
     /// <summary>Whether the week a day belongs to has been built by the planner.</summary>
     private bool IsScheduled(DateTime d) => scheduledWeeks.Contains(MondayOf(d));
 
-    private bool CanGoForward =>
-        lastScheduledWeek is DateTime last && MondayOf(month.AddMonths(1)) <= last;
+    private DateTime ThisMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+    /// <summary>The furthest month ahead the calendar will open.</summary>
+    /// <remarks>
+    /// One. Rotation is decided a month at a time and the planner builds next month
+    /// shortly before it starts, so the month after next is a guess however much of it
+    /// happens to be in the database. A week that runs across the turn of the month can
+    /// put rows in it without any of it being planned.
+    /// </remarks>
+    private DateTime FurthestMonth => ThisMonth.AddMonths(1);
+
+    /// <summary>
+    /// Whether there is a month ahead worth opening.
+    /// </summary>
+    /// <remarks>
+    /// One bound, and it does not apply to going back: any month up to this one has
+    /// happened or is happening, and a driver who stepped back to August has to be able
+    /// to return.
+    ///
+    /// Next month opens whether or not it has been planned. Refusing it while it was
+    /// empty was guarding against a blank grid being read as a month off, and the
+    /// hatching answers that now: an unplanned month draws as unplanned rather than as
+    /// free, so there is nothing left to protect the driver from.
+    /// </remarks>
+    private bool CanGoForward => month.AddMonths(1) <= FurthestMonth;
 
     private List<Trip> TripsOn(DateTime d) =>
         trips.Where(t => t.Date.Date == d.Date)
@@ -242,7 +295,11 @@
         if (onLeave is not null) c.Add("cal-leave-day");
         else if (shifts.Count == 0 && unplanned) c.Add("cal-unplanned");
         else if (shifts.Count == 0) c.Add("cal-rest");
-        else c.Add("cal-on");
+        else
+        {
+            c.Add("cal-on");
+            if (shifts.Count == 2 && shifts[0] != shifts[1]) c.Add("cal-split");
+        }
         return string.Join(" ", c);
     }
 
@@ -255,14 +312,20 @@
     /// </summary>
     private string DayStyle(List<string> shifts, LeaveRequest? onLeave)
     {
-        if (onLeave is not null) return $"background:{LeaveColour}";
+        if (onLeave is not null) return $"background:{LeaveColour};color:#FFFFFF";
         if (shifts.Count == 0) return "";
-        if (shifts.Count == 1) return $"background:{ShiftColour(shifts[0])}";
 
+        if (shifts.Count == 1)
+            return $"background:{ShiftColour(shifts[0])};color:{ShiftInk(shifts[0])}";
+
+        // Two different shifts split the square. No single ink reads on both halves when
+        // one is the yellow of the morning and the other the dark of the evening, so the
+        // number is dark and carries a halo. The halo comes from the split class.
         if (shifts.Count == 2 && shifts[0] != shifts[1])
-            return $"background:linear-gradient(135deg,{ShiftColour(shifts[0])} 0 50%,{ShiftColour(shifts[1])} 50% 100%)";
+            return $"background:linear-gradient(135deg,{ShiftColour(shifts[0])} 0 50%,{ShiftColour(shifts[1])} 50% 100%)"
+                 + $";color:{DarkInk}";
 
-        return "background:#6B7A8D";
+        return $"background:{ManyColour};color:#FFFFFF";
     }
 
     private string AriaFor(DateTime d, List<string> shifts, LeaveRequest? onLeave, bool unplanned)
@@ -275,8 +338,73 @@
 
     private string RouteName(int id) => routeNames.GetValueOrDefault(id, $"Route {id}");
 
+    /// <summary>
+    /// How a trip stands, as the driver should read it.
+    /// </summary>
+    /// <remarks>
+    /// Worked out rather than read off the row. Nothing writes Missed to trip_status: the
+    /// dashboard derives it from the shift having closed on a trip that never started,
+    /// and a trip left unstarted keeps saying Not Yet Started in the column for ever. A
+    /// calendar printing the column would tell a driver a shift last month is still
+    /// waiting to depart.
+    ///
+    /// The dispatcher's readiness words are not repeated here. Pending and Assignment
+    /// Issue describe whether a bus can be sent, which is dispatch's problem and says
+    /// nothing to the driver whose day it is; both read as Scheduled.
+    /// </remarks>
+    private static string TripState(Trip t)
+    {
+        if (string.Equals(t.TripStatus, "Active", StringComparison.OrdinalIgnoreCase))
+            return "In progress";
+
+        if (string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+            return "Completed";
+
+        return ShiftEndAt(t) < PhTime.Now ? "Missed" : "Scheduled";
+    }
+
+    private static string TripStateClass(Trip t) => TripState(t) switch
+    {
+        "In progress" => "cal-trip-st--live",
+        "Completed" => "cal-trip-st--done",
+        "Missed" => "cal-trip-st--missed",
+        _ => "cal-trip-st--due",
+    };
+
+    /// <summary>
+    /// When a shift closes. An end at or before its start runs past midnight, so it
+    /// closes on the following day.
+    /// </summary>
+    private static DateTime ShiftEndAt(Trip t) =>
+        t.Date.Date.Add(t.ShiftEndTime)
+            .AddDays(t.ShiftEndTime <= t.ShiftStartTime ? 1 : 0);
+
     private static string TimeRange(Trip t) =>
         $"{DateTime.Today.Add(t.ShiftStartTime):h:mm tt} to {DateTime.Today.Add(t.ShiftEndTime):h:mm tt}";
+
+    /// <summary>How the chosen day stands, in a word, beside its date.</summary>
+    private string PanelTag
+    {
+        get
+        {
+            if (OnLeave(selected) is not null) return "On leave";
+
+            var n = ShiftsOn(selected).Count;
+            if (n > 0) return n == 1 ? "1 shift" : $"{n} shifts";
+
+            return IsScheduled(selected) ? "Rest day" : "Not scheduled";
+        }
+    }
+
+    private string PanelTagClass
+    {
+        get
+        {
+            if (OnLeave(selected) is not null) return "cal-panel-tag--leave";
+            if (ShiftsOn(selected).Count > 0) return "cal-panel-tag--on";
+            return IsScheduled(selected) ? "cal-panel-tag--rest" : "cal-panel-tag--none";
+        }
+    }
 
     private void Select(DateTime d) => selected = d;
 

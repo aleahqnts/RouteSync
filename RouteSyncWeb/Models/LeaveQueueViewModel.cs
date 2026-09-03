@@ -81,6 +81,13 @@
         /// </remarks>
         public List<LeaveDayOption> RevokableDays { get; set; } = new();
 
+        /// <summary>Set when the driver has asked for this granted leave back.</summary>
+        public bool WithdrawAsked { get; set; }
+
+        public string? WithdrawReason { get; set; }
+
+        public string? WithdrawAskedWhen { get; set; }
+
         public string? DecisionNote { get; set; }
 
         /// <summary>What happened to this request, oldest first.</summary>

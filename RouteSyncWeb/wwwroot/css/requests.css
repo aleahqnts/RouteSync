@@ -334,6 +334,21 @@
        looked at nor the green of one that has been granted, because it is neither. */
     .rq-badge--held { background: #EAF0FB; color: #3A5BA0; }
 
+    /* Granted leave the driver has asked to hand back. Beside an Approved badge, because
+       it is still approved until somebody answers. */
+    .rq-asked {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #EAF0FB;
+        color: #3A5BA0;
+        font-size: .7rem;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: help;
+    }
+
     /* Days of an approved leave that dispatch has taken back. The badge beside it still
        reads Approved, because the rest of the leave still stands. */
     .rq-revoked {
