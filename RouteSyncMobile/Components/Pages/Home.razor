@@ -371,7 +371,7 @@ else
     }
 
     // A trip assigned by a dispatcher has to appear without the driver doing anything, so
-    // the page re-fetches every 15 seconds with no spinner and no flicker.
+    // the page re-fetches every five seconds with no spinner and no flicker.
     private readonly CancellationTokenSource pollCts = new();
 
     private async Task PollLoop()
@@ -524,7 +524,13 @@ else
             await JS.InvokeVoidAsync("ptr.set", _ptrRef);
         }
     }
-    [JSInvokable] public async Task Refresh() { await Load(); StateHasChanged(); }
+    /// <summary>Re-reads the page on a pull, and when the app comes back to the front.</summary>
+    /// <remarks>
+    /// Silent, so the card on screen stays put. The pull draws its own indicator, and
+    /// coming back to the app draws none: either way, raising the skeleton blanks a page
+    /// the driver is already reading.
+    /// </remarks>
+    [JSInvokable] public async Task Refresh() { await Load(silent: true); StateHasChanged(); }
 
     public void Dispose()
     {

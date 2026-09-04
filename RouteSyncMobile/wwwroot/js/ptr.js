@@ -2,9 +2,13 @@
 // scroll container; each tab page registers its own .NET refresh callback via
 // window.ptr.set(dotnetRef). Pulling down at scrollTop 0 past a threshold calls
 // the current page's [JSInvokable] Refresh().
+//
+// The same callback is called when the app comes back to the front, so a page that was
+// left open while the phone was elsewhere is right the moment it is looked at again.
 window.ptr = (function () {
     let current = null;
     let wired = false;
+    let resuming = false;
     const THRESHOLD = 70;
     const MAX_H = 96; // indicator height when spinning (room for status-bar offset)
 
@@ -49,6 +53,16 @@ window.ptr = (function () {
 
         return true;
     }
+
+    // No indicator on this one. The pull is something the driver did and wants answered;
+    // coming back to the app is not, and a spinner on every glance at the phone reads as
+    // the page having been broken while it was away.
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState !== 'visible' || !current || resuming) return;
+        resuming = true;
+        try { await current.invokeMethodAsync('Refresh'); } catch (e) { }
+        resuming = false;
+    });
 
     return {
         set: function (dotnet) {

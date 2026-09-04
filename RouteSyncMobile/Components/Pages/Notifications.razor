@@ -186,7 +186,7 @@ else
         _ = PollLoop();             // background: new messages appear without pull-to-refresh
     }
 
-    // Re-fetches every 15 seconds while the tab is open, so new messages appear on their
+    // Re-fetches every five seconds while the tab is open, so new messages appear on their
     // own. The badge is kept clear at the same time, since the driver is reading the list.
     private readonly CancellationTokenSource pollCts = new();
 

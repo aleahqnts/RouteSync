@@ -153,7 +153,7 @@ else
         }
     }
 
-    // Re-fetches every 15 seconds while the tab is open, keeping the list current.
+    // Re-fetches every five seconds while the tab is open, keeping the list current.
     private readonly CancellationTokenSource pollCts = new();
 
     private async Task PollLoop()
