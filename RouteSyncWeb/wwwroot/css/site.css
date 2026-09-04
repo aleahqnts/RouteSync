@@ -594,9 +594,52 @@ html.rs-dialog-open .main-content {
 
 /* An identifier printed in a column of its own only stays in that column if every
    character is the same width, so the lists that do it are set in a monospace face.
-   Applies to the option rows, not the closed control, which shows one name. */
+   Applies to the option rows. The closed control is covered by the face below, which is
+   set in the page's own type. */
 .rs-id-list option {
     font-family: ui-monospace, "Cascadia Mono", "Consolas", "Courier New", monospace;
+}
+
+/* A name over a chosen identifier.
+ *
+ * A list of people is opened to find somebody, where the number tells two of the same
+ * name apart, and read afterwards to see who is on, where the number is noise in a cell
+ * the width of a day. A native option cannot be styled per state and the closed control
+ * shows whatever the chosen option says, so the control keeps the full row and this is
+ * laid over it.
+ *
+ * Opaque, and inside the border so the control's own outline still shows, with the arrow
+ * left uncovered. It takes no pointer events, so the click, the keyboard and the native
+ * dropdown all still reach the control underneath.
+ */
+.rs-pick {
+    position: relative;
+    display: block;
+}
+
+.rs-pick-face {
+    position: absolute;
+    inset: 1.5px 26px 1.5px 1.5px;
+    display: flex;
+    align-items: center;
+    /* Set to the control's own left padding, less its border, so the name sits exactly
+       where the placeholder it replaces sat. */
+    padding: 0 var(--rs-pick-pad, 6.5px);
+    border-radius: 6px;
+    background: var(--rs-pick-bg, #fff);
+    color: inherit;
+    font: inherit;
+    /* Clipped rather than ellipsised. The text is the flex box's own, not a child, so
+       there is nothing for an ellipsis to attach to, and a native control clips a long
+       option in exactly the same place. */
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Nothing chosen yet, so the control's own placeholder is what should be read. */
+.rs-pick-face:empty {
+    display: none;
 }
 
 /* ===========================================================================
@@ -619,6 +662,7 @@ html.rs-dialog-open .main-content {
 .us-title.us-title,
 .rq-title.rq-title,
 .au-title.au-title,
+.sch-title.sch-title,
 .sch-week-label.sch-week-label,
 .rs-bar-title.rs-bar-title {
     font-family: 'Poppins', 'Segoe UI', sans-serif;
@@ -635,7 +679,8 @@ html.rs-dialog-open .main-content {
 .vh-title.vh-title,
 .us-title.us-title,
 .rq-title.rq-title,
-.au-title.au-title {
+.au-title.au-title,
+.sch-title.sch-title {
     font-weight: 800;
 }
 

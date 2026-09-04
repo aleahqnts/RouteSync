@@ -54,6 +54,20 @@ namespace FleetWise.ViewModels
         /// </remarks>
         public bool WeekClosed { get; set; }
 
+        /// <summary>What the week's save marker read when this grid was drawn.</summary>
+        /// <remarks>
+        /// Handed back with the save and compared against the marker as it stands then.
+        /// Two dispatchers can hold the same week open, and a save rewrites the whole of
+        /// it, so without this the second to save deletes the first one's work without
+        /// either of them seeing it happen.
+        ///
+        /// Carried as the string it will be compared against rather than as a time.
+        /// Nothing reads it: it either matches or the grid is out of date. Empty means the
+        /// week had never been saved when it was drawn, which is a state worth telling
+        /// apart from a week that had.
+        /// </remarks>
+        public string SavedAt { get; set; } = "";
+
         public bool SlotClosed(string shift, DateTime day) =>
             ClosedSlots.Contains($"{shift}|{day:yyyy-MM-dd}");
     }
@@ -90,6 +104,11 @@ namespace FleetWise.ViewModels
 
         [Required, RegularExpression(@"^\d{4}-\d{2}-\d{2}$", ErrorMessage = "Week end must be yyyy-MM-dd.")]
         public string WeekEnd { get; set; }
+
+        /// <summary>The save marker the grid was loaded with, empty for a week that had none.</summary>
+        [MaxLength(40, ErrorMessage = "That week could not be read.")]
+        public string? SavedAt { get; set; }
+
         // Dispatcher acknowledged the conflict modal and chose to save anyway.
         public bool Override { get; set; }
     }

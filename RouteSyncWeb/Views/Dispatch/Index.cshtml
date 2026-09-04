@@ -46,15 +46,28 @@
         <div class="rp-stat-sub">Today</div>
     </div>
 
-    <div class="rp-stat-card">
-        <div class="rp-stat-header">
-            <span class="rp-stat-icon rp-stat-icon--amber">
-                <i class="ti ti-clock-pause"></i>
-            </span>
-            <span class="rp-stat-label">Trips Not Started</span>
+    @* Two figures, because they call for two different things. One is a shift that has
+       not come round yet and wants nothing done; the other is a bus that should be out
+       and is not, which wants somebody ringing a driver. Put together they were one
+       number that stayed calm while the day went wrong. *@
+    <div class="rp-stat-card dp-side-card">
+        <div class="dp-side-row">
+            <div>
+                <div class="rp-stat-label">Trips Not Started</div>
+                <div class="rp-stat-value">@Model.TripsNotStarted</div>
+                <div class="rp-stat-sub">Awaiting departure</div>
+            </div>
+            <div class="@(Model.DelayedTrips > 0 ? "dp-side-btn" : "")"
+                 @(Model.DelayedTrips > 0 ? "onclick=dpHighlightDelayed()" : "")
+                 title="Departure time passed and the trip has not started">
+                <div class="rp-stat-label">Delayed</div>
+                <div class="rp-stat-value dp-side-value--red">@Model.DelayedTrips</div>
+                @if (Model.DelayedTrips > 0)
+                {
+                    <div class="dp-side-view">Show &#8250;</div>
+                }
+            </div>
         </div>
-        <div class="rp-stat-value">@Model.TripsNotStarted</div>
-        <div class="rp-stat-sub">Awaiting departure</div>
     </div>
 
     <div class="rp-stat-card @(Model.UnassignedTrips > 0 ? "dp-card-click" : "")"
@@ -95,6 +108,7 @@
 <div class="dp-chips" id="dpChips" role="group" aria-label="Filter trips by status">
     <button type="button" class="dp-chip dp-chip--on" data-chip="">All <span class="dp-chip-n"></span></button>
     <button type="button" class="dp-chip" data-chip="Assignment Issue">Issues <span class="dp-chip-n"></span></button>
+    <button type="button" class="dp-chip" data-chip="__late">Delayed <span class="dp-chip-n"></span></button>
     <button type="button" class="dp-chip" data-chip="Missed">Missed <span class="dp-chip-n"></span></button>
     <button type="button" class="dp-chip" data-chip="Active">Active <span class="dp-chip-n"></span></button>
 </div>
@@ -108,7 +122,7 @@
     <a class="dp-btn-secondary" href="/Schedule" style="text-decoration:none;"><i class="ti ti-calendar-week"></i> Edit Schedule</a>
     <div class="dp-search-wrap">
         <i class="ti ti-search dp-search-icon"></i>
-        <input type="text" id="searchInput" class="dp-search-input" placeholder="Search…" oninput="filterRows()" />
+        <input type="text" id="searchInput" class="dp-search-input" placeholder="Search bus, plate, driver or ID…" oninput="filterRows()" />
     </div>
     <button class="dp-btn-refresh" id="dpRefreshBtn" onclick="dpRefresh(true)" title="Refresh this page only">
         <i class="ti ti-refresh"></i> Refresh
@@ -222,8 +236,18 @@
                                     _ => ("dp-badge--completed", trip.TripStatus)
                                 };
 
+                                // Said on top of the status rather than in place of it. Why a
+                                // trip has not gone is what gets it moving; how long it has
+                                // not gone for is how hard to push.
+                                if (trip.LateLabel is not null)
+                                {
+                                    badgeClass += " dp-badge--late";
+                                    badgeLabel += $" · {trip.LateLabel}";
+                                }
+
                                 <tr class="dp-trip-row"
                                     data-trip-status="@trip.TripStatus"
+                                    @(trip.LateBy is null ? "" : "data-late")
                                     data-shift-id="@shiftId"
                                     data-shift-type="@shift.ShiftType"
                                     data-shift-label="@shift.ShiftType @(shift.ShiftStartTime) to @(shift.ShiftEndTime)@(shift.IsOvernight ? " +1" : "")">
@@ -255,10 +279,17 @@
                                         </div>
                                     </td>
                                     <td data-label="Driver">
+                                        @* Laid out as the bus beside it: what is read first in weight,
+                                           what identifies it quietly after. The identifier is also what
+                                           makes the row findable by it, since the search reads the row. *@
                                         <div class="dp-status-wrap">
                                             <span class="dp-status-dot @dDotClass"></span>
                                             <span class="dp-tooltip">@dTooltip</span>
-                                            @trip.DriverName
+                                            <strong>@trip.DriverName</strong>
+                                            @if (trip.DriverId > 0)
+                                            {
+                                                <span class="rp-plate">| @trip.DriverId</span>
+                                            }
                                         </div>
                                     </td>
                                     <td data-label="Status">
@@ -348,12 +379,22 @@
     }
     function dpCloseMsg() { document.getElementById('dp-msg-modal').style.display = 'none'; }
 
-    function dpHighlightIssues() {
-        const rows = document.querySelectorAll('.dp-trip-row[data-trip-status="Assignment Issue"]');
+    function dpHighlight(selector) {
+        const rows = document.querySelectorAll(selector);
         document.querySelectorAll('.dp-row-flag').forEach(r => r.classList.remove('dp-row-flag'));
         if (!rows.length) return;
         rows.forEach(r => r.classList.add('dp-row-flag'));
         rows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function dpHighlightIssues() {
+        dpHighlight('.dp-trip-row[data-trip-status="Assignment Issue"]');
+    }
+
+    // Selected on the marker rather than on the status, because a delayed trip keeps
+    // whichever status it already had.
+    function dpHighlightDelayed() {
+        dpHighlight('.dp-trip-row[data-late]');
     }
 
     // Hover popup for an assignment issue.
@@ -457,10 +498,22 @@
             const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } });
             const html = await res.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
+            // Which routes are folded away is the dispatcher's arrangement of the board,
+            // not part of what the board says, so it is taken off before the markup is
+            // replaced and put back after. Without this a route folded at the start of a
+            // shift unfolds itself half a minute later.
+            const shut = Array.from(document.querySelectorAll('.dp-route-card--shut'))
+                .map(c => c.dataset.routeId);
+
             ['dpStats', 'dpRoutes'].forEach(id => {
                 const fresh = doc.getElementById(id);
                 const cur = document.getElementById(id);
                 if (fresh && cur) cur.innerHTML = fresh.innerHTML;
+            });
+
+            shut.forEach(function (routeId) {
+                const card = document.querySelector('.dp-route-card[data-route-id="' + routeId + '"]');
+                if (card) card.classList.add('dp-route-card--shut');
             });
             // Reapply the active search filter to the replaced rows.
             const s = document.getElementById('searchInput');
@@ -531,6 +584,9 @@
                 <option value="Not Yet Started">Not Yet Started</option>
                 <option value="Pending">Pending</option>
                 <option value="Assignment Issue">Assignment Issue</option>
+                @* Not a status. A trip keeps whichever status it had and is late as well,
+                   so this filters on the marker and cuts across the list above it. *@
+                <option value="__late">Delayed</option>
                 <option value="Missed">Missed</option>
                 <option value="Completed">Completed</option>
             </select>
@@ -596,7 +652,10 @@
                 // Step 2: Determine visibility for each row
                 const visibility = groupRows.map(row => {
                     const rowStatus = row.dataset.tripStatus || '';
-                    const statusMatches = status === '' || rowStatus === status;
+                    const statusMatches =
+                        status === '' ? true
+                        : status === '__late' ? row.hasAttribute('data-late')
+                        : rowStatus === status;
                     const textMatches = q === '' || row.textContent.toLowerCase().includes(q);
                     return routeMatches && statusMatches && textMatches;
                 });
@@ -661,6 +720,7 @@
                 if (!st) return;
                 totals[st] = (totals[st] || 0) + 1;
                 totals[''] = (totals[''] || 0) + 1;
+                if (r.hasAttribute('data-late')) totals['__late'] = (totals['__late'] || 0) + 1;
             });
             chipBar.querySelectorAll('.dp-chip').forEach(function (chip) {
                 var n = totals[chip.dataset.chip] || 0;
