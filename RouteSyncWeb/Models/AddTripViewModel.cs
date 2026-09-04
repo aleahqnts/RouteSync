@@ -16,6 +16,13 @@ namespace FleetWise.ViewModels
         public List<RouteOption> Routes { get; set; } = new();
         public List<VehicleOption> Vehicles { get; set; } = new();
         public List<DriverOption> Drivers { get; set; } = new();
+
+        /// <summary>Shifts on this operational day whose window has already closed.</summary>
+        /// <remarks>
+        /// Decided on the server. The browser's clock is the user's own and may be set to
+        /// another timezone, which would offer a finished shift or withhold a running one.
+        /// </remarks>
+        public List<string> ClosedShifts { get; set; } = new();
     }
 
     public class RouteOption

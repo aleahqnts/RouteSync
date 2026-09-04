@@ -175,9 +175,26 @@
                 o.textContent = r.routeName;
                 routeSel.appendChild(o);
             });
+
+            markClosedShifts(_atmOptions.closedShifts || []);
         } catch {
             document.getElementById('atm-route').innerHTML = '<option value="">Failed to load</option>';
         }
+    }
+
+    // A shift already finished can no longer be booked into: the trip would be missed the
+    // moment it was written. Marked and disabled rather than removed, so the list still
+    // reads as the day's three shifts and says which of them has gone.
+    //
+    // Decided on the server, whose clock is the one the trip is written against.
+    function markClosedShifts(closed) {
+        const sel = document.getElementById('atm-shift-type');
+        Array.prototype.forEach.call(sel.options, o => {
+            if (!o.value) return;
+            const gone = closed.indexOf(o.value) !== -1;
+            o.disabled = gone;
+            o.textContent = o.value + ' Shift' + (gone ? ' (already finished)' : '');
+        });
     }
 
     // Shift type change.

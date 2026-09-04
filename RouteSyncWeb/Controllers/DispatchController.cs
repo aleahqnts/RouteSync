@@ -392,6 +392,14 @@ namespace FleetWise.Controllers
 
             var vm = new AddTripOptionsViewModel
             {
+                // Marked rather than withheld, for the reason the driver list is: an option
+                // that is simply gone reads as a fault in the page, and leaves the
+                // dispatcher hunting for a shift they can see on the board behind them.
+                ClosedShifts = TripStatus.Windows
+                    .Where(w => TripStatus.Closed(PhClock.OperationalDay, w.Value.Start, w.Value.End, PhClock.Now))
+                    .Select(w => w.Key)
+                    .ToList(),
+
                 Routes = routes
                     .OrderBy(r => r.RouteId)
                     .Select(r => new RouteOption
@@ -461,6 +469,15 @@ namespace FleetWise.Controllers
              || !TimeSpan.TryParse(req.ShiftEndTime, out var endTime))
                 return BadRequest("Invalid shift times.");
 
+            // A shift that has finished cannot be booked into. Late is workable, since a
+            // bus put on the road at seven still runs most of an evening; past is not,
+            // because the trip would be missed the moment it was written.
+            //
+            // Not overridable. Confirming it would not put the shift back.
+            if (TripStatus.Closed(PhClock.OperationalDay, startTime, endTime, PhClock.Now))
+                return BadRequest($"The {req.ShiftType} shift has already finished. "
+                                + "Pick a shift that is still running.");
+
             // Scheduling conflicts, whether a double booking or back-to-back shifts, can
             // be overridden by a dispatcher who confirms the warning. A 409 marks that
             // kind of conflict, as distinct from a 400, which is a validation failure the
@@ -516,6 +533,14 @@ namespace FleetWise.Controllers
                 .Get();
             var trip = tripResp.Models.FirstOrDefault();
             if (trip == null) return NotFound("Trip not found.");
+
+            // Refused here as well as on the write, so the modal never opens over a trip
+            // whose save can only be turned down.
+            if (string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("That trip has finished and can no longer be reassigned.");
+
+            if (TripStatus.Closed(trip, PhClock.Now))
+                return BadRequest("That shift has finished, so the trip can no longer be reassigned.");
 
             var tripsTask = _supabase.From<Trip>().Filter("date", Operator.Equals, today).Get();
             var vehiclesTask = _supabase.From<Vehicle>().Get();
@@ -609,6 +634,20 @@ namespace FleetWise.Controllers
                 .Get();
             var trip = tripResp.Models.FirstOrDefault();
             if (trip == null) return NotFound("Trip not found.");
+
+            // A finished trip is history and a finished shift is history it never made. A
+            // running one stays reassignable, which is most of what this endpoint is for:
+            // a driver taken ill and a bus that has to come off the road both happen
+            // mid-shift.
+            //
+            // The board disables the button on the same two cases, and this is what makes
+            // it true. The button is markup, and a page left open since the shift ended
+            // still reaches this.
+            if (string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("That trip has finished and can no longer be reassigned.");
+
+            if (TripStatus.Closed(trip, PhClock.Now))
+                return BadRequest("That shift has finished, so the trip can no longer be reassigned.");
 
             // Captured before the update, because a reassignment is only meaningful
             // alongside what it moved away from.
