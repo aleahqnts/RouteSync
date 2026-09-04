@@ -274,9 +274,14 @@
             const opt = document.createElement('option');
             opt.value = it.value;
             opt.textContent = it.label;
+            if (it.face !== undefined) opt.dataset.face = it.face;
             if (selectedId != null && it.value == selectedId) opt.selected = true;
             sel.appendChild(opt);
         });
+
+        // Only lists that offered a face get one, so the routes and vehicles above are
+        // left showing exactly what their options say.
+        if ((items || []).some(function (it) { return it.face !== undefined; })) rsPickFace(sel);
     }
 
 
@@ -308,6 +313,7 @@
             sel.innerHTML = _atmShift
                 ? '<option value="">No drivers available</option>'
                 : '<option value="">Select shift first…</option>';
+            rsPickFace(sel);
             return;
         }
         // Two drivers can share a name, so the identifier travels with it, in a
@@ -318,8 +324,14 @@
         // missing reads as resigned, and sends the dispatcher hunting for somebody who is
         // standing in front of them. The reason travels with the name so it is read
         // before the choice, and the free ones come first.
+        // A cell shows the name; the number is only worth the room where two drivers
+        // answer to it.
+        const atmShared = rsSharedNames(drivers.map(d => d.driverName));
+
         const marked = drivers
             .map((d, i) => ({
+                face: (atmShared(d.driverName) ? d.driverName + ' · ' + d.driverId : d.driverName)
+                    + (d.unavailable ? '  (' + d.unavailable + ')' : ''),
                 value: d.driverId,
                 label: atmLabels[i] + (d.unavailable ? '  (' + d.unavailable + ')' : ''),
                 free: d.offered !== false

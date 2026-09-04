@@ -16,6 +16,19 @@
         name
         + new string(' ', Math.Max(0, driverNameWidth - name.Length) + 2)
         + id;
+
+    // Names that belong to more than one driver. Only these are worth an identifier on a
+    // cell: everywhere else the number is a second way of saying what the name already
+    // said, in the one place on the page with the least room to say it.
+    var sharedNames = Model.Drivers
+        .GroupBy(d => d.DriverName, StringComparer.OrdinalIgnoreCase)
+        .Where(g => g.Count() > 1)
+        .Select(g => g.Key)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    // What a cell says once a driver is chosen, as against the list it was chosen from.
+    string DriverFace(string name, int id) =>
+        sharedNames.Contains(name) ? $"{name} · {id}" : name;
 }
 
 <div class="sch-wrap">
@@ -24,12 +37,20 @@
        the way to save are wanted at every point of a grid several screens long. *@
     <div class="sch-sticky-top" id="schStickyTop">
 
+    @* The page names itself, the same as every other board does, and the week it is
+       showing is named beside it. The range sits here rather than between Prev and Next
+       because a label wide enough to hold any week is what pushed the toolbar onto a
+       third row on a laptop. *@
+    <div class="sch-titlerow">
+        <h1 class="sch-title">Edit Schedule</h1>
+        <span class="sch-week-label">@Model.WeekStart.ToString("MMM d") – @Model.WeekEnd.ToString("MMM d, yyyy")</span>
+    </div>
+
     @* Toolbar *@
     <div class="sch-toolbar">
         <a class="sch-btn-ghost" href="/Dispatch">&#8592; Back to Dispatch</a>
         <div class="sch-week-nav">
             <a class="sch-btn-ghost" href="/Schedule?start=@Model.PrevWeekStart">&#8249; Prev</a>
-            <span class="sch-week-label">@Model.WeekStart.ToString("MMM d") – @Model.WeekEnd.ToString("MMM d, yyyy")</span>
             <a class="sch-btn-ghost" href="/Schedule?start=@Model.NextWeekStart">Next &#8250;</a>
         </div>
         @* Next week is last week with edits, which is why the rotation is monthly.
@@ -73,14 +94,38 @@
                 aria-selected="false">All</button>
     </div>
 
+    @* The week has been saved by somebody else since this grid was drawn. Held on screen
+       rather than shown once, because it stays true until the week is reloaded.
+
+       Inside the header that holds, so it is read wherever in the week the dispatcher has
+       got to. It is drawn only once the week has moved, and until then it costs the
+       header no height at all. *@
+    <div class="sch-draft sch-draft--moved" id="schMoved" hidden>
+        <span class="sch-draft-line">
+            <span class="sch-draft-ico" aria-hidden="true">&#9888;</span>
+            <span class="sch-draft-text" id="schMovedText"></span>
+        </span>
+        <button type="button" class="sch-draft-go" onclick="schReloadWeek()">Reload the week</button>
+    </div>
+
     </div>@* /sch-sticky-top *@
 
-    @* Shown when a week is opened on edits that were made and never saved. *@
+    @* Everything changed and not yet written, counted while the week is being worked on
+       and not only when one is opened again on yesterday's edits. A grid runs to several
+       screens, so the count is worth nothing without a way of reaching what it counts. *@
     <div class="sch-draft" id="schDraft" hidden>
-        <span class="sch-draft-ico" aria-hidden="true">&#9998;</span>
-        <span id="schDraftText"></span>
-        <button type="button" class="sch-draft-drop" onclick="schDiscardDraft()">Discard them</button>
+        <span class="sch-draft-line">
+            <span class="sch-draft-ico" aria-hidden="true">&#9998;</span>
+            <span class="sch-draft-text" id="schDraftText"></span>
+        </span>
+        @* Weeks edited and left behind. Named rather than counted in with this one: they
+           are not on screen, Show me cannot reach them, and this week's Save does not
+           write them. *@
+        <span class="sch-draft-other" id="schDraftOther" hidden></span>
+        <button type="button" class="sch-draft-go" id="schDraftGo" onclick="schNextDirty()">Show me</button>
+        <button type="button" class="sch-draft-drop" id="schDraftDrop" onclick="schDiscardDraft()">Discard them</button>
     </div>
+
 
     <p class="sch-hint">
         Each shift requires both a vehicle and a driver. Use <strong>+ Add bus</strong> to
@@ -176,13 +221,23 @@
                                                             <option value="@v.VehicleId" selected="@(cell?.VehicleId == v.VehicleId)">@v.VehicleId · @v.PlateNumber@(v.Offered ? "" : " (unavailable)")</option>
                                                         }
                                                     </select>
-                                                    <select class="sch-sel sch-drv rs-id-list">
-                                                        <option value="">Driver…</option>
-                                                        @foreach (var dr in Model.Drivers)
-                                                        {
-                                                            <option value="@dr.DriverId" selected="@(cell != null && cell.DriverId == dr.DriverId)">@DriverLabel(dr.DriverName, dr.DriverId)</option>
-                                                        }
-                                                    </select>
+                                                    @* The list is read down a column of identifiers, and a cell
+                                                       is read across a week of names. The face covers the closed
+                                                       control so each reads the way it is used. *@
+                                                    @{
+                                                        var picked = cell == null ? null
+                                                            : Model.Drivers.FirstOrDefault(d => d.DriverId == cell.DriverId);
+                                                    }
+                                                    <span class="rs-pick">
+                                                        <select class="sch-sel sch-drv rs-id-list">
+                                                            <option value="">Driver…</option>
+                                                            @foreach (var dr in Model.Drivers)
+                                                            {
+                                                                <option value="@dr.DriverId" data-face="@DriverFace(dr.DriverName, dr.DriverId)" selected="@(cell != null && cell.DriverId == dr.DriverId)">@DriverLabel(dr.DriverName, dr.DriverId)</option>
+                                                            }
+                                                        </select>
+                                                        <span class="rs-pick-face" aria-hidden="true">@(picked is null ? "" : DriverFace(picked.DriverName, picked.DriverId))</span>
+                                                    </span>
                                                 </div>
                                             }
                                         </td>
@@ -253,6 +308,41 @@
             </div>
         </div>
     </div>
+
+    @* A save turned away because the week on screen is not the week that is saved. Offers
+       no way past: there is nothing in the cells to correct. *@
+    <div id="sch-moved-modal" class="sch-modal-overlay" style="display:none;">
+        <div class="sch-modal">
+            <div class="sch-modal-head">
+                <span class="sch-modal-ico">&#9888;</span>
+                <h3>Week Already Saved</h3>
+            </div>
+            <p id="sch-moved-text" class="sch-modal-sub"></p>
+            <div class="sch-modal-actions">
+                <button class="sch-modal-btn" onclick="schCloseMoved()">Keep Editing</button>
+                <button class="sch-modal-btn sch-modal-btn-override" onclick="schReloadWeek()">Reload The Week</button>
+            </div>
+        </div>
+    </div>
+
+    @* Raised on the way out of the planner with edits nowhere but this tab. *@
+    <div id="sch-leave-modal" class="sch-modal-overlay" style="display:none;">
+        <div class="sch-modal">
+            <div class="sch-modal-head">
+                <span class="sch-modal-ico">&#9998;</span>
+                <h3>Unsaved Edits</h3>
+            </div>
+            <p id="sch-leave-sub" class="sch-modal-sub"></p>
+            <ul id="sch-leave-list" class="sch-modal-list"></ul>
+            <p class="sch-modal-sub">
+                These are kept while this tab stays open, and are lost when it closes.
+            </p>
+            <div class="sch-modal-actions">
+                <button class="sch-modal-btn" onclick="schCloseLeave()">Stay Here</button>
+                <button class="sch-modal-btn sch-modal-btn-override" onclick="schLeaveAnyway()">Leave Anyway</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Styles {
@@ -260,8 +350,18 @@
 }
 
 <script>
+    // Who the draft below belongs to. Storage is shared by everything served from this
+    // origin, and a tab outlives a sitting: without this, signing in after somebody else
+    // restores their unsaved week and offers it to be saved under the new name.
+    const SCH_USER = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0")';
     const SCH_WEEK_START = '@Model.WeekStart.ToString("yyyy-MM-dd")';
     const SCH_WEEK_END   = '@Model.WeekEnd.ToString("yyyy-MM-dd")';
+
+    // What the week's save marker read when this page was drawn, handed back with the
+    // save. A week nobody had saved reads empty, which is a state of its own: a week built
+    // since is not the week this grid is a picture of either.
+    const SCH_SAVED_AT = '@Model.SavedAt';
+    const SCH_WEEK_CLOSED = @(Model.WeekClosed ? "true" : "false");
     const SCH_PREV_WEEK  = '@Model.PrevWeekStart';
     const SCH_DAYS = [@Html.Raw(string.Join(",", Model.Days.Select(d => $"'{d:yyyy-MM-dd}'")))];
     // Data, not markup. These used to be HTML strings glued together with Html.Raw, which
@@ -273,7 +373,12 @@
     const SCH_VEHICLES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Vehicles.Where(v => v.Offered).Select(v => new { id = v.VehicleId, label = $"{v.VehicleId} · {v.PlateNumber}" })));
     const SCH_DRIVERS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Drivers.Select(d => new { id = d.DriverId, label = DriverLabel(d.DriverName, d.DriverId) })));
+        Model.Drivers.Select(d => new
+        {
+            id = d.DriverId,
+            label = DriverLabel(d.DriverName, d.DriverId),
+            face = DriverFace(d.DriverName, d.DriverId),
+        })));
     // Names on their own, for the sentences below. The label above is padded out into
     // columns and carries the identifier, which reads as a name and a number in a warning.
     const SCH_DRIVER_NAMES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
@@ -285,23 +390,73 @@
     const SCH_UNAVAILABLE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Drivers.Where(d => !d.Offered).Select(d => d.DriverId.ToString())));
     const SCH_TODAY = '@(Model.TodayInWeek ?? "")';
+    // Shift windows in this week that have already finished, as "Shift|date". A lane added
+    // after the page loaded is built here rather than by the server, and without this it
+    // would draw pickers over days the save is bound to refuse.
+    const SCH_CLOSED = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClosedSlots));
 
     /* The height of the block held at the top, written where the stylesheet can read it,
        so every route heading knows what to come to rest under.
        Measured rather than written down: the toolbar wraps onto a second line on a narrow
-       window, and a figure typed into the stylesheet would be wrong the moment it did. */
+       window, and a figure typed into the stylesheet would be wrong the moment it did.
+
+       A hair short, so the layer below overlaps this one instead of leaving a seam.
+       Measured heights carry a fraction of a pixel and the offsets built from them never
+       divide evenly; what shows through a seam is a row of the grid, and what shows
+       through an overlap is the padding of a heading. */
     (function () {
         const top = document.getElementById('schStickyTop');
         if (!top) return;
 
         function measure() {
             document.documentElement.style.setProperty(
-                '--sch-top', top.getBoundingClientRect().height + 'px');
+                '--sch-top', Math.max(0, top.getBoundingClientRect().height - 1) + 'px');
         }
 
         measure();
         if (window.ResizeObserver) new ResizeObserver(measure).observe(top);
         window.addEventListener('resize', measure);
+    })();
+
+    /* Each route's day names come to rest under that route's own heading, so each card
+       carries the height of its heading rather than reading one figure for all of them: a
+       long route name wraps on a narrow window and only that card's heading grows.
+
+       The day names can only be held where the grid fits the card without scrolling
+       sideways, since a box that scrolls is what anything inside it is held against. That
+       is measured, not inferred from the window: the page's padding widens partway up the
+       range, so a wider window can leave the grid less room than a narrower one.
+
+       Measured rather than gated on width for the phone as well, where one day at a time
+       is on screen and the grid narrows to a single column that fits easily. Showing the
+       whole week there scrolls sideways, and the day names give way to that.
+
+       The table's own width is compared rather than the wrapper's overflow, which would
+       read differently once this has acted on it and settle into a loop.
+
+       A hair short again, and the second hair of the two: this layer rests under the
+       heading, which already sits a hair under the toolbar. */
+    (function () {
+        function fit() {
+            document.querySelectorAll('.sch-card').forEach(card => {
+                const head = card.querySelector('.sch-card-head');
+                const wrap = card.querySelector('.sch-table-scroll');
+                const table = card.querySelector('.sch-table');
+                if (!head || !wrap || !table) return;
+
+                card.style.setProperty('--sch-head',
+                    Math.max(0, head.getBoundingClientRect().height - 1) + 'px');
+                card.classList.toggle('sch-card--fits', table.scrollWidth <= wrap.clientWidth);
+            });
+        }
+
+        fit();
+        if (window.ResizeObserver) {
+            const watch = new ResizeObserver(fit);
+            document.querySelectorAll('.sch-card').forEach(c => watch.observe(c));
+        }
+        window.addEventListener('resize', fit);
+        window.schFitCards = fit;
     })();
 
     // Why a driver cannot take a shift on a given day, or an empty string when they can.
@@ -343,7 +498,19 @@
                     : opt.dataset.base;
             });
 
-            cell.classList.toggle('sch-away', !!(sel.value && schAwayNote(sel.value, date)));
+            const away = sel.value ? schAwayNote(sel.value, date) : '';
+            cell.classList.toggle('sch-away', !!away);
+
+            // The face covers the closed control, so whatever the control would have said
+            // has to be said here instead. That includes the note: a cell holding a driver
+            // who is away says so without being opened, which is the point of writing it.
+            const face = cell.querySelector('.rs-pick-face');
+            if (face) {
+                const chosen = sel.selectedOptions[0];
+                face.textContent = !sel.value ? ''
+                    : (chosen && chosen.dataset.face ? chosen.dataset.face : '')
+                      + (away ? '\u00a0\u00a0(' + away + ')' : '');
+            }
         });
     }
 
@@ -363,9 +530,22 @@
             const opt = document.createElement('option');
             opt.value = it.id;
             opt.textContent = it.label;
+            if (it.face !== undefined) opt.dataset.face = it.face;
             sel.appendChild(opt);
         });
-        return sel;
+
+        if (cls !== 'sch-drv') return sel;
+
+        // The driver list is the one that is read two ways, so it is the one that gets a
+        // face over the closed control. Built here as well as on the server, or a lane
+        // added by hand would go back to printing the identifier in the cell.
+        const wrap = document.createElement('span');
+        wrap.className = 'rs-pick';
+        const face = document.createElement('span');
+        face.className = 'rs-pick-face';
+        face.setAttribute('aria-hidden', 'true');
+        wrap.append(sel, face);
+        return wrap;
     }
 
     // Edits held between weeks.
@@ -381,7 +561,37 @@
     // over a week somebody else has since saved.
     let schRestoring = false;
 
-    function schDraftKey() { return 'sch_draft_' + SCH_WEEK_START; }
+    function schDraftKey() { return 'sch_draft_' + SCH_USER + '_' + SCH_WEEK_START; }
+
+    /* Every other week this dispatcher has unwritten edits for, in date order. Read out of
+       storage rather than remembered, because a week is edited and left by loading another
+       one over it, and nothing on this page saw that happen. */
+    function schOtherDrafts() {
+        const prefix = 'sch_draft_' + SCH_USER + '_';
+        const weeks = [];
+
+        try {
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (!key || key.indexOf(prefix) !== 0) continue;
+
+                const week = key.slice(prefix.length);
+                if (week === SCH_WEEK_START) continue;   // counted off the grid instead
+
+                let n = 0;
+                try { n = (JSON.parse(sessionStorage.getItem(key)) || []).length; } catch (e) { }
+                if (n) weeks.push({ week: week, n: n });
+            }
+        } catch (e) { return []; }
+
+        return weeks.sort(function (a, b) { return a.week < b.week ? -1 : 1; });
+    }
+
+    /* A week named the way a sentence names one, rather than as the date it starts on. */
+    function schWeekName(iso) {
+        const parts = iso.split('-').map(Number);
+        return SCH_MONTHS[parts[1] - 1].slice(0, 3) + ' ' + parts[2];
+    }
 
     /* Every cell that has been touched, and where it sits. Lanes are counted over all of
        them in the order they are drawn, so a lane added by + Add bus is found again. */
@@ -411,6 +621,8 @@
             if (out.length) sessionStorage.setItem(schDraftKey(), JSON.stringify(out));
             else sessionStorage.removeItem(schDraftKey());
         } catch (e) { /* private browsing, or the quota */ }
+
+        schUpdateDirtyBar();
     }
 
     function schLanesFor(route, shift, date) {
@@ -468,14 +680,86 @@
         schNarrowChoices();
         schMarkAway();
 
-        if (!put && !lost) return;
+        schUpdateDirtyBar(
+            (put ? 'Put back from earlier.' : '')
+            + (lost ? (put ? ' ' : '') + lost + ' could not be put back.' : ''));
+    }
 
+    /* Every cell edited and not yet written, in the order they are drawn. */
+    function schDirtyCells() {
+        return document.querySelectorAll('.sch-cell.sch-dirty');
+    }
+
+    // Where the walk below has got to. Reset whenever the count changes, so a cell added
+    // or undone does not leave it pointing into the middle of a different list.
+    let schDirtyAt = -1;
+
+    /* Says how much is unwritten, and offers the two things that can be done about it.
+
+       The note is remembered rather than passed in each time. It is written once, when a
+       week is opened on edits restored from an earlier sitting, and has to survive every
+       recount after that without being restated by the caller doing the counting. */
+    function schUpdateDirtyBar(note) {
         const bar = document.getElementById('schDraft');
+        if (!bar) return;
+
+        if (note !== undefined) bar.dataset.note = note || '';
+        const said = bar.dataset.note || '';
+        const n = schDirtyCells().length;
+        const other = schOtherDrafts();
+
+        schDirtyAt = -1;
+
+        if (!n && !said && !other.length) { bar.hidden = true; return; }
+
         document.getElementById('schDraftText').textContent =
-            (put === 1 ? '1 unsaved change' : put + ' unsaved changes') + ' from earlier restored.'
-            + (lost ? ' ' + lost + (lost === 1 ? ' could not be put back.' : ' could not be put back.') : '')
-            + ' Nothing is written until you save.';
+            (n ? (n === 1 ? '1 unsaved change.' : n + ' unsaved changes.') : '')
+            + (n && said ? ' ' : '') + said
+            + (n ? ' Nothing is written until you save.' : '');
+
+        // Named and linked rather than counted in with this week. Each is a week of its
+        // own that has to be opened to be saved, and the number beside it is how much is
+        // waiting there.
+        const rest = document.getElementById('schDraftOther');
+        rest.textContent = '';
+        other.forEach(function (w, i) {
+            rest.appendChild(document.createTextNode(i ? ', ' : 'Also unsaved: '));
+
+            const link = document.createElement('a');
+            link.href = '/Schedule?start=' + w.week;
+            link.textContent = schWeekName(w.week) + ' (' + w.n + ')';
+            rest.appendChild(link);
+        });
+        rest.hidden = !other.length;
+
+        document.getElementById('schDraftGo').hidden = !n;
+        document.getElementById('schDraftDrop').hidden = !n;
         bar.hidden = false;
+    }
+
+    /* The next unwritten cell, and round again at the end. */
+    function schNextDirty() {
+        const cells = schDirtyCells();
+        if (!cells.length) return;
+
+        schDirtyAt = (schDirtyAt + 1) % cells.length;
+        const cell = cells[schDirtyAt];
+
+        schShowDayOf(cell);
+        schRevealCell(cell);
+
+        cell.classList.add('sch-dirty--found');
+        setTimeout(function () { cell.classList.remove('sch-dirty--found'); }, 1600);
+    }
+
+    /* A cell in a day the grid is not showing cannot be scrolled to, so the day is opened
+       first. Nothing happens on All, where every day is already on screen. */
+    function schShowDayOf(el) {
+        const td = el.closest('[data-sch-day]');
+        if (!td || td.offsetParent !== null) return;
+
+        const chip = document.querySelector('.sch-day-chip[data-day="' + td.dataset.schDay + '"]');
+        if (chip) chip.click();
     }
 
     let schToastTimer = null;
@@ -503,6 +787,121 @@
     function schGoWeek() {
         const v = document.getElementById('sch-start').value;
         if (v) window.location.href = '/Schedule?start=' + v;
+    }
+
+    /* Watches for the week being saved by somebody else while this one is open, and stops
+       at the first answer that says so. The week is out of date from then on, and asking
+       again cannot make it more so.
+
+       A failed poll is left alone rather than reported. The save itself asks the same
+       question and refuses on the same answer, so a dispatcher who never sees this is
+       warned late rather than not at all. */
+    let schMarkerTimer = null;
+
+    async function schCheckMarker() {
+        if (document.hidden) return;
+
+        let data = null;
+        try {
+            const res = await fetch('/Schedule/Marker?start=' + encodeURIComponent(SCH_WEEK_START)
+                                 + '&have=' + encodeURIComponent(SCH_SAVED_AT));
+            if (!res.ok) return;
+            data = await res.json();
+        } catch (e) { return; }
+
+        if (!data || data.savedAt === SCH_SAVED_AT) return;
+
+        clearInterval(schMarkerTimer);
+        document.getElementById('schMovedText').textContent = data.message
+            || 'This week has been saved by somebody else since you opened it.';
+        document.getElementById('schMoved').hidden = false;
+    }
+
+    // Only a week that can still be saved is worth watching.
+    if (!SCH_WEEK_CLOSED) schMarkerTimer = setInterval(schCheckMarker, 30000);
+
+    function schShowMoved(text) {
+        document.getElementById('sch-moved-text').textContent = text
+            || 'This week has been saved by somebody else since you opened it.';
+        document.getElementById('sch-moved-modal').style.display = 'flex';
+    }
+
+    function schCloseMoved() {
+        document.getElementById('sch-moved-modal').style.display = 'none';
+    }
+
+    /* The draft is left where it is on purpose. Reloading puts it back over the week as it
+       now stands, which is the point of reloading rather than discarding: the edits were
+       never the thing that was out of date. */
+    function schReloadWeek() {
+        schLeaving = true;
+        window.location.reload();
+    }
+
+    // Set by anything on this page that navigates on purpose, so the guard below does not
+    // ask about a departure that was already chosen.
+    let schLeaving = false;
+
+    /* Every week with edits that are not written, this one first. */
+    function schPendingWeeks() {
+        const here = schDirtyCells().length;
+        const weeks = schOtherDrafts();
+        if (here) weeks.unshift({ week: SCH_WEEK_START, n: here });
+        return weeks;
+    }
+
+    /* Named on the way out. A draft lives in this tab and nowhere else: moving about the
+       app keeps it, closing the tab does not, and until now nothing on the way out said
+       which weeks were being carried or that they were being carried at all. */
+    document.addEventListener('click', function (e) {
+        if (schLeaving || !e.target.closest) return;
+
+        const link = e.target.closest('a[href]');
+        if (!link || link.target === '_blank') return;
+
+        // A jump inside the page, and a move to another week, both stay in the planner and
+        // both keep every draft where it is.
+        const href = link.getAttribute('href') || '';
+        if (!href || href.charAt(0) === '#'
+            || href.toLowerCase().indexOf('/schedule') === 0) return;
+
+        const weeks = schPendingWeeks();
+        if (!weeks.length) return;
+
+        e.preventDefault();
+        schShowLeave(weeks, link.href);
+    }, true);
+
+    let schLeaveTo = null;
+
+    function schShowLeave(weeks, href) {
+        const list = document.getElementById('sch-leave-list');
+        list.textContent = '';
+
+        weeks.forEach(function (w) {
+            const li = document.createElement('li');
+            li.textContent = 'Week of ' + schWeekName(w.week) + ': '
+                + (w.n === 1 ? '1 unsaved change' : w.n + ' unsaved changes')
+                + (w.week === SCH_WEEK_START ? ' (on screen)' : '');
+            list.appendChild(li);
+        });
+
+        document.getElementById('sch-leave-sub').textContent = weeks.length === 1
+            ? 'One week has edits that have not been saved.'
+            : weeks.length + ' weeks have edits that have not been saved.';
+
+        schLeaveTo = href;
+        document.getElementById('sch-leave-modal').style.display = 'flex';
+    }
+
+    function schCloseLeave() {
+        document.getElementById('sch-leave-modal').style.display = 'none';
+        schLeaveTo = null;
+    }
+
+    function schLeaveAnyway() {
+        schLeaving = true;
+        window.location.href = schLeaveTo;
     }
 
     function schWireCell(cell) {
@@ -635,6 +1034,10 @@
             chip.classList.toggle('sch-day-chip--on', on);
             chip.setAttribute('aria-selected', on ? 'true' : 'false');
         });
+
+        // Hiding days narrows the grid, which can be the difference between a card that
+        // has to scroll sideways and one that can hold its day names.
+        if (window.schFitCards) window.schFitCards();
     }
 
     function schSetDay(day) {
@@ -670,6 +1073,23 @@
             const td = document.createElement('td');
             td.className = 'sch-cell-td';
             td.dataset.schDay = dayIndex;
+
+            // A day whose shift has finished takes the same read-only block the server
+            // draws, rather than pickers that look fillable and are dropped on save.
+            if (SCH_CLOSED.indexOf(shift + '|' + date) !== -1) {
+                const shut = document.createElement('div');
+                shut.className = 'sch-locked sch-locked--closed sch-locked--empty';
+                shut.dataset.shift = shift;
+                shut.dataset.date = date;
+                const txt = document.createElement('span');
+                txt.className = 'sch-lock-txt';
+                txt.textContent = 'Not run';
+                shut.appendChild(txt);
+                td.appendChild(shut);
+                tr.appendChild(td);
+                return;
+            }
+
             const cell = document.createElement('div');
             cell.className = 'sch-cell';
             cell.dataset.route = route;
@@ -912,9 +1332,21 @@
         window.scrollTo({ top: Math.max(0, want), behavior: 'smooth' });
     }
 
+    /* Walks the cells a line is about, one to a press.
+
+       A conflict names both sides of a double booking, and a shift can be running several
+       lanes, so the cell being read about is often not the first one the line was built
+       from. Landing on the first every time left the other cells marked with a number and
+       no way of reaching them.
+
+       Where it has got to is kept on the line itself. The lines are rebuilt from the
+       answer each time conflicts are shown, so a fresh save starts each of them over. */
     function schGoToConflict(item) {
-        const el = (item.els || [])[0];
-        if (!el) return;
+        const els = item.els || [];
+        if (!els.length) return;
+
+        item.at = item.at === undefined ? 0 : (item.at + 1) % els.length;
+        const el = els[item.at];
 
         // Left open on a desk. It is a note beside the grid, not over it, and numbering
         // the lines is only worth anything if they can be worked through one after
@@ -922,9 +1354,12 @@
         // same panel covers the page, so there it has to get out of the way.
         if (window.matchMedia('(max-width: 599px)').matches) schCloseConflicts();
 
+        schShowDayOf(el);
         schRevealCell(el);
 
-        (item.els || []).forEach(function (cell) {
+        // Every cell the line names is lit, not only the one arrived at. A double booking
+        // is read by seeing both halves of it at once.
+        els.forEach(function (cell) {
             cell.classList.add('sch-cell--found');
             setTimeout(function () { cell.classList.remove('sch-cell--found'); }, 2000);
         });
@@ -947,7 +1382,12 @@
 
             if ((item.els || []).length) {
                 li.className = 'sch-modal-item--go';
-                li.title = 'Show this on the grid';
+                // A line over more than one cell says so, since otherwise a second press
+                // moving the grid somewhere else reads as the first one having missed.
+                li.title = item.els.length === 1
+                    ? 'Show this on the grid'
+                    : 'Show this on the grid. ' + item.els.length
+                      + ' cells, one to a press.';
                 li.addEventListener('click', function () {
                     if (Date.now() - schPanelDraggedAt < 250) return;
                     schGoToConflict(item);
@@ -1239,13 +1679,24 @@
         fetch('/Schedule/Save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cells, weekStart: SCH_WEEK_START, weekEnd: SCH_WEEK_END, override: !!force })
+            body: JSON.stringify({
+                cells,
+                weekStart: SCH_WEEK_START,
+                weekEnd: SCH_WEEK_END,
+                savedAt: SCH_SAVED_AT,
+                override: !!force
+            })
         }).then(async res => {
             if (!res.ok) {
                 // 409 carries { conflicts: [{ message, cells:[{routeId,shift,date}] }] } and
                 // may be forced past. Anything else is a refusal or a fault, and says why.
                 let data = null;
                 try { data = await res.json(); } catch { /* an error page, not JSON */ }
+
+                // The week moved under this grid. Not a booking rule and nothing the cells
+                // can answer for, so it is taken out before the marking below, which would
+                // otherwise find nothing to mark and offer a Save Anyway that must not be.
+                if (data && data.weekMoved) { schShowMoved(data.message); return; }
 
                 // Anything carrying cells is marked in the grid, whatever the status. The
                 // status only decides whether it can be forced past: a 409 is a booking
@@ -1289,6 +1740,7 @@
             catch { /* an empty 200, which is the ordinary case */ }
 
             sessionStorage.setItem('sch_saved', note || '1'); // survive the reload -> show toast
+            schLeaving = true;
             window.location.reload();
         }).catch(err => schShowConflicts(
               [{ text: 'The server could not be reached: ' + err.message, els: [] }], false,

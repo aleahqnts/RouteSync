@@ -110,6 +110,26 @@ namespace FleetWise.Controllers
             // Nothing is believed from the first.
             if (decision == "Approved")
             {
+                // How late leave may be filed is decided here as well as in the driver's
+                // app. The app inserts its own rows under the driver's own token, so the
+                // form it fills in is a courtesy; granting the days is what spends the
+                // allowance, and this is the point that can refuse.
+                //
+                // Only approval is gated. A request that should never have been filed can
+                // still be rejected, which is how it leaves the queue.
+                var late = LeaveEntitlement.BackdatingProblem(
+                    found.LeaveType, found.StartDate, PhClock.OperationalDay);
+
+                if (late is not null)
+                {
+                    await _audit.WriteAsync("leave_decided",
+                        $"could not approve {found.LeaveType.ToLowerInvariant()} leave for driver "
+                            + $"{found.UserId} covering {Span(found)}: {late}",
+                        "requests", requestId.ToString(), outcome: "failed");
+
+                    return BadRequest(late);
+                }
+
                 var blocking = await BlockingTripsAsync(found);
                 if (blocking.Count > 0)
                 {

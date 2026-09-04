@@ -133,6 +133,47 @@
         justify-content: center;
     }
 
+    /* Counts sit on the icon, not beside the label. The rail is collapsed to its icons
+       until it is hovered, and the mark has to be readable in that state. */
+    .fw-sidebar__icon {
+        position: relative;
+    }
+
+    .fw-sidebar__badge,
+    .fw-bar__badge {
+        position: absolute;
+        top: -5px;
+        right: -8px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .62rem;
+        font-weight: 800;
+        font-family: 'Segoe UI', sans-serif;
+        line-height: 1;
+        /* Two tiers, and no more. Neutral says there is something to look at; urgent says
+           it will not keep. A third shade would have to be read rather than glanced at. */
+        background: #64748B;
+        color: #fff;
+        box-shadow: 0 0 0 2px var(--fw-bg, #fff);
+    }
+
+    .fw-sidebar__badge--urgent,
+    .fw-bar__badge--urgent,
+    .fw-sheet__badge--urgent {
+        background: #E74C3C;
+    }
+
+    .fw-sidebar__badge[hidden],
+    .fw-bar__badge[hidden],
+    .fw-sheet__badge[hidden] {
+        display: none;
+    }
+
     /* SVG inherits currentColor from the <a> tag automatically */
     .fw-sidebar__icon svg {
         width: 22px;
@@ -375,6 +416,11 @@
         color: var(--fw-teal);
     }
 
+    .fw-bar__icon,
+    .fw-bar__more {
+        position: relative;
+    }
+
     .fw-bar__icon svg {
         width: 22px;
         height: 22px;
@@ -555,6 +601,23 @@
         font-size: .92rem;
         font-weight: 600;
         text-decoration: none;
+    }
+
+    /* At the end of the row, where a list of destinations is read to. */
+    .fw-sheet__badge {
+        margin-left: auto;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #64748B;
+        color: #fff;
+        font-size: .7rem;
+        font-weight: 800;
+        line-height: 1;
     }
 
     /* Filled, the way the desk rail marks the page you are on. */

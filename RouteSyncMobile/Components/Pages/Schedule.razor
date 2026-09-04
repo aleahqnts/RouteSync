@@ -1,8 +1,10 @@
 ﻿@page "/schedule"
+@implements IDisposable
 @using FleetWiseMobile.Models
 @inject SessionService Session
 @inject DriverDataService Data
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <div class="cal">
 
@@ -175,11 +177,73 @@
 
     private const string LeaveColour = "#2E8B57";
 
-    protected override async Task OnInitializedAsync() => await Load();
-
-    private async Task Load()
+    protected override async Task OnInitializedAsync()
     {
-        loading = true;
+        await Load();
+        _ = PollLoop();
+    }
+
+    /// <summary>
+    /// Keeps the month current while it is on screen.
+    /// </summary>
+    /// <remarks>
+    /// Slower than the tab pages poll, because a month is read rather than acted on and
+    /// an approval or a roster change is not something a driver is waiting on the second
+    /// of. The cost is three queries a tick against a month either side.
+    ///
+    /// A month that has finished is left alone. Nothing in it can change in a way that
+    /// matters, and a driver reading back through the year is not asking to be kept up to
+    /// date with it.
+    /// </remarks>
+    private readonly CancellationTokenSource pollCts = new();
+
+    private async Task PollLoop()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+            while (await timer.WaitForNextTickAsync(pollCts.Token))
+            {
+                if (loading || month < ThisMonth) continue;
+                await InvokeAsync(async () =>
+                {
+                    await Load(silent: true);
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) { /* page closed */ }
+    }
+
+    private DotNetObjectReference<Schedule>? _ptrRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ptrRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("ptr.set", _ptrRef);
+        }
+    }
+
+    [JSInvokable] public async Task Refresh() { await Load(silent: true); StateHasChanged(); }
+
+    public void Dispose()
+    {
+        pollCts.Cancel();
+        pollCts.Dispose();
+        _ptrRef?.Dispose();
+    }
+
+    /// <summary>Reads the month on show, and the days either side of it.</summary>
+    /// <param name="silent">
+    /// Leaves the grid on screen while the month is re-read. The skeleton belongs to
+    /// opening the page and to changing month, where there is nothing to show yet; raised
+    /// on a refresh it blanks a calendar the driver is looking at.
+    /// </param>
+    private async Task Load(bool silent = false)
+    {
+        if (!silent) loading = true;
         var uid = Session.CurrentUser!.UserId;
 
         // A month plus the days either side that share its first and last weeks, so a

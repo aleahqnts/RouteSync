@@ -3,6 +3,7 @@
 @inject SessionService Session
 @inject DriverDataService Data
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 @* Shown on the page the request lands on, so the confirmation and the request itself
    arrive together. *@
@@ -97,7 +98,18 @@
                     <div class="lv-row">
                         <div class="lv-row-top">
                             <span class="lv-span">@Span(r)</span>
-                            <span class="lv-badge @Shown(r.Status).ToLowerInvariant()">@Shown(r.Status)</span>
+
+                            @* The asking sits beside the status rather than under it. What
+                               was granted and what has been asked about it are two answers
+                               to two questions, and a line of prose below the row reads as
+                               a change to the status itself. *@
+                            <div class="lv-row-tags">
+                                @if (WithdrawChip(r) is string chip)
+                                {
+                                    <span class="lv-chip @(r.WithdrawAnsweredAt is null ? "asked" : "refused")">@chip</span>
+                                }
+                                <span class="lv-badge @Shown(r.Status).ToLowerInvariant()">@Shown(r.Status)</span>
+                            </div>
                         </div>
 
                         @* Said only while the approval is part way through. The badge stays
@@ -107,16 +119,6 @@
                         @if (string.Equals(r.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
                         {
                             <p class="lv-checking">Being checked against your schedule.</p>
-                        }
-
-                        @* Granted leave the driver has asked to give back. Still granted:
-                           the days are still theirs until a dispatcher says otherwise, and
-                           the badge goes on saying Approved because that is what it is. *@
-                        @if (r.WithdrawRequestedAt is not null)
-                        {
-                            <p class="lv-checking">
-                                You asked to cancel this. Waiting on your dispatcher.
-                            </p>
                         }
 
                         @* The kind of leave and what can be done about it on one line. Given
@@ -220,8 +222,11 @@
             <div class="lv-modal-body">
                 @* Dates first: what a driver comes here knowing. The type is a detail of
                    the days already chosen. *@
+                @* Bounded at the loosest of the types, since the dates are chosen before
+                   the type is. The type narrows it, and Validate says so by name. *@
                 <label>Start date</label>
                 <input type="date" lang="en-US" data-picker-only inputmode="none"
+                       min="@EarliestStart.ToString("yyyy-MM-dd")"
                        class="@Bad(nameof(start))" @bind="start" @bind:after="Revalidate" />
 
                 <label>End date</label>
@@ -404,6 +409,10 @@
     private CancellationTokenSource? toastCts;
     private string type = LeaveEntitlement.Vacation;
     private string reason = "";
+    /// <summary>The earliest day any type of leave can still be filed for.</summary>
+    private static DateTime EarliestStart =>
+        PhTime.OperationalDay.AddDays(-LeaveEntitlement.BackdatingDays);
+
     private DateTime start = DateTime.Today;
     private DateTime end = DateTime.Today;
 
@@ -484,10 +493,36 @@
         catch (OperationCanceledException) { /* page closed */ }
     }
 
+    private DotNetObjectReference<LeaveRequests>? _ptrRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ptrRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("ptr.set", _ptrRef);
+        }
+    }
+
+    /// <summary>Re-reads the list on a pull, and when the app comes back to the front.</summary>
+    /// <remarks>
+    /// Nothing is taken away mid-sentence: a form being filled in or a request being read
+    /// keeps what is on screen, the same as the poll does.
+    /// </remarks>
+    [JSInvokable]
+    public async Task Refresh()
+    {
+        if (showForm || openHistory is not null || withdrawing is not null) return;
+
+        requests = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId);
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         pollCts.Cancel();
         pollCts.Dispose();
+        _ptrRef?.Dispose();
     }
 
     private void CloseHistory() => openHistory = null;
@@ -531,6 +566,17 @@
         {
             problem = "Choose a leave type.";
             problemField = nameof(type);
+            return false;
+        }
+
+        // Sickness and emergencies are filed after the fact as a matter of course, and a
+        // holiday is not. Asked after the type is known, and named against the type,
+        // because the same dates are allowed or refused depending on it.
+        var late = LeaveEntitlement.BackdatingProblem(type, start, PhTime.OperationalDay);
+        if (late is not null)
+        {
+            problem = late;
+            problemField = LeaveEntitlement.AllowsBackdating(type) ? nameof(start) : nameof(type);
             return false;
         }
 
@@ -616,6 +662,29 @@
     ///
     /// The database refuses the same cases rather than trusting this.
     /// </remarks>
+    /// <summary>
+    /// What to say about a driver's asking for granted leave back, or null when there is
+    /// nothing to say.
+    /// </summary>
+    /// <remarks>
+    /// The asking stays on the row after it is answered, so that the request keeps its own
+    /// history. Read on its own it says a question is open long after it was settled, and
+    /// the answer is what decides which of the two this is.
+    ///
+    /// An accepted asking cancels the leave, and the status badge carries that. Only a
+    /// refusal needs saying, because the leave goes back to looking exactly as it did
+    /// before the driver asked, and Ask to cancel is gone with nothing to explain it.
+    /// </remarks>
+    private static string? WithdrawChip(LeaveRequest r)
+    {
+        if (r.WithdrawRequestedAt is null) return null;
+        if (r.WithdrawAnsweredAt is null) return "Cancel asked";
+
+        return string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)
+            ? "Cancel refused"
+            : null;
+    }
+
     private static bool CanAskToCancel(LeaveRequest r) =>
         string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)
         && r.WithdrawRequestedAt is null
