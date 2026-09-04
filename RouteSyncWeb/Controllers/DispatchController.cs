@@ -92,7 +92,7 @@ namespace FleetWise.Controllers
 
             // Status comes from TripStatus so this board, the trip detail modal and the
             // counters below cannot drift apart. See that class for the rules.
-            (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged) Resolve(Trip trip)
+            (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late) Resolve(Trip trip)
             {
                 vehicleDict.TryGetValue(trip.VehicleId, out var vehicle);
                 driverDict.TryGetValue(trip.DriverId, out var driver);
@@ -103,24 +103,29 @@ namespace FleetWise.Controllers
                     trip, vehicle, driver, driverAvail, cl,
                     flaggedVehicleIds.Contains(trip.VehicleId), PhClock.Now);
 
-                return (vehicle, driver, view.VehicleStatus, view.DriverStatus, view.TripStatus, view.VehicleFlagged);
+                return (vehicle, driver, view.VehicleStatus, view.DriverStatus, view.TripStatus, view.VehicleFlagged, view.Late);
             }
 
-            var resolved = new Dictionary<string, (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged)>();
+            var resolved = new Dictionary<string, (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late)>();
             foreach (var trip in trips)
             {
                 try { resolved[trip.TripId] = Resolve(trip); }
-                catch { resolved[trip.TripId] = (null, null, "Pending", "Available", "Pending", false); }
+                catch { resolved[trip.TripId] = (null, null, "Pending", "Available", "Pending", false, null); }
             }
 
             // Header counters.
             int activeTrips = trips.Count(t => resolved[t.TripId].TripStatus == "Active");
-            // Awaiting departure means not started, not finished, and not already missed.
-            // A missed trip is past its window, so it no longer counts as awaited.
+            // Awaiting departure means not started, not finished, not already missed, and
+            // not overdue. A missed trip is past its window, so nothing is awaiting it;
+            // an overdue one is counted beside this figure rather than inside it, or the
+            // one number that needs acting on hides in the one that does not.
             int notStarted = trips.Count(t =>
                 resolved[t.TripId].TripStatus != "Active"
                 && resolved[t.TripId].TripStatus != "Completed"
-                && resolved[t.TripId].TripStatus != "Missed");
+                && resolved[t.TripId].TripStatus != "Missed"
+                && resolved[t.TripId].Late is null);
+
+            int delayed = trips.Count(t => resolved[t.TripId].Late is not null);
             int unassigned = trips.Count(t => resolved[t.TripId].TripStatus == "Assignment Issue");
             // Counted from the day on screen rather than the whole fleet. A bus with an
             // open fault that nobody is scheduled to drive is the vehicles tab's business,
@@ -141,6 +146,7 @@ namespace FleetWise.Controllers
                 IsToday = selected == PhClock.OperationalDay,
                 ActiveTrips = activeTrips,
                 TripsNotStarted = notStarted,
+                DelayedTrips = delayed,
                 UnassignedTrips = unassigned,
                 FlaggedVehicles = flaggedVehicles,
                 UnavailableDrivers = unavailableDrivers
@@ -202,10 +208,12 @@ namespace FleetWise.Controllers
                             DriverName = r.Driver != null
                                 ? $"{r.Driver.FirstName} {r.Driver.LastName}"
                                 : "Unassigned",
+                            DriverId = trip.DriverId,
                             DriverStatus = r.DriverStatus,
                             TripStatus = r.TripStatus,
                             Flagged = r.Flagged,
                             NeedsRelief = r.TripStatus == "Active" && r.DriverStatus == "Unavailable",
+                            LateBy = r.Late,
                             AssignmentIssueReason =
                                 r.TripStatus == "Assignment Issue"
                                     ? BuildIssueReason(r.Vehicle, r.DriverStatus,
@@ -215,6 +223,14 @@ namespace FleetWise.Controllers
                                     ? "Driver reported they cannot drive"
                                         + (awayReasons.TryGetValue(trip.DriverId, out var why) ? $": {why}" : "")
                                         + ". Send a relief driver."
+                                // The bus did not run, so the trip is still missed and still
+                                // counts as service that was not delivered. What changes is
+                                // that the driver is not carrying it unexplained: leave can
+                                // be granted for a day already past, and without this the
+                                // record reads the same as a driver who simply failed to
+                                // appear.
+                                : r.TripStatus == "Missed" && r.DriverStatus == "On Leave"
+                                    ? "The driver was on approved leave for this day."
                                     : null
                         });
                     }

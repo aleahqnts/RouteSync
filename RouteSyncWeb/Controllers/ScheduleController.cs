@@ -55,7 +55,14 @@ namespace FleetWise.Controllers
                                 .Filter("end_date", Operator.GreaterThanOrEqual, weekStart.ToString("yyyy-MM-dd"))
                                 .Get();
 
-            await Task.WhenAll(routesTask, vehiclesTask, driversTask, availabilityTask, tripsTask, leaveTask);
+            // What the week's last save reads as. Sent out with the grid and handed back
+            // on save, which is how a save built on somebody else's week is caught.
+            var markerTask = _supabase.From<ScheduleWeek>()
+                                .Filter("week_start", Operator.Equals, weekStart.ToString("yyyy-MM-dd"))
+                                .Get();
+
+            await Task.WhenAll(routesTask, vehiclesTask, driversTask, availabilityTask,
+                               tripsTask, leaveTask, markerTask);
 
             // A bus or a driver already holding a slot this week stays on its list even when
             // it can no longer be booked. Dropping it would leave that slot showing nothing,
@@ -121,6 +128,7 @@ namespace FleetWise.Controllers
                 TodayInWeek = PhClock.OperationalDay.Date >= weekStart && PhClock.OperationalDay.Date <= weekEnd
                     ? PhClock.OperationalDay.ToString("yyyy-MM-dd")
                     : null,
+                SavedAt = WeekMarker(markerTask.Result.Models.FirstOrDefault()),
             };
 
             // Which of this week's windows have closed. Read once so every cell in the grid
@@ -223,6 +231,33 @@ namespace FleetWise.Controllers
             // the check that admits a cell and the write that acts on it.
             var now = PhClock.Now;
 
+            // The week as it stands, read before anything else is looked at. A grid built
+            // on an older reading is not merged cell by cell and cannot be: this save
+            // deletes every trip the grid does not carry, so applying it would erase
+            // whatever the other dispatcher wrote in the meantime, and nothing on either
+            // screen would show it had happened.
+            var week = (await _supabase.From<ScheduleWeek>()
+                .Filter("week_start", Operator.Equals, weekStart.ToString("yyyy-MM-dd"))
+                .Get()).Models.FirstOrDefault();
+
+            if (!string.Equals(req.SavedAt ?? "", WeekMarker(week), StringComparison.Ordinal))
+            {
+                // A 409 the same as a booking conflict, and marked apart from one, because
+                // the two answer differently. A conflict can be forced past by somebody who
+                // means it. This cannot be forced past at all: there is nothing in the cells
+                // to correct, and no version of this grid that is safe to write.
+                return Conflict(new
+                {
+                    weekMoved = true,
+                    message = await WeekMovedMessageAsync(week, refused: true),
+                });
+            }
+
+            // Asked now, because this save is about to record the week as built. What it
+            // answers is whether the drivers are being told about a change or about their
+            // schedule appearing for the first time, and only the first is worth a notice.
+            var wasBuilt = week != null;
+
             // Existing trips in the range. Also needed to validate against locked trips,
             // which the grid does not always resend.
             var existingResp = await _supabase.From<Trip>()
@@ -231,13 +266,6 @@ namespace FleetWise.Controllers
                 .Get();
             var existing = existingResp.Models;
             var existingById = existing.ToDictionary(t => t.TripId);
-
-            // Asked now, because this save is about to record the week as built. What it
-            // answers is whether the drivers are being told about a change or about their
-            // schedule appearing for the first time, and only the first is worth a notice.
-            var wasBuilt = (await _supabase.From<ScheduleWeek>()
-                .Filter("week_start", Operator.Equals, weekStart.ToString("yyyy-MM-dd"))
-                .Get()).Models.Count > 0;
 
             // Conflicts are validated against the schedule as it will be after this save:
             // the submitted cells, plus any locked trip the grid did not resend, since those
@@ -495,6 +523,92 @@ namespace FleetWise.Controllers
             }
 
             return Ok();
+        }
+
+        /// <summary>Whether the week on screen has been saved by somebody else since.</summary>
+        /// <remarks>
+        /// Polled by the open planner. A dispatcher told only at the moment of saving has
+        /// already done the work twice over, so the same answer is offered while there is
+        /// still little of it to redo.
+        ///
+        /// The name behind the save is looked up only once the marker has moved, so the
+        /// ordinary answer, which is the one given nearly every time, costs one row.
+        /// </remarks>
+        [HttpGet]
+        public async Task<IActionResult> Marker(string start, string have)
+        {
+            if (!DateTime.TryParse(start, out var parsed))
+                return BadRequest(new { message = "That week could not be read." });
+
+            var week = (await _supabase.From<ScheduleWeek>()
+                .Filter("week_start", Operator.Equals, parsed.Date.ToString("yyyy-MM-dd"))
+                .Get()).Models.FirstOrDefault();
+
+            var marker = WeekMarker(week);
+            if (string.Equals(marker, have ?? "", StringComparison.Ordinal))
+                return Json(new { savedAt = marker });
+
+            return Json(new
+            {
+                savedAt = marker,
+                message = await WeekMovedMessageAsync(week, refused: false),
+            });
+        }
+
+        /// <summary>How a week's last save is named, for holding one reading against another.</summary>
+        /// <remarks>
+        /// Spelled without a zone or a kind, so the same instant reads the same way whether
+        /// it was taken when the grid was drawn or when the grid came back. Nothing reads
+        /// the value itself. A week nobody has saved has no marker, and empty is how a grid
+        /// says it was drawn on one.
+        /// </remarks>
+        private static string WeekMarker(ScheduleWeek? week) =>
+            week?.SavedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffffff") ?? "";
+
+        /// <summary>Why the week on screen is not the week that is saved.</summary>
+        /// <remarks>
+        /// Names who and when rather than only that the week changed, because what this
+        /// usually calls for is going to ask them. A refusal naming nobody leaves the
+        /// dispatcher reloading to work out what moved and who to talk to about it.
+        /// </remarks>
+        /// <param name="refused">
+        /// Whether a save was turned away, as against a warning raised while one is still
+        /// being worked on.
+        /// </param>
+        private async Task<string> WeekMovedMessageAsync(ScheduleWeek? week, bool refused)
+        {
+            if (week == null)
+                return "This week's saved copy has gone since you opened it. Reload before "
+                     + "saving, so what you save is built on what is there now.";
+
+            var who = await SavedByNameAsync(week);
+            var when = week.SavedAt.Date == PhClock.Today
+                ? week.SavedAt.ToString("h:mm tt")
+                : week.SavedAt.ToString("MMM d, h:mm tt");
+
+            return $"{who} saved this week at {when}, after you opened it. "
+                 + (refused
+                    ? "Saving now would undo their work, so nothing was written. "
+                    : "What is on screen no longer matches what is saved. ")
+                 + "Reload the week to see it. Your unsaved edits are kept and put back on top.";
+        }
+
+        /// <summary>Who saved the week, or "Somebody" where that cannot be answered.</summary>
+        /// <remarks>
+        /// The marker predates the column naming the saver, so early rows carry no id. A
+        /// refusal is worth making either way, and one that names nobody still says what
+        /// happened and what to do about it.
+        /// </remarks>
+        private async Task<string> SavedByNameAsync(ScheduleWeek week)
+        {
+            if (week.SavedBy is not int id) return "Somebody";
+
+            var user = (await _supabase.From<UserModel>()
+                .Filter("user_id", Operator.Equals, id.ToString())
+                .Get()).Models.FirstOrDefault();
+
+            var name = $"{user?.FirstName} {user?.LastName}".Trim();
+            return string.IsNullOrWhiteSpace(name) ? "Somebody" : name;
         }
 
         /// <summary>

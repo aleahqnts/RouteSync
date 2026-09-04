@@ -263,6 +263,7 @@
             const opt = document.createElement('option');
             opt.value = it.value;
             opt.textContent = it.label;
+            if (it.face !== undefined) opt.dataset.face = it.face;
             if (selectedId != null && it.value == selectedId) opt.selected = true;
             sel.appendChild(opt);
         });
@@ -292,10 +293,21 @@
             // Two drivers can share a name, so the identifier travels with it, in a
             // column of its own so the numbers can be read down the list.
             const rtmLabels = rsIdLabels(list.map(d => ({ name: d.driverName, id: d.driverId })));
+
+            // A chosen driver is read as a name. The number is only worth the room where
+            // two of them answer to it.
+            const rtmShared = rsSharedNames(list.map(d => d.driverName));
+
             rtmFillSelect(driverSel,
                 list.length === 0 ? 'No drivers available for this shift' : 'Select a driver…',
-                list.map((d, i) => ({ value: d.driverId, label: rtmLabels[i] })),
+                list.map((d, i) => ({
+                    value: d.driverId,
+                    label: rtmLabels[i],
+                    face: rtmShared(d.driverName) ? d.driverName + ' · ' + d.driverId : d.driverName,
+                })),
                 selectedId);
+
+            rsPickFace(driverSel);
 
             driverHint.textContent = list.length === 0
                 ? 'No available drivers are free for this shift.'

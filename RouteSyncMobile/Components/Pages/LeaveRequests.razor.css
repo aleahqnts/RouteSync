@@ -229,8 +229,11 @@
 
 /* The dates take the line and the outcome sits at the end of it, rather than the badge
    taking a column and pushing everything else into a narrow strip. */
+/* Wraps so that the dates and the status can take a line each on a narrow phone. A
+   status pushed onto its own line still reads; a date broken across two does not. */
 .lv-row-top {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
@@ -240,6 +243,7 @@
     font-size: 14px;
     font-weight: 700;
     color: #1b2a56;
+    white-space: nowrap;
 }
 
 .lv-meta {
@@ -384,6 +388,31 @@
     font-size: 12px;
     color: #1b2a56;
 }
+
+/* The status and anything qualifying it, held together against the right edge so the
+   dates keep the left one. */
+.lv-row-tags {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* Deliberately quieter than the badge beside it. The status is the answer; this is a
+   note on it. */
+.lv-chip {
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.lv-chip.asked   { background: #eef2f8; color: #64748b; }
+.lv-chip.refused { background: #fdecec; color: #c0504d; }
 
 .lv-badge {
     flex: 0 0 auto;

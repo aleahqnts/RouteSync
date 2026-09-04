@@ -202,7 +202,8 @@
     }
 
     /* clickable flagged column */
-    .dp-side-link {
+    .dp-side-link,
+    .dp-side-btn {
         text-decoration: none;
         display: block;
         border-radius: 10px;
@@ -210,8 +211,15 @@
         transition: background 150ms;
     }
 
-    .dp-side-link:hover {
+    .dp-side-link:hover,
+    .dp-side-btn:hover {
         background: #FEECEC;
+    }
+
+    /* Half a card rather than a whole one, so it tints on hover instead of lifting.
+       A card that rises while the card it shares a box with stays put reads as broken. */
+    .dp-side-btn {
+        cursor: pointer;
     }
 
     .dp-side-view {
@@ -317,20 +325,59 @@
         margin-bottom: 20px;
     }
 
+    /* No clipping of its own. A box that hides its overflow becomes the scrollport its
+       sticky children are measured against, which holds the header to the card instead
+       of to the page. The corners it was rounding are rounded by its two children. */
     .dp-route-card {
         padding: 0;
-        overflow: hidden;
+        overflow: visible;
     }
 
+    /* Held at the top while the route's own trips scroll past, so a board several
+       screens long never leaves a row without the route it belongs to. */
     .dp-route-header {
+        position: sticky;
+        top: var(--rs-bar, 0px);
+        z-index: 5;
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 16px 22px;
         background: #F1F4F8;
         border-bottom: 1.5px solid var(--rp-border);
+        border-radius: calc(var(--rp-radius) - 1px) calc(var(--rp-radius) - 1px) 0 0;
         flex-wrap: wrap;
         gap: 10px;
+        cursor: pointer;
+    }
+
+    .dp-route-card .rp-table-wrap {
+        border-radius: 0 0 calc(var(--rp-radius) - 1px) calc(var(--rp-radius) - 1px);
+    }
+
+    /* Which way a route is folded. Drawn wherever a route can be folded, which is
+       everywhere: a desk has more routes on screen at once, not fewer. */
+    .dp-route-caret {
+        flex: 0 0 auto;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid #4d8a86;
+        border-bottom: 2px solid #4d8a86;
+        transform: rotate(45deg) translate(-2px, -2px);
+        transition: transform 160ms ease;
+    }
+
+    .dp-route-card--shut .dp-route-caret {
+        transform: rotate(-45deg) translate(-1px, -1px);
+    }
+
+    .dp-route-card--shut .rp-table-wrap {
+        display: none;
+    }
+
+    .dp-route-card--shut .dp-route-header {
+        border-bottom-color: transparent;
+        border-radius: calc(var(--rp-radius) - 1px);
     }
 
     .dp-route-name {
@@ -605,6 +652,13 @@
         background: #FDE8E8;
         color: #B42318;
         border: 1px solid #F5C2C0;
+    }
+
+    /* Worn over the status, never instead of it. The fill still says what the trip is
+       waiting on; the outline says it has been waiting too long. */
+    .dp-badge--late {
+        box-shadow: inset 0 0 0 1.5px #E74C3C;
+        font-weight: 700;
     }
 
     .dp-badge--hint {
@@ -1291,6 +1345,17 @@
             border-top: 5px solid #9AA5B4;
             pointer-events: none;
         }
+
+    /* The face laid over a driver list, set to match the control it covers. */
+    .atm-select-wrap .rs-pick,
+    .rtm-select-wrap .rs-pick {
+        --rs-pick-pad: 12.5px;
+        color: #2D3748;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .atm-select-wrap .rs-pick { font-size: 0.9rem; }
+    .rtm-select-wrap .rs-pick { font-size: 0.88rem; }
 
     .atm-select {
         width: 100%;
@@ -2075,7 +2140,6 @@
    only where the page has to be worked one-handed. A desk keeps its stat cards,
    its toolbar and its legend exactly as they are. */
 .dp-empty-state,
-.dp-route-caret,
 .dp-chips,
 .dp-more,
 .dp-more-sheet,
@@ -2425,6 +2489,13 @@
         row-gap: 8px;
     }
 
+    /* The bar is a rounded box in its own right here, folded or not, so it keeps its
+       own corners and its own outline rather than the desk's squared-off join. */
+    .dp-route-card--shut .dp-route-header {
+        border-radius: 10px;
+        border-bottom-color: #DCE8E7;
+    }
+
     .dp-route-name {
         flex: 1;
         min-width: 0;
@@ -2446,25 +2517,6 @@
 
     .dp-btn-route-msg {
         flex: 0 0 auto;
-    }
-
-    .dp-route-caret {
-        display: block;
-        flex: 0 0 auto;
-        width: 8px;
-        height: 8px;
-        border-right: 2px solid #4d8a86;
-        border-bottom: 2px solid #4d8a86;
-        transform: rotate(45deg) translate(-2px, -2px);
-        transition: transform 160ms ease;
-    }
-
-    .dp-route-card--shut .dp-route-caret {
-        transform: rotate(-45deg) translate(-1px, -1px);
-    }
-
-    .dp-route-card--shut .rp-table-wrap {
-        display: none;
     }
 
     .dp-trip-row {

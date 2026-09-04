@@ -96,7 +96,12 @@ namespace FleetWise.Controllers
             int completedTrips = filtered.Count(t => string.Equals(t.TripStatus, "completed", StringComparison.OrdinalIgnoreCase));
             // Missed is never stored. It is derived from the shift window, so this counts
             // trips past their window that never started or completed.
-            int delayedTrips = filtered.Count(t => DeriveStatus(t) == "Missed");
+            //
+            // Not the same as the delayed figure on the dispatch board, which is a trip
+            // still inside its window that has yet to depart. That one can still be
+            // rescued and belongs to the day being worked; this one is service that was
+            // not delivered.
+            int missedTrips = filtered.Count(t => DeriveStatus(t) == "Missed");
 
             int totalPassengers = filtered.Sum(Passengers);
             decimal totalRevenue = filtered.Where(Earned).Sum(t => t.EstimatedRevenue);
@@ -122,7 +127,7 @@ namespace FleetWise.Controllers
                 stats = new
                 {
                     totalTrips = completedTrips,
-                    delayedTrips,
+                    missedTrips,
                     totalPassengers,
                     totalRevenue,
                     passengerDelta = totalPassengers - prevPassengers,

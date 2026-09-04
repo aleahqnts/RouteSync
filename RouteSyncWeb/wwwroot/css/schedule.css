@@ -11,9 +11,18 @@
         padding: 20px 24px 4px;
         background: #F8F9FA;
     }
+    .sch-titlerow { display:flex; align-items:baseline; gap:16px; margin-bottom:14px; }
+
+    /* Spaced the way every other board spaces its heading. The face, the capitals and the
+       weight come from the shared rule in site.css. */
+    .sch-title { font-size:1.6rem; font-weight:700; color:#1a2a4a; font-family:'Segoe UI', sans-serif; margin:0; }
+
     .sch-toolbar { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:10px; }
     .sch-week-nav { display:flex; align-items:center; gap:10px; }
-    .sch-week-label { font-weight:700; color:#1a2a4a; font-size:.95rem; min-width:180px; text-align:center; }
+
+    /* No width held in reserve. Sitting beside the heading it has the row to itself, and
+       the toolbar is free to fit its controls to the window. */
+    .sch-week-label { margin-left:auto; font-weight:700; color:#1a2a4a; font-size:.95rem; }
     .sch-pick { display:flex; align-items:center; gap:8px; font-size:.85rem; color:#4A5568; }
     .sch-pick input[type=date] { padding:7px 10px; border:1.5px solid #E2E8F0; border-radius:8px; font-size:.85rem; }
     .sch-btn-ghost { padding:7px 14px; border:1.5px solid #E2E8F0; border-radius:8px; background:#fff; color:#2D3748; font-weight:600; font-size:.85rem; cursor:pointer; text-decoration:none; }
@@ -55,6 +64,39 @@
     }
 
     .sch-table-scroll { overflow-x:auto; border-radius: 0 0 13px 13px; }
+
+    /* The day names, held under the route they belong to.
+
+       A box that scrolls in any direction is a scrollport, and anything sticky inside one
+       is held against that box rather than against the page. Declaring overflow-y visible
+       does not help: beside an overflow-x of auto it computes back to auto, and clip
+       computes to hidden, which scrolls too. So the wrapper has to stop scrolling
+       altogether, which it can only do where the grid already fits.
+
+       Whether it fits is measured per card rather than assumed from the width, because the
+       page's own padding widens from 32px to 90px partway up the range and a wider window
+       can leave the grid less room than a narrower one. */
+    .sch-card--fits .sch-table-scroll { overflow: visible; }
+
+    .sch-card--fits .sch-table thead th {
+        position: sticky;
+        top: calc(var(--rs-bar, 0px) + var(--sch-top, 0px) + var(--sch-head, 0px));
+        z-index: 6;
+    }
+
+    /* The corner is held on both axes at once, so it sits over the column it shares an
+       edge with. */
+    .sch-card--fits .sch-table thead .sch-shift-col { z-index: 7; }
+
+    /* The wrapper rounded the foot of the card by clipping it. Nothing clips once it stops
+       scrolling, so the cells that reach the corners round themselves. */
+    .sch-card--fits .sch-table tbody:last-of-type tr:last-child td:first-child {
+        border-bottom-left-radius: 13px;
+    }
+
+    .sch-card--fits .sch-table tbody:last-of-type tr:last-child td:last-child {
+        border-bottom-right-radius: 13px;
+    }
     .sch-table { width:100%; border-collapse:collapse; min-width:900px; }
     .sch-table th, .sch-table td { border:1px solid #EEF1F4; padding:8px; text-align:center; vertical-align:top; }
     .sch-table thead th { background:#FBFCFD; font-size:.78rem; color:#4A5568; }
@@ -74,11 +116,38 @@
     .sch-sel { width:100%; padding:6px 8px; border:1.5px solid #E2E8F0; border-radius:7px; font-size:.78rem; color:#2D3748; background:#fff; cursor:pointer; }
     .sch-sel:focus { outline:none; border-color:#4AADA8; }
     .sch-cell.sch-dirty .sch-sel { border-color:#4AADA8; }
+
+    /* Set on the wrapper, so the face laid over the closed control inherits the type the
+       control itself is set in. */
+    .sch-cell .rs-pick { font-size:.78rem; color:#2D3748; }
+
     /* A driver away on the day this cell sits in. The list itself says which, and this
        is what finds the cell in a week of them. Kept above the conflict rule, so a cell
        reported on save still reads as one. */
     .sch-cell.sch-away .sch-drv { border-color:#D69E2E; background:#FFFAF0; }
+    .sch-cell.sch-away { --rs-pick-bg:#FFFAF0; }
     .sch-cell.sch-conflict .sch-sel { border-color:#E74C3C; background:#FEECEC; }
+    .sch-cell.sch-conflict { --rs-pick-bg:#FEECEC; }
+
+    /* An edit that has not been written yet.
+     *
+     * A corner mark rather than a border, because the border is already carrying whether
+     * the driver is away and whether the cell was reported on the last save, and those
+     * have to stay readable on a cell that has just been changed. */
+    .sch-cell.sch-dirty::before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        z-index: 2;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #4AADA8;
+        box-shadow: 0 0 0 2px #fff;
+    }
+
+    .sch-cell.sch-dirty--found::before { transform: scale(1.6); }
     .sch-locked { display:flex; flex-direction:column; gap:4px; align-items:center; padding:6px; }
     .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:#F0F2F5; color:#6B7C93; }
     .sch-lock-txt { font-size:.72rem; color:#6B7C93; }
@@ -238,6 +307,7 @@
     .sch-draft {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 10px;
         margin: 0 0 10px;
         padding: 9px 14px;
@@ -252,8 +322,25 @@
 
     .sch-draft-ico { font-size: 1rem; }
 
+    /* The sign and the sentence travel together. A flex line is broken on what each item
+       would like to be, before any of them are squeezed, so a sentence too long for the
+       row dropped to a row of its own and left the sign standing alone on the first.
+
+       Shrinks and does not grow, so the weeks named after it stay beside the sentence
+       rather than being pushed away to the far end of the bar. */
+    .sch-draft-line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .sch-draft-text:empty { display: none; }
+
+    /* Both sit at the end of the bar, the finding one before the losing one. */
+    .sch-draft-go,
     .sch-draft-drop {
-        margin-left: auto;
         border: 1px solid #E6D6A8;
         border-radius: 8px;
         padding: 5px 12px;
@@ -265,7 +352,36 @@
         white-space: nowrap;
     }
 
+    .sch-draft-go { margin-left: auto; }
+
+    .sch-draft-go:hover,
     .sch-draft-drop:hover { background: #FFF3D0; }
+
+    /* Other weeks are links rather than a count, because reaching one is the whole of
+       what can be done about it, and each has to be opened to be saved. */
+    .sch-draft-other { font-size: .82rem; }
+    .sch-draft-other[hidden] { display: none; }
+
+    .sch-draft-other a {
+        color: #7a6412;
+        font-weight: 700;
+        text-decoration: underline;
+    }
+
+    /* The week has moved under the grid. Red rather than amber: the bar above says work
+       is waiting to be written, and this one says writing it would take something away. */
+    .sch-draft--moved {
+        border-color: #F0B4AE;
+        background: #FEECEC;
+        color: #9B2C2C;
+    }
+
+    .sch-draft--moved .sch-draft-go {
+        border-color: #F0B4AE;
+        color: #9B2C2C;
+    }
+
+    .sch-draft--moved .sch-draft-go:hover { background: #FDDCD8; }
 
     .sch-toast {
         position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -303,10 +419,14 @@
         .sch-week-nav { flex: 1 1 100%; justify-content: space-between; gap: 8px; }
         .sch-week-nav .sch-btn-ghost { flex: 0 0 auto; white-space: nowrap; }
 
+        /* The bar across the top carries the page name here, so the row keeps only the
+           week, centred over the controls that move it. */
+        .sch-title { display: none; }
+
+        .sch-titlerow { justify-content: center; margin-bottom: 8px; }
+
         .sch-week-label {
-            flex: 1;
-            min-width: 0;
-            order: 0;
+            margin-left: 0;
             font-size: .88rem;
         }
 
@@ -386,6 +506,15 @@
         }
 
         .sch-table thead .sch-shift-col { z-index: 5; }
+
+        /* One day on screen is narrow enough that the grid stops scrolling sideways, and
+           the shift column then needs neither the pixel of overhang nor the fill that
+           covered the sliver behind it. Both were standing in for a scroller's edge, and
+           with nothing clipping them they paint out over the card. */
+        .sch-card--fits .sch-table .sch-shift-col {
+            left: 0;
+            box-shadow: 1px 0 0 #EEF1F4;
+        }
 
         .sch-modal-overlay { padding: 0; align-items: flex-end; }
         .sch-modal { max-width: none; max-height: 92vh; max-height: 92dvh; overflow-y: auto;

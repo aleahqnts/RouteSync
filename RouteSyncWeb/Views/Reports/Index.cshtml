@@ -55,10 +55,10 @@
                     <line x1="8" y1="12" x2="16" y2="12" />
                 </svg>
             </span>
-            <span class="rp-stat-label">Delayed/Missed Trips</span>
+            <span class="rp-stat-label">Missed Trips</span>
         </div>
-        <div class="rp-stat-value rp-skeleton" id="statDelayedTrips">—</div>
-        <div class="rp-stat-sub">Delayed</div>
+        <div class="rp-stat-value rp-skeleton" id="statMissedTrips">—</div>
+        <div class="rp-stat-sub">Never departed</div>
     </div>
 
     <div class="rp-stat-card rp-stat-card--click" role="button" tabindex="0" data-stat="passengers" title="Show the trips behind this figure">
@@ -712,11 +712,11 @@
 
     function renderStats(stats) {
     document.getElementById('statTotalTrips').textContent = formatNumber(stats.totalTrips);
-    document.getElementById('statDelayedTrips').textContent = formatNumber(stats.delayedTrips);
+    document.getElementById('statMissedTrips').textContent = formatNumber(stats.missedTrips);
     document.getElementById('statTotalPassengers').textContent = formatNumber(stats.totalPassengers);
     document.getElementById('statTotalRevenue').innerHTML = formatCurrencyCompact(stats.totalRevenue);
 
-    ['statTotalTrips', 'statDelayedTrips', 'statTotalPassengers', 'statTotalRevenue'].forEach(id => {
+    ['statTotalTrips', 'statMissedTrips', 'statTotalPassengers', 'statTotalRevenue'].forEach(id => {
     document.getElementById(id).classList.remove('rp-skeleton');
     });
 

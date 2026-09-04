@@ -38,11 +38,6 @@ public class LeaveRequest : BaseModel
     [Column("status")]
     public string Status { get; set; }
 
-    /// <summary>
-    /// When notice arrived. BGC asks for three days on a vacation and two hours on a
-    /// sick call, and treats both as practice rather than a gate, so this is recorded
-    /// and never used to refuse a request.
-    /// </summary>
     /// <summary>Days inside the range that have been handed back, as yyyy-MM-dd.</summary>
     /// <remarks>
     /// Held as text rather than as dates. The column is `date[]`, and Postgres casts
@@ -105,6 +100,11 @@ public class LeaveRequest : BaseModel
     [Column("withdraw_answered_at")]
     public DateTime? WithdrawAnsweredAt { get; set; }
 
+    /// <summary>
+    /// When notice arrived. BGC asks for three days on a vacation and two hours on a
+    /// sick call, and treats both as practice rather than a gate, so this is recorded
+    /// and never used to refuse a request.
+    /// </summary>
     [Column("filed_at")]
     public DateTime FiledAt { get; set; }
 
@@ -149,6 +149,55 @@ public static class LeaveEntitlement
 
     public static bool IsType(string type) => DaysPerYear.ContainsKey(type ?? "");
 
+    /// <summary>How far back leave may be filed, for the types that allow it.</summary>
+    /// <remarks>
+    /// Long enough to cover a fortnight off followed by filing on the day of return, and
+    /// short enough that a reporting period is not reopened indefinitely.
+    /// </remarks>
+    public const int BackdatingDays = 14;
+
+    /// <summary>Whether a type may be filed for a day already past.</summary>
+    /// <remarks>
+    /// Sickness and emergencies are not known in advance, and a driver dealing with one
+    /// is not filing a form first, so both are filed afterwards as a matter of course.
+    ///
+    /// Vacation is planned by definition. Filed after the fact it is either a correction
+    /// to the record, which is a dispatcher's job through their own tools, or an
+    /// allowance being spent before it lapses.
+    /// </remarks>
+    public static bool AllowsBackdating(string type) =>
+        string.Equals(type, Sick, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(type, Emergency, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Why this leave cannot be filed for the days it names, or null when it can.
+    /// </summary>
+    /// <remarks>
+    /// Only the first day is bounded. A leave running from last week into this one is one
+    /// absence, and where it ends says nothing about whether it could be foreseen.
+    ///
+    /// Asked of the operational day rather than the calendar one, so leave filed at two in
+    /// the morning is still filed on the service day that is running.
+    ///
+    /// The driver's app asks this before sending and the dashboard asks it again before
+    /// granting. The app posts its own rows, so the form is a courtesy and the decision is
+    /// the gate.
+    /// </remarks>
+    public static string BackdatingProblem(string type, DateTime start, DateTime today)
+    {
+        var days = (int)(today.Date - start.Date).TotalDays;
+        if (days <= 0) return null;
+
+        if (!AllowsBackdating(type))
+            return $"{type} leave cannot be filed for a day that has passed.";
+
+        if (days > BackdatingDays)
+            return $"{type} leave can be filed up to {BackdatingDays} days late, and that is "
+                 + $"{days} days ago.";
+
+        return null;
+    }
+
     /// <summary>
     /// Whether a request is still waiting on an answer.
     /// </summary>
@@ -172,10 +221,9 @@ public static class LeaveEntitlement
     /// Days a request actually covers, with any handed back taken off.
     /// </summary>
     /// <remarks>
-    /// Every reader of leave used to be able to assume that an approved request meant
-    /// every day from its start to its end. Partial revocation ends that, so the count
-    /// and the per-day question both go through here rather than being worked out again
-    /// at each place that asks.
+    /// An approved request does not mean every day from its start to its end: single days
+    /// can be handed back. The count and the per-day question both go through here rather
+    /// than being worked out again at each place that asks.
     /// </remarks>
     public static int EffectiveDays(LeaveRequest r) =>
         Math.Max(0, Days(r) - (r.RevokedDates?.Count ?? 0));

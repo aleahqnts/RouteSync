@@ -11,6 +11,8 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @using System.Security.Claims
 @using System.Globalization
+@using FleetWise.Services
+@inject NavCounts NavCounts
 
 @*
     Icon helper. Each icon is a self-contained inline SVG that draws with the current
@@ -114,6 +116,28 @@
         // separate decision from managing accounts. No role has it until it is granted.
         new { Label = "Audit Log", Short = "Audit",    Controller = "Audit",     Action = "Index", IconKey = "audit",     Perm = "audit"     },
     };
+
+    // What each tab is holding. Read once for the page and handed to both the rail and
+    // the phone bar below, which draw the same eight destinations.
+    var badges = await NavCounts.ReadAsync();
+
+    FleetWise.Services.NavBadge BadgeFor(string controller) => controller switch
+    {
+        "Dispatch" => badges.Dispatch,
+        "Requests" => badges.Requests,
+        "Vehicles" => badges.Vehicles,
+        _ => FleetWise.Services.NavBadge.None,
+    };
+
+    // The key the script below writes back into, and the reason a tab with nothing on it
+    // still carries an empty marker: it has somewhere to put a count that arrives later.
+    string BadgeKey(string controller) => controller switch
+    {
+        "Dispatch" => "dispatch",
+        "Requests" => "requests",
+        "Vehicles" => "vehicles",
+        _ => null,
+    };
 }
 
 <aside class="fw-sidebar" id="fwSidebar">
@@ -137,6 +161,8 @@
                 // Only render links the signed-in role is permitted to see.
                 if (!User.HasClaim("perm", item.Perm)) { continue; }
                 var active = IsActive(item.Controller, item.Action);
+                var key = BadgeKey(item.Controller);
+                var badge = BadgeFor(item.Controller);
                 <li class="fw-sidebar__item">
                     <a asp-controller="@item.Controller"
                        asp-action="@item.Action"
@@ -144,6 +170,14 @@
                        aria-current="@(active ? "page" : null)">
                         <span class="fw-sidebar__icon" aria-hidden="true">
                             @NavIcon(item.IconKey)
+                            @* On the icon rather than beside the label, because the rail is
+                               collapsed to its icons until it is hovered and a dispatcher
+                               reading it from across the room is reading the dot. *@
+                            @if (key is not null)
+                            {
+                                <span class="fw-sidebar__badge @(badge.Urgent ? "fw-sidebar__badge--urgent" : "")"
+                                      data-badge="@key" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
+                            }
                         </span>
                         <span class="fw-sidebar__label">@item.Label</span>
                     </a>
@@ -194,6 +228,12 @@
                              .OrderBy(i => Array.IndexOf(barOrder, i.Controller))
                              .ToList();
     var moreItems = touchItems.Except(barItems).ToList();
+
+    // What the sheet is hiding. Requests lives behind the More button on a phone, so
+    // without a mark on it an urgent sick call is one tap out of sight.
+    var behind = moreItems.Select(m => BadgeFor(m.Controller)).ToList();
+    var behindCount = behind.Sum(x => x.Count);
+    var behindUrgent = behind.Any(x => x.Urgent);
 }
 
 <nav class="fw-bar" id="fwBar" aria-label="Main navigation">
@@ -210,15 +250,26 @@
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
+                <span class="fw-bar__badge @(behindUrgent ? "fw-bar__badge--urgent" : "")"
+                      data-badge-sum hidden="@(behindCount == 0 ? "hidden" : null)">@behindCount</span>
             </button>
         }
 
         var item = barItems[i];
         var active = IsActive(item.Controller, item.Action);
+        var barKey = BadgeKey(item.Controller);
+        var barBadge = BadgeFor(item.Controller);
         <a asp-controller="@item.Controller" asp-action="@item.Action"
            class="fw-bar__link @(active ? "fw-bar__link--active" : "")"
            aria-current="@(active ? "page" : null)">
-            <span class="fw-bar__icon" aria-hidden="true">@NavIcon(item.IconKey)</span>
+            <span class="fw-bar__icon" aria-hidden="true">
+                @NavIcon(item.IconKey)
+                @if (barKey is not null)
+                {
+                    <span class="fw-bar__badge @(barBadge.Urgent ? "fw-bar__badge--urgent" : "")"
+                          data-badge="@barKey" hidden="@(barBadge.Count == 0 ? "hidden" : null)">@barBadge.Count</span>
+                }
+            </span>
             <span class="fw-bar__label">@item.Short</span>
         </a>
     }
@@ -249,6 +300,12 @@
                    aria-current="@(active ? "page" : null)" tabindex="-1">
                     <span class="fw-sheet__icon" aria-hidden="true">@NavIcon(item.IconKey)</span>
                     @item.Label
+                    @{ var sheetKey = BadgeKey(item.Controller); var sheetBadge = BadgeFor(item.Controller); }
+                    @if (sheetKey is not null)
+                    {
+                        <span class="fw-sheet__badge @(sheetBadge.Urgent ? "fw-sheet__badge--urgent" : "")"
+                              data-badge="@sheetKey" hidden="@(sheetBadge.Count == 0 ? "hidden" : null)">@sheetBadge.Count</span>
+                    }
                 </a>
             </li>
         }
@@ -292,7 +349,74 @@
         document.getElementById('fwSignOutCancel').addEventListener('click', close);
         dialog.addEventListener('click', function (e) { if (e.target === dialog) close(); });
 
+        // Anything this sitting left in the tab goes with the sitting. The planner keeps
+        // unsaved weeks in session storage so that moving between them does not lose
+        // them, and that storage outlives the cookie: whoever signs in next in this tab
+        // is otherwise handed a week they never touched.
+        dialog.querySelector('form').addEventListener('submit', function () {
+            try {
+                Object.keys(sessionStorage)
+                    .filter(function (k) { return k.indexOf('sch_draft_') === 0; })
+                    .forEach(function (k) { sessionStorage.removeItem(k); });
+            } catch (e) { /* private browsing */ }
+        });
+
         // Named for dialog-stack.js, which closes the frontmost dialog on Escape.
         window.fwCloseSignOut = close;
+    })();
+
+    // Badges.
+    //
+    // The rail is drawn on every page, so a dispatcher reading the dashboard learns that
+    // Requests is holding something without going to look. The first numbers come with
+    // the page; this keeps them current while it is left open.
+    //
+    // A tab the role cannot open is not in the answer at all, so nothing here has to
+    // decide who may see what.
+    (function () {
+        var marks = document.querySelectorAll('[data-badge]');
+        if (!marks.length) return;
+
+        function paint(el, count, urgent) {
+            el.textContent = count;
+            el.hidden = count === 0;
+            el.classList.toggle('fw-sidebar__badge--urgent',
+                urgent && el.classList.contains('fw-sidebar__badge'));
+            el.classList.toggle('fw-bar__badge--urgent',
+                urgent && el.classList.contains('fw-bar__badge'));
+            el.classList.toggle('fw-sheet__badge--urgent',
+                urgent && el.classList.contains('fw-sheet__badge'));
+        }
+
+        async function read() {
+            var res = await fetch('/Nav/Badges', { headers: { 'X-Requested-With': 'fetch' } });
+            if (!res.ok) return;
+            var data = await res.json();
+
+            marks.forEach(function (el) {
+                var b = data[el.dataset.badge];
+                if (b) paint(el, b.count, b.urgent);
+            });
+
+            // The sheet's own total, so the button that opens it says how much is inside.
+            document.querySelectorAll('[data-badge-sum]').forEach(function (el) {
+                var inside = document.querySelectorAll('#fwSheet [data-badge]');
+                var total = 0, urgent = false;
+                inside.forEach(function (one) {
+                    var b = data[one.dataset.badge];
+                    if (!b) return;
+                    total += b.count;
+                    urgent = urgent || b.urgent;
+                });
+                paint(el, total, urgent);
+            });
+        }
+
+        // Not while the tab is in the background: a rail nobody is looking at does not
+        // need counting, and a phone left on a desk would poll all day.
+        setInterval(function () {
+            if (document.hidden) return;
+            read().catch(function () { /* the numbers on screen stand */ });
+        }, 30000);
     })();
 </script>
