@@ -38,6 +38,24 @@ namespace FleetWise.ViewModels
         /// column the grid marks it on.
         /// </remarks>
         public string TodayInWeek { get; set; }
+
+        /// <summary>Shift windows in this week that have already closed, as "Shift|date".</summary>
+        /// <remarks>
+        /// Keyed without the route, because a window belongs to the clock and not to a
+        /// route. Held as its own set so an empty slot on a finished shift can be drawn
+        /// read-only, which a cell carrying a trip could not answer for.
+        /// </remarks>
+        public HashSet<string> ClosedSlots { get; set; } = new();
+
+        /// <summary>Whether every shift in the week has finished.</summary>
+        /// <remarks>
+        /// Such a week is a record rather than a plan, so the page withholds Save, Add bus
+        /// and Copy last week rather than offering controls that can only be refused.
+        /// </remarks>
+        public bool WeekClosed { get; set; }
+
+        public bool SlotClosed(string shift, DateTime day) =>
+            ClosedSlots.Contains($"{shift}|{day:yyyy-MM-dd}");
     }
 
     public class ScheduleCell
@@ -45,7 +63,17 @@ namespace FleetWise.ViewModels
         public string TripId { get; set; }
         public string VehicleId { get; set; }
         public int DriverId { get; set; }
-        public string TripStatus { get; set; }   // locked if Active/Completed
+
+        /// <summary>Whether the trip is beyond further change.</summary>
+        /// <remarks>
+        /// A trip that has started or finished, or one whose shift window has closed.
+        /// Worked out where the clock is known rather than from the stored status, which
+        /// says "Not Yet Started" for a shift that ended hours ago.
+        /// </remarks>
+        public bool Locked { get; set; }
+
+        /// <summary>How the locked cell names its trip, derived the way the board does.</summary>
+        public string StatusLabel { get; set; }
     }
 
     // Posted by POST /Schedule/Save

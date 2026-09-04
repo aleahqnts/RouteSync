@@ -431,9 +431,13 @@ namespace FleetWise.Controllers
         /// clear first.
         /// </summary>
         /// <remarks>
-        /// Trips already running or already driven are left out. Those days happened, and
-        /// no decision made now can un-drive them; counting them would leave a request that
-        /// can never be approved.
+        /// Only shifts a dispatcher can still act on. A trip already running or driven is
+        /// left out, and so is one whose shift has finished: the planner will not rewrite
+        /// either, so holding an approval for them would demand a change that cannot be
+        /// made and leave the request unanswerable in both directions.
+        ///
+        /// This is what lets leave be filed for a day already past. The shift on it has
+        /// finished, so it asks nothing of the schedule and blocks nothing.
         /// </remarks>
         private async Task<List<BlockingShift>> BlockingTripsAsync(LeaveRequest r)
         {
@@ -443,9 +447,10 @@ namespace FleetWise.Controllers
                 .Filter("date", Constants.Operator.LessThanOrEqual, r.EndDate.ToString("yyyy-MM-dd"))
                 .Get();
 
+            var now = PhClock.Now;
+
             return trips.Models
-                .Where(t => !string.Equals(t.TripStatus, "Active", StringComparison.OrdinalIgnoreCase)
-                         && !string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                .Where(t => !TripStatus.Locked(t, now))
                 // A day already handed back is not leave, so a shift on it blocks nothing.
                 .Where(t => !LeaveEntitlement.IsRevokedOn(r, t.Date))
                 .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
@@ -639,6 +644,7 @@ namespace FleetWise.Controllers
                 new()
                 {
                     Action = "Filed",
+                    At = r.FiledAt,
                     When = r.FiledAt.ToString("MMM d, yyyy h:mm tt"),
                     By = Who(r.UserId),
                     Note = r.Reason,
@@ -651,6 +657,7 @@ namespace FleetWise.Controllers
                 events.Add(new LeaveEventViewModel
                 {
                     Action = r.Status,
+                    At = decided,
                     When = decided.ToString("MMM d, yyyy h:mm tt"),
                     // A withdrawal is the driver's own doing and carries no decider.
                     By = r.DecidedBy is null ? Who(r.UserId) : Who(r.DecidedBy),
@@ -663,6 +670,7 @@ namespace FleetWise.Controllers
                 events.Add(new LeaveEventViewModel
                 {
                     Action = "Cancellation asked for",
+                    At = asked,
                     When = asked.ToString("MMM d, yyyy h:mm tt"),
                     By = Who(r.UserId),
                     Note = r.WithdrawReason,
@@ -677,6 +685,7 @@ namespace FleetWise.Controllers
                     events.Add(new LeaveEventViewModel
                     {
                         Action = "Cancellation declined",
+                        At = answered,
                         When = answered.ToString("MMM d, yyyy h:mm tt"),
                         By = Who(r.DecidedBy),
                     });
@@ -695,13 +704,16 @@ namespace FleetWise.Controllers
                 events.Add(new LeaveEventViewModel
                 {
                     Action = "Revoked",
+                    At = revoked,
                     When = revoked.ToString("MMM d, yyyy h:mm tt"),
                     By = Who(r.RevokedBy),
                     Note = string.IsNullOrWhiteSpace(r.RevokeNote) ? which : $"{which}. {r.RevokeNote}",
                 });
             }
 
-            return events;
+            // In the order they happened, not the order they were assembled. OrderBy is
+            // stable, so two stamped the same second keep the order they were added in.
+            return events.OrderBy(e => e.At).ToList();
         }
     }
 }

@@ -28,6 +28,23 @@
         return parseInt(getComputedStyle(el).zIndex, 10) || 0;
     }
 
+    /**
+     * Whether an overlay actually covers the page, as opposed to sitting over it.
+     *
+     * A panel the page can be clicked through is not covering it, and locking the
+     * scroll behind one is what stops it being read against the thing it describes.
+     * The schedule's conflict list is the case: on a desk it is a note beside the grid
+     * that can be dragged about while the grid is worked, so the planner could see the
+     * cell numbered 1 and had no way to reach the cell numbered 3. On a phone the same
+     * panel is an ordinary sheet over a dimmed page, and there it does lock.
+     *
+     * Read from pointer-events rather than a list kept here, so the stylesheet that
+     * decides whether a panel blocks is the one thing that has to say so.
+     */
+    function covers(el) {
+        return getComputedStyle(el).pointerEvents !== 'none';
+    }
+
     /** Every dialog currently on screen, Bootstrap's and this project's own. */
     function openDialogs() {
         var bootstrapDialogs = Array.prototype.slice.call(document.querySelectorAll('.modal.show'));
@@ -53,9 +70,9 @@
     }
 
     function anythingOpen() {
-        var covers = document.querySelectorAll(COVERS);
-        for (var i = 0; i < covers.length; i++) {
-            if (isVisible(covers[i])) return true;
+        var found = document.querySelectorAll(COVERS);
+        for (var i = 0; i < found.length; i++) {
+            if (isVisible(found[i]) && covers(found[i])) return true;
         }
         return false;
     }
@@ -102,6 +119,11 @@
 
     document.addEventListener('shown.bs.modal', sync);
     document.addEventListener('hidden.bs.modal', sync);
+
+    // A panel that lets the page through on a desk blocks it on a phone, and crossing
+    // that width changes nothing the observer above is watching.
+    window.addEventListener('resize', sync);
+
     sync();
 
     /** The one in front, which is the one the keyboard belongs to. */

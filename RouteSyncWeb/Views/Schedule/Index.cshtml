@@ -34,15 +34,29 @@
         </div>
         @* Next week is last week with edits, which is why the rotation is monthly.
            Fills the blanks in the week on screen and writes nothing until Save. *@
-        <button type="button" class="sch-btn-ghost" id="sch-copy" onclick="schCopyLastWeek()">
-            Copy last week
-        </button>
+        @if (!Model.WeekClosed)
+        {
+            <button type="button" class="sch-btn-ghost" id="sch-copy" onclick="schCopyLastWeek()">
+                Copy last week
+            </button>
+        }
         <div class="sch-pick">
             <label>Week starting</label>
             <input type="date" id="sch-start" value="@Model.WeekStart.ToString("yyyy-MM-dd")" />
             <button class="sch-btn-ghost" onclick="schGoWeek()">Go</button>
         </div>
-        <button class="sch-btn-save" id="sch-save" onclick="schSave()">Save Schedule</button>
+        @* A week whose every shift has finished is a record, not a plan. The controls that
+           would write to it are withheld rather than left to be refused on use. *@
+        @if (Model.WeekClosed)
+        {
+            <span class="sch-closed-note" title="Shifts are open to editing until they finish">
+                This week has finished. It can be read but not changed.
+            </span>
+        }
+        else
+        {
+            <button class="sch-btn-save" id="sch-save" onclick="schSave()">Save Schedule</button>
+        }
     </div>
 
     <div class="sch-days" id="schDays" role="tablist" aria-label="Day of the week">
@@ -112,7 +126,10 @@
                                     {
                                         <td class="sch-shift-col" rowspan="@laneCount">
                                             <div class="sch-shift-name">@shift</div>
-                                            <button type="button" class="sch-add-bus" onclick="schAddBus(this)">+ Add bus</button>
+                                            @if (!Model.WeekClosed)
+                                            {
+                                                <button type="button" class="sch-add-bus" onclick="schAddBus(this)">+ Add bus</button>
+                                            }
                                         </td>
                                     }
                                     @for (int dayIndex = 0; dayIndex < Model.Days.Count; dayIndex++)
@@ -120,14 +137,31 @@
                                         var day = Model.Days[dayIndex];
                                         Model.Cells.TryGetValue(CellKey(route.RouteId, shift, day), out var lst);
                                         var cell = lst != null && lane < lst.Count ? lst[lane] : null;
-                                        var locked = cell != null && (cell.TripStatus == "Active" || cell.TripStatus == "Completed");
+
+                                        @* A finished shift is drawn read-only whether or not it holds a
+                                           trip. An empty picker over one reads as a slot still to fill,
+                                           and filling it is refused on save. *@
+                                        var slotClosed = Model.SlotClosed(shift, day);
+                                        var locked = cell?.Locked == true || (cell == null && slotClosed);
                                         <td class="sch-cell-td" data-sch-day="@dayIndex">
-                                            @if (locked)
+                                            @* Marked apart from a lane that is merely under way, because
+                                               the two answer differently when a week is filled from another
+                                               one: a finished shift wants nothing, a running trip is a slot
+                                               already taken. *@
+                                            @if (locked && cell != null)
                                             {
-                                                <div class="sch-locked" data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")"
+                                                <div class="sch-locked @(slotClosed ? "sch-locked--closed" : "")"
+                                                     data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")"
                                                      data-veh="@cell.VehicleId" data-drv="@cell.DriverId">
-                                                    <span class="sch-lock-badge">@cell.TripStatus</span>
+                                                    <span class="sch-lock-badge">@cell.StatusLabel</span>
                                                     <span class="sch-lock-txt">@cell.VehicleId · @(Model.Drivers.FirstOrDefault(d => d.DriverId == cell.DriverId)?.DriverName ?? "—")</span>
+                                                </div>
+                                            }
+                                            else if (locked)
+                                            {
+                                                <div class="sch-locked sch-locked--closed sch-locked--empty"
+                                                     data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")">
+                                                    <span class="sch-lock-txt">Not run</span>
                                                 </div>
                                             }
                                             else
@@ -456,8 +490,14 @@
 
     // show save toast once after the post-save reload
     if (sessionStorage.getItem('sch_saved')) {
+        const said = sessionStorage.getItem('sch_saved');
         sessionStorage.removeItem('sch_saved');
-        window.addEventListener('DOMContentLoaded', () => schToast('Schedule saved'));
+        // A save that left slots alone because their shift finished says so, and holds the
+        // line long enough to be read: the grid it comes back to has changed under the
+        // planner and the reason is not visible in it.
+        const plain = said === '1';
+        window.addEventListener('DOMContentLoaded',
+            () => schToast(plain ? 'Schedule saved' : 'Schedule saved. ' + said, plain ? undefined : 6500));
     }
 
     function schGoWeek() {
@@ -684,7 +724,10 @@
             return;
         }
 
-        let filled = 0, kept = 0, skipped = 0;
+        // Two reasons a slot is passed over, counted apart because they ask different
+        // things of the planner. A shift that has finished wants nothing. A bus or driver
+        // that can no longer be booked leaves a hole somebody has to fill.
+        let filled = 0, kept = 0, skipped = 0, finished = 0;
 
         cells.forEach(c => {
             const tbody = document.querySelector(
@@ -700,9 +743,14 @@
             const td = row.querySelectorAll('.sch-cell-td')[c.dayIndex];
             if (!td) { skipped++; return; }
 
-            // A lane under way renders as a locked block with no pickers in it.
+            // Both a finished shift and a lane under way render as a locked block with no
+            // pickers in it, and they mean different things here. A finished shift asks
+            // nothing of the planner; a running trip is a slot already taken.
             const cell = td.querySelector('.sch-cell');
-            if (!cell) { skipped++; return; }
+            if (!cell) {
+                if (td.querySelector('.sch-locked--closed')) finished++; else kept++;
+                return;
+            }
 
             const veh = cell.querySelector('.sch-veh');
             const drv = cell.querySelector('.sch-drv');
@@ -735,10 +783,20 @@
         parts.push(filled === 1 ? 'Filled 1 slot from last week.'
                                 : 'Filled ' + filled + ' slots from last week.');
         if (kept) parts.push(kept + (kept === 1 ? ' slot already set was' : ' slots already set were') + ' left alone.');
+        if (finished) parts.push(finished + (finished === 1 ? ' shift had' : ' shifts had') + ' already finished.');
         if (skipped) parts.push(skipped + (skipped === 1 ? ' could not be placed.' : ' could not be placed.'));
-        schToast(filled === 0 && kept === 0 && skipped
-            ? 'Nothing could be placed. Those buses and drivers are no longer available.'
-            : parts.join(' '), 5200);
+
+        // Nothing landed, and the reason decides what to say. Naming buses and drivers when
+        // the week had simply gone sends the planner looking for a fleet problem that is
+        // not there.
+        const nothing = filled === 0 && kept === 0;
+        schToast(
+            nothing && skipped && !finished
+                ? 'Nothing could be placed. Those buses and drivers are no longer available.'
+                : nothing && finished && !skipped
+                ? 'Nothing was filled. Every shift in this week has already finished.'
+                : parts.join(' '),
+            5200);
     }
 
     const SHIFT_ADJ = { 'Morning': 'Afternoon', 'Afternoon': 'Evening' }; // back-to-back pairs
@@ -811,12 +869,60 @@
 
     /* Takes the reader to the first cell a line is about, and holds it long enough to be
        found. The list is over the grid, so it closes on the way. */
+    /* Brings a cell into view past everything pinned over it.
+
+       scrollIntoView cannot do this. Vertically it knows nothing about the app bar, the
+       toolbar block or the route heading held above the grid, so centring a cell drops it
+       under them the moment the page cannot scroll far enough to centre anything, which
+       is most of the first and last card. Sideways it centres inside the card's own
+       scroller, and a cell in one of the early columns then ends up beneath the shift
+       column pinned to the left edge.
+
+       Both offsets are worked out here instead. The two custom properties are read off
+       the cell, which inherits whatever the layout resolved them to rather than what this
+       file might assume. */
+    function schRevealCell(el) {
+        const style = getComputedStyle(el);
+        const px = function (name) { return parseFloat(style.getPropertyValue(name)) || 0; };
+        const GAP = 20;
+
+        // Sideways, inside the card, clear of the shift column pinned over the left.
+        const scroller = el.closest('.sch-table-scroll');
+        if (scroller) {
+            const pinned = scroller.querySelector('.sch-shift-col');
+            const pad = (pinned ? pinned.getBoundingClientRect().width : 0) + GAP;
+            const cell = el.getBoundingClientRect();
+            const box = scroller.getBoundingClientRect();
+
+            let byX = 0;
+            if (cell.left < box.left + pad) byX = cell.left - (box.left + pad);
+            else if (cell.right > box.right - GAP) byX = cell.right - (box.right - GAP);
+
+            if (byX) scroller.scrollTo({ left: scroller.scrollLeft + byX, behavior: 'smooth' });
+        }
+
+        // Down the page, clear of the bar, the toolbar and this card's own heading.
+        const card = el.closest('.sch-card');
+        const head = card ? card.querySelector('.sch-card-head') : null;
+
+        const cover = px('--rs-bar') + px('--sch-top')
+                    + (head ? head.getBoundingClientRect().height : 0);
+
+        const want = el.getBoundingClientRect().top + window.scrollY - cover - GAP;
+        window.scrollTo({ top: Math.max(0, want), behavior: 'smooth' });
+    }
+
     function schGoToConflict(item) {
         const el = (item.els || [])[0];
         if (!el) return;
 
-        schCloseConflicts();
-        el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+        // Left open on a desk. It is a note beside the grid, not over it, and numbering
+        // the lines is only worth anything if they can be worked through one after
+        // another; closing it meant saving again to see what was left. On a phone the
+        // same panel covers the page, so there it has to get out of the way.
+        if (window.matchMedia('(max-width: 599px)').matches) schCloseConflicts();
+
+        schRevealCell(el);
 
         (item.els || []).forEach(function (cell) {
             cell.classList.add('sch-cell--found');
@@ -989,6 +1095,9 @@
         const cells = [];        // payload for server
         const filled = [];       // {el, route, shift, date, veh, drv}
         const found = [];        // {text, els}, paired so each line can be numbered
+        // The same shape, for what cannot be booked at all rather than what merely wants
+        // confirming. Kept apart so Save Anyway never reaches it.
+        const blocked = [];
         const partials = [];
 
         // reset marks + gather
@@ -1029,8 +1138,15 @@
                     // Skip if every colliding cell is untouched (already decided).
                     if (dups.length > 1 && dups.some(r => r.dirty)) {
                         const what = field === 'drv' ? 'driver' : 'bus';
-                        found.push({
-                            text: `This ${what} is already booked for the ${dups[0].shift} shift on ${schFmtDate(dups[0].date)}.`,
+                        const cannot = field === 'drv'
+                            ? 'One driver cannot run two buses.'
+                            : 'One bus cannot run two routes.';
+                        // Blocked, not warned about. Two routes on the same shift is the
+                        // usual way in: the same driver on Route 1 and Route 2 Morning is
+                        // one person in two places, which no override makes true.
+                        blocked.push({
+                            text: `This ${what} is already booked for the ${dups[0].shift} shift on `
+                                + `${schFmtDate(dups[0].date)}, on another route. ${cannot}`,
                             els: dups.map(r => r.el)
                         });
                     }
@@ -1038,7 +1154,7 @@
             });
         });
 
-        // same driver: back-to-back shifts.
+        // same driver: back-to-back shifts, and the morning-to-evening spread.
         const byDriver = {};
         filled.forEach(r => { (byDriver[r.drv] ??= []).push(r); });
         Object.values(byDriver).forEach(list => {
@@ -1050,6 +1166,16 @@
                     found.push({
                         text: `This driver is assigned to consecutive ${r.shift} and ${next} shifts on ${schFmtDate(r.date)}.`,
                         els: [r.el, map[r.date + '|' + next].el]
+                    });
+                }
+                // Morning and Evening on the same day. Not adjacent, so the map above
+                // never paired them, and a fourteen hour spread went unreported.
+                if (r.shift === 'Morning' && map[r.date + '|Evening']
+                    && (r.dirty || map[r.date + '|Evening'].dirty)) {
+                    found.push({
+                        text: `This driver is assigned to both the Morning and Evening shifts on `
+                            + `${schFmtDate(r.date)}, which spans fourteen hours.`,
+                        els: [r.el, map[r.date + '|Evening'].el]
                     });
                 }
                 // Evening -> next-day Morning
@@ -1074,16 +1200,42 @@
             if (!r.dirty) return;
             const note = schAwayNote(r.drv, r.date);
             if (!note) return;
-            found.push({
-                text: `${schDriverName(r.drv)} is ${note} on ${schFmtDate(r.date)}.`,
+
+            // Approved leave the server refuses outright; reporting it as forceable here
+            // only to be refused on the round trip reads as the save being broken. The
+            // availability flag stays a warning, as it does on the server.
+            const bucket = note.indexOf('leave') === -1 ? found : blocked;
+            bucket.push({
+                text: `${schDriverName(r.drv)} is ${note} on ${schFmtDate(r.date)}.`
+                    + (bucket === blocked ? ' Revoke the leave first, or book another driver.' : ''),
                 els: [r.el]
             });
         });
 
-        // Soft conflicts -> offer override, unless the dispatcher already confirmed (force).
-        if (!force && found.length) { schShowConflicts(found, true); return; }
+        // Both kinds in one list, refusals first. Reported in two passes the dispatcher
+        // fixed what could not be booked, saved, met the warnings, and worked through a
+        // queue that never showed them how much was left.
+        //
+        // Warnings are left out once they have been confirmed: Save Anyway answered them,
+        // and repeating them beside a refusal reads as the confirmation not having taken.
+        const soft = force ? [] : found;
 
-        btn.disabled = true; btn.textContent = 'Saving…';
+        if (blocked.length || soft.length) {
+            schShowConflicts(
+                blocked.concat(soft),
+                // Forceable only when nothing in the list is a refusal.
+                blocked.length === 0,
+                blocked.length ? 'Assignment Unavailable' : 'Schedule Conflicts',
+                blocked.length
+                    ? 'The numbered lines mark the cells. The first '
+                      + (blocked.length === 1 ? 'one cannot' : blocked.length + ' cannot')
+                      + ' be booked at all and must be changed before this week can be saved.'
+                    : null);
+            return;
+        }
+
+        // Absent on a week whose shifts have all finished, which offers no Save at all.
+        if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
         fetch('/Schedule/Save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1128,12 +1280,20 @@
             }
             // Written, so the draft of it has nothing left to hold.
             try { sessionStorage.removeItem(schDraftKey()); } catch (e) { }
-            sessionStorage.setItem('sch_saved', '1'); // survive the reload -> show toast
+
+            // A save can come back having left some slots alone, where their shift finished
+            // while the week sat open. The reload is what puts those cells right; the
+            // message is what says why they changed.
+            let note = null;
+            try { const d = await res.json(); if (d && d.reload && d.message) note = d.message; }
+            catch { /* an empty 200, which is the ordinary case */ }
+
+            sessionStorage.setItem('sch_saved', note || '1'); // survive the reload -> show toast
             window.location.reload();
         }).catch(err => schShowConflicts(
               [{ text: 'The server could not be reached: ' + err.message, els: [] }], false,
               'Save Failed', 'Check your connection, then save again.'))
-          .finally(() => { btn.disabled = false; btn.textContent = 'Save Schedule'; });
+          .finally(() => { if (btn) { btn.disabled = false; btn.textContent = 'Save Schedule'; } });
     }
 
     // Last, because putting a draft back can add lanes, and adding one reads the day
