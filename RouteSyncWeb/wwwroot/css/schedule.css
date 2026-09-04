@@ -83,6 +83,23 @@
     .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:#F0F2F5; color:#6B7C93; }
     .sch-lock-txt { font-size:.72rem; color:#6B7C93; }
 
+    /* A slot on a shift that finished with nothing rostered on it. Held apart from a blank
+       cell that can still be filled, which is drawn with pickers, and quieter than a slot
+       that carries a trip, since there is nothing here to read. */
+    .sch-locked--empty { opacity:.55; }
+    .sch-locked--empty .sch-lock-txt { font-style:italic; }
+
+    /* The week is a record rather than a plan, said where the Save button would be. */
+    .sch-closed-note {
+        margin-left:auto;
+        font-size:.82rem;
+        font-weight:600;
+        color:#6B7C93;
+        background:#F0F2F5;
+        border-radius:8px;
+        padding:8px 14px;
+    }
+
     .sch-modal-overlay { position:fixed; inset:0; background:rgba(13,28,40,.5); z-index:2000; display:flex; align-items:center; justify-content:center; padding:24px; }
 
     /* The conflict list. It opens beside the grid rather than over the middle of it, lets

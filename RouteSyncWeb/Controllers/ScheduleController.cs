@@ -19,13 +19,9 @@ namespace FleetWise.Controllers
             _audit = audit;
         }
 
-        // Fixed shift windows, matching the times the add trip modal offers.
-        private static readonly Dictionary<string, (TimeSpan start, TimeSpan end)> ShiftTimes = new()
-        {
-            ["Morning"] = (new(6, 0, 0), new(14, 0, 0)),
-            ["Afternoon"] = (new(14, 0, 0), new(22, 0, 0)),
-            ["Evening"] = (new(22, 0, 0), new(6, 0, 0)),
-        };
+        // The shift windows every surface books against, defined once in TripStatus.
+        private static readonly IReadOnlyDictionary<string, (TimeSpan Start, TimeSpan End)> ShiftTimes
+            = TripStatus.Windows;
         private static readonly string[] ShiftOrder = { "Morning", "Afternoon", "Evening" };
 
         /// <summary>The role a bus is driven by, which is the only one this page books.</summary>
@@ -127,6 +123,16 @@ namespace FleetWise.Controllers
                     : null,
             };
 
+            // Which of this week's windows have closed. Read once so every cell in the grid
+            // answers against the same moment.
+            var now = PhClock.Now;
+            foreach (var day in vm.Days)
+                foreach (var (shift, window) in ShiftTimes)
+                    if (TripStatus.Closed(day, window.Start, window.End, now))
+                        vm.ClosedSlots.Add($"{shift}|{day:yyyy-MM-dd}");
+
+            vm.WeekClosed = vm.ClosedSlots.Count == vm.Days.Count * ShiftTimes.Count;
+
             foreach (var t in trips.OrderBy(t => t.VehicleId))
             {
                 var key = $"{t.RouteId}|{t.ShiftType}|{t.Date:yyyy-MM-dd}";
@@ -137,7 +143,13 @@ namespace FleetWise.Controllers
                     TripId = t.TripId,
                     VehicleId = t.VehicleId,
                     DriverId = t.DriverId,
-                    TripStatus = t.TripStatus
+                    Locked = TripStatus.Locked(t, now),
+                    // A shift that finished without the trip starting reads as missed. The
+                    // stored status still says "Not Yet Started", which on a past week names
+                    // a departure that is never coming.
+                    StatusLabel = t.TripStatus is "Active" or "Completed"
+                        ? t.TripStatus
+                        : TripStatus.Closed(t, now) ? "Missed" : t.TripStatus,
                 });
             }
 
@@ -207,6 +219,10 @@ namespace FleetWise.Controllers
 
             var cells = req.Cells ?? new();
 
+            // One reading of the clock for the whole save, so a shift cannot close between
+            // the check that admits a cell and the write that acts on it.
+            var now = PhClock.Now;
+
             // Existing trips in the range. Also needed to validate against locked trips,
             // which the grid does not always resend.
             var existingResp = await _supabase.From<Trip>()
@@ -243,8 +259,7 @@ namespace FleetWise.Controllers
                 return (cell: c, locked: unchanged);
             }).ToList();
             effective.AddRange(existing
-                .Where(t => !submittedIds.Contains(t.TripId)
-                         && (t.TripStatus == "Active" || t.TripStatus == "Completed"))
+                .Where(t => !submittedIds.Contains(t.TripId) && TripStatus.Locked(t, now))
                 .Select(t => (cell: new ScheduleCellInput
                 {
                     TripId = t.TripId,
@@ -262,9 +277,11 @@ namespace FleetWise.Controllers
             // Cells left as they were are not checked. A trip already run on a bus since
             // grounded is history, and re-checking it would leave the week unsavable.
             var away = await DriverAwayConflictsAsync(effective);
+            var clashes = FindConflicts(effective);
 
             var refusal = await RefuseUnusableAsync(effective);
             refusal.AddRange(away.Refuse);
+            refusal.AddRange(clashes.Refuse);
             if (refusal.Count > 0)
             {
                 return BadRequest(new
@@ -278,10 +295,15 @@ namespace FleetWise.Controllers
             // the save is blocked only until that acknowledgement arrives. Answered with a
             // 409 rather than a 400, the same way dispatch does, because the two mean
             // different things to the planner: one it may force past, the other it may not.
-            var conflicts = FindConflicts(effective);
+            var conflicts = clashes.Warn;
             conflicts.AddRange(away.Warn);
             if (!req.Override && conflicts.Count > 0)
                 return Conflict(new { message = "This schedule breaks a booking rule.", conflicts });
+
+            // Cells whose shift closed while the planner was open. The rest of the save
+            // still goes through and the planner is told to reload the week: forty good
+            // cells are not worth losing to one that went stale.
+            int stale = 0;
 
             // A write that fails partway leaves the week half-rewritten, so the planner is
             // told plainly rather than being handed a page it cannot read. The detail goes
@@ -312,11 +334,22 @@ namespace FleetWise.Controllers
                         continue;
                     if (!ShiftTimes.TryGetValue(c.Shift, out var window)) continue;
 
+                    // Nothing is written into a shift that has already finished. The grid
+                    // draws those cells read-only, so a submission carrying one is either a
+                    // page that was open when the window closed or a request built by hand.
+                    if (TripStatus.Closed(date, window.Start, window.End, now))
+                    {
+                        if (!string.IsNullOrEmpty(c.TripId)) keptIds.Add(c.TripId);
+                        stale++;
+                        continue;
+                    }
+
                     if (!string.IsNullOrEmpty(c.TripId) && existingById.TryGetValue(c.TripId, out var trip))
                     {
                         keptIds.Add(trip.TripId);
-                        // A trip that has started is locked and never modified.
-                        if (trip.TripStatus == "Active" || trip.TripStatus == "Completed") continue;
+                        // A trip that has started or whose shift has finished is not the
+                        // schedule's to rewrite.
+                        if (TripStatus.Locked(trip, now)) continue;
                         if (trip.VehicleId == c.VehicleId && trip.DriverId == c.DriverId) continue; // unchanged
 
                         await _supabase.From<Trip>()
@@ -338,8 +371,8 @@ namespace FleetWise.Controllers
                         {
                             Date = DateTime.SpecifyKind(date, DateTimeKind.Utc),
                             ShiftType = c.Shift,
-                            ShiftStartTime = window.start,
-                            ShiftEndTime = window.end,
+                            ShiftStartTime = window.Start,
+                            ShiftEndTime = window.End,
                             RouteId = c.RouteId,
                             VehicleId = c.VehicleId,
                             DriverId = c.DriverId,
@@ -351,11 +384,13 @@ namespace FleetWise.Controllers
                     }
                 }
 
-                // Trips no longer present in the grid are deleted, except those already started.
+                // Trips no longer present in the grid are deleted, except the locked ones.
+                // A shift that has finished is a record of what was rostered, and blanking
+                // its cell is not a way to erase it.
                 foreach (var t in existing)
                 {
                     if (keptIds.Contains(t.TripId)) continue;
-                    if (t.TripStatus == "Active" || t.TripStatus == "Completed") continue;
+                    if (TripStatus.Locked(t, now)) continue;
 
                     await _supabase.From<Trip>()
                         .Filter("trip_id", Operator.Equals, t.TripId)
@@ -417,8 +452,19 @@ namespace FleetWise.Controllers
                     await _audit.WriteAsync("schedule_saved",
                         $"saved the schedule for {weekStart:MMM d} to {weekEnd:MMM d}: "
                             + $"{added} added, {changed} changed, {deleted} removed"
+                            + (stale > 0 ? $", leaving {stale} on shifts that had finished" : "")
                             + (req.Override ? ", overriding a conflict warning" : ""),
                         "trips");
+                }
+                else if (stale > 0)
+                {
+                    // Nothing was written and every cell was for a finished shift. Worth a
+                    // line of its own: the same shape arrives from a page left open
+                    // overnight and from a request aimed at a week that is closed.
+                    await _audit.WriteAsync("schedule_saved",
+                        $"submitted {stale} {(stale == 1 ? "cell" : "cells")} for shifts that "
+                            + $"had already finished in the week of {weekStart:MMM d}; nothing was written",
+                        "trips", outcome: "failed");
                 }
 
             }
@@ -432,6 +478,19 @@ namespace FleetWise.Controllers
                 {
                     message = "The schedule could not be saved. Reload the planner to see "
                             + "what was written, then try again."
+                });
+            }
+
+            // The grid on screen no longer matches what can be booked, so it is reloaded
+            // rather than left showing pickers over shifts that have finished.
+            if (stale > 0)
+            {
+                return Ok(new
+                {
+                    reload = true,
+                    message = stale == 1
+                        ? "One shift finished while this week was open, so that slot was left as it was."
+                        : $"{stale} shifts finished while this week was open, so those slots were left as they were.",
                 });
             }
 
@@ -687,9 +746,11 @@ namespace FleetWise.Controllers
         /// exactly what needs changing.
         /// </remarks>
 
-        private static List<ConflictDto> FindConflicts(List<(ScheduleCellInput cell, bool locked)> all)
+        private static (List<ConflictDto> Refuse, List<ConflictDto> Warn) FindConflicts(
+            List<(ScheduleCellInput cell, bool locked)> all)
         {
-            var results = new List<ConflictDto>();
+            var refuse = new List<ConflictDto>();
+            var warn = new List<ConflictDto>();
 
             var valid = all.Where(x => !string.IsNullOrEmpty(x.cell.VehicleId) && x.cell.DriverId != 0
                                     && !string.IsNullOrEmpty(x.cell.Shift) && DateTime.TryParse(x.cell.Date, out _))
@@ -698,16 +759,23 @@ namespace FleetWise.Controllers
             static CellRef Ref((ScheduleCellInput cell, bool locked) x) =>
                 new() { RouteId = x.cell.RouteId, Shift = x.cell.Shift, Date = x.cell.Date };
 
-            // Within one day and shift: a driver or vehicle booked twice.
+            // Within one day and shift: a driver or vehicle booked twice, on any route.
+            //
+            // Refused rather than warned about. A driver working two shifts back to back is
+            // a long day and the dispatcher's to judge; one person driving two buses at the
+            // same hour is not a judgement, it cannot happen. The same holds for a bus
+            // asked to run two routes at once. Offered as an override these were saved, and
+            // the schedule then said something impossible.
             foreach (var g in valid.GroupBy(x => new { x.cell.Date, x.cell.Shift }))
             {
                 foreach (var dup in g.GroupBy(x => x.cell.DriverId).Where(x => x.Count() > 1))
                 {
                     var editable = dup.Where(x => !x.locked).ToList();
                     if (editable.Count == 0) continue; // locked-vs-locked -> not the user's problem
-                    results.Add(new ConflictDto
+                    refuse.Add(new ConflictDto
                     {
-                        Message = $"This driver is already booked for the {g.Key.Shift} shift on {FmtDate(g.Key.Date)}.",
+                        Message = $"This driver is already booked for the {g.Key.Shift} shift on "
+                                + $"{FmtDate(g.Key.Date)}, on another route. One driver cannot run two buses.",
                         Cells = editable.Select(Ref).ToList()
                     });
                 }
@@ -716,9 +784,10 @@ namespace FleetWise.Controllers
                 {
                     var editable = dup.Where(x => !x.locked).ToList();
                     if (editable.Count == 0) continue;
-                    results.Add(new ConflictDto
+                    refuse.Add(new ConflictDto
                     {
-                        Message = $"This bus is already booked for the {g.Key.Shift} shift on {FmtDate(g.Key.Date)}.",
+                        Message = $"This bus is already booked for the {g.Key.Shift} shift on "
+                                + $"{FmtDate(g.Key.Date)}, on another route. One bus cannot run two routes.",
                         Cells = editable.Select(Ref).ToList()
                     });
                 }
@@ -736,7 +805,7 @@ namespace FleetWise.Controllers
                     if (!byDayShift.TryGetValue(a, out var la) || !byDayShift.TryGetValue(b, out var lb)) return;
                     var editable = la.Concat(lb).Where(x => !x.locked).ToList();
                     if (editable.Count == 0) return; // both shifts locked -> immutable, skip
-                    results.Add(new ConflictDto { Message = message, Cells = editable.Select(Ref).ToList() });
+                    warn.Add(new ConflictDto { Message = message, Cells = editable.Select(Ref).ToList() });
                 }
 
                 foreach (var day in byDayShift.Keys.Select(k => k.Day).Distinct())
@@ -745,12 +814,16 @@ namespace FleetWise.Controllers
                         $"This driver is assigned to consecutive Morning and Afternoon shifts on {FmtDate(day.ToString("yyyy-MM-dd"))}.");
                     Pair((day, "Afternoon"), (day, "Evening"),
                         $"This driver is assigned to consecutive Afternoon and Evening shifts on {FmtDate(day.ToString("yyyy-MM-dd"))}.");
+                    // Not consecutive, and worse than the pairs that are: the morning starts
+                    // at six and the evening ends at six the next day. Nothing reported this.
+                    Pair((day, "Morning"), (day, "Evening"),
+                        $"This driver is assigned to both the Morning and Evening shifts on {FmtDate(day.ToString("yyyy-MM-dd"))}, which spans fourteen hours.");
                     Pair((day, "Evening"), (day.AddDays(1), "Morning"),
                         $"This driver finishes the Evening shift on {FmtDate(day.ToString("yyyy-MM-dd"))} and starts the Morning shift the next day.");
                 }
             }
 
-            return results;
+            return (refuse, warn);
         }
 
         private static string FmtDate(string isoDate) =>

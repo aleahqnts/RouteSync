@@ -181,77 +181,20 @@
 
                 <p class="lv-det-label">History</p>
                 <ol class="lv-hist">
-                    <li class="lv-hist-item">
-                        <span class="lv-hist-dot filed"></span>
-                        <span class="lv-hist-body">
-                            <span class="lv-hist-action">Filed</span>
-                            <span class="lv-hist-when">@h.FiledAt.ToString("MMM d, yyyy h:mm tt")</span>
-                        </span>
-                    </li>
-                    @* Asking for granted leave back, and the answer. Neither was recorded
-                       here, so a driver who asked and was answered had nothing to show it
-                       ever happened. *@
-                    @if (h.WithdrawRequestedAt is DateTime asked)
+                    @foreach (var e in Story(h))
                     {
                         <li class="lv-hist-item">
-                            <span class="lv-hist-dot"></span>
+                            <span class="lv-hist-dot @e.Dot"></span>
                             <span class="lv-hist-body">
-                                <span class="lv-hist-action">You asked to cancel</span>
-                                <span class="lv-hist-when">@asked.ToString("MMM d, yyyy h:mm tt")</span>
-                                @if (!string.IsNullOrWhiteSpace(h.WithdrawReason))
+                                <span class="lv-hist-action">@e.Action</span>
+                                @if (e.At is DateTime at)
                                 {
-                                    <span class="lv-hist-note">@h.WithdrawReason</span>
+                                    <span class="lv-hist-when">@at.ToString("MMM d, yyyy h:mm tt")</span>
                                 }
-                            </span>
-                        </li>
-
-                        @* Accepting cancels the request, which the decision below reports.
-                           Declining leaves the leave standing, and only this says so. *@
-                        @if (h.WithdrawAnsweredAt is DateTime answered
-                             && string.Equals(h.Status, "Approved", StringComparison.OrdinalIgnoreCase))
-                        {
-                            <li class="lv-hist-item">
-                                <span class="lv-hist-dot rejected"></span>
-                                <span class="lv-hist-body">
-                                    <span class="lv-hist-action">Cancellation declined</span>
-                                    <span class="lv-hist-when">@answered.ToString("MMM d, yyyy h:mm tt")</span>
-                                </span>
-                            </li>
-                        }
-                        else if (h.WithdrawAnsweredAt is null)
-                        {
-                            <li class="lv-hist-item">
-                                <span class="lv-hist-dot"></span>
-                                <span class="lv-hist-body">
-                                    <span class="lv-hist-action">Waiting on your dispatcher</span>
-                                </span>
-                            </li>
-                        }
-                    }
-
-                    @if (h.DecidedAt is DateTime decided
-                         && !LeaveEntitlement.IsOpen(h.Status))
-                    {
-                        <li class="lv-hist-item">
-                            <span class="lv-hist-dot @h.Status.ToLowerInvariant()"></span>
-                            <span class="lv-hist-body">
-                                <span class="lv-hist-action">@h.Status</span>
-                                <span class="lv-hist-when">@decided.ToString("MMM d, yyyy h:mm tt")</span>
-                                @* Carried whichever way it went. An approval that came with
-                                   a condition on it says so here, not only a refusal. *@
-                                @if (!string.IsNullOrWhiteSpace(h.DecisionNote))
+                                @if (!string.IsNullOrWhiteSpace(e.Note))
                                 {
-                                    <span class="lv-hist-note">@h.DecisionNote</span>
+                                    <span class="lv-hist-note">@e.Note</span>
                                 }
-                            </span>
-                        </li>
-                    }
-                    @if (LeaveEntitlement.IsOpen(h.Status))
-                    {
-                        <li class="lv-hist-item">
-                            <span class="lv-hist-dot"></span>
-                            <span class="lv-hist-body">
-                                <span class="lv-hist-action">Awaiting a decision</span>
                             </span>
                         </li>
                     }
@@ -364,6 +307,67 @@
 }
 
 @code {
+    /// <summary>One thing that happened to a request.</summary>
+    /// <remarks>
+    /// Undated for the two that have not happened yet, which is what puts them last.
+    /// </remarks>
+    private sealed record Moment(DateTime? At, string Action, string Dot, string Note);
+
+    /// <summary>
+    /// What happened to a request, in the order it happened.
+    /// </summary>
+    /// <remarks>
+    /// Built as a list and sorted rather than written out in the markup. Written out, the
+    /// order was the order the code happened to check things in: a leave approved at noon
+    /// and asked about that evening listed the asking above the approval, because asking
+    /// is read off the same row and was checked first. A history out of order is not a
+    /// history.
+    ///
+    /// The two waiting lines carry no time because they are about now, so they sort to
+    /// the end where they belong.
+    /// </remarks>
+    private static List<Moment> Story(LeaveRequest h)
+    {
+        var done = new List<Moment>
+        {
+            new(h.FiledAt, "Filed", "filed", null),
+        };
+
+        var waiting = new List<Moment>();
+
+        if (h.WithdrawRequestedAt is DateTime asked)
+        {
+            done.Add(new(asked, "You asked to cancel", "", h.WithdrawReason));
+
+            // Accepting cancels the request, which the decision reports. Declining leaves
+            // the leave standing, and only this says so.
+            if (h.WithdrawAnsweredAt is DateTime answered
+                && string.Equals(h.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                done.Add(new(answered, "Cancellation declined", "rejected", null));
+            }
+            else if (h.WithdrawAnsweredAt is null)
+            {
+                waiting.Add(new(null, "Waiting on your dispatcher", "", null));
+            }
+        }
+
+        if (h.DecidedAt is DateTime decided && !LeaveEntitlement.IsOpen(h.Status))
+        {
+            // Carried whichever way it went. An approval that came with a condition on it
+            // says so here, not only a refusal.
+            done.Add(new(decided, Shown(h.Status), h.Status.ToLowerInvariant(), h.DecisionNote));
+        }
+
+        if (LeaveEntitlement.IsOpen(h.Status))
+        {
+            waiting.Add(new(null, "Awaiting a decision", "", null));
+        }
+
+        // OrderBy is stable, so two stamped the same second keep the order they were added.
+        return done.OrderBy(e => e.At).Concat(waiting).ToList();
+    }
+
     /// <summary>The word for a status, as the driver should read it.</summary>
     /// <remarks>
     /// A request held while the dispatcher clears the schedule is stored as

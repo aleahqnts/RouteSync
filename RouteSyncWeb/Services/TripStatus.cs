@@ -25,14 +25,70 @@ namespace FleetWise.Services
     /// </remarks>
     public static class TripStatus
     {
+        /// <summary>The fixed windows a shift can be booked into.</summary>
+        /// <remarks>
+        /// One definition, because the planner, the dispatch board and the add trip modal
+        /// all decide from it whether a shift is still open, and three copies of the same
+        /// three times drift apart quietly.
+        ///
+        /// Evening ends before it starts, which is what marks it as running past midnight.
+        /// </remarks>
+        public static readonly IReadOnlyDictionary<string, (TimeSpan Start, TimeSpan End)> Windows =
+            new Dictionary<string, (TimeSpan Start, TimeSpan End)>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Morning"] = (new(6, 0, 0), new(14, 0, 0)),
+                ["Afternoon"] = (new(14, 0, 0), new(22, 0, 0)),
+                ["Evening"] = (new(22, 0, 0), new(6, 0, 0)),
+            };
+
         /// <summary>
         /// When the shift closes. A window whose end is not after its start runs past
         /// midnight and therefore closes on the following day.
         /// </summary>
         public static DateTime ShiftEndAt(Trip trip) =>
-            trip.Date.Date
-                .Add(trip.ShiftEndTime)
-                .AddDays(trip.ShiftEndTime <= trip.ShiftStartTime ? 1 : 0);
+            EndOf(trip.Date, trip.ShiftStartTime, trip.ShiftEndTime);
+
+        /// <summary>When a shift window closes, for a slot that holds no trip yet.</summary>
+        public static DateTime EndOf(DateTime date, TimeSpan start, TimeSpan end) =>
+            date.Date.Add(end).AddDays(end <= start ? 1 : 0);
+
+        /// <summary>
+        /// Whether a shift window has closed, and with it every action that could still
+        /// have changed what ran.
+        /// </summary>
+        /// <remarks>
+        /// The single test behind a closed window: the planner will not create, edit or
+        /// delete across it, dispatch will not create or reassign across it, and an
+        /// undecided leave request is not held up by a shift on the far side of it.
+        ///
+        /// Written against the clock rather than a stored column because "Missed" is
+        /// derived and never written down. A guard reading trip_status sees a shift that
+        /// closed hours ago as "Not Yet Started" and lets it through.
+        ///
+        /// A leave approval depends on this too. A closed shift that still blocked would
+        /// demand the schedule be cleared first, which this same rule forbids, and the
+        /// request could never be answered either way.
+        /// </remarks>
+        public static bool Closed(DateTime date, TimeSpan start, TimeSpan end, DateTime now) =>
+            EndOf(date, start, end) < now;
+
+        /// <inheritdoc cref="Closed(DateTime, TimeSpan, TimeSpan, DateTime)"/>
+        public static bool Closed(Trip trip, DateTime now) =>
+            ShiftEndAt(trip) < now;
+
+        /// <summary>
+        /// Whether a trip is beyond further change: it ran, is running, or its window has
+        /// closed.
+        /// </summary>
+        /// <remarks>
+        /// What the planner and the reassign path both mean by locked. A started trip is
+        /// history in progress and a closed one is history, and neither is the schedule's
+        /// to rewrite.
+        /// </remarks>
+        public static bool Locked(Trip trip, DateTime now) =>
+            string.Equals(trip.TripStatus, "Active", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+            || Closed(trip, now);
 
         /// <param name="checklist">
         /// This trip's most recent inspection, or null when none was submitted.

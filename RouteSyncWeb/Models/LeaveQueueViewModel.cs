@@ -94,12 +94,6 @@
         public List<LeaveEventViewModel> History { get; set; } = new();
     }
 
-    /// <summary>One thing that happened to a request, and who did it.</summary>
-    /// <remarks>
-    /// Who is named here and not in the driver's app. An operator answering for a decision
-    /// needs to know whose it was; a driver reading the outcome does not, and naming the
-    /// person turns a company decision into a personal one.
-    /// </remarks>
     /// <summary>One day of a leave, as the revoke dialog lists it.</summary>
     public class LeaveDayOption
     {
@@ -107,9 +101,25 @@
         public string Label { get; set; } = "";
     }
 
+    /// <summary>One thing that happened to a request, and who did it.</summary>
+    /// <remarks>
+    /// Who is named here and not in the driver's app. An operator answering for a decision
+    /// needs to know whose it was; a driver reading the outcome does not, and naming the
+    /// person turns a company decision into a personal one.
+    /// </remarks>
     public class LeaveEventViewModel
     {
         public string Action { get; set; } = "";
+
+        /// <summary>When it happened, for ordering. The formatted form is in When.</summary>
+        /// <remarks>
+        /// The events are not written in the order they occur: asking to cancel is read
+        /// off the same row as the decision, and a leave approved at noon and asked about
+        /// that evening listed the asking first because that is the order the code builds
+        /// them in. A history out of order is not a history.
+        /// </remarks>
+        public DateTime At { get; set; }
+
         public string When { get; set; } = "";
         public string By { get; set; } = "";
         public string? Note { get; set; }
