@@ -62,6 +62,9 @@
 .bus-name { margin: 0; font-size: 18px; font-weight: 800; color: #1b2a56; }
 .plate { font-size: 13px; font-weight: 500; color: #8a93a2; }
 .route { margin: 2px 0 0; color: #2e9e8f; font-size: 13px; font-weight: 600; }
+
+/* Quieter than the route it sits under, since it names what the trip is no longer on. */
+.route-moved { margin: 1px 0 0; color: #c0504d; font-size: 11px; font-weight: 600; }
 .trip-id { margin: 3px 0 0; color: #8a93a2; font-size: 12px; font-weight: 700; letter-spacing: .3px; }
 
 .counter-card {

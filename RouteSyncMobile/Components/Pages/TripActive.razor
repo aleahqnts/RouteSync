@@ -31,6 +31,14 @@ else
             <div>
                 <p class="bus-name">@(vehicle?.VehicleId ?? trip.VehicleId) <span class="plate">(@(vehicle?.PlateNumber ?? "—"))</span></p>
                 <p class="route">@(route?.RouteName ?? $"Route {trip.RouteId}")</p>
+                @* A change that arrives mid shift is worth more than quietly swapping the
+                   name. A driver looking at this screen has been running the old route for
+                   hours and has no reason to reread a line that was right this morning.
+                   Taken down again once it has had time to be read. *@
+                @if (movedFrom is not null)
+                {
+                    <p class="route-moved">Changed from @movedFrom</p>
+                }
                 <p class="trip-id">Trip ID: @trip.TripId</p>
             </div>
         </div>
@@ -378,15 +386,95 @@ else
         string RouteName, long StartTicks, long EndTicks, long DateTicks, int TotalBoarded,
         decimal Fare, string Status, long? ActualStartTicks);
 
+    /// <summary>What this trip was on before the dispatcher moved it, once they have.</summary>
+    /// <remarks>
+    /// A notice rather than a state, so it is taken down once it has had time to be read.
+    /// Left standing it becomes part of how the screen ordinarily looks, and by the end of
+    /// a shift it says nothing except that something happened hours ago.
+    ///
+    /// The record of the change is the notice sent to the driver, which keeps.
+    /// </remarks>
+    private string? movedFrom;
+
+    /// <summary>When the change was noticed, which is when the note starts running out.</summary>
+    private DateTime? movedAt;
+
+    /// <summary>How long the note stands.</summary>
+    /// <remarks>
+    /// Long enough that a driver at a stop, or with their eyes on the road when it
+    /// arrived, still finds it when they next look down. Short enough that it is gone well
+    /// before the shift is.
+    /// </remarks>
+    private static readonly TimeSpan MovedNoteFor = TimeSpan.FromMinutes(5);
+
+    /// <summary>Reads back what the dispatcher owns, in case it has changed.</summary>
+    /// <remarks>
+    /// A trip can be moved to another route or another bus while it is running, and this
+    /// screen is the driver's instruction for the next several hours. Loaded once it was a
+    /// picture taken when the shift started: the dispatcher moved the trip, the board and
+    /// the map both showed it, and the one person who had to act on it was reading the old
+    /// route off their own phone.
+    ///
+    /// Only the assignment is taken from the answer. The count belongs to this app while
+    /// the trip is running, and copying a server total over it would undo every tap made
+    /// since the last flush.
+    /// </remarks>
+    private async Task RefreshAssignmentAsync()
+    {
+        if (trip is null || ending) return;
+
+        try
+        {
+            var fresh = await Data.GetTripAsync(TripId);
+            if (fresh is null) return;
+
+            var changed = false;
+
+            if (fresh.RouteId != trip.RouteId)
+            {
+                movedFrom = route?.RouteName ?? $"Route {trip.RouteId}";
+                movedAt = PhTime.Now;
+                trip.RouteId = fresh.RouteId;
+                route = await Data.GetRouteAsync(fresh.RouteId);
+                changed = true;
+            }
+
+            if (!string.Equals(fresh.VehicleId, trip.VehicleId, StringComparison.OrdinalIgnoreCase))
+            {
+                trip.VehicleId = fresh.VehicleId;
+                vehicle = await Data.GetVehicleAsync(fresh.VehicleId);
+                changed = true;
+            }
+
+            if (!changed) return;
+
+            // Written through, so a restart or a dead zone does not put the old route back.
+            await SaveCacheAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TripActive.Assign] {ex}"); }
+    }
+
     private void OnTick()
     {
         now = PhTime.Now;
         tick++;
+
+        // The route change note, once it has stood long enough to have been read.
+        if (movedAt is DateTime shown && now - shown > MovedNoteFor)
+        {
+            movedFrom = null;
+            movedAt = null;
+        }
+
         // While the camera is alive it owns trips.total_boarded, so the manual flush is
         // suppressed and the two never write over each other. It resumes on its own once
         // the heartbeat goes stale.
         if (tick % 15 == 0 && !cameraAlive) _ = Flush();
         if (tick % 5 == 0) _ = RefreshCameraStateAsync();
+        // Slower than the camera, because a reassignment is a thing a person does and
+        // fifteen seconds is well inside the time it takes to act on one.
+        if (tick % 15 == 0) _ = RefreshAssignmentAsync();
         // Liveness indicator on the camera card.
         if (tick % 5 == 0) _ = RefreshCameraPanelAsync();
         InvokeAsync(StateHasChanged);
