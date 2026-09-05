@@ -1,8 +1,47 @@
 ﻿/* Dispatch/Index.cshtml */
     .dp-card-click { cursor:pointer; transition:box-shadow .15s, transform .15s; }
     .dp-card-click:hover { box-shadow:0 6px 20px rgba(231,76,60,.22); transform:translateY(-2px); }
-    .dp-trip-row.dp-row-flag > td { background:#FEECEC !important; }
-    .dp-trip-row.dp-row-flag { outline:2px solid #E74C3C; outline-offset:-2px; }
+    /* Found, not flagged.
+
+       The mark is how a row is picked out of a board once the scroll has landed on it,
+       and that job is over in a couple of seconds. Left standing it becomes a second
+       status competing with the one in the status column, and a board read an hour later
+       still shows a row in red for a question already answered.
+
+       The scroll settles in about half a second, so it holds at full strength for one and
+       goes over the three after that. Pressing the card again starts it over from full,
+       which is how the same row is found twice. The class comes off at the end so the row
+       is an ordinary row again, hover and all.
+
+       Faded to a transparent version of its own colour rather than to the keyword, which
+       some engines walk through grey on the way. */
+    @keyframes dp-row-flag-fill {
+        0%, 25% { background-color: #FEECEC; }
+        100%    { background-color: rgba(254, 236, 236, 0); }
+    }
+
+    @keyframes dp-row-flag-edge {
+        0%, 25% { outline-color: #E74C3C; }
+        100%    { outline-color: rgba(231, 76, 60, 0); }
+    }
+
+    .dp-trip-row.dp-row-flag > td {
+        background-color: #FEECEC;
+        animation: dp-row-flag-fill 4s ease-out forwards;
+    }
+
+    .dp-trip-row.dp-row-flag {
+        outline: 2px solid #E74C3C;
+        outline-offset: -2px;
+        animation: dp-row-flag-edge 4s ease-out forwards;
+    }
+
+    /* The same four seconds, without the fade. The mark stays whole and is taken away at
+       the end by the same timer, so nobody is left with a row marked for good. */
+    @media (prefers-reduced-motion: reduce) {
+        .dp-trip-row.dp-row-flag > td,
+        .dp-trip-row.dp-row-flag { animation: none; }
+    }
 
     .dp-title-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
     .dp-date-badge { position:relative; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:#EAF7F5; color:#2e7d72; font-size:.86rem; font-weight:700; border:1px solid #CDE9E4; cursor:pointer; }

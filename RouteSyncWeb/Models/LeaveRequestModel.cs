@@ -208,9 +208,18 @@ public static class LeaveEntitlement
     /// granted, so it counts against the allowance exactly as Pending does, and the driver
     /// is shown the word Pending because from where they stand nothing has changed.
     /// </remarks>
+    /// <summary>The statuses <see cref="IsOpen"/> answers yes to.</summary>
+    /// <remarks>
+    /// Held as a list as well as a test, because the same question is asked of the
+    /// database when only the waiting requests are wanted and reading the whole table to
+    /// find them would grow with every request ever filed. A second copy of the two words
+    /// written into a query is a copy that drifts.
+    /// </remarks>
+    public static readonly IReadOnlyList<string> OpenStatuses =
+        new[] { "Pending", "AwaitingChange" };
+
     public static bool IsOpen(string status) =>
-        string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(status, "AwaitingChange", StringComparison.OrdinalIgnoreCase);
+        OpenStatuses.Any(s => string.Equals(status, s, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Whether a day inside a request has been handed back.</summary>
     public static bool IsRevokedOn(LeaveRequest r, DateTime day) =>

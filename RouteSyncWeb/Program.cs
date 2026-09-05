@@ -105,7 +105,12 @@ builder.Services.AddScoped<AuditLog>();
 builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<NavCounts>();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Anything written can change what the rail is counting, so the standing count is
+    // dropped after every write and worked out again on the next reading.
+    options.Filters.Add<NavCountsFreshener>();
+});
 
 // Tell the app how to create a Supabase connection
 builder.Services.AddSingleton(provider => {

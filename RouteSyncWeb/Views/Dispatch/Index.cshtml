@@ -379,12 +379,32 @@
     }
     function dpCloseMsg() { document.getElementById('dp-msg-modal').style.display = 'none'; }
 
+    // What is left of the fade the marked rows are running. Held so a second press starts
+    // it over rather than letting the first one take the mark off partway through.
+    let dpFlagTimer = null;
+
     function dpHighlight(selector) {
         const rows = document.querySelectorAll(selector);
+
+        clearTimeout(dpFlagTimer);
         document.querySelectorAll('.dp-row-flag').forEach(r => r.classList.remove('dp-row-flag'));
         if (!rows.length) return;
+
+        // Taking the class off and putting it back in the same frame is no change at all
+        // as far as the browser is concerned, and the fade would carry on from where it
+        // had got to rather than starting over. Reading a measurement forces the removal to
+        // be settled first, which is what makes pressing the card twice work.
+        void document.body.offsetWidth;
+
         rows.forEach(r => r.classList.add('dp-row-flag'));
         rows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // The mark goes when the fade has run out, so the row is left as any other: it can
+        // be hovered again, and nothing on the board is still claiming a state the trip is
+        // not in.
+        dpFlagTimer = setTimeout(function () {
+            rows.forEach(r => r.classList.remove('dp-row-flag'));
+        }, 4000);
     }
 
     function dpHighlightIssues() {
