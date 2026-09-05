@@ -707,7 +707,7 @@ namespace FleetWise.Controllers
             // leave the dispatcher looking at a trip the database has already moved.
             if (wasRoute != trip.RouteId)
             {
-                try { await NotifyRouteChangeAsync(trip, wasRoute); }
+                try { await NotifyRouteChangeAsync(trip, wasRoute, wasVehicle); }
                 catch (Exception ex)
                 {
                     await _audit.WriteAsync("trip_reassigned",
@@ -742,7 +742,12 @@ namespace FleetWise.Controllers
         /// Addressed to the driver the trip now has. Where the driver was swapped in the
         /// same edit, that is the person who needs to know.
         /// </remarks>
-        private async Task NotifyRouteChangeAsync(Trip trip, int wasRoute)
+        /// <param name="wasVehicle">
+        /// The bus the trip held before this edit. Named only when it changed, since a
+        /// route change and a bus change often arrive in the same edit and a driver told
+        /// about one and not the other walks to the wrong bay.
+        /// </param>
+        private async Task NotifyRouteChangeAsync(Trip trip, int wasRoute, string wasVehicle)
         {
             var routes = (await _supabase.From<BusRoute>().Get()).Models;
             string Name(int id) => routes.FirstOrDefault(r => r.RouteId == id)?.RouteName ?? $"Route {id}";
@@ -750,7 +755,26 @@ namespace FleetWise.Controllers
             var senderIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             int.TryParse(senderIdClaim, out var senderId);
 
-            var window = FormatShiftWindow(trip);
+            // Written to be acted on rather than read through.
+            //
+            // Named by the trip rather than by the shift, so it matches the identifier on
+            // the driver's own screen and answers which trip it is about without them
+            // having to work it out. The route it came off is given as well: a driver who
+            // has been running one all afternoon needs to know which one is ending, not
+            // only which one is beginning.
+            //
+            // The shift window is left out. The driver was given it this morning and it has
+            // not changed, and repeating it buried the one line that was new in three that
+            // were not.
+            var body = $"Your trip {trip.TripId} is now on {Name(trip.RouteId)}, "
+                     + $"previously on {Name(wasRoute)}.";
+
+            // Only when it changed in the same edit. A driver told about the route and not
+            // the bus walks to the wrong bay.
+            if (!string.Equals(wasVehicle, trip.VehicleId, StringComparison.OrdinalIgnoreCase))
+                body += $" Your bus has changed to {trip.VehicleId}.";
+
+            body += " Please update your route accordingly. Thank you.";
 
             await _supabase.From<Message>().Insert(new Message
             {
@@ -758,10 +782,7 @@ namespace FleetWise.Controllers
                 TargetAudience = "Driver",
                 TargetId = trip.DriverId.ToString(),
                 Subject = $"Route change: {Name(trip.RouteId)}",
-                Body = $"Your {trip.ShiftType} shift on {trip.Date:MMMM d} has been moved from "
-                     + $"{Name(wasRoute)} to {Name(trip.RouteId)}. "
-                     + $"Bus {trip.VehicleId}, {window.Start} to {window.End}. "
-                     + "Run the new route from now on.",
+                Body = body,
                 Priority = "High",
                 CreatedAt = PhClock.NowForDb
             });
