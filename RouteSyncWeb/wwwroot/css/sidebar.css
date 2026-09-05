@@ -101,6 +101,7 @@
 
     /* Link. */
     .fw-sidebar__link {
+        position: relative;
         display: flex;
         align-items: center;
         gap: 12px;
@@ -133,17 +134,35 @@
         justify-content: center;
     }
 
-    /* Counts sit on the icon, not beside the label. The rail is collapsed to its icons
-       until it is hovered, and the mark has to be readable in that state. */
-    .fw-sidebar__icon {
-        position: relative;
+    /* Where a count sits depends on how much of the rail is showing.
+
+       Collapsed there is nothing but an icon to put it on, so it goes on the icon's
+       corner the way an app carries one, and that is the state it is read in from across
+       the room. Opened there is a name to put it beside, and a mark still clinging to the
+       icon reads as part of the icon rather than as something the tab is holding.
+
+       Placed against the row rather than the icon, since it is no longer inside the icon:
+       past the row's own 10px of padding and the 22px of icon, then back over the corner
+       by the same 8px the phone bar uses. */
+    .fw-sidebar__badge {
+        position: absolute;
+        left: 24px;
+        top: 6px;
     }
 
-    .fw-sidebar__badge,
+    /* Opened, it is simply the last thing in the row, spaced by the row's own gap. */
+    .fw-sidebar:hover .fw-sidebar__badge {
+        position: static;
+    }
+
     .fw-bar__badge {
         position: absolute;
         top: -5px;
         right: -8px;
+    }
+
+    .fw-sidebar__badge,
+    .fw-bar__badge {
         min-width: 17px;
         height: 17px;
         padding: 0 4px;

@@ -170,16 +170,17 @@
                        aria-current="@(active ? "page" : null)">
                         <span class="fw-sidebar__icon" aria-hidden="true">
                             @NavIcon(item.IconKey)
-                            @* On the icon rather than beside the label, because the rail is
-                               collapsed to its icons until it is hovered and a dispatcher
-                               reading it from across the room is reading the dot. *@
-                            @if (key is not null)
-                            {
-                                <span class="fw-sidebar__badge @(badge.Urgent ? "fw-sidebar__badge--urgent" : "")"
-                                      data-badge="@key" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
-                            }
                         </span>
                         <span class="fw-sidebar__label">@item.Label</span>
+                        @* Last in the row, so that opening the rail leaves it beside the
+                           name. Collapsed there is no name to be beside and the stylesheet
+                           puts it back on the icon's corner, which is the only thing
+                           showing and the thing a dispatcher reads from across the room. *@
+                        @if (key is not null)
+                        {
+                            <span class="fw-sidebar__badge @(badge.Urgent ? "fw-sidebar__badge--urgent" : "")"
+                                  data-badge="@key" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
+                        }
                     </a>
                 </li>
             }
@@ -412,11 +413,61 @@
             });
         }
 
+        function refresh() { read().catch(function () { /* the numbers on screen stand */ }); }
+
+        // What is left for the poll to catch is a change made somewhere this page cannot
+        // see: a driver filing a sick call from their own app, or another dispatcher on
+        // another board. Asking more often costs the database nothing extra, since the
+        // count itself is held for longer than the gap between two askings.
+        //
         // Not while the tab is in the background: a rail nobody is looking at does not
         // need counting, and a phone left on a desk would poll all day.
         setInterval(function () {
             if (document.hidden) return;
-            read().catch(function () { /* the numbers on screen stand */ });
-        }, 30000);
+            refresh();
+        }, 15000);
+
+        // Coming back to a tab that was left is arriving at it. Nothing was counted while
+        // it was away, so the numbers on it are as old as the moment it was put down, and
+        // sitting through the rest of a poll to learn that is what makes a badge look
+        // stuck.
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) refresh();
+        });
+
+        // Read again whenever this page writes something.
+        //
+        // Anything a dispatcher does here can change what the rail is counting, and being
+        // made to wait out a poll to be told about their own action is the whole of what
+        // makes a badge feel broken. Hung on fetch rather than on each of the places that
+        // write, because those are spread over every board and the list of them is not
+        // stable; a page that submits a form navigates instead, and comes back counted.
+        //
+        // Only writes, and only writes that were accepted. The reading below is itself a
+        // GET, so nothing here can set itself going.
+        var afterWrite = null;
+        var sent = window.fetch;
+
+        window.fetch = function (input, init) {
+            var how = (init && init.method)
+                || (input && typeof input === 'object' && input.method)
+                || 'GET';
+
+            var answer = sent.apply(this, arguments);
+            how = String(how).toUpperCase();
+            if (how === 'GET' || how === 'HEAD') return answer;
+
+            // A branch of its own, so what the caller does with the answer is untouched.
+            answer.then(function (res) {
+                if (!res || !res.ok) return;
+
+                // Several writes in a row are one change as far as the rail is concerned,
+                // and the server needs the moment it takes to have finished with them.
+                clearTimeout(afterWrite);
+                afterWrite = setTimeout(refresh, 400);
+            }).catch(function () { /* the caller answers for its own failure */ });
+
+            return answer;
+        };
     })();
 </script>

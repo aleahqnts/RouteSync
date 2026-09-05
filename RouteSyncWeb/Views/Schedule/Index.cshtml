@@ -320,7 +320,24 @@
             <p id="sch-moved-text" class="sch-modal-sub"></p>
             <div class="sch-modal-actions">
                 <button class="sch-modal-btn" onclick="schCloseMoved()">Keep Editing</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schReloadWeek()">Reload The Week</button>
+                <button class="sch-modal-btn sch-modal-btn-override" onclick="schReloadWeek()">Reload Week</button>
+            </div>
+        </div>
+    </div>
+
+    @* Raised when a save would write over a trip another dispatcher has saved since this
+       week was opened. Offers one way past, because the dispatcher may well mean it. *@
+    <div id="sch-overwrite-modal" class="sch-modal-overlay" style="display:none;">
+        <div class="sch-modal">
+            <div class="sch-modal-head">
+                <span class="sch-modal-ico">&#9888;</span>
+                <h3>Overwriting Recent Changes</h3>
+            </div>
+            <p id="sch-overwrite-sub" class="sch-modal-sub"></p>
+            <ul id="sch-overwrite-list" class="sch-modal-list"></ul>
+            <div class="sch-modal-actions">
+                <button class="sch-modal-btn" onclick="schCloseOverwrite()">Back</button>
+                <button class="sch-modal-btn sch-modal-btn-override" onclick="schSaveOverOthers()">Save Anyway</button>
             </div>
         </div>
     </div>
@@ -330,12 +347,12 @@
         <div class="sch-modal">
             <div class="sch-modal-head">
                 <span class="sch-modal-ico">&#9998;</span>
-                <h3>Unsaved Edits</h3>
+                <h3>Unsaved Changes</h3>
             </div>
             <p id="sch-leave-sub" class="sch-modal-sub"></p>
             <ul id="sch-leave-list" class="sch-modal-list"></ul>
             <p class="sch-modal-sub">
-                These are kept while this tab stays open, and are lost when it closes.
+                These are kept while this tab remains open and are lost when it closes.
             </p>
             <div class="sch-modal-actions">
                 <button class="sch-modal-btn" onclick="schCloseLeave()">Stay Here</button>
@@ -593,26 +610,37 @@
         return SCH_MONTHS[parts[1] - 1].slice(0, 3) + ' ' + parts[2];
     }
 
-    /* Every cell that has been touched, and where it sits. Lanes are counted over all of
-       them in the order they are drawn, so a lane added by + Add bus is found again. */
+    /* Every cell that has been touched, recorded by what it was about.
+
+       Each entry names the trip it was editing, or nothing at all where the cell was
+       empty and the edit is a bus being added. It also carries what the cell held when
+       the week was drawn, which is what lets a later restore tell an untouched trip from
+       one another dispatcher has saved over in the meantime.
+
+       Lane numbers are deliberately not kept. A lane is a position in a table that is
+       ordered by vehicle, so a trip added anywhere in a shift renumbers the ones after
+       it, and an edit aimed by position lands on a different trip than the one it was
+       made against. */
     function schSaveDraft() {
         if (schRestoring) return;
 
-        const lanes = {};
         const out = [];
 
         document.querySelectorAll('.sch-cell').forEach(function (cell) {
-            const slot = cell.dataset.route + '|' + cell.dataset.shift + '|' + cell.dataset.date;
-            lanes[slot] = (lanes[slot] === undefined ? 0 : lanes[slot] + 1);
             if (!cell.classList.contains('sch-dirty')) return;
+
+            const veh = cell.querySelector('.sch-veh');
+            const drv = cell.querySelector('.sch-drv');
 
             out.push({
                 r: cell.dataset.route,
                 s: cell.dataset.shift,
                 d: cell.dataset.date,
-                lane: lanes[slot],
-                veh: cell.querySelector('.sch-veh').value,
-                drv: cell.querySelector('.sch-drv').value
+                trip: cell.dataset.tripid || '',
+                veh: veh.value,
+                drv: drv.value,
+                bveh: veh.dataset.base || '',
+                bdrv: drv.dataset.base || ''
             });
         });
 
@@ -635,54 +663,185 @@
         window.location.reload();
     }
 
-    /* Put back where they were. A bus or a driver that has since stopped being on offer is
-       left out rather than forced in, and the count says how many. */
+    // Trips another dispatcher saved while this week was open, which this dispatcher's
+    // unsaved changes have been restored over. Held from the merge until the save.
+    let schContested = [];
+
+    /* Restores unsaved changes onto the week as it now stands.
+
+       A merge rather than a replay. The week may have been saved by another dispatcher
+       since these changes were made, so each one is matched to the trip it was made
+       against, wherever that trip now sits, and a change that was adding a bus is given a
+       cell holding no trip rather than one that does.
+
+       Four outcomes, reported together: applied, applied over a change another dispatcher
+       made, already made by them, and no longer applicable. */
     function schRestoreDraft() {
         let saved = null;
         try { saved = JSON.parse(sessionStorage.getItem(schDraftKey()) || 'null'); }
         catch (e) { return; }
         if (!Array.isArray(saved) || !saved.length) return;
 
+        // A draft written before changes recorded the trip they were made against cannot
+        // be placed safely. All it holds is a position in a table that is ordered by
+        // vehicle and may since have been renumbered. Discarded rather than guessed at.
+        if (saved.some(function (c) { return c.bveh === undefined || c.trip === undefined; })) {
+            try { sessionStorage.removeItem(schDraftKey()); } catch (e) { }
+            return;
+        }
+
         schRestoring = true;
-        let put = 0, lost = 0;
 
-        saved.forEach(function (c) {
-            const tbody = document.querySelector(
-                '.sch-shift-body[data-route="' + c.r + '"][data-shift="' + c.s + '"]');
-            if (!tbody) { lost++; return; }
+        const applied = [];
+        const contested = [];
+        const alreadyDone = [];
+        const claimed = [];
+        let unplaceable = 0;
 
-            let list = schLanesFor(c.r, c.s, c.d);
-            let guard = 0;
-            while (list.length <= c.lane && guard++ < 20) {
-                schAddLane(tbody);
-                list = schLanesFor(c.r, c.s, c.d);
-            }
+        function offered(sel, value) {
+            return !value || Array.prototype.some.call(sel.options,
+                function (o) { return o.value === value; });
+        }
 
-            const cell = list[c.lane];
-            if (!cell) { lost++; return; }
-
+        function apply(cell, entry) {
             const veh = cell.querySelector('.sch-veh');
             const drv = cell.querySelector('.sch-drv');
-            const has = function (sel, value) {
-                return !value || Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
-            };
-            if (!has(veh, c.veh) || !has(drv, c.drv)) { lost++; return; }
+            if (!offered(veh, entry.veh) || !offered(drv, entry.drv)) return false;
 
-            veh.value = c.veh;
-            drv.value = c.drv;
+            veh.value = entry.veh;
+            drv.value = entry.drv;
             veh.dataset.prev = veh.value;
             drv.dataset.prev = drv.value;
             cell.classList.add('sch-dirty');
-            put++;
+            return true;
+        }
+
+        // Changes to trips that already existed, taken first so that a bus being added
+        // cannot claim a cell one of them is about to fill.
+        saved.filter(function (c) { return c.trip; }).forEach(function (c) {
+            const cell = document.querySelector('.sch-cell[data-tripid="' + c.trip + '"]');
+
+            // Deleted by another dispatcher, or started, or its shift has closed. All
+            // three leave the change with nowhere to go.
+            if (!cell) { unplaceable++; return; }
+
+            const nowVeh = cell.querySelector('.sch-veh').value;
+            const nowDrv = cell.querySelector('.sch-drv').value;
+
+            if (nowVeh === c.veh && nowDrv === c.drv) { alreadyDone.push(cell); return; }
+
+            // Measured against what the cell held when the week was drawn. A cell that
+            // reads differently now has been saved by somebody else in the meantime.
+            const theirs = nowVeh !== c.bveh || nowDrv !== c.bdrv;
+            if (!apply(cell, c)) { unplaceable++; return; }
+
+            if (theirs) contested.push({ el: cell, theirVeh: nowVeh, theirDrv: nowDrv });
+            else applied.push(cell);
+        });
+
+        // Buses being added, each of which wants a slot rather than a particular lane.
+        saved.filter(function (c) { return !c.trip; }).forEach(function (c) {
+            if (!c.veh && !c.drv) return;   // an empty cell touched and left empty
+
+            const slot = schLanesFor(c.r, c.s, c.d);
+
+            // Another dispatcher has already put this bus and this driver on this shift.
+            const twin = Array.prototype.find.call(slot, function (one) {
+                return one.dataset.tripid
+                    && one.querySelector('.sch-veh').value === c.veh
+                    && one.querySelector('.sch-drv').value === c.drv;
+            });
+            if (twin) { alreadyDone.push(twin); return; }
+
+            // A cell holding a trip is never taken, including one this draft cleared.
+            // Filling it would rewrite that trip rather than replace it, and the trip
+            // would keep an identity its removal was meant to end.
+            let cell = Array.prototype.find.call(slot, function (one) {
+                return !one.dataset.tripid
+                    && claimed.indexOf(one) === -1
+                    && !one.querySelector('.sch-veh').value
+                    && !one.querySelector('.sch-drv').value;
+            });
+
+            if (!cell) {
+                const tbody = document.querySelector(
+                    '.sch-shift-body[data-route="' + c.r + '"][data-shift="' + c.s + '"]');
+                if (!tbody) { unplaceable++; return; }
+
+                // The same lane the button adds. A shift that has finished draws its new
+                // lane read-only, which is what leaves the count short here.
+                const before = slot.length;
+                schAddLane(tbody);
+                const after = schLanesFor(c.r, c.s, c.d);
+                cell = after.length > before ? after[after.length - 1] : null;
+            }
+
+            if (!cell || !apply(cell, c)) { unplaceable++; return; }
+
+            claimed.push(cell);
+            applied.push(cell);
         });
 
         schRestoring = false;
         schNarrowChoices();
         schMarkAway();
 
-        schUpdateDirtyBar(
-            (put ? 'Put back from earlier.' : '')
-            + (lost ? (put ? ' ' : '') + lost + ' could not be put back.' : ''));
+        // Rewritten against the week it was merged into, so the trips it names and the
+        // values it measures against are the ones now on screen.
+        schSaveDraft();
+
+        schContested = contested;
+        schReportMerge(applied.length, contested, alreadyDone, unplaceable);
+    }
+
+    /* Says what the merge did, and marks the cells it is about.
+
+       A reload that rearranges unsaved work owes an account of itself. A restore with
+       nothing to report keeps to the bar, as it always has; anything else opens the panel,
+       where each line can be walked to the cells it names. */
+    function schReportMerge(applied, contested, alreadyDone, unplaceable) {
+        const parts = [];
+        if (applied) parts.push(applied === 1 ? '1 change restored.' : applied + ' changes restored.');
+        if (contested.length) parts.push(contested.length === 1
+            ? '1 differs from what is saved.'
+            : contested.length + ' differ from what is saved.');
+        if (alreadyDone.length) parts.push(alreadyDone.length + ' already applied.');
+        if (unplaceable) parts.push(unplaceable + ' could not be restored.');
+
+        schUpdateDirtyBar(parts.join(' '));
+
+        if (!contested.length && !alreadyDone.length && !unplaceable) return;
+
+        const lines = [];
+
+        if (contested.length) lines.push({
+            text: contested.length === 1
+                ? '1 of your changes applies to a trip another dispatcher has saved since '
+                  + 'you began editing. Your change has been restored over theirs. Please '
+                  + 'review it before saving.'
+                : contested.length + ' of your changes apply to trips another dispatcher '
+                  + 'has saved since you began editing. Your changes have been restored '
+                  + 'over theirs. Please review them before saving.',
+            els: contested.map(function (c) { return c.el; })
+        });
+
+        if (alreadyDone.length) lines.push({
+            text: (alreadyDone.length === 1 ? '1 of your changes had ' : alreadyDone.length + ' of your changes had ')
+                + 'already been made by another dispatcher and '
+                + (alreadyDone.length === 1 ? 'was' : 'were') + ' not repeated.',
+            els: alreadyDone
+        });
+
+        if (unplaceable) lines.push({
+            text: (unplaceable === 1 ? '1 of your changes could ' : unplaceable + ' of your changes could ')
+                + 'not be restored. The trip is no longer on the schedule, or the bus or '
+                + 'driver is no longer available.',
+            els: []
+        });
+
+        schShowConflicts(lines, false, 'Unsaved Changes Restored',
+            'The week was reloaded and your unsaved changes were reapplied to it. Each '
+            + 'numbered line marks the cells it refers to.');
     }
 
     /* Every cell edited and not yet written, in the order they are drawn. */
@@ -887,8 +1046,8 @@
         });
 
         document.getElementById('sch-leave-sub').textContent = weeks.length === 1
-            ? 'One week has edits that have not been saved.'
-            : weeks.length + ' weeks have edits that have not been saved.';
+            ? 'One week contains changes that have not been saved.'
+            : weeks.length + ' weeks contain changes that have not been saved.';
 
         schLeaveTo = href;
         document.getElementById('sch-leave-modal').style.display = 'flex';
@@ -907,6 +1066,12 @@
     function schWireCell(cell) {
         cell.querySelectorAll('.sch-sel').forEach(function (sel) {
             sel.dataset.prev = sel.value;
+
+            // What the cell held when the week was drawn, kept apart from prev, which
+            // follows every change made since. Restoring a draft has to tell a cell that
+            // differs because this dispatcher changed it from one that differs because
+            // somebody else saved over it, and only a fixed starting point answers that.
+            if (sel.dataset.base === undefined) sel.dataset.base = sel.value;
             sel.addEventListener('change', function () {
                 cell.classList.add('sch-dirty');
 
@@ -1226,6 +1391,21 @@
         return `${SCH_MONTHS[m - 1]} ${d}, ${y}`;
     }
 
+    /* How a cell is named in a sentence: its route, its shift and its day. The route is
+       read off the card it sits in, which is the only place the name is held. */
+    function schCellName(el) {
+        const card = el.closest('.sch-card');
+        const head = card ? card.querySelector('.sch-card-head') : null;
+        const route = head ? head.textContent.trim() : 'Route ' + el.dataset.route;
+        return route + ', ' + el.dataset.shift + ', ' + schFmtDate(el.dataset.date);
+    }
+
+    /* A bus and a driver as one phrase, or what is missing from it. */
+    function schPairing(veh, drv) {
+        if (!veh && !drv) return 'empty';
+        return (veh || 'no bus') + ' \u00b7 ' + (drv ? schDriverName(drv) : 'no driver');
+    }
+
     let schLastConflicts = [];   // remembered for the override confirmation modal
 
     // When the panel last finished being dragged. A drag that happens to start on one of
@@ -1527,6 +1707,53 @@
         document.getElementById('sch-override-modal').style.display = 'none';
     }
 
+    // Set by the acknowledgement below and not by force, which the server reads as leave
+    // to ignore booking conflicts. Agreeing to write over somebody else's work is not
+    // agreeing to double-book a bus, and one press must not buy both.
+    let schOverwriteOk = false;
+    let schOverwriteForce = false;
+
+    /* Trips another dispatcher saved while this week was open, which this save would
+       write over. A cell put back to their value is no longer an overwrite and drops out
+       of the list on its own. */
+    function schOverwrites() {
+        return schContested.filter(function (c) {
+            return document.body.contains(c.el)
+                && (c.el.querySelector('.sch-veh').value !== c.theirVeh
+                    || c.el.querySelector('.sch-drv').value !== c.theirDrv);
+        });
+    }
+
+    function schShowOverwrite(list) {
+        document.getElementById('sch-overwrite-sub').textContent = list.length === 1
+            ? 'The following trip was changed by another dispatcher after you began '
+            : 'The following ' + list.length + ' trips were changed by another dispatcher '
+
+        const ul = document.getElementById('sch-overwrite-list');
+        ul.replaceChildren();
+
+        list.forEach(function (c) {
+            const li = document.createElement('li');
+            li.textContent = schCellName(c.el)
+                + '. Saved: ' + schPairing(c.theirVeh, c.theirDrv)
+                + '. Yours: ' + schPairing(c.el.querySelector('.sch-veh').value,
+                                           c.el.querySelector('.sch-drv').value) + '.';
+            ul.appendChild(li);
+        });
+
+        document.getElementById('sch-overwrite-modal').style.display = 'flex';
+    }
+
+    function schCloseOverwrite() {
+        document.getElementById('sch-overwrite-modal').style.display = 'none';
+    }
+
+    function schSaveOverOthers() {
+        schCloseOverwrite();
+        schOverwriteOk = true;
+        schSave(schOverwriteForce);
+    }
+
     // force = dispatcher confirmed override -> skip the client-side block and tell the
     // server to ignore conflicts too.
     function schSave(force) {
@@ -1674,6 +1901,15 @@
             return;
         }
 
+        // Asked last, after everything that is an error rather than a decision. A booking
+        // rule is something to correct; this is something to mean.
+        const overwrites = schOverwrites();
+        if (!schOverwriteOk && overwrites.length) {
+            schOverwriteForce = !!force;
+            schShowOverwrite(overwrites);
+            return;
+        }
+
         // Absent on a week whose shifts have all finished, which offers no Save at all.
         if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
         fetch('/Schedule/Save', {
@@ -1684,6 +1920,7 @@
                 weekStart: SCH_WEEK_START,
                 weekEnd: SCH_WEEK_END,
                 savedAt: SCH_SAVED_AT,
+                overwrites: overwrites.length,
                 override: !!force
             })
         }).then(async res => {

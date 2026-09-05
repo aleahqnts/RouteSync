@@ -111,6 +111,19 @@ namespace FleetWise.ViewModels
 
         // Dispatcher acknowledged the conflict modal and chose to save anyway.
         public bool Override { get; set; }
+
+        /// <summary>
+        /// How many trips this save knowingly writes over, having been saved by somebody
+        /// else since the grid was drawn.
+        /// </summary>
+        /// <remarks>
+        /// Recorded rather than enforced. The grid is refused outright while its marker is
+        /// stale, so by the time a save reaches here it has been built on the current week
+        /// and these are changes the dispatcher has been shown and has chosen to replace.
+        /// What the audit trail needs is that the choice was made.
+        /// </remarks>
+        [Range(0, 500, ErrorMessage = "That week could not be read.")]
+        public int Overwrites { get; set; }
     }
 
     public class ScheduleCellInput
