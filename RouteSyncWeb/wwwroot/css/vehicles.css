@@ -46,6 +46,16 @@
     .cam-chip--on { background: #eafaf1; color: #2fae74; }
     .cam-chip--off { background: #fdecec; color: #d15b5b; }
 
+    .cam-backlog {
+        margin: 0 16px 12px;
+        padding: 9px 12px;
+        border-radius: 8px;
+        background: #fdecec;
+        color: #b4443f;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
     .cam-wait {
         display: flex;
         flex-direction: column;

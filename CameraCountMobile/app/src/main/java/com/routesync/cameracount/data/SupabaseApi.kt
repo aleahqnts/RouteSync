@@ -190,24 +190,38 @@ object SupabaseApi {
      * The only write permitted after a trip has ended.
      *
      * A camera in a dead zone can count more passengers than the driver's manual
-     * fallback recorded, and the trip can close before it reconnects. This raises
-     * `total_boarded` only when [finalCount] is higher, expressed as a filter so the
-     * update is atomic and can never lower a finalized total. It applies only while this
+     * fallback recorded, and the trip can close before it reconnects. The count has to
+     * land anyway, so this write is allowed against a completed trip for as long as this
      * device is still the claimed counter.
+     *
+     * The figure is sent plainly. Keeping it from lowering a stored total is the
+     * database's job now: a trigger treats an incoming count as a claim and keeps the
+     * high-water mark itself, which no client can get wrong or forget.
+     *
+     * @return the machine count the database holds after the write, or null when the
+     *   request matched no row. Those are different outcomes and used to be identical:
+     *   a lost claim, a deleted trip and a refusal by row-level security all answer 200
+     *   with an empty body, so a caller that only checked the status code deleted counts
+     *   that had never been stored. Nothing is cleared until this figure comes back.
      *
      * The body carries no heartbeat: the trip is over and nothing should appear alive.
      */
-    suspend fun reconcileFinalCount(tripId: String, deviceId: String, totalBoarded: Int): Unit =
+    suspend fun reconcileFinalCount(tripId: String, deviceId: String, totalBoarded: Int): Int? =
         withContext(Dispatchers.IO) {
             val url = "$BASE/trips?trip_id=eq.$tripId&counter_device_id=eq.$deviceId" +
-                    "&total_boarded=lt.$totalBoarded"
+                    "&select=boarded_counted"
             val body = JSONObject().put("total_boarded", totalBoarded).toString().toRequestBody(JSON)
             val req = Request.Builder().url(url).supabaseHeaders()
-                .header("Prefer", "return=minimal")
+                .header("Prefer", "return=representation")
                 .patch(body)
                 .build()
             http.newCall(req).execute().use { res ->
                 if (!res.isSuccessful) throw IllegalStateException("PATCH reconcile ${res.code}")
+                val arr = JSONArray(res.body?.string() ?: "[]")
+                // boarded_counted rather than total_boarded: the reported total also
+                // carries the driver's manual correction, which can sit below the machine
+                // count quite legitimately and would read as a failed delivery forever.
+                if (arr.length() == 0) null else arr.getJSONObject(0).optInt("boarded_counted", 0)
             }
         }
 
@@ -323,7 +337,13 @@ object SupabaseApi {
         /** Wake lifecycle: idle, capturing, preview or applied. Null omits the field from
          *  the request body, leaving the stored value unchanged. */
         wakeState: String? = null,
-        snapshotReady: Boolean = false
+        snapshotReady: Boolean = false,
+        /** Counts this device is holding that the database has not confirmed. Null omits
+         *  the field, for callers that are reporting something else and do not know. */
+        unreconciled: Int? = null,
+        /** When the oldest of those was made, so a backlog reads differently from a
+         *  count that is a few seconds behind. */
+        unreconciledOldest: Instant? = null
     ): Unit = withContext(Dispatchers.IO) {
         val body = JSONObject()
             .put("device_id", deviceId)
@@ -333,6 +353,15 @@ object SupabaseApi {
                 if (justApplied) put("applied_at", Instant.now().toString())
                 if (wakeState != null) put("wake_state", wakeState)
                 if (snapshotReady) put("snapshot_ready_at", Instant.now().toString())
+                if (unreconciled != null) {
+                    put("unreconciled_counts", unreconciled)
+                    // Cleared explicitly when the backlog empties, or the dashboard would
+                    // keep showing the age of a count that has since been delivered.
+                    put(
+                        "unreconciled_oldest_at",
+                        unreconciledOldest?.toString() ?: JSONObject.NULL
+                    )
+                }
             }
             .toString().toRequestBody(JSON)
         val req = Request.Builder().url("$BASE/device_status").supabaseHeaders()

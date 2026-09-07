@@ -364,6 +364,26 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
                         .background(RsColor.Mint2).padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
+            // Counts this phone is holding that the database has not confirmed storing.
+            // Absent in normal operation, because a count is confirmed within seconds of
+            // the trip ending. Shown plainly when it is not, since the alternative is a
+            // screen reporting a total that reached nobody.
+            if (s.unreconciled > 0) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    if (s.unreconciled == 1) "1 trip count is waiting to be saved"
+                    else "${s.unreconciled} trip counts are waiting to be saved",
+                    color = RsColor.Error, fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                        .background(RsColor.Mint1).padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "They are kept on this phone and sent again automatically.",
+                    color = RsColor.Muted, fontSize = 11.sp, textAlign = TextAlign.Center
+                )
+            }
             s.lastError?.let {
                 Spacer(Modifier.height(12.dp))
                 Text(
