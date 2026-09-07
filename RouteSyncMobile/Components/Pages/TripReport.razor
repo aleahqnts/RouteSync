@@ -178,7 +178,7 @@ else
                 route = routeTask.Result;
                 vehicle = vehicleTask.Result;
 
-                try { checklist = await Data.GetChecklistAsync(trip.TripId); } catch { /* card shows "none" */ }
+                try { checklist = await Data.GetChecklistAsync(trip.TripId, trip.VehicleId); } catch { /* card shows "none" */ }
             }
         }
         catch (Exception ex)
