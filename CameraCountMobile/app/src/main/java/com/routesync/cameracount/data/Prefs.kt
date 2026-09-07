@@ -30,6 +30,9 @@ class Prefs(private val context: Context) {
         private val LINE_BX = floatPreferencesKey("line_bx")
         private val LINE_BY = floatPreferencesKey("line_by")
         private val LINE_INWARD_SIGN = intPreferencesKey("line_inward_sign")
+        private val PENDING_COUNTS = stringPreferencesKey("pending_counts")
+        // Superseded by PENDING_COUNTS. Read once on the next start so a count held
+        // at upgrade time is carried into the list rather than dropped.
         private val PENDING_TRIP_ID = stringPreferencesKey("pending_trip_id")
         private val PENDING_COUNT = intPreferencesKey("pending_count")
         private val DEVICE_JWT = stringPreferencesKey("device_jwt")
@@ -39,6 +42,18 @@ class Prefs(private val context: Context) {
         const val DEF_AX = 0.5f; const val DEF_AY = 0.05f
         const val DEF_BX = 0.5f; const val DEF_BY = 0.95f
         const val DEF_INWARD_SIGN = 1
+
+        /**
+         * How many undelivered counts to hold.
+         *
+         * Normal operation holds none: a count is confirmed within seconds of the trip
+         * ending. A backlog this long means deliveries have been failing for weeks, and
+         * the oldest entries are the least likely to ever be accepted.
+         */
+        const val MAX_PENDING = 20
+
+        /** How long one is kept before it is given up on. */
+        const val PENDING_MAX_AGE_MS = 14L * 24 * 60 * 60 * 1000
     }
 
     val vehicleId: Flow<String?> = context.dataStore.data.map { it[VEHICLE_ID] }
@@ -134,31 +149,131 @@ class Prefs(private val context: Context) {
     }
 
     /**
-     * Trip and count, persisted on every change so a dead zone, a process kill or a
-     * reboot mid-trip does not lose passengers.
+     * A count made for one trip that the database has not yet confirmed storing.
      *
-     * On restart the count resumes at the higher of the saved and stored values when the
-     * same trip is still active. A different trip discards it.
+     * Written on every change, so a dead zone, a process kill or a reboot mid-trip does
+     * not lose passengers. An entry is removed only when the database has been read back
+     * and holds at least this many, which is what separates a delivered count from one
+     * that was merely sent.
+     *
+     * [at] is when counting for the trip last moved, and is what the age bound measures.
      */
-    data class PendingCount(val tripId: String, val count: Int)
+    data class PendingCount(
+        val tripId: String,
+        val count: Int,
+        val at: Long = System.currentTimeMillis()
+    )
 
-    suspend fun pendingCount(): PendingCount? {
+    /**
+     * Every count still awaiting confirmation, oldest first.
+     *
+     * There is one entry per trip rather than one in total. A trip that ended in a dead
+     * zone can still be waiting when the next trip begins, and the next trip must not be
+     * the thing that erases it.
+     */
+    suspend fun pendingCounts(): List<PendingCount> {
         val d = context.dataStore.data.first()
-        val t = d[PENDING_TRIP_ID] ?: return null
-        return PendingCount(t, d[PENDING_COUNT] ?: 0)
+        val list = decodePending(d[PENDING_COUNTS]).toMutableList()
+
+        // A count held by the previous single-slot format, carried across on first read.
+        val legacyTrip = d[PENDING_TRIP_ID]
+        if (legacyTrip != null && list.none { it.tripId == legacyTrip }) {
+            list += PendingCount(legacyTrip, d[PENDING_COUNT] ?: 0)
+        }
+        return list.sortedBy { it.at }
     }
 
+    /** The entry for one trip, or null. */
+    suspend fun pendingCount(tripId: String): PendingCount? =
+        pendingCounts().firstOrNull { it.tripId == tripId }
+
+    /**
+     * Records the count for a trip, replacing any earlier figure for the same one.
+     *
+     * The stored count never falls. Counting is monotonic, so a lower figure arriving
+     * here means a stale caller, not a correction.
+     */
     suspend fun savePendingCount(tripId: String, count: Int) {
-        context.dataStore.edit {
-            it[PENDING_TRIP_ID] = tripId
-            it[PENDING_COUNT] = count
+        context.dataStore.edit { p ->
+            val list = decodePending(p[PENDING_COUNTS]).toMutableList()
+            val legacyTrip = p[PENDING_TRIP_ID]
+            if (legacyTrip != null && list.none { it.tripId == legacyTrip }) {
+                list += PendingCount(legacyTrip, p[PENDING_COUNT] ?: 0)
+            }
+            p.remove(PENDING_TRIP_ID)
+            p.remove(PENDING_COUNT)
+
+            val at = list.firstOrNull { it.tripId == tripId }?.at ?: System.currentTimeMillis()
+            val was = list.firstOrNull { it.tripId == tripId }?.count ?: 0
+            list.removeAll { it.tripId == tripId }
+            list += PendingCount(tripId, maxOf(was, count), at)
+
+            // Oldest first, so the bound drops the entries least likely to be accepted.
+            p[PENDING_COUNTS] = encodePending(
+                list.sortedBy { it.at }.takeLast(MAX_PENDING)
+            )
         }
     }
 
-    suspend fun clearPendingCount() {
-        context.dataStore.edit {
-            it.remove(PENDING_TRIP_ID)
-            it.remove(PENDING_COUNT)
+    /** Drops one trip's entry, once the database has confirmed the figure. */
+    suspend fun clearPendingCount(tripId: String) {
+        context.dataStore.edit { p ->
+            val list = decodePending(p[PENDING_COUNTS]).filterNot { it.tripId == tripId }
+            p[PENDING_COUNTS] = encodePending(list)
+            if (p[PENDING_TRIP_ID] == tripId) {
+                p.remove(PENDING_TRIP_ID)
+                p.remove(PENDING_COUNT)
+            }
+        }
+    }
+
+    /**
+     * Removes entries older than the age bound and returns what was removed.
+     *
+     * Giving up on a count is an event rather than housekeeping: the caller reports it
+     * instead of letting the figure disappear without anyone being told.
+     */
+    suspend fun prunePendingCounts(): List<PendingCount> {
+        val cut = System.currentTimeMillis() - PENDING_MAX_AGE_MS
+        val dropped = mutableListOf<PendingCount>()
+        context.dataStore.edit { p ->
+            val list = decodePending(p[PENDING_COUNTS])
+            dropped += list.filter { it.at < cut }
+            if (dropped.isNotEmpty()) {
+                p[PENDING_COUNTS] = encodePending(list.filter { it.at >= cut })
+            }
+        }
+        return dropped
+    }
+
+    // DataStore holds scalars, so the list travels as one JSON string. The volume is a
+    // handful of small objects, rewritten once per boarding.
+
+    private fun encodePending(list: List<PendingCount>): String {
+        val arr = org.json.JSONArray()
+        list.forEach {
+            arr.put(
+                org.json.JSONObject()
+                    .put("t", it.tripId).put("c", it.count).put("at", it.at)
+            )
+        }
+        return arr.toString()
+    }
+
+    private fun decodePending(raw: String?): List<PendingCount> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return try {
+            val arr = org.json.JSONArray(raw)
+            (0 until arr.length()).mapNotNull { i ->
+                val o = arr.optJSONObject(i) ?: return@mapNotNull null
+                val t = o.optString("t", "")
+                if (t.isEmpty()) null
+                else PendingCount(t, o.optInt("c", 0), o.optLong("at", 0L))
+            }
+        } catch (_: Exception) {
+            // Unreadable rather than absent. Counts held here are already at risk, so the
+            // list is abandoned rather than allowed to throw on every read.
+            emptyList()
         }
     }
 
