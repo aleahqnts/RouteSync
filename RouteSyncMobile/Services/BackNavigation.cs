@@ -73,6 +73,8 @@ public static class BackNavigation
         return path switch
         {
             "/leave" => "/profile",
+            // Reached from the home screen, which is the only way in to it.
+            "/schedule" => "/home",
             "/trips" or "/notifications" or "/profile" => "/home",
             _ => null, // /home, /, /set-password: nothing above them
         };

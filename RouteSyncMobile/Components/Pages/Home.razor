@@ -132,15 +132,22 @@ else
                 {
                     <div class="upcoming-note">@LockLabel</div>
                 }
-                else if (checklist is not null)
+                @* A shift already running is resumable whatever the paperwork says. The
+                   inspection gates starting a shift, and a driver mid route who has been
+                   moved to another bus must not be sent back to the checklist to reach
+                   the trip they are already on. *@
+                else if (ChecklistCleared || assignment.TripStatus == "Active")
                 {
-                    <div class="checklist-done">
-                        <div>
-                            <p class="green s-title">Bus Checklist Completed</p>
-                            <p class="s-sub">@checklist.SubmittedAt.ToString("MMM d, h:mm tt")</p>
+                    @if (ChecklistCleared)
+                    {
+                        <div class="checklist-done">
+                            <div>
+                                <p class="green s-title">Bus Checklist Completed</p>
+                                <p class="s-sub">@checklist.SubmittedAt.ToString("MMM d, h:mm tt")</p>
+                            </div>
+                            <button class="link-btn" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{assignment.TripId}"))">View Log</button>
                         </div>
-                        <button class="link-btn" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{assignment.TripId}"))">View Log</button>
-                    </div>
+                    }
                     @* Ending a shift is done the moment the driver does it. The server
                        finds out on the next flush, and until then it still reads the trip
                        as active, so it is not the thing asked here. *@
@@ -318,6 +325,21 @@ else
     private bool checklistBlocked =>
         string.Equals(checklist?.ChecklistStatus, "Failed", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Whether the bus about to be driven has been signed off.</summary>
+    /// <remarks>
+    /// Having an inspection is not the same as having passed one. A critical fault
+    /// records Failed and grounds the bus, and the grounding used to be the only thing
+    /// standing in the way, so a shift whose bus was swapped for a healthy one became
+    /// startable on the strength of an inspection that had failed on a different bus.
+    ///
+    /// Pending is not a pass either. Defects that are not critical are, which is the
+    /// same call the inspection itself makes when it decides whether to ground.
+    /// </remarks>
+    private bool ChecklistCleared =>
+        checklist is not null
+        && (string.Equals(checklist.ChecklistStatus, "Passed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(checklist.ChecklistStatus, "Passed with Defects", StringComparison.OrdinalIgnoreCase));
+
     // A driver who has just failed a critical item on their own inspection knows why
     // the bus is grounded and needs to be told what happens next, not to phone in.
     private string GroundedMessage =>
@@ -458,7 +480,7 @@ else
                 var vehicleTask = Data.GetVehicleAsync(assignment.VehicleId);
                 var checklistTask = isUpcoming
                     ? Task.FromResult<BusChecklist?>(null)
-                    : Data.GetChecklistAsync(assignment.TripId);
+                    : Data.GetChecklistAsync(assignment.TripId, assignment.VehicleId);
 
                 await Task.WhenAll(routeTask, vehicleTask, checklistTask);
 
@@ -488,10 +510,20 @@ else
         }
         finally
         {
-            // Read from the queue rather than the network, so it stays right when the
-            // load above has just failed, which is exactly when it matters.
-            endPending = assignment is not null && await Queue.HasFinalizeAsync(assignment.TripId);
+            // Released before anything else can throw. The poll loop skips a pass while a
+            // load is in flight, so a failure here that left this set would not slow the
+            // page down, it would stop it refreshing for the rest of the session.
             if (!silent) loading = false;
+
+            // Read from the queue rather than the network, so it stays right when the
+            // load above has just failed, which is exactly when it matters. Guarded
+            // separately: whether a trip has been ended on this phone is worth less than
+            // the page continuing to refresh.
+            try
+            {
+                endPending = assignment is not null && await Queue.HasFinalizeAsync(assignment.TripId);
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Home.EndPending] {ex}"); }
         }
     }
 

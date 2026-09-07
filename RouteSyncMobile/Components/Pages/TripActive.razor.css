@@ -7,7 +7,61 @@
 }
 .ta-empty { text-align: center; color: #8a93a2; margin-top: 40px; }
 
-.ta { padding: 52px 22px calc(28px + env(safe-area-inset-bottom)); }
+/*
+   The shift screen is sized to the phone rather than allowed to run past it. A
+   driver reads this at a glance, often with the bus moving, and the two things they
+   reach for, the count and End Shift, sit at opposite ends. Anything that scrolls
+   puts one of them off the screen exactly when it is wanted.
+
+   Every block keeps its natural height and the counter takes up whatever is left, so
+   a short phone closes the gaps instead of pushing the button under the fold. The
+   sizes below are bounded at both ends: the middle of each clamp is a share of the
+   viewport height so the page compresses smoothly, and the lower bound is the point
+   past which a figure stops being readable from the driver's seat.
+
+   Scrolling is left available rather than cut off. On a screen too short for even
+   the minimums, a page that scrolls is worth more than one that hides End Shift.
+*/
+.ta {
+    box-sizing: border-box;
+    height: 100vh;
+    height: 100dvh; /* excludes the browser chrome that 100vh counts in */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3px, 0.7vh, 14px);
+    overflow-y: auto;
+    /* The status bar is cleared by this 52px and nothing else. The safe-area inset
+       reads nought in this WebView and the reserving element above it is hidden on
+       Android, so every page in the app carries the same flat value. It is not a
+       proportion and must not become one. */
+    padding: 52px 22px calc(clamp(6px, 1.2vh, 28px) + env(safe-area-inset-bottom));
+}
+
+/* Each block holds its own height. Only the counter below gives ground. */
+.ta > * { flex: 0 0 auto; }
+
+/* The slack goes here, so the count stays the largest thing on the screen at any
+   height and the blocks around it keep their proportions.
+
+   Grows into spare room but never shrinks past its own content. Allowing it to shrink
+   crushes the card below the number it holds, and a centred column that has run out of
+   room spills its content out of both ends rather than clipping it, which reads as the
+   label printed over the count. When even the natural heights do not fit, the page
+   scrolls instead, which is what the overflow rule above is for. */
+.ta > .counter-card {
+    flex: 1 0 auto;
+    /* Capped, or a tall phone turns the card into a field of grey with a small number
+       adrift in the middle. It takes the slack up to this and no further. */
+    max-height: clamp(110px, 28vh, 260px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Whatever room is left after the cap collects above the button, which holds End Shift
+   against the bottom edge where a thumb already rests rather than floating it under
+   the progress card. */
+.ta > .btn-end { margin-top: auto; }
 
 .ta-head {
     display: flex;
@@ -18,7 +72,7 @@
 
 .ta-head h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: clamp(17px, 2.6vh, 20px);
     font-weight: 800;
     color: #1b2a56;
 }
@@ -45,7 +99,7 @@
     color: #1b2a56;
     font-size: 14px;
     font-weight: 600;
-    margin: 16px 0 12px;
+    margin: 0;
 }
 
 .bus-card {
@@ -54,11 +108,10 @@
     gap: 12px;
     border: 1px solid #e6e8ee;
     border-radius: 12px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
+    padding: clamp(6px, 1.1vh, 12px) 16px;
 }
 
-.bus-ico svg { width: 38px; height: auto; display: block; }
+.bus-ico svg { width: clamp(30px, 5vh, 38px); height: auto; display: block; }
 .bus-name { margin: 0; font-size: 18px; font-weight: 800; color: #1b2a56; }
 .plate { font-size: 13px; font-weight: 500; color: #8a93a2; }
 .route { margin: 2px 0 0; color: #2e9e8f; font-size: 13px; font-weight: 600; }
@@ -70,12 +123,11 @@
 .counter-card {
     background: #f4f6f9;
     border-radius: 16px;
-    padding: 28px 20px;
-    margin-bottom: 14px;
+    padding: clamp(6px, 1vh, 24px) 20px;
 }
 
 .counter-label {
-    margin: 0 0 20px;
+    margin: 0 0 clamp(4px, 1vh, 18px);
     text-align: center;
     color: #5a6473;
     font-size: 15px;
@@ -86,16 +138,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 28px;
+    gap: clamp(14px, 4vw, 28px);
 }
 
 .cbtn {
-    width: 76px;
-    height: 76px;
+    width: clamp(44px, 6.5vh, 72px);
+    height: clamp(44px, 6.5vh, 72px);
     border-radius: 50%;
     border: 2.5px solid #cdd4de;
     background: #fff;
-    font-size: 40px;
+    font-size: clamp(22px, 3.6vh, 38px);
     color: #1b2a56;
     cursor: pointer;
     display: flex;
@@ -107,11 +159,18 @@
 
 .cbtn:active { transform: scale(0.94); }
 
+/* The manual buttons only appear when the camera has stopped answering, and they make
+   the row far taller than the number alone. The count gives way to them, because a
+   driver counting by hand needs to hit the buttons more than they need the largest
+   possible figure. With the camera alive the number has the row to itself and keeps
+   the size above. */
+.counter:has(.cbtn) .count { font-size: clamp(32px, 5.4vh, 56px); }
+
 .cbtn.plus { border-color: #2e9e8f; color: #2e9e8f; }
 .cbtn.minus { border-color: #d0494b; color: #d0494b; }
 
 .count {
-    font-size: 76px;
+    font-size: clamp(38px, 7.2vh, 72px);
     font-weight: 800;
     color: #1b2a56;
     min-width: 96px;
@@ -122,31 +181,29 @@
 .stat-row {
     display: flex;
     gap: 12px;
-    margin-bottom: 14px;
 }
 
 .stat-card {
     flex: 1;
     background: #f4f6f9;
     border-radius: 14px;
-    padding: 16px;
+    padding: clamp(7px, 1.2vh, 16px);
     text-align: center;
 }
 
 .stat-label { margin: 0; color: #5a6473; font-size: 13px; }
-.stat-value { margin: 8px 0 0; font-size: 24px; font-weight: 800; color: #1b2a56; }
+.stat-value { margin: clamp(3px, 0.8vh, 8px) 0 0; font-size: clamp(19px, 3vh, 24px); font-weight: 800; color: #1b2a56; }
 
 .progress-card {
     border: 1px solid #e6e8ee;
     border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 20px;
+    padding: clamp(9px, 1.4vh, 16px);
 }
 
 .prog-label { margin: 0; color: #1b2a56; font-weight: 600; font-size: 14px; text-align: center; }
 
 .prog-remaining {
-    margin: 4px 0 12px;
+    margin: 3px 0 clamp(6px, 1.1vh, 12px);
     text-align: center;
     color: #2e9e8f;
     font-size: 15px;
@@ -179,7 +236,7 @@
     width: 100%;
     border: none;
     border-radius: 12px;
-    padding: 16px;
+    padding: clamp(11px, 2vh, 16px);
     background: #d0494b;
     color: #fff;
     font-size: 17px;
@@ -283,7 +340,7 @@
 
 /* Camera auto-count mode (CameraCount heartbeat fresh -> manual counter hidden) */
 .auto-badge {
-    margin: -12px 0 14px;
+    margin: -8px 0 clamp(8px, 1.6vh, 14px);
     text-align: center;
     color: #2e9e8f;
     font-size: 13px;
@@ -309,21 +366,20 @@
 .auto-badge.pending { color: #9aa3b2; }
 .auto-badge.pending .auto-dot { background: #9aa3b2; }
 
-/* ---------- Phase 8: camera card (chip + calibrate entry) ---------- */
+/* ---------- Camera card: liveness chip and the way in to calibration ---------- */
 
 .cam-card {
     border: 1px solid #e6e8ee;
     border-radius: 12px;
     background: #fff;
-    margin-bottom: 16px;
-    padding: 12px 16px 14px;
+    padding: clamp(8px, 1.3vh, 12px) 16px clamp(9px, 1.5vh, 14px);
 }
 
 .cam-head-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: clamp(6px, 1vh, 10px);
 }
 
 .cam-title {

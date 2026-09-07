@@ -13,9 +13,9 @@ public class PendingTripFinalize
     public string TripId { get; set; } = "";
     public int TotalBoarded { get; set; }
 
-    // The driver's manual correction at the moment the trip ended. Carried here
-    // because a trip that ran offline may never have flushed it while it was running,
-    // and this row is then the only record of it.
+    // Unused. The local table on phones already carries this column with a not-null
+    // constraint, and removing the property would make every insert on those installs
+    // fail rather than quietly ignore it.
     public int BoardedAdjustment { get; set; }
     public decimal Revenue { get; set; }
     public DateTime EndTime { get; set; }

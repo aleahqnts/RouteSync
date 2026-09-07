@@ -1,10 +1,12 @@
-# CameraCount Mobile
+# RouteSync Sentinel
 
 RouteSync's camera-based passenger counter. Native Kotlin Android app for the bus
 dashboard phone. Counts boarding passengers (line-cross past the pay zone) and writes
 `trips.total_boarded` + `trips.count_heartbeat` to the shared Supabase DB every 5s.
 
-Full spec + phase plan: [`../CameraApp-plan.md`](../CameraApp-plan.md).
+The directory and the Kotlin package keep their original names. The identifier a
+phone is bound by is derived from the installed package, so renaming it would present
+every mounted phone as a new device and leave the vehicle locks pointing at nothing.
 
 ## Open / build
 

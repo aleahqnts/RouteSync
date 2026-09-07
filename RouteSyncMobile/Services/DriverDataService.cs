@@ -256,11 +256,23 @@ public class DriverDataService
     }
 
     /// <summary>The most recent checklist submitted for a trip, or null if there is none.</summary>
-    public async Task<BusChecklist?> GetChecklistAsync(string tripId)
+    /// <summary>The most recent inspection for a trip, optionally narrowed to one bus.</summary>
+    /// <remarks>
+    /// A trip can carry more than one inspection, because a bus reassigned after the
+    /// first one has not been looked at. Passing the vehicle asks the question that
+    /// matters before a shift starts, which is whether the bus about to be driven has
+    /// been inspected, not whether the trip has an inspection somewhere in its history.
+    /// Omitting it returns the trip's latest whatever bus it describes, which is what a
+    /// log of what happened wants.
+    /// </remarks>
+    public async Task<BusChecklist?> GetChecklistAsync(string tripId, string? vehicleId = null)
     {
-        var r = await _supabase.From<BusChecklist>()
-            .Filter("trip_id", Operator.Equals, tripId)
-            .Get();
+        var q = _supabase.From<BusChecklist>()
+            .Filter("trip_id", Operator.Equals, tripId);
+        if (!string.IsNullOrEmpty(vehicleId))
+            q = q.Filter("vehicle_id", Operator.Equals, vehicleId);
+
+        var r = await q.Get();
         return r.Models.OrderByDescending(c => c.SubmittedAt).FirstOrDefault();
     }
 
@@ -416,24 +428,18 @@ public class DriverDataService
             await UpdateVehicleStatusAsync(t.VehicleId, "On Trip");
     }
 
-    /// <summary>Pushes the running count and the driver's correction.</summary>
+    /// <summary>Pushes the running count.</summary>
     /// <remarks>
-    /// The count is a claim rather than a value. A trigger keeps the high-water mark of
-    /// every claim, so this can raise the stored figure and never lower it, which is what
-    /// stops a stale write from this app replacing a count the counter phone made in a
-    /// dead zone. The correction is stored separately for the same reason: kept in the
-    /// same column it would be erased by the next camera reading.
+    /// The count is a claim rather than a value. While a camera is counting, a trigger
+    /// keeps the higher of this and what is stored, so a stale write from this app
+    /// cannot replace a count the counter phone made in a dead zone. While no camera is
+    /// counting the driver owns the figure and this sets it, which is what makes the
+    /// manual minus button work.
     /// </remarks>
-    public async Task UpdateTripProgressAsync(
-        string tripId, int totalBoarded, int adjustment, decimal revenue)
+    public async Task UpdateTripProgressAsync(string tripId, int totalBoarded, decimal revenue)
     {
         await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}",
-            new
-            {
-                total_boarded = totalBoarded,
-                boarded_adjustment = adjustment,
-                estimated_revenue = revenue
-            });
+            new { total_boarded = totalBoarded, estimated_revenue = revenue });
     }
 
     public async Task EndTripAsync(string tripId, int totalBoarded, decimal revenue)
