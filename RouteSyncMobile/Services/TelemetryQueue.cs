@@ -30,7 +30,39 @@ public class TelemetryQueue
 
     public Task EnqueueAsync(PendingTelemetry row) => _db.InsertAsync(row);
 
-    public Task EnqueueFinalizeAsync(PendingTripFinalize f) => _db.InsertAsync(f);
+    /// <summary>Records that a trip has ended, replacing any earlier record of the
+    /// same trip ending.</summary>
+    /// <remarks>
+    /// One row per trip. A driver who ends a trip, is offered it again because the
+    /// first end has not reached the server, and ends it a second time used to leave two
+    /// rows, applied in insertion order, so the last and least informed write won. The
+    /// second end is the less informed of the two: ending clears the local count, so the
+    /// figure it carries is whatever the server was holding rather than what was counted.
+    ///
+    /// The surviving row keeps the higher count for the same reason the database does.
+    /// Counting only rises, so a lower figure is a staler one.
+    /// </remarks>
+    public async Task EnqueueFinalizeAsync(PendingTripFinalize f)
+    {
+        var existing = await _db.Table<PendingTripFinalize>()
+            .Where(r => r.TripId == f.TripId).ToListAsync();
+
+        if (existing.Count > 0)
+        {
+            f.TotalBoarded = Math.Max(f.TotalBoarded, existing.Max(r => r.TotalBoarded));
+            var ids = existing.Select(r => r.Id).ToList();
+            await _db.Table<PendingTripFinalize>().DeleteAsync(r => ids.Contains(r.Id));
+        }
+        await _db.InsertAsync(f);
+    }
+
+    /// <summary>Whether this trip has already been ended on this phone.</summary>
+    /// <remarks>
+    /// The queue is what makes an offline end a fact rather than an intention, so it is
+    /// asked before the server is believed about a trip still being active.
+    /// </remarks>
+    public async Task<bool> HasFinalizeAsync(string tripId) =>
+        await _db.Table<PendingTripFinalize>().Where(r => r.TripId == tripId).CountAsync() > 0;
 
     public Task<int> CountAsync() => _db.Table<PendingTelemetry>().CountAsync();
 
@@ -88,10 +120,14 @@ public class TelemetryQueue
         var fins = await _db.Table<PendingTripFinalize>().OrderBy(f => f.Id).ToListAsync();
         foreach (var f in fins)
         {
+            // total_boarded is sent as a claim. A trigger keeps the high-water mark, so
+            // this cannot lower a count the counter phone made while this app was out of
+            // contact, and estimated_revenue is re-derived from whichever figure wins.
             var body = new
             {
                 trip_status = "Completed",
                 total_boarded = f.TotalBoarded,
+                boarded_adjustment = f.BoardedAdjustment,
                 estimated_revenue = f.Revenue,
                 actual_end_time = f.EndTime
             };

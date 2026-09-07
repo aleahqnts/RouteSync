@@ -416,10 +416,24 @@ public class DriverDataService
             await UpdateVehicleStatusAsync(t.VehicleId, "On Trip");
     }
 
-    public async Task UpdateTripProgressAsync(string tripId, int totalBoarded, decimal revenue)
+    /// <summary>Pushes the running count and the driver's correction.</summary>
+    /// <remarks>
+    /// The count is a claim rather than a value. A trigger keeps the high-water mark of
+    /// every claim, so this can raise the stored figure and never lower it, which is what
+    /// stops a stale write from this app replacing a count the counter phone made in a
+    /// dead zone. The correction is stored separately for the same reason: kept in the
+    /// same column it would be erased by the next camera reading.
+    /// </remarks>
+    public async Task UpdateTripProgressAsync(
+        string tripId, int totalBoarded, int adjustment, decimal revenue)
     {
         await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}",
-            new { total_boarded = totalBoarded, estimated_revenue = revenue });
+            new
+            {
+                total_boarded = totalBoarded,
+                boarded_adjustment = adjustment,
+                estimated_revenue = revenue
+            });
     }
 
     public async Task EndTripAsync(string tripId, int totalBoarded, decimal revenue)
