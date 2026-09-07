@@ -48,7 +48,7 @@ class BootReceiver : BroadcastReceiver() {
 
         val notif = android.app.Notification.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentTitle("RouteSync Counter")
+            .setContentTitle("RouteSync Sentinel")
             .setContentText("Phone restarted. Tap to resume counting.")
             .setContentIntent(pi)
             .setFullScreenIntent(pi, true)

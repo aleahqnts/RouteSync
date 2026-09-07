@@ -5,7 +5,7 @@
     <!-- Camera used from Phase 3 onward; declared now so the manifest is final early. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
-    <!-- Phase 6: foreground service keeps the counter alive for the whole trip. -->
+    <!-- A foreground service keeps the counter alive for the whole trip. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
-        android:label="RouteSync Counter"
+        android:label="RouteSync Sentinel"
         android:icon="@android:drawable/ic_menu_camera"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
@@ -38,7 +38,7 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- Phase 9b: bring the counter back up after a reboot. -->
+        <!-- Brings the counter back up after a reboot. -->
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
