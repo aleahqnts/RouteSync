@@ -209,7 +209,7 @@ object SupabaseApi {
     suspend fun reconcileFinalCount(tripId: String, deviceId: String, totalBoarded: Int): Int? =
         withContext(Dispatchers.IO) {
             val url = "$BASE/trips?trip_id=eq.$tripId&counter_device_id=eq.$deviceId" +
-                    "&select=boarded_counted"
+                    "&select=total_boarded"
             val body = JSONObject().put("total_boarded", totalBoarded).toString().toRequestBody(JSON)
             val req = Request.Builder().url(url).supabaseHeaders()
                 .header("Prefer", "return=representation")
@@ -218,10 +218,7 @@ object SupabaseApi {
             http.newCall(req).execute().use { res ->
                 if (!res.isSuccessful) throw IllegalStateException("PATCH reconcile ${res.code}")
                 val arr = JSONArray(res.body?.string() ?: "[]")
-                // boarded_counted rather than total_boarded: the reported total also
-                // carries the driver's manual correction, which can sit below the machine
-                // count quite legitimately and would read as a failed delivery forever.
-                if (arr.length() == 0) null else arr.getJSONObject(0).optInt("boarded_counted", 0)
+                if (arr.length() == 0) null else arr.getJSONObject(0).optInt("total_boarded", 0)
             }
         }
 

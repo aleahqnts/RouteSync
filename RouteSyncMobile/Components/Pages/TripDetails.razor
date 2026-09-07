@@ -91,7 +91,7 @@ else
                 // needs an answer from the others.
                 var routeTask = Data.GetRouteAsync(trip.RouteId);
                 var vehicleTask = Data.GetVehicleAsync(trip.VehicleId);
-                var checklistTask = Data.GetChecklistAsync(trip.TripId);
+                var checklistTask = Data.GetChecklistAsync(trip.TripId, trip.VehicleId);
 
                 await Task.WhenAll(routeTask, vehicleTask, checklistTask);
 

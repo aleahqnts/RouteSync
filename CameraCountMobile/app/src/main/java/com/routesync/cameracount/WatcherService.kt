@@ -100,7 +100,7 @@ class WatcherService : Service() {
         )
         return Notification.Builder(this, ensureChannel(CHANNEL_STANDBY, "Counter standby"))
             .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentTitle("RouteSync Counter")
+            .setContentTitle("RouteSync Sentinel")
             .setContentText("Standby: watching for trips.")
             .setContentIntent(pi)
             .setOngoing(true)

@@ -57,15 +57,4 @@ public class Trip : BaseModel
     [Column("count_heartbeat")]
     public DateTime? CountHeartbeat { get; set; }
 
-    // The high-water mark of the counts claimed by this app and by the counter phone.
-    // total_boarded above is the reported figure, which is this plus the correction
-    // below, so comparing a local count against it would read a driver's own
-    // subtraction as a number still to be caught up with.
-    [Column("boarded_counted")]
-    public int BoardedCounted { get; set; }
-
-    // The driver's manual correction, negative where the count is too high. Held
-    // apart from the count so that a later camera reading cannot erase it.
-    [Column("boarded_adjustment")]
-    public int BoardedAdjustment { get; set; }
 }

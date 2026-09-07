@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.first
 import com.routesync.cameracount.ui.*
 
 /**
- * Entry point for the RouteSync camera-based passenger counter.
+ * Entry point for RouteSync Sentinel, the camera-based passenger counter.
  *
  * The phone is bound to one vehicle, polls for that vehicle's active trip, and counts
  * boarding passengers from the camera while a trip runs. Styling follows the shared
@@ -193,16 +193,21 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
 
     val vehicleOk = CounterViewModel.VEHICLE_ID_RE.matches(vehicle)
 
-    RsWordmark("Passenger Counter")
+    RsWordmark("Sentinel")
     Spacer(Modifier.height(24.dp))
     RsCard {
-        Text("Set up this device", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = RsColor.Navy)
-        Spacer(Modifier.height(4.dp))
-        Text("Bind this phone to the bus it is mounted in.", color = RsColor.Muted)
-        Spacer(Modifier.height(20.dp))
+        RsCardTitle("Set up this device")
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Bind this phone to the bus it is mounted in.",
+            color = RsColor.Muted, fontSize = 14.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(22.dp))
 
         var showPasscode by remember { mutableStateOf(false) }
-        OutlinedTextField(
+        RsTextField(
             passcode,
             {
                 passcode = it
@@ -212,18 +217,16 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
                 serverDown = false
                 vehicle = ""
             },
-            singleLine = true,
-            label = { Text("Fleet passcode") }, modifier = Modifier.fillMaxWidth(),
+            placeholder = "Fleet passcode",
+            leading = { RsFieldIcon(RsIcons.Lock) },
+            trailing = { PasscodeReveal(showPasscode) { showPasscode = !showPasscode } },
             visualTransformation =
                 if (showPasscode) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = { PasscodeReveal(showPasscode) { showPasscode = !showPasscode } },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { submitPasscode() }),
-            supportingText = {
-                if (!passOk) Text("Enter the fleet passcode to load the bus list.", color = RsColor.Muted)
-            }
+            keyboardActions = KeyboardActions(onDone = { submitPasscode() })
         )
-        Spacer(Modifier.height(10.dp))
+        if (!passOk) RsHint("Enter the fleet passcode to load the bus list.")
+        Spacer(Modifier.height(14.dp))
 
         if (fleet == null && !serverDown && !checking) {
             PrimaryButton("Confirm passcode", enabled = passOk) { submitPasscode() }
@@ -240,19 +243,24 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
                 // A picker rules out typos, and showing the plate lets the installer
                 // confirm the bus in front of them.
                 var open by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
-                    OutlinedTextField(
-                        value = fleet!!.firstOrNull { it.vehicleId == vehicle }
+                Box {
+                    RsPickerField(
+                        display = fleet!!.firstOrNull { it.vehicleId == vehicle }
                             ?.let { "${it.vehicleId} · ${it.plate}" } ?: "",
-                        onValueChange = {}, readOnly = true,
-                        label = { Text("Select vehicle") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(open) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                        placeholder = "Select vehicle",
+                        expanded = open,
+                        onClick = { open = true },
+                        trailing = { RsFieldIcon(RsIcons.Bus) }
                     )
-                    ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                         fleet!!.forEach { v ->
                             DropdownMenuItem(
-                                text = { Text("${v.vehicleId} · ${v.plate}") },
+                                text = {
+                                    Text(
+                                        "${v.vehicleId} · ${v.plate}",
+                                        color = RsColor.Navy, fontWeight = FontWeight.Medium
+                                    )
+                                },
                                 onClick = { vehicle = v.vehicleId; bindError = null; open = false }
                             )
                         }
@@ -262,7 +270,8 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
             serverDown -> {
                 // Offline fallback: manual entry with format validation. The bind retries
                 // the network regardless.
-                OutlinedTextField(
+                val badFormat = touchedVehicle && vehicle.isNotEmpty() && !vehicleOk
+                RsTextField(
                     vehicle,
                     {
                         // Fleet identifiers are V followed by digits, so input is uppercased,
@@ -270,15 +279,12 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
                         vehicle = it.uppercase().filter { c -> c == 'V' || c.isDigit() }.take(4)
                         touchedVehicle = true; bindError = null
                     },
-                    singleLine = true,
-                    label = { Text("Vehicle ID (e.g. V001)") }, modifier = Modifier.fillMaxWidth(),
-                    isError = touchedVehicle && vehicle.isNotEmpty() && !vehicleOk,
-                    supportingText = {
-                        if (touchedVehicle && vehicle.isNotEmpty() && !vehicleOk)
-                            Text("Format: V + 3 digits, e.g. V001", color = RsColor.Error)
-                        else Text("Offline: type the vehicle ID from the dashboard sticker.", color = RsColor.Muted)
-                    }
+                    placeholder = "Vehicle ID (e.g. V001)",
+                    leading = { RsFieldIcon(RsIcons.Bus) },
+                    isError = badFormat
                 )
+                if (badFormat) RsHint("Format: V + 3 digits, e.g. V001", error = true)
+                else RsHint("Offline: type the vehicle ID from the dashboard sticker.")
             }
         }
         fleetError?.takeIf { !serverDown }?.let {
@@ -398,7 +404,7 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
     // vehicles rows, which an admin needs in order to identify or clear this phone's lock.
     if (deviceId.isNotBlank()) {
         Spacer(Modifier.height(14.dp))
-        Text("RouteSync Counter · $deviceId", color = RsColor.Muted, fontSize = 11.sp)
+        Text("RouteSync Sentinel · $deviceId", color = RsColor.Muted, fontSize = 11.sp)
     }
 }
 
@@ -442,7 +448,7 @@ private fun Header(vm: CounterViewModel, vehicleId: String, onCamera: () -> Unit
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RsWordmark("Passenger Counter")
+        RsWordmark("Sentinel")
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Screen pinning keeps the app from being swiped away or backgrounded on a
             // mounted phone. Unpinning is a system gesture, Back and Recents together.
@@ -466,12 +472,13 @@ private fun StatusDot(active: Boolean) {
 }
 
 @Composable
-private fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
-    Button(
-        onClick = onClick, enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth().height(52.dp)
-    ) { Text(text, fontWeight = FontWeight.Bold) }
+private fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
+    RsPrimaryButton(text, enabled, onClick = onClick)
+
+/** A field's leading or trailing mark, at the size the driver app draws them. */
+@Composable
+private fun RsFieldIcon(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Icon(icon, contentDescription = null, tint = RsColor.Muted, modifier = Modifier.size(18.dp))
 }
 
 /**
@@ -500,14 +507,16 @@ private fun UnbindDialog(vm: CounterViewModel, dismiss: () -> Unit) {
             Column {
                 Text("Enter the bind passcode to release this phone from its bus.", color = RsColor.Muted)
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    passcode, { passcode = it; error = false }, singleLine = true,
-                    label = { Text("Passcode") }, isError = error,
+                RsTextField(
+                    passcode, { passcode = it; error = false },
+                    placeholder = "Passcode",
+                    leading = { RsFieldIcon(RsIcons.Lock) },
+                    trailing = { PasscodeReveal(showPasscode) { showPasscode = !showPasscode } },
+                    isError = error,
                     visualTransformation =
-                        if (showPasscode) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = { PasscodeReveal(showPasscode) { showPasscode = !showPasscode } }
+                        if (showPasscode) VisualTransformation.None else PasswordVisualTransformation()
                 )
-                if (error) Text("Wrong passcode.", color = RsColor.Error)
+                if (error) RsHint("Wrong passcode.", error = true)
             }
         },
         confirmButton = {

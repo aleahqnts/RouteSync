@@ -61,6 +61,29 @@ object RsIcons {
      * eye while the passcode is hidden, an open one while it is readable. The dashboard
      * and the driver app draw the same pair from the same outlines.
      */
+    /** Padlock, the mark the driver app puts beside a passcode field. */
+    val Lock: ImageVector by lazy {
+        strokeIcon(
+            "Lock",
+            // Body.
+            "M5,11 L19,11 A1,1 0 0 1 20,12 L20,19 A1,1 0 0 1 19,20 L5,20 A1,1 0 0 1 4,19 L4,12 A1,1 0 0 1 5,11 z",
+            // Shackle, standing on the body rather than crossing into it.
+            "M8,11 L8,7.5 A4,4 0 0 1 16,7.5 L16,11"
+        )
+    }
+
+    /** Bus, for the field that names which one this phone is bound to. */
+    val Bus: ImageVector by lazy {
+        strokeIcon(
+            "Bus",
+            "M5,17 L5,7 A3,3 0 0 1 8,4 L16,4 A3,3 0 0 1 19,7 L19,17 A2,2 0 0 1 17,19 L7,19 A2,2 0 0 1 5,17 z",
+            // Window band and the two wheels.
+            "M5,11 L19,11",
+            "M8,19 L8,20.5",
+            "M16,19 L16,20.5"
+        )
+    }
+
     val EyeOpen: ImageVector by lazy {
         strokeIcon(
             "EyeOpen",

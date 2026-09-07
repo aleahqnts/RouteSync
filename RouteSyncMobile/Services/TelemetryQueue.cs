@@ -120,14 +120,14 @@ public class TelemetryQueue
         var fins = await _db.Table<PendingTripFinalize>().OrderBy(f => f.Id).ToListAsync();
         foreach (var f in fins)
         {
-            // total_boarded is sent as a claim. A trigger keeps the high-water mark, so
-            // this cannot lower a count the counter phone made while this app was out of
-            // contact, and estimated_revenue is re-derived from whichever figure wins.
+            // total_boarded is sent as a claim. A trigger keeps the higher of this and
+            // what is stored whenever a camera is counting, so a finalize sent after a
+            // spell out of contact cannot replace a count made in a dead zone, and
+            // estimated_revenue is re-derived from whichever figure wins.
             var body = new
             {
                 trip_status = "Completed",
                 total_boarded = f.TotalBoarded,
-                boarded_adjustment = f.BoardedAdjustment,
                 estimated_revenue = f.Revenue,
                 actual_end_time = f.EndTime
             };

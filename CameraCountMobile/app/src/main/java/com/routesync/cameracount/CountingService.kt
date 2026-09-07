@@ -63,7 +63,7 @@ class CountingService : Service() {
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentTitle("RouteSync Counter")
+            .setContentTitle("RouteSync Sentinel")
             .setContentText("Counting passengers${if (vehicle.isNotBlank()) " · $vehicle" else ""}")
             .setOngoing(true)
             .build()

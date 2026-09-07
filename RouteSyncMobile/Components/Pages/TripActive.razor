@@ -49,21 +49,21 @@ else
             {
                 <p class="auto-badge"><span class="auto-dot"></span> Auto-counting (camera)</p>
                 <div class="counter">
-                    <span class="count">@Reported</span>
+                    <span class="count">@total</span>
                 </div>
             }
             else if (!ShowManual)
             {
                 <p class="auto-badge pending"><span class="auto-dot"></span> Connecting to camera counter&#8230;</p>
                 <div class="counter">
-                    <span class="count">@Reported</span>
+                    <span class="count">@total</span>
                 </div>
             }
             else
             {
                 <div class="counter">
                     <button class="cbtn minus" @onclick="Dec">&#8722;</button>
-                    <span class="count">@Reported</span>
+                    <span class="count">@total</span>
                     <button class="cbtn plus" @onclick="Inc">&#43;</button>
                 </div>
             }
@@ -229,19 +229,9 @@ else
     private bool ShowManual => !cameraAlive && (cameraSeen || DateTime.UtcNow >= graceEndUtc);
 
     private string CountKey => $"trip_count_{TripId}";
-    private string AdjKey => $"trip_adj_{TripId}";
     private string CacheKey => $"trip_cache_{TripId}";
     private const string ActiveKey = "fw_active_trip";
-
-    // The driver's running correction, at or below zero. Held apart from the count
-    // because the two behave differently: the count is a claim that only rises and is
-    // merged with the camera's, while this is a statement about the count being wrong.
-    private int adjustment;
-
-    /// <summary>What the trip is credited with, and what the screen shows.</summary>
-    private int Reported => Math.Max(0, total + adjustment);
-
-    private decimal Revenue => Reported * fare;
+    private decimal Revenue => total * fare;
 
     private string StartLabel => trip?.ActualStartTime is not null
         ? PhTime.Raw(trip.ActualStartTime.Value).ToString("h:mm tt")
@@ -319,15 +309,9 @@ else
         {
             // Prefer the locally saved running count, which survives a crash.
             var saved = await SecureStorage.Default.GetAsync(CountKey);
-            var savedAdj = await SecureStorage.Default.GetAsync(AdjKey);
-            // The counted figure rather than the reported one. The reported figure
-            // already carries the correction, so seeding the count from it and then
-            // applying the correction again would subtract it twice.
-            total = int.TryParse(saved, out var s) ? s : trip.BoardedCounted;
-            adjustment = int.TryParse(savedAdj, out var a) ? a : trip.BoardedAdjustment;
+            total = int.TryParse(saved, out var s) ? s : trip.TotalBoarded;
             // Seed the mirror so the tracker has a count to log from its first fix.
             await SecureStorage.Default.SetAsync(CountKey, total.ToString());
-            await SecureStorage.Default.SetAsync(AdjKey, adjustment.ToString());
 
             // The camera may already be counting this trip, after an app restart
             // mid-trip. Its heartbeat is evaluated before the first poll so the manual
@@ -515,13 +499,9 @@ else
         var hb = t.CountHeartbeat;
         if (hb is not null) cameraSeen = true;
         var fresh = hb is not null && DateTime.UtcNow - PhTime.Raw(hb.Value) < HeartbeatStale;
-        // The camera's count can only raise the local one. A lagging read must never
+        // The camera's total can only raise the local one. A lagging read must never
         // discard taps the driver has just made.
-        //
-        // Read from the counted figure, not the reported one. A driver who has just
-        // subtracted three leaves the reported figure below the count, and comparing
-        // against that would read their own correction as ground still to make up.
-        if (fresh && t.BoardedCounted > total) total = t.BoardedCounted;
+        if (fresh && t.TotalBoarded > total) total = t.TotalBoarded;
         cameraAlive = fresh;
     }
 
@@ -572,11 +552,9 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    // Plus counts, minus corrects, and they are not opposites once a camera is
-    // involved. A passenger the camera missed is one more to count. A passenger it
-    // counted twice cannot be taken off the count, because the camera reports the same
-    // figure again on its next reading and the higher of the two is always kept. The
-    // correction is stored separately so that it survives being outcounted.
+    // Both buttons move the same count, and are only on screen while no camera is
+    // counting. The database permits this app to lower the stored figure under exactly
+    // that condition, so minus undoes a mis-tap rather than being quietly ignored.
 
     private async Task Inc()
     {
@@ -586,13 +564,13 @@ else
 
     private async Task Dec()
     {
-        if (Reported > 0) adjustment--;
-        await SecureStorage.Default.SetAsync(AdjKey, adjustment.ToString());
+        if (total > 0) total--;
+        await SecureStorage.Default.SetAsync(CountKey, total.ToString());
     }
 
     private async Task Flush()
     {
-        try { await Data.UpdateTripProgressAsync(TripId, total, adjustment, Revenue); }
+        try { await Data.UpdateTripProgressAsync(TripId, total, Revenue); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TripActive.Flush] {ex}"); }
     }
 
@@ -606,7 +584,7 @@ else
             // the audit never records a stale value.
             var saved = await SecureStorage.Default.GetAsync(CountKey);
             var finalTotal = Math.Max(total, int.TryParse(saved, out var s) ? s : 0);
-            var finalRevenue = Math.Max(0, finalTotal + adjustment) * fare;
+            var finalRevenue = finalTotal * fare;
 
             // Enqueue first so the finalization survives being offline. The PATCH is the
             // single authoritative write of trips.total_boarded.
@@ -614,7 +592,6 @@ else
             {
                 TripId = TripId,
                 TotalBoarded = finalTotal,
-                BoardedAdjustment = adjustment,
                 Revenue = finalRevenue,
                 EndTime = PhTime.Now,
                 VehicleId = vehicle?.VehicleId ?? trip?.VehicleId ?? ""
@@ -624,7 +601,6 @@ else
             Tracker.Stop();
             timer?.Dispose();
             SecureStorage.Default.Remove(CountKey);
-            SecureStorage.Default.Remove(AdjKey);
             SecureStorage.Default.Remove(CacheKey);
             SecureStorage.Default.Remove(ActiveKey);
 
