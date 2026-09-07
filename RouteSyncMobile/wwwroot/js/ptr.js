@@ -7,7 +7,13 @@
 // left open while the phone was elsewhere is right the moment it is looked at again.
 window.ptr = (function () {
     let current = null;
-    let wired = false;
+    // The element the listeners are attached to, rather than whether any have ever
+    // been attached. The scroll container belongs to MainLayout, and the pages that
+    // declare LoginLayout tear that layout down: the checklist, the active trip, trip
+    // details, the calibration editor. Returning from one builds a new container, and
+    // a flag saying the work was already done would leave every listener bound to an
+    // element that is no longer in the document.
+    let wiredEl = null;
     let resuming = false;
     const THRESHOLD = 70;
     const MAX_H = 96; // indicator height when spinning (room for status-bar offset)
@@ -19,7 +25,12 @@ window.ptr = (function () {
 
     function wire() {
         const el = document.querySelector('.app-body');
-        if (!el) return false;
+        // Absent while a LoginLayout page is on screen. Left unwired so the next
+        // registration tries again.
+        if (!el) return;
+        // Already carrying these listeners. Attaching a second set would run the
+        // refresh twice for one pull.
+        if (el === wiredEl) return;
 
         let startY = 0, dist = 0, pulling = false, busy = false;
         const ind = indicator();
@@ -51,7 +62,7 @@ window.ptr = (function () {
             if (ind) { ind.style.height = '0px'; ind.style.opacity = 0; ind.classList.remove('spin'); }
         });
 
-        return true;
+        wiredEl = el;
     }
 
     // No indicator on this one. The pull is something the driver did and wants answered;
@@ -67,7 +78,9 @@ window.ptr = (function () {
     return {
         set: function (dotnet) {
             current = dotnet;
-            if (!wired) { wired = wire(); }
+            // Every registration, not only the first. A tab page registering is also
+            // the moment the layout it needs is known to be back on screen.
+            wire();
         }
     };
 })();
