@@ -141,7 +141,16 @@ else
                         </div>
                         <button class="link-btn" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{assignment.TripId}"))">View Log</button>
                     </div>
-                    @if (assignment.TripStatus == "Active")
+                    @* Ending a shift is done the moment the driver does it. The server
+                       finds out on the next flush, and until then it still reads the trip
+                       as active, so it is not the thing asked here. *@
+                    @if (endPending)
+                    {
+                        <div class="grounded-note">
+                            This shift has ended. The record will be sent when the connection returns.
+                        </div>
+                    }
+                    else if (assignment.TripStatus == "Active")
                     {
                         <button class="btn-green" @onclick="@(() => Nav.NavigateTo($"/trip-active/{assignment.TripId}"))">Resume Shift</button>
                     }
@@ -336,6 +345,14 @@ else
         }
     }
 
+    /// <summary>Whether this phone has already ended the shift it is showing.</summary>
+    /// <remarks>
+    /// True between a trip being ended out of contact and the queued record reaching the
+    /// server. The server reads the trip as active for the whole of that window, and
+    /// believing it offers the driver a shift they have already finished.
+    /// </remarks>
+    private bool endPending;
+
     private const int LeadHours = 2; // checklist/start opens this many hours before shift
 
     private DateTime ShiftStart => assignment is null
@@ -383,6 +400,15 @@ else
             {
                 // Never replace state mid-interaction, with a modal open or a toggle in flight.
                 if (toggling || showUnavailModal || loading) continue;
+
+                // Queued work goes out before the page is re-read, because this loop is
+                // what notices the connection coming back. Flushing only in
+                // OnInitializedAsync ran it at the one moment the phone was certain to
+                // still be offline, so a trip ended in a dead zone stayed active on the
+                // server and was offered back as a resume for as long as the driver
+                // stayed on this page.
+                try { await Queue.FlushAsync(); } catch { /* offline: stays queued */ }
+
                 await InvokeAsync(async () =>
                 {
                     await Load(silent: true);
@@ -462,6 +488,9 @@ else
         }
         finally
         {
+            // Read from the queue rather than the network, so it stays right when the
+            // load above has just failed, which is exactly when it matters.
+            endPending = assignment is not null && await Queue.HasFinalizeAsync(assignment.TripId);
             if (!silent) loading = false;
         }
     }

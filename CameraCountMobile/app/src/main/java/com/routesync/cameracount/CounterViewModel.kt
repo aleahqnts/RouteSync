@@ -35,7 +35,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
             val vehicleId: String,
             val lastError: String?,
             val plate: String? = null,
-            val tripSummary: String? = null // e.g. "43 boarded", shown after a trip ends
+            val tripSummary: String? = null, // e.g. "43 boarded", shown after a trip ends
+            /** Counts held for trips the database has not confirmed storing. Zero
+             *  normally, and a number that does not fall means they are being refused. */
+            val unreconciled: Int = 0
         ) : UiState
         /** Another camera phone owns this trip. This device watches without counting. */
         data class Standby(val vehicleId: String, val tripId: String) : UiState
@@ -62,10 +65,13 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     private var lastSummary: String? = null
 
     private fun waiting(err: String? = null) =
-        UiState.Waiting(vehicleId, err, plate, lastSummary)
+        UiState.Waiting(vehicleId, err, plate, lastSummary, unreconciled)
 
-    /** Trip and count persisted before the last shutdown, consumed when the trip is re-acquired. */
-    private var restored: Prefs.PendingCount? = null
+    /** How many held counts the database has not confirmed, republished each poll. */
+    private var unreconciled = 0
+
+    /** When the oldest of those was made, reported so a backlog can be told from a lag. */
+    private var backlogOldest: Long? = null
 
     /**
      * Time of the last analyzed frame, updated by the camera pipeline.
@@ -85,7 +91,6 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
             deviceId = prefs.deviceId()
             // Attach the stored device JWT before the first database call.
             SupabaseApi.deviceJwt = prefs.deviceJwt()
-            restored = prefs.pendingCount() // survives kill/reboot mid-trip
             plate = prefs.plate.first()
             val v = prefs.vehicleId.first()
             if (v.isNullOrBlank()) _state.value = UiState.NeedsSetup
@@ -249,12 +254,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                                 // is resumed too, so counts made in a dead zone survive a
                                 // restart and flush on reconnect.
                                 tripId = active.tripId
-                                val saved = restored?.takeIf { it.tripId == active.tripId }?.count ?: 0
-                                // A pending count from an earlier trip, one that ended while
-                                // this device was down, still needs its reconcile.
-                                restored?.takeIf { it.tripId != active.tripId }
-                                    ?.let { reconcileAndClear(it.tripId, it.count) }
-                                restored = null
+                                val saved = prefs.pendingCount(active.tripId)?.count ?: 0
                                 count = maxOf(count, active.totalBoarded, saved)
                                 persistPending(active.tripId)
                                 lastFrameAt = android.os.SystemClock.elapsedRealtime() // camera warm-up grace
@@ -280,21 +280,12 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                             val endedTrip = tripId!!
                             val finalCount = count
                             lastSummary = "$finalCount boarded"
+                            prefs.savePendingCount(endedTrip, finalCount)
                             stopCounting()
-                            reconcileAndClear(endedTrip, finalCount)
                             _state.value = waiting()
                         }
                     }
-                    if (tripId == null && active == null) {
-                        // Started up after the trip had already ended, with counts still on
-                        // disk from an offline shutdown. Reconcile them now.
-                        restored?.let { r ->
-                            restored = null
-                            if (r.count > 0) lastSummary = "${r.count} boarded (recovered)"
-                            reconcileAndClear(r.tripId, r.count)
-                        }
-                        _state.value = waiting()
-                    }
+                    if (tripId == null && active == null) _state.value = waiting()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     // The job is being shut down, by an unbind or by the view model
                     // going away. Rethrow so the loop actually stops rather than
@@ -304,6 +295,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     if (tripId == null) _state.value = waiting(e.message)
                     // While counting, poll errors are tolerated. The flush loop keeps trying.
                 }
+                // Held counts are offered on every pass, including while a later trip is
+                // being counted, so one that cannot be delivered today is still being
+                // tried tomorrow. Wrapped so a failure cannot break the trip poll.
+                runCatching { drainPending(tripId) }
+
                 // The config follower runs regardless of trip state, so a parked bus still
                 // obeys a remote calibration. Wrapped separately so a configuration failure
                 // cannot break the trip poll.
@@ -329,6 +325,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
      * - The two are in sync. Every third tick sends a liveness heartbeat, roughly every
      *   12 seconds.
      */
+    private fun backlogInstant(): java.time.Instant? =
+        backlogOldest?.let { java.time.Instant.ofEpochMilli(it) }
+
     private var cfgTick = 0
     private suspend fun followDeviceConfig() {
         cfgTick++
@@ -341,7 +340,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 SupabaseApi.upsertDeviceConfig(
                     deviceId, cal.ax, cal.ay, cal.bx, cal.by, cal.inwardSign, back, localV
                 )
-                SupabaseApi.upsertDeviceStatus(deviceId, localV)
+                SupabaseApi.upsertDeviceStatus(
+                    deviceId, localV,
+                    unreconciled = unreconciled, unreconciledOldest = backlogInstant()
+                )
             }
             cfg.version > localV -> {
                 prefs.applyRemoteConfig(
@@ -357,7 +359,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     SupabaseApi.upsertDeviceStatus(deviceId, cfg.version, justApplied = true)
                 }
             }
-            cfgTick % 3 == 0 -> SupabaseApi.upsertDeviceStatus(deviceId, localV)
+            cfgTick % 3 == 0 -> SupabaseApi.upsertDeviceStatus(
+                deviceId, localV,
+                unreconciled = unreconciled, unreconciledOldest = backlogInstant()
+            )
         }
         handleWake(cfg?.wakeRequestedAt, localV)
     }
@@ -491,22 +496,61 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Pushes the final count if it exceeds the stored total, then clears the persisted
-     * pending count.
+     * Offers one held count to the database and reports whether it was stored.
      *
-     * A failed reconcile, from being offline or a transient error, puts the pending count
-     * back in [restored], so the next poll pass or the next app start retries it.
+     * Success is the figure that comes back, not the status code. A write matching no
+     * row answers 200 with an empty body, and a count can match nothing for reasons that
+     * are not recoverable: the claim was taken by another phone while this one was
+     * offline, and row-level security then refuses every retry against the closed trip.
+     * Treating that as success is what used to delete counts that had never been stored.
      */
-    private fun reconcileAndClear(trip: String, finalCount: Int) {
-        viewModelScope.launch {
-            try {
-                if (finalCount > 0) SupabaseApi.reconcileFinalCount(trip, deviceId, finalCount)
-                // Clear only this trip's pending count. A newer trip may have written its own.
-                if (prefs.pendingCount()?.tripId == trip) prefs.clearPendingCount()
-            } catch (_: Exception) {
-                restored = Prefs.PendingCount(trip, finalCount) // retry on a later pass
-            }
+    private suspend fun reconcileOne(held: Prefs.PendingCount): Boolean {
+        if (held.count <= 0) {
+            prefs.clearPendingCount(held.tripId)
+            return true
         }
+        val stored = try {
+            SupabaseApi.reconcileFinalCount(held.tripId, deviceId, held.count)
+        } catch (_: Exception) {
+            return false // offline or transient, so it stays on disk
+        }
+        if (stored == null || stored < held.count) return false
+        prefs.clearPendingCount(held.tripId)
+        return true
+    }
+
+    /**
+     * Offers every held count except the one still being made, then republishes how many
+     * remain, both on screen and to the fleet.
+     *
+     * The trip being counted is skipped because the flush loop is already writing it
+     * every five seconds, and its entry is not finished until the trip ends.
+     */
+    private suspend fun drainPending(activeTrip: String?) {
+        // Whether anything was already known to be stuck. A count delivered on the pass
+        // straight after its trip ended is the ordinary case and says nothing worth
+        // reading; one delivered after a failure is the dead zone finally clearing.
+        val hadBacklog = unreconciled > 0
+        // Counts old enough to be given up on. Said out loud rather than swept away,
+        // because the figure is about to stop existing anywhere at all.
+        prefs.prunePendingCounts().forEach {
+            lastSummary = "${it.count} boarded on ${it.tripId}, never delivered"
+        }
+
+        prefs.pendingCounts()
+            .filter { it.tripId != activeTrip }
+            .forEach { held ->
+                if (reconcileOne(held) && hadBacklog) {
+                    lastSummary = "${held.count} boarded, delivered late"
+                }
+            }
+
+        val held = prefs.pendingCounts().filter { it.tripId != activeTrip }
+        unreconciled = held.size
+        backlogOldest = held.minByOrNull { it.at }?.at
+        // The count reaches the screen on the next pass rather than here. Publishing
+        // from this far down would overwrite the state the poll has just set, and the
+        // one it sets on a failed poll is the offline indicator.
     }
 
     // cameraStalled defaults to the live answer rather than to false. Several loops

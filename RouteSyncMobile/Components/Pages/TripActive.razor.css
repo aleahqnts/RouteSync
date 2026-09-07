@@ -342,6 +342,15 @@
 .cam-chip.on { background: #eafaf1; color: #2fae74; }
 .cam-chip.off { background: #fdecec; color: #d15b5b; }
 
+.cam-held {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fdecec;
+    color: #b4443f;
+    font: 600 12px/1.4 sans-serif;
+}
+
 .cam-btn.calib {
     width: 100%;
     border: 1px solid #cfe5e1;

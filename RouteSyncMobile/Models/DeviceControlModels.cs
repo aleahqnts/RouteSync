@@ -32,4 +32,7 @@ public class DeviceStatusDto
     // snapshot became available.
     [JsonPropertyName("wake_state")] public string? WakeState { get; set; }
     [JsonPropertyName("snapshot_ready_at")] public DateTimeOffset? SnapshotReadyAt { get; set; }
+    // Counts the camera has made but cannot get the database to accept. Zero in
+    // normal running, since a count is confirmed within seconds of a trip ending.
+    [JsonPropertyName("unreconciled_counts")] public int UnreconciledCounts { get; set; }
 }

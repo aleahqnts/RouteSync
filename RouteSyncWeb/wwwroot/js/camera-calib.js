@@ -143,6 +143,24 @@
         return res.json();
     }
 
+    // Counts the camera holds that the database has not confirmed storing. A phone
+    // that lost its trip claim while it was out of contact is refused on every retry,
+    // so this can be a number that never falls on its own.
+    function backlog(n, oldest) {
+        const el = $('camBacklog');
+        if (!el) return;
+        if (!n) { el.style.display = 'none'; return; }
+        let text = n === 1
+            ? 'This camera is holding 1 trip count it has not been able to send.'
+            : 'This camera is holding ' + n + ' trip counts it has not been able to send.';
+        if (oldest) {
+            const days = Math.floor((Date.now() - Date.parse(oldest)) / 86400000);
+            if (days >= 1) text += ' The oldest is ' + days + (days === 1 ? ' day' : ' days') + ' old.';
+        }
+        el.textContent = text;
+        el.style.display = 'block';
+    }
+
     function applyState(s) {
         if (!s) return;
         if (s.status && s.status.last_seen) {
@@ -150,6 +168,8 @@
         } else {
             chip(false);
         }
+        backlog(s.status && s.status.unreconciled_counts,
+                s.status && s.status.unreconciled_oldest_at);
     }
 
     // ── Flows ──
