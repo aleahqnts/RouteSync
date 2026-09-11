@@ -1,0 +1,133 @@
+@implements IDisposable
+@inject ILocationGuard Location
+
+@* Tells the driver that the phone cannot report where the bus is, and takes them to the
+   setting that fixes it.
+
+   Shown before a shift starts and again whenever location goes off during one. Without
+   it the tracking service simply gets no fix, writes nothing, and the bus drops off the
+   fleet map with no sign on the phone that anything is wrong.
+
+   Closes itself once location is back, checked every couple of seconds, so a driver who
+   goes to settings and returns finds the warning already gone rather than having to
+   dismiss something that is no longer true.
+
+   Styles are inline for the same reason BackNavHost and MessageAlert inline theirs:
+   scoped CSS on this project does not reliably apply after structural edits. *@
+
+@if (State != LocationState.Ready)
+{
+    <div style="position:fixed; inset:0; z-index:9200; background:rgba(15,22,44,.55);
+                display:flex; align-items:center; justify-content:center; padding:24px;">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="loc-title"
+             style="width:100%; max-width:340px; background:#fff; border-radius:20px;
+                    padding:24px 20px 18px; text-align:center;
+                    box-shadow:0 24px 60px rgba(15,22,44,.45);">
+
+            <div style="width:58px; height:58px; margin:0 auto 14px; border-radius:50%;
+                        background:#fdecec; display:flex; align-items:center; justify-content:center;">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#d15b5b"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" />
+                    <circle cx="12" cy="10" r="2.5" />
+                </svg>
+            </div>
+
+            <p id="loc-title" style="margin:0 0 8px; font:800 18px sans-serif; color:#1b2a56;">@Title</p>
+            <p style="margin:0 0 20px; font:14px sans-serif; color:#5a6473; line-height:1.5;">@Body</p>
+
+            <button @onclick="OpenSettings"
+                    style="width:100%; padding:13px 0; border:none; border-radius:12px;
+                           background:#2e9e8f; color:#fff; font:700 15px sans-serif; cursor:pointer;">
+                @SettingsLabel
+            </button>
+            <button @onclick="Dismiss"
+                    style="width:100%; margin-top:8px; padding:11px 0; border:none; border-radius:12px;
+                           background:transparent; color:#5a6473; font:600 14px sans-serif; cursor:pointer;">
+                @DismissLabel
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>What is wrong. <see cref="LocationState.Ready"/> hides the prompt.</summary>
+    [Parameter] public LocationState State { get; set; } = LocationState.Ready;
+
+    /// <summary>
+    /// True before the shift has started, when the prompt stands in the way of starting
+    /// it. False during a trip, when it can only warn: the bus is already on the road.
+    /// </summary>
+    [Parameter] public bool Starting { get; set; }
+
+    /// <summary>Raised when location comes back without the driver touching the prompt.</summary>
+    [Parameter] public EventCallback OnResolved { get; set; }
+
+    /// <summary>Raised when the driver closes it.</summary>
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private System.Threading.Timer? recheck;
+
+    private string Title => State == LocationState.PermissionDenied
+        ? "Location Access Needed"
+        : Starting ? "Turn On Location" : "Location Is Off";
+
+    private string Body => (State, Starting) switch
+    {
+        (LocationState.PermissionDenied, true) =>
+            "RouteSync does not have permission to use this phone's location. Please allow it in the app settings before starting your shift, so dispatch can see the bus on the fleet map.",
+        (LocationState.PermissionDenied, false) =>
+            "RouteSync can no longer use this phone's location, so dispatch cannot see this bus on the fleet map. Please allow location access in the app settings.",
+        (_, true) =>
+            "Location is turned off on this phone. Dispatch follows the bus on the fleet map using its location, so please turn it on before starting your shift.",
+        _ =>
+            "This phone has stopped sharing its location. The bus no longer appears on the fleet map and dispatch cannot see where it is. Please turn location back on."
+    };
+
+    private string SettingsLabel => State == LocationState.PermissionDenied
+        ? "Open App Settings" : "Open Location Settings";
+
+    // Before the shift nothing has happened yet, so backing out is simply not starting.
+    // During it the trip carries on regardless, and the prompt returns if location is
+    // still off a little later.
+    private string DismissLabel => Starting ? "Cancel" : "Remind Me Later";
+
+    protected override void OnParametersSet()
+    {
+        if (State == LocationState.Ready)
+        {
+            recheck?.Dispose();
+            recheck = null;
+        }
+        else
+        {
+            // Dispatched rather than run on the timer thread, the same as the trip
+            // screen's own check, because the permission read is not safe off it.
+            recheck ??= new System.Threading.Timer(_ => _ = InvokeAsync(Recheck), null, 2000, 2000);
+        }
+    }
+
+    private async Task Recheck()
+    {
+        try
+        {
+            if (await Location.CheckAsync() == LocationState.Ready)
+                await OnResolved.InvokeAsync();
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LocationPrompt] {ex}"); }
+    }
+
+    private void OpenSettings()
+    {
+        if (State == LocationState.PermissionDenied) Location.OpenAppSettings();
+        else Location.OpenLocationSettings();
+    }
+
+    private Task Dismiss() => OnDismiss.InvokeAsync();
+
+    public void Dispose()
+    {
+        recheck?.Dispose();
+        recheck = null;
+    }
+}

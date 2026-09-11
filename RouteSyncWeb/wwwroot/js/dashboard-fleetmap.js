@@ -25,11 +25,20 @@
             boxZoom: false,
             keyboard: false,
             touchZoom: false,
-            attributionControl: false
+            // Kept, small, even on a preview this size. Credit on the map itself is a
+            // condition of using OpenStreetMap's tiles, not a courtesy.
+            attributionControl: true
         });
+        map.attributionControl.setPrefix(false);
         map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        // Same terms as the full map: the origin is sent as the Referer, which the site-wide
+        // header otherwise withholds and without which OpenStreetMap blocks every tile.
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            referrerPolicy: 'strict-origin-when-cross-origin',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
 
         var routeColors = {};       // routeName -> color
         var busLayer = L.layerGroup().addTo(map);

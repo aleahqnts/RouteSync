@@ -172,8 +172,9 @@ app.Use(async (context, next) =>
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; " +
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
         "font-src 'self' data: https://cdn.jsdelivr.net; " +
-        // Leaflet pulls map tiles straight from OpenStreetMap.
-        "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; " +
+        // Leaflet pulls map tiles straight from OpenStreetMap, from the bare host. A
+        // wildcard such as *.tile.openstreetmap.org does not cover it.
+        "img-src 'self' data: blob: https://tile.openstreetmap.org https://unpkg.com; " +
         // Every call the browser makes is to this server. The database is reached only
         // from the server side, so the browser never needs to.
         "connect-src 'self'; " +
@@ -182,6 +183,9 @@ app.Use(async (context, next) =>
         "form-action 'self'; " +
         "object-src 'none'";
     headers["X-Content-Type-Options"] = "nosniff";
+    // Nothing about the page travels to another site. The map tiles are the one
+    // exception, made on the tile layer itself rather than here: OpenStreetMap refuses
+    // tiles to a page that sends no Referer, so they carry the origin alone.
     headers["Referrer-Policy"] = "same-origin";
     await next();
 });
