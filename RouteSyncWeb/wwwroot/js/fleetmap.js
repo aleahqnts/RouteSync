@@ -27,8 +27,16 @@
         maxBoundsViscosity: 1
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // OpenStreetMap's own servers are run by volunteers and refuse tiles to any web
+    // page that does not say which site it is. The dashboard sends no Referer on
+    // cross-origin requests at all, by its own Referrer-Policy header, so every tile
+    // came back as an "Access blocked" image. The policy is overridden here for the
+    // tiles alone, and only the origin is sent, never the page path.
+    //
+    // The one host without a subdomain, which OSM now asks for in place of a, b and c.
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        referrerPolicy: 'strict-origin-when-cross-origin',
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
         className: 'map-tiles'
     }).addTo(map);
