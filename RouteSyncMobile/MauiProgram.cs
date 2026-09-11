@@ -44,9 +44,11 @@ public static class MauiProgram
 #if ANDROID
 		builder.Services.AddSingleton<Services.ITripTracker, Platforms.Android.AndroidTripTracker>();
 		builder.Services.AddSingleton<Services.ILocalNotifier, Platforms.Android.AndroidLocalNotifier>();
+		builder.Services.AddSingleton<Services.ILocationGuard, Platforms.Android.AndroidLocationGuard>();
 #else
 		builder.Services.AddSingleton<Services.ITripTracker, Services.NoopTripTracker>();
 		builder.Services.AddSingleton<Services.ILocalNotifier, Services.NoopLocalNotifier>();
+		builder.Services.AddSingleton<Services.ILocationGuard, Services.NoopLocationGuard>();
 #endif
 
 		// Message poller, which drives the badge, the popup and the system notification.
