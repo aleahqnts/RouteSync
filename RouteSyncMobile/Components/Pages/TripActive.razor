@@ -4,6 +4,7 @@
 @inject SessionService Session
 @inject DriverDataService Data
 @inject ITripTracker Tracker
+@inject ILocationGuard Location
 @inject TelemetryQueue Queue
 @inject NavigationManager Nav
 @using System.Text.Json
@@ -19,6 +20,8 @@ else if (trip is null)
 else
 {
     <MessageAlert />
+    <LocationPrompt State="locationPrompt" Starting="false"
+                    OnResolved="LocationResolved" OnDismiss="SnoozeLocation" />
     <div class="ta">
         <div class="ta-head">
             <h1>Active Trip</h1>
@@ -228,6 +231,14 @@ else
     private static readonly TimeSpan CameraGrace = TimeSpan.FromSeconds(30);
     private bool ShowManual => !cameraAlive && (cameraSeen || DateTime.UtcNow >= graceEndUtc);
 
+    // What the location prompt is warning about, or Ready when it is not shown.
+    private LocationState locationPrompt = LocationState.Ready;
+
+    // Set when the driver puts the warning off. It comes back after this if location is
+    // still off, since a warning that can be dismissed for good is one that will be.
+    private DateTime? locationSnoozedUntil;
+    private static readonly TimeSpan LocationSnooze = TimeSpan.FromMinutes(2);
+
     private string CountKey => $"trip_count_{TripId}";
     private string CacheKey => $"trip_cache_{TripId}";
     private const string ActiveKey = "fw_active_trip";
@@ -326,6 +337,10 @@ else
             // grant may have been revoked since the last trip.
             await EnsureLocationPermissionAsync();
             Tracker.Start(TripId);
+
+            // A resumed shift arrives here without passing the start screen, where
+            // location is otherwise checked, so it is checked again on the way in.
+            await CheckLocationAsync();
 
             // Hardware back asks before leaving, because a single stray press mid-boarding
             // takes the tap controls away until the driver navigates back.
@@ -483,6 +498,10 @@ else
         // the heartbeat goes stale.
         if (tick % 15 == 0 && !cameraAlive) _ = Flush();
         if (tick % 5 == 0) _ = RefreshCameraStateAsync();
+        // Location can be switched off from quick settings at any point in a shift, and
+        // the tracking service then goes silent rather than failing loudly. Run on the
+        // dispatcher because the permission read is not safe from a timer thread.
+        if (tick % 5 == 0) _ = InvokeAsync(CheckLocationAsync);
         // Slower than the camera, because a reassignment is a thing a person does and
         // fifteen seconds is well inside the time it takes to act on one.
         if (tick % 15 == 0) _ = RefreshAssignmentAsync();
@@ -566,6 +585,49 @@ else
     {
         if (total > 0) total--;
         await SecureStorage.Default.SetAsync(CountKey, total.ToString());
+    }
+
+    /// <summary>Raises the location prompt when the phone cannot report the bus.</summary>
+    /// <remarks>
+    /// Raised on the change rather than on every check, so a prompt the driver has put
+    /// off stays down until the snooze runs out instead of reappearing five seconds
+    /// later. Lowered as soon as location is back.
+    /// </remarks>
+    private async Task CheckLocationAsync()
+    {
+        LocationState state;
+        try { state = await Location.CheckAsync(); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TripActive.Location] {ex}");
+            return;
+        }
+
+        if (state == LocationState.Ready)
+        {
+            locationSnoozedUntil = null;
+            if (locationPrompt == LocationState.Ready) return;
+            locationPrompt = LocationState.Ready;
+        }
+        else
+        {
+            if (locationPrompt != LocationState.Ready) return;
+            if (locationSnoozedUntil is DateTime until && DateTime.UtcNow < until) return;
+            locationPrompt = state;
+        }
+        StateHasChanged();
+    }
+
+    private void LocationResolved()
+    {
+        locationPrompt = LocationState.Ready;
+        locationSnoozedUntil = null;
+    }
+
+    private void SnoozeLocation()
+    {
+        locationPrompt = LocationState.Ready;
+        locationSnoozedUntil = DateTime.UtcNow + LocationSnooze;
     }
 
     private async Task Flush()

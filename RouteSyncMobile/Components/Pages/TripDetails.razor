@@ -3,6 +3,7 @@
 @inject SessionService Session
 @inject DriverDataService Data
 @inject ITripTracker Tracker
+@inject ILocationGuard Location
 @inject NavigationManager Nav
 
 @if (loading)
@@ -52,6 +53,10 @@ else
 
         <button class="btn-green" @onclick="Start" disabled="@busy">Start Shift</button>
     </div>
+
+    <LocationPrompt State="locationPrompt" Starting="true"
+                    OnResolved="@(() => locationPrompt = LocationState.Ready)"
+                    OnDismiss="@(() => locationPrompt = LocationState.Ready)" />
 }
 
 @code {
@@ -60,6 +65,9 @@ else
     private bool loading = true;
     private bool busy;
     private string? msg;
+
+    // What the location prompt is warning about, or Ready when it is not shown.
+    private LocationState locationPrompt = LocationState.Ready;
     private Trip? trip;
     private BusRoute? route;
     private Vehicle? vehicle;
@@ -113,8 +121,19 @@ else
         msg = null;
         try
         {
-            await Data.StartTripAsync(TripId);
+            // Checked before the trip is marked started, not after. A shift started with
+            // location off reads as running to the driver and as absent on the fleet
+            // map, and nothing would say why. Refusing here leaves nothing half done:
+            // the trip is untouched until the phone can actually report the bus.
             await EnsureLocationPermissionAsync();
+            locationPrompt = await Location.CheckAsync();
+            if (locationPrompt != LocationState.Ready)
+            {
+                busy = false;
+                return;
+            }
+
+            await Data.StartTripAsync(TripId);
             Tracker.Start(TripId);
             // History is replaced so the back button from the counter cannot return to
             // this confirmation page, which no longer applies once the trip has started.
