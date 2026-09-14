@@ -481,8 +481,13 @@
 
         @* What is standing in the way, when an approval cannot complete. Each shift links
            into the planner at the week it belongs to, so clearing it is one press away
-           rather than a date to remember and find. *@
-        <div id="rqBlocking" class="rq-blocking" style="display:none;">
+           rather than a date to remember and find.
+
+           The planner requires the routes permission. A role without it still sees which
+           shifts are in the way, listed as plain text, since a link would only bounce
+           off the planner and be recorded as a denied attempt. *@
+        <div id="rqBlocking" class="rq-blocking" style="display:none;"
+             data-planner="@(User.HasClaim("perm", "routes") ? "/Schedule" : null)">
             <p class="rq-blocking-t">Clear these shifts before approving</p>
             <ul class="rq-blocking-list" id="rqBlockingList"></ul>
             <p class="rq-blocking-s">
@@ -806,19 +811,26 @@
             err.textContent = message;
             err.style.display = 'block';
 
+            const box = document.getElementById('rqBlocking');
+            const planner = box.dataset.planner;
             const list = document.getElementById('rqBlockingList');
             list.replaceChildren();
 
             shifts.forEach(function (s) {
                 const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = '/Schedule?start=' + encodeURIComponent(s.week);
-                a.textContent = s.date + ', ' + s.shift + ' shift';
-                li.appendChild(a);
+                const label = s.date + ', ' + s.shift + ' shift';
+                if (planner) {
+                    const a = document.createElement('a');
+                    a.href = planner + '?start=' + encodeURIComponent(s.week);
+                    a.textContent = label;
+                    li.appendChild(a);
+                } else {
+                    li.textContent = label;
+                }
                 list.appendChild(li);
             });
 
-            document.getElementById('rqBlocking').style.display = 'block';
+            box.style.display = 'block';
         }
 
         // ---- Answering a driver's cancellation ---------------------------------------
