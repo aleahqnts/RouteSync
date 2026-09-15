@@ -16,9 +16,12 @@ namespace FleetWise.Models;
 [Table("schedule_weeks")]
 public class ScheduleWeek : BaseModel
 {
+    private DateTime _weekStart;
+
     /// <summary>The Monday the week runs from.</summary>
+    /// <remarks>A date column, normalized on the way in; see <see cref="UnzonedColumn"/>.</remarks>
     [PrimaryKey("week_start", false)]
-    public DateTime WeekStart { get; set; }
+    public DateTime WeekStart { get => _weekStart; set => _weekStart = UnzonedColumn.Day(value); }
 
     [Column("saved_at")]
     public DateTime SavedAt { get; set; }

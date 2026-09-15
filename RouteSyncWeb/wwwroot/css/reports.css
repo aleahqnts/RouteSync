@@ -409,6 +409,24 @@
     margin-bottom: 0;
     }
 
+    /* Replacement suggestions: two figures side by side, stacked on a narrow screen. */
+    .rp-suggest-month {
+    font-size: 0.8rem;
+    color: #8a98a3;
+    }
+
+    .rp-suggest-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+    .rp-suggest-body {
+    grid-template-columns: 1fr;
+    }
+    }
+
     .rp-summary-body {
     display: flex;
     align-items: flex-start;

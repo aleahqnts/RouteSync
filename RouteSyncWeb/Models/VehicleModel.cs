@@ -46,8 +46,16 @@ public class Vehicle : BaseModel
     [Column("retired_reason")]
     public string RetiredReason { get; set; }
 
+    // A date column, rewritten by every whole-row save of a vehicle. Normalized on the way
+    // in so a save never moves it; see UnzonedColumn.
+    private DateTime? _lastMaintenanceDate;
+
     [Column("last_maintenance_date")]
-    public DateTime? LastMaintenanceDate { get; set; }
+    public DateTime? LastMaintenanceDate
+    {
+        get => _lastMaintenanceDate;
+        set => _lastMaintenanceDate = UnzonedColumn.Day(value);
+    }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

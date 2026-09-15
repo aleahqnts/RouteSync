@@ -62,4 +62,9 @@ public class BusPositionDto
 
     [JsonPropertyName("timestamp")]
     public DateTime Timestamp { get; set; }
+
+    // When the driver's break ends, as "10:00 AM", while the clock is inside it. Null
+    // otherwise. The status stays On Trip: the bus is still on its trip and reporting.
+    [JsonPropertyName("onBreakUntil")]
+    public string OnBreakUntil { get; set; }
 }

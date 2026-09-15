@@ -25,7 +25,16 @@ else
     <div class="ta">
         <div class="ta-head">
             <h1>Active Trip</h1>
-            <p class="status"><span class="dot"></span> In Progress</p>
+            @* The break takes the place of the status line rather than adding one, so the
+               screen still fits without scrolling. *@
+            @if (OnBreak)
+            {
+                <p class="status on-break"><span class="dot"></span> On break until @TripBreak.EndLabel(trip.BreakStart!.Value)</p>
+            }
+            else
+            {
+                <p class="status"><span class="dot"></span> In Progress</p>
+            }
         </div>
         <p class="date">@DateTime.Today.ToString("dddd, MMMM d, yyyy")</p>
 
@@ -115,6 +124,10 @@ else
             <div class="bar"><div class="fill" style="width:@(ProgressPct)%"></div></div>
             <div class="prog-times">
                 <span>@DateTime.Today.Add(trip.ShiftStartTime).ToString("h:mm tt")</span>
+                @if (trip.BreakStart is TimeSpan breakStart)
+                {
+                    <span class="prog-break">Break @TripBreak.Range(breakStart)</span>
+                }
                 <span>@DateTime.Today.Add(trip.ShiftEndTime).ToString("h:mm tt")</span>
             </div>
         </div>
@@ -255,6 +268,8 @@ else
     private DateTime ShiftEnd => trip is null ? DateTime.MinValue
         : trip.Date.Date + trip.ShiftEndTime + (trip.ShiftEndTime <= trip.ShiftStartTime ? TimeSpan.FromDays(1) : TimeSpan.Zero);
 
+    private bool OnBreak => trip is not null && TripBreak.IsOn(trip, now);
+
     private int ProgressPct
     {
         get
@@ -386,7 +401,8 @@ else
         var c = new TripCache(trip.TripId, vehicle?.VehicleId ?? trip.VehicleId,
             vehicle?.PlateNumber ?? "—", trip.RouteId, route?.RouteName ?? $"Route {trip.RouteId}",
             trip.ShiftStartTime.Ticks, trip.ShiftEndTime.Ticks, trip.Date.Ticks,
-            trip.TotalBoarded, fare, trip.TripStatus, trip.ActualStartTime?.Ticks);
+            trip.TotalBoarded, fare, trip.TripStatus, trip.ActualStartTime?.Ticks,
+            trip.BreakStart?.Ticks);
         await SecureStorage.Default.SetAsync(CacheKey, JsonSerializer.Serialize(c));
     }
 
@@ -401,16 +417,19 @@ else
             TripId = c.TripId, VehicleId = c.VehicleId, RouteId = c.RouteId,
             ShiftStartTime = TimeSpan.FromTicks(c.StartTicks), ShiftEndTime = TimeSpan.FromTicks(c.EndTicks),
             Date = new DateTime(c.DateTicks), TotalBoarded = c.TotalBoarded, TripStatus = c.Status,
-            ActualStartTime = c.ActualStartTicks is null ? null : new DateTime(c.ActualStartTicks.Value)
+            ActualStartTime = c.ActualStartTicks is null ? null : new DateTime(c.ActualStartTicks.Value),
+            BreakStart = c.BreakTicks is null ? null : TimeSpan.FromTicks(c.BreakTicks.Value)
         };
         route = new BusRoute { RouteName = c.RouteName };
         vehicle = new Vehicle { VehicleId = c.VehicleId, PlateNumber = c.Plate };
         fare = c.Fare;
     }
 
+    // BreakTicks is last and nullable, so a cache written by an earlier build still reads,
+    // as a trip with no break.
     private record TripCache(string TripId, string VehicleId, string Plate, int RouteId,
         string RouteName, long StartTicks, long EndTicks, long DateTicks, int TotalBoarded,
-        decimal Fare, string Status, long? ActualStartTicks);
+        decimal Fare, string Status, long? ActualStartTicks, long? BreakTicks = null);
 
     /// <summary>What this trip was on before the dispatcher moved it, once they have.</summary>
     /// <remarks>
@@ -469,6 +488,14 @@ else
             {
                 trip.VehicleId = fresh.VehicleId;
                 vehicle = await Data.GetVehicleAsync(fresh.VehicleId);
+                changed = true;
+            }
+
+            // Dispatch can move the break while the shift runs, when the bus is needed on
+            // the road at the hour it was due to park.
+            if (fresh.BreakStart != trip.BreakStart)
+            {
+                trip.BreakStart = fresh.BreakStart;
                 changed = true;
             }
 

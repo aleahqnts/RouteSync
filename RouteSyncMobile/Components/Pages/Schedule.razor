@@ -115,6 +115,10 @@
                         <div class="cal-trip-body">
                             <p class="cal-trip-r">@RouteName(t.RouteId)</p>
                             <p class="cal-trip-s">@t.ShiftType shift · @TimeRange(t)</p>
+                            @if (t.BreakStart is TimeSpan breakStart)
+                            {
+                                <p class="cal-trip-s">Break · @TripBreak.Range(breakStart)</p>
+                            }
                             <p class="cal-trip-m">
                                 @t.VehicleId
                                 <span class="cal-trip-st @TripStateClass(t)">@TripState(t)</span>

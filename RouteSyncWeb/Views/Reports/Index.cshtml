@@ -244,6 +244,35 @@
 
 </div>
 
+@* REPLACEMENT SUGGESTIONS. How often dispatch took the driver or bus the rules ranked
+   first, over the month of the chosen day. A measure the system keeps, not a claim about
+   how good the ranking is: a month with a handful of reassignments says very little. *@
+<div class="rp-card rp-suggest-card">
+    <div class="rp-card-header">
+        <span class="rp-card-icon rp-card-icon--green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+        </span>
+        <span class="rp-card-title">Replacement Suggestions</span>
+        <span class="rp-suggest-month ms-auto" id="rpSuggestMonth"></span>
+    </div>
+    <div class="rp-suggest-body">
+        <div class="rp-suggest-figure">
+            <div class="rp-summary-sublabel">Top suggestion used</div>
+            <div class="rp-summary-big" id="rpSuggestPct">—</div>
+            <div class="rp-vs-label" id="rpSuggestOf"></div>
+        </div>
+        <div class="rp-suggest-figure">
+            <div class="rp-summary-sublabel">When fixing an assignment issue</div>
+            <div class="rp-summary-big" id="rpSuggestIssuePct">—</div>
+            <div class="rp-vs-label" id="rpSuggestIssueOf"></div>
+        </div>
+    </div>
+</div>
+
 @* REPORT TEMPLATES *@
 <div class="rp-card rp-card--templates">
     <div class="rp-templates-inner">
@@ -892,9 +921,41 @@
     });
     }
 
+    /* Replacement suggestions card. Loaded beside the main data rather than inside it,
+       so a trail that cannot be read leaves every other figure on the page untouched. */
+    async function loadSuggestionStats(date) {
+        const pct = document.getElementById('rpSuggestPct');
+        const of = document.getElementById('rpSuggestOf');
+        const issuePct = document.getElementById('rpSuggestIssuePct');
+        const issueOf = document.getElementById('rpSuggestIssueOf');
+        const share = (n, d) => d > 0 ? Math.round(n / d * 100) + '%' : '—';
+        const phrase = (n, d, noun) => d === 0
+            ? 'No ' + noun + ' recorded'
+            : n + ' of ' + d + ' ' + noun;
+
+        try {
+            const res = await fetch('/Reports/SuggestionStats' + (date ? '?date=' + encodeURIComponent(date) : ''));
+            if (!res.ok) throw new Error('suggestion stats ' + res.status);
+            const s = await res.json();
+
+            document.getElementById('rpSuggestMonth').textContent = s.month;
+            pct.textContent = share(s.tookTop, s.total);
+            of.textContent = phrase(s.tookTop, s.total, s.total === 1 ? 'reassignment' : 'reassignments');
+            issuePct.textContent = share(s.issueTookTop, s.issueTotal);
+            issueOf.textContent = phrase(s.issueTookTop, s.issueTotal, s.issueTotal === 1 ? 'issue' : 'issues');
+        } catch (e) {
+            console.warn(e);
+            pct.textContent = '—';
+            issuePct.textContent = '—';
+            of.textContent = 'Could not be read';
+            issueOf.textContent = '';
+        }
+    }
+
     /* Main loader. */
     async function loadAll() {
     const f = getFilters();
+    loadSuggestionStats(f.date);
     const params = new URLSearchParams({
     page: currentPage,
     passengerPeriod: f.passengerPeriod,

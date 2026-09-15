@@ -15,9 +15,49 @@ namespace FleetWise.Controllers
     public class ReportsController : Controller
     {
         private readonly Supabase.Client _supabase;
+        private readonly AuditLog _audit;
         private const int PageSize = 5;
 
-        public ReportsController(Supabase.Client supabase) => _supabase = supabase;
+        public ReportsController(Supabase.Client supabase, AuditLog audit)
+        {
+            _supabase = supabase;
+            _audit = audit;
+        }
+
+        /// <summary>
+        /// How often a reassignment took the top replacement suggestion, over the month of
+        /// the chosen day.
+        /// </summary>
+        /// <remarks>
+        /// Read from the audit trail, where every reassignment records where its choice sat
+        /// in the ranking. The month runs by operational day, from 06:00 on the 1st to
+        /// 06:00 on the 1st of the next. Philippine time keeps no daylight saving, so the
+        /// offset is fixed.
+        /// </remarks>
+        [HttpGet]
+        public async Task<IActionResult> SuggestionStats(DateTime? date)
+        {
+            var anchor = (date ?? PhClock.OperationalDay).Date;
+            var monthStart = new DateTime(anchor.Year, anchor.Month, 1);
+            var offset = TimeSpan.FromHours(8);
+
+            var from = new DateTimeOffset(monthStart.Add(PhClock.DayStartTime), offset);
+            var to = new DateTimeOffset(monthStart.AddMonths(1).Add(PhClock.DayStartTime), offset);
+
+            var picks = await _audit.ReassignmentPicksAsync(from, to);
+            if (picks is null) return StatusCode(502, "The audit trail could not be read.");
+
+            var issues = picks.Where(p => p.FixedIssue).ToList();
+
+            return Json(new
+            {
+                month = monthStart.ToString("MMMM yyyy"),
+                total = picks.Count,
+                tookTop = picks.Count(p => p.TookTopSuggestion),
+                issueTotal = issues.Count,
+                issueTookTop = issues.Count(p => p.TookTopSuggestion),
+            });
+        }
 
         public async Task<IActionResult> Index() => View();
 
