@@ -26,6 +26,11 @@ public class Trip : BaseModel
     [Column("shift_end_time")]
     public TimeSpan ShiftEndTime { get; set; }
 
+    // Start of the one hour break, one of three slots inside the shift; see BreakSlots.
+    // Null on trips written before breaks existed.
+    [Column("break_start")]
+    public TimeSpan? BreakStart { get; set; }
+
     [Column("route_id")]
     public int RouteId { get; set; }
 

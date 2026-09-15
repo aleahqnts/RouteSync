@@ -355,6 +355,14 @@ namespace FleetWise.Controllers
                     days.Add(day.Date);
                 }
 
+                // Breaks already spoken for on each route, shift and day by the trips this save
+                // keeps: those the grid resent and the locked ones it did not. A new cell fits
+                // around them, and each one added counts for the next.
+                var breaksTaken = existing
+                    .Where(t => submittedIds.Contains(t.TripId) || TripStatus.Locked(t, now))
+                    .GroupBy(t => (Day: t.Date.Date, t.RouteId, Shift: t.ShiftType))
+                    .ToDictionary(g => g.Key, g => g.Select(t => t.BreakStart).ToList());
+
                 foreach (var c in cells)
                 {
                     if (string.IsNullOrEmpty(c.VehicleId) || c.DriverId == 0
@@ -395,12 +403,19 @@ namespace FleetWise.Controllers
                     else
                     {
                         // A new bus for this route, shift and day.
+                        var slotKey = (Day: date.Date, c.RouteId, Shift: c.Shift);
+                        if (!breaksTaken.TryGetValue(slotKey, out var taken))
+                            breaksTaken[slotKey] = taken = new List<TimeSpan?>();
+                        var breakStart = BreakSlots.LeastUsed(window.Start, taken);
+                        taken.Add(breakStart);
+
                         await _supabase.From<Trip>().Insert(new Trip
                         {
                             Date = date,
                             ShiftType = c.Shift,
                             ShiftStartTime = window.Start,
                             ShiftEndTime = window.End,
+                            BreakStart = breakStart,
                             RouteId = c.RouteId,
                             VehicleId = c.VehicleId,
                             DriverId = c.DriverId,

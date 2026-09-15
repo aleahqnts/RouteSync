@@ -168,11 +168,17 @@
         return hrs === 1 ? '1 hour ago' : hrs + ' hours ago';
     }
 
+    // A bus on its driver's break is still on its trip: it keeps reporting, keeps its
+    // color and still counts as out. Only what it is called changes.
+    function statusText(bus) {
+        return bus.onBreakUntil ? 'On Break until ' + bus.onBreakUntil : bus.status;
+    }
+
     function fillPanel(bus) {
         document.getElementById('fmPanelBus').textContent = bus.vehicleId;
         document.getElementById('fmPanelRoute').textContent = String(bus.routeId).padStart(2, '0');
         document.getElementById('fmPanelShift').textContent = bus.shift;
-        document.getElementById('fmPanelStatus').textContent = bus.status;
+        document.getElementById('fmPanelStatus').textContent = statusText(bus);
         document.getElementById('fmPanelStatusDot').style.background = statusColor(bus.status);
         document.getElementById('fmPanelDriver').textContent = bus.driverName;
         document.getElementById('fmPanelPax').textContent = bus.passengers;
@@ -241,7 +247,7 @@
                     '<span class="fm-tooltip__route">' + bus.routeName + '</span>' +
                 '</div>' +
                 '<div class="fm-tooltip__plate">' + bus.plateNumber + '</div>' +
-                '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + bus.status + '</div>' +
+                '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + statusText(bus) + '</div>' +
                 '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + bus.passengers + '</strong></div>' +
                 (isStale(bus)
                     ? '<div class="fm-tooltip__stale">Last heard from ' + relativeTime(bus.timestamp) + '</div>'

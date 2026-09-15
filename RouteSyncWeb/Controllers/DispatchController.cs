@@ -329,7 +329,14 @@ namespace FleetWise.Controllers
             // read the same maintenance log the board and the vehicles tab read.
             var maintTask = _supabase.From<MaintenanceLog>()
                                     .Filter("vehicle_id", Operator.Equals, trip.VehicleId).Get();
-            await Task.WhenAll(vehicleTask, driverTask, routeTask, availabilityTask, checklistTask, maintTask);
+            // The route's other buses on this shift, so the break picker can say how many
+            // already park in each slot.
+            var alongsideTask = _supabase.From<Trip>()
+                                    .Filter("date", Operator.Equals, trip.Date.ToString("yyyy-MM-dd"))
+                                    .Filter("route_id", Operator.Equals, trip.RouteId.ToString())
+                                    .Filter("shift_type", Operator.Equals, trip.ShiftType).Get();
+
+            await Task.WhenAll(vehicleTask, driverTask, routeTask, availabilityTask, checklistTask, maintTask, alongsideTask);
 
             var vehicle = vehicleTask.Result.Models.FirstOrDefault();
             var driver = driverTask.Result.Models.FirstOrDefault();
@@ -365,6 +372,19 @@ namespace FleetWise.Controllers
                 ShiftStartTime = TripAssignments.ShiftWindow(trip).Start,
                 ShiftEndTime = TripAssignments.ShiftWindow(trip).End,
                 RouteName = route?.RouteName ?? "—",
+
+                BreakStart = trip.BreakStart?.ToString(@"hh\:mm"),
+                BreakLabel = trip.BreakStart is TimeSpan b ? BreakSlots.Label(b) : null,
+                OnBreak = trip.TripStatus == "Active" && BreakSlots.IsOnBreak(trip, PhClock.Now),
+                // A running trip's break can still move; the bus may be needed on the road
+                // at the hour it was due to park.
+                BreakEditable = trip.TripStatus != "Completed" && !TripStatus.Closed(trip, PhClock.Now),
+                BreakOptions = BreakSlots.For(trip.ShiftStartTime).Select(slot => new BreakOptionViewModel
+                {
+                    Value = slot.ToString(@"hh\:mm"),
+                    Label = BreakSlots.Label(slot),
+                    Others = alongsideTask.Result.Models.Count(t => t.TripId != trip.TripId && t.BreakStart == slot),
+                }).ToList(),
 
                 VehicleId = trip.VehicleId,
                 PlateNumber = vehicle?.PlateNumber ?? "—",
@@ -564,12 +584,20 @@ namespace FleetWise.Controllers
                 if (conflict != null) return Conflict(new { conflict });
             }
 
+            // The break fits around the buses already on this route and shift today.
+            var alongside = (await _supabase.From<Trip>()
+                .Filter("date", Operator.Equals, PhClock.OperationalDay.ToString("yyyy-MM-dd"))
+                .Filter("route_id", Operator.Equals, req.RouteId.ToString())
+                .Filter("shift_type", Operator.Equals, req.ShiftType)
+                .Get()).Models;
+
             var newTrip = new Trip
             {
                 Date = PhClock.OperationalDay,
                 ShiftType = req.ShiftType,
                 ShiftStartTime = startTime,
                 ShiftEndTime = endTime,
+                BreakStart = BreakSlots.LeastUsed(startTime, alongside.Select(t => t.BreakStart)),
                 RouteId = req.RouteId,
                 VehicleId = req.VehicleId,
                 DriverId = req.DriverId,
@@ -711,6 +739,76 @@ namespace FleetWise.Controllers
                 ReassignOutcome.Conflict => Conflict(new { conflict = result.Message }),
                 _ => Ok(new { tripId = result.Trip!.TripId }),
             };
+        }
+
+        /// <summary>Moves a trip's break to another of its shift's slots.</summary>
+        /// <remarks>
+        /// Allowed while the trip is running, since the hour a bus was due to park can be the
+        /// hour it is needed most. The driver is told, because the slot is what their app
+        /// shows them and what the fleet map labels the bus with.
+        /// </remarks>
+        [HttpPost]
+        public async Task<IActionResult> SetBreak([FromBody] SetBreakRequest req)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState.FirstError());
+
+            var trip = (await _supabase.From<Trip>()
+                .Filter("trip_id", Operator.Equals, req.TripId)
+                .Get()).Models.FirstOrDefault();
+            if (trip == null) return NotFound("Trip not found.");
+
+            if (string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("That trip has finished, so its break can no longer be moved.");
+
+            if (TripStatus.Closed(trip, PhClock.Now))
+                return BadRequest("That shift has finished, so its break can no longer be moved.");
+
+            if (!TimeSpan.TryParseExact(req.BreakStart, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture, out var slot)
+                || !BreakSlots.IsSlot(trip.ShiftStartTime, slot))
+                return BadRequest("That is not one of this shift's break slots.");
+
+            if (trip.BreakStart == slot)
+                return Ok(new { breakStart = req.BreakStart, label = BreakSlots.Label(slot) });
+
+            var was = trip.BreakStart;
+
+            await _supabase.From<Trip>()
+                .Filter("trip_id", Operator.Equals, trip.TripId)
+                .Set(t => t.BreakStart, slot)
+                .Update();
+
+            // Best effort and after the write, like every other notice from this board.
+            try
+            {
+                var senderIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                int.TryParse(senderIdClaim, out var senderId);
+
+                await _supabase.From<Message>().Insert(new Message
+                {
+                    SenderId = senderId,
+                    TargetAudience = "Driver",
+                    TargetId = trip.DriverId.ToString(),
+                    Subject = $"Break changed: {trip.Date:MMM d}",
+                    Body = $"Your break on trip {trip.TripId} ({trip.ShiftType} shift, {trip.Date:MMMM d}) "
+                         + $"is now {BreakSlots.Label(slot)}. Thank you.",
+                    Priority = "Normal",
+                    CreatedAt = PhClock.NowForDb,
+                });
+            }
+            catch (Exception ex)
+            {
+                await _audit.WriteAsync("trip_break_changed",
+                    $"could not tell driver {trip.DriverId} that the break on trip {trip.TripId} moved: {ex.Message}",
+                    "trips", trip.TripId, outcome: "failed");
+            }
+
+            await _audit.WriteAsync("trip_break_changed",
+                $"moved the break on trip {trip.TripId} "
+                    + (was is TimeSpan w ? $"from {BreakSlots.Clock(w)} " : "")
+                    + $"to {BreakSlots.Clock(slot)}",
+                "trips", trip.TripId);
+
+            return Ok(new { breakStart = req.BreakStart, label = BreakSlots.Label(slot) });
         }
 
         // Removes a trip. Clearing both the bus and the driver in the reassign modal

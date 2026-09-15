@@ -275,7 +275,10 @@ namespace FleetWise.Controllers
                     Capacity = capacity,
                     OccupancyPct = occupancyPct,
                     EstimatedRevenue = _fareCalculator.Estimate(boardedForRevenue, fareRate),
-                    Timestamp = telemetry.Timestamp
+                    Timestamp = telemetry.Timestamp,
+                    OnBreakUntil = BreakSlots.IsOnBreak(trip, PhClock.Now) && BreakSlots.WindowOf(trip) is { } breakWindow
+                        ? BreakSlots.Clock(breakWindow.End.TimeOfDay)
+                        : null
                 };
             }
 

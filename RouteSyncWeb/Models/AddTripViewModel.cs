@@ -127,6 +127,16 @@ namespace FleetWise.ViewModels
         public string TripId { get; set; }
     }
 
+    // Posted when a dispatcher moves a trip's break to another slot.
+    public class SetBreakRequest
+    {
+        [Required, RegularExpression(@"^[A-Za-z0-9_-]{1,64}$", ErrorMessage = "That is not a trip ID.")]
+        public string TripId { get; set; }
+
+        [Required, RegularExpression(@"^([01][0-9]|2[0-3]):[0-5][0-9]$", ErrorMessage = "That is not a time.")]
+        public string BreakStart { get; set; }
+    }
+
     // Posted when a message goes to every driver.
     public class BroadcastMessageRequest
     {
