@@ -506,9 +506,7 @@ namespace FleetWise.Controllers
 
             var newTrip = new Trip
             {
-                // Specified as UTC so this serializes to yyyy-MM-dd, matching the filter
-                // the board uses.
-                Date = DateTime.SpecifyKind(PhClock.OperationalDay, DateTimeKind.Utc),
+                Date = PhClock.OperationalDay,
                 ShiftType = req.ShiftType,
                 ShiftStartTime = startTime,
                 ShiftEndTime = endTime,
@@ -1163,10 +1161,14 @@ namespace FleetWise.Controllers
                 else
                     continue;
 
+                // Only the status is written, so a change another writer made to the row
+                // since it was read is not overwritten with the copy read here.
                 if (trip.TripStatus != newStatus)
                 {
-                    trip.TripStatus = newStatus;
-                    await _supabase.From<Trip>().Upsert(trip);
+                    await _supabase.From<Trip>()
+                        .Filter("trip_id", Operator.Equals, trip.TripId)
+                        .Set(t => t.TripStatus, newStatus)
+                        .Update();
                 }
             }
         }

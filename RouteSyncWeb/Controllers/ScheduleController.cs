@@ -397,7 +397,7 @@ namespace FleetWise.Controllers
                         // A new bus for this route, shift and day.
                         await _supabase.From<Trip>().Insert(new Trip
                         {
-                            Date = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+                            Date = date,
                             ShiftType = c.Shift,
                             ShiftStartTime = window.Start,
                             ShiftEndTime = window.End,
@@ -458,7 +458,7 @@ namespace FleetWise.Controllers
                     var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                     await _supabase.From<ScheduleWeek>().Upsert(new ScheduleWeek
                     {
-                        WeekStart = DateTime.SpecifyKind(weekStart, DateTimeKind.Utc),
+                        WeekStart = weekStart,
                         SavedAt = PhClock.NowForDb,
                         SavedBy = int.TryParse(idStr, out var by) ? by : null,
                     });
