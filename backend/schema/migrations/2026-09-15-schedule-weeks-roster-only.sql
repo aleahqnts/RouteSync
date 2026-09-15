@@ -18,9 +18,9 @@
 --                              publish. Any other write clears it, and a publish never
 --                              sets it on a week the planner has already saved.
 --
--- The driver app counts a day as scheduled when its month has a published roster, or its
--- week has a row that is not roster_only. The planner's version check is unchanged: a
--- publish still moves saved_at.
+-- The driver app counts a day as scheduled when its week has a row that is not
+-- roster_only, or a roster_only row and a month with a published roster. The planner's
+-- version check is unchanged: a publish still moves saved_at.
 --
 -- Kept by trigger, so neither the planner nor publish_roster_month has to send the column,
 -- and a dashboard deployed before or after this migration writes the same rows. It reads
