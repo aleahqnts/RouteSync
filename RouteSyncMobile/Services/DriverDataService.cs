@@ -609,6 +609,10 @@ public class DriverDataService
     /// What separates a rest day from a day nobody has scheduled yet. Returned as the set
     /// of week starts rather than a set of days, because the planner saves a week at a
     /// time and every day in a saved week is answered.
+    ///
+    /// A week only a roster publish has marked is left out. The publish answers the days
+    /// of its own month, which <see cref="GetPublishedMonthsAsync"/> covers, and not the
+    /// days of that week that fall in the month next door.
     /// </remarks>
     public async Task<HashSet<DateTime>> GetScheduledWeeksAsync(DateTime from, DateTime to)
     {
@@ -616,8 +620,55 @@ public class DriverDataService
             .Filter("week_start", Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-dd"))
             .Filter("week_start", Operator.LessThanOrEqual, to.ToString("yyyy-MM-dd"))
             .Get();
-        return r.Models.Select(w => w.WeekStart.Date).ToHashSet();
+        return r.Models.Where(w => !w.RosterOnly).Select(w => w.WeekStart.Date).ToHashSet();
     }
+
+    /// <summary>The first days of the months with a published roster, within a span.</summary>
+    /// <remarks>
+    /// Every day of a published month is answered, whether or not the planner has saved
+    /// its weeks. Empty when the roster tables do not exist yet, so the calendar falls back
+    /// to the planner's weeks alone rather than failing.
+    /// </remarks>
+    public async Task<HashSet<DateTime>> GetPublishedMonthsAsync(DateTime from, DateTime to)
+    {
+        try
+        {
+            var r = await _supabase.From<RosterMonth>()
+                .Filter("month", Operator.GreaterThanOrEqual, FirstOfMonth(from).ToString("yyyy-MM-dd"))
+                .Filter("month", Operator.LessThanOrEqual, FirstOfMonth(to).ToString("yyyy-MM-dd"))
+                .Filter("status", Operator.Equals, "Published")
+                .Get();
+            return r.Models.Select(m => m.Month.Date).ToHashSet();
+        }
+        catch (Postgrest.Exceptions.PostgrestException)
+        {
+            return new();
+        }
+    }
+
+    /// <summary>The driver's own roster places in the published months of a span.</summary>
+    /// <remarks>
+    /// At most one a month. Empty for a driver with no place on the roster, for months not
+    /// yet published, and when the roster tables do not exist yet.
+    /// </remarks>
+    public async Task<List<RosterSlot>> GetRosterSlotsAsync(int userId, DateTime from, DateTime to)
+    {
+        try
+        {
+            var r = await _supabase.From<RosterSlot>()
+                .Filter("driver_id", Operator.Equals, userId.ToString())
+                .Filter("month", Operator.GreaterThanOrEqual, FirstOfMonth(from).ToString("yyyy-MM-dd"))
+                .Filter("month", Operator.LessThanOrEqual, FirstOfMonth(to).ToString("yyyy-MM-dd"))
+                .Get();
+            return r.Models;
+        }
+        catch (Postgrest.Exceptions.PostgrestException)
+        {
+            return new();
+        }
+    }
+
+    private static DateTime FirstOfMonth(DateTime d) => new(d.Year, d.Month, 1);
 
     /// <summary>Approved leave covering a given day, or null when there is none.</summary>
     /// <remarks>

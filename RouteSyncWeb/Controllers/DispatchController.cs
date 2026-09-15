@@ -565,58 +565,23 @@ namespace FleetWise.Controllers
              || !TimeSpan.TryParse(req.ShiftEndTime, out var endTime))
                 return BadRequest("Invalid shift times.");
 
-            // A shift that has finished cannot be booked into. Late is workable, since a
-            // bus put on the road at seven still runs most of an evening; past is not,
-            // because the trip would be missed the moment it was written.
-            //
-            // Not overridable. Confirming it would not put the shift back.
-            if (TripStatus.Closed(PhClock.OperationalDay, startTime, endTime, PhClock.Now))
-                return BadRequest($"The {req.ShiftType} shift has already finished. "
-                                + "Pick a shift that is still running.");
+            var senderIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(senderIdClaim, out var senderId);
 
-            // Scheduling conflicts, whether a double booking or back-to-back shifts, can
-            // be overridden by a dispatcher who confirms the warning. A 409 marks that
-            // kind of conflict, as distinct from a 400, which is a validation failure the
-            // client cannot bypass.
-            if (!req.Override)
+            // Late is workable, since a bus put on the road at seven still runs most of an
+            // evening; a shift already over is refused. A scheduling conflict comes back as a
+            // 409 the dispatcher may confirm past, as distinct from a 400, which is final.
+            var result = await _assignments.CreateAsync(
+                new NewTrip(PhClock.OperationalDay, req.ShiftType, startTime, endTime,
+                            req.RouteId, req.VehicleId, req.DriverId, req.Override),
+                senderId);
+
+            return result.Outcome switch
             {
-                var conflict = await _assignments.ValidateAssignmentAsync(PhClock.OperationalDay, req.ShiftType, req.VehicleId, req.DriverId, null);
-                if (conflict != null) return Conflict(new { conflict });
-            }
-
-            // The break fits around the buses already on this route and shift today.
-            var alongside = (await _supabase.From<Trip>()
-                .Filter("date", Operator.Equals, PhClock.OperationalDay.ToString("yyyy-MM-dd"))
-                .Filter("route_id", Operator.Equals, req.RouteId.ToString())
-                .Filter("shift_type", Operator.Equals, req.ShiftType)
-                .Get()).Models;
-
-            var newTrip = new Trip
-            {
-                Date = PhClock.OperationalDay,
-                ShiftType = req.ShiftType,
-                ShiftStartTime = startTime,
-                ShiftEndTime = endTime,
-                BreakStart = BreakSlots.LeastUsed(startTime, alongside.Select(t => t.BreakStart)),
-                RouteId = req.RouteId,
-                VehicleId = req.VehicleId,
-                DriverId = req.DriverId,
-                TripStatus = "Not Yet Started",
-                EstimatedRevenue = 0
+                ReassignOutcome.Refused => BadRequest(result.Message),
+                ReassignOutcome.Conflict => Conflict(new { conflict = result.Message }),
+                _ => Ok(new { tripId = result.Trip?.TripId }),
             };
-
-            var insertResult = await _supabase.From<Trip>().Insert(newTrip);
-            var inserted = insertResult.Models.FirstOrDefault();
-            await _assignments.SyncTripStatusesAsync();
-
-            // An override records that the dispatcher was warned about a clash and
-            // proceeded, which is the part of the decision worth auditing.
-            await _audit.WriteAsync("trip_created",
-                $"created a {req.ShiftType} trip for bus {req.VehicleId} with driver {req.DriverId}"
-                    + (req.Override ? ", overriding a scheduling conflict" : ""),
-                "trips", inserted?.TripId);
-
-            return Ok(new { tripId = inserted?.TripId });
         }
 
 

@@ -1,0 +1,487 @@
+/* Roster/Index.cshtml */
+    :root {
+        --ro-teal: #4AADA8;
+        --ro-text: #2D3748;
+        --ro-muted: #9AA5B4;
+        --ro-soft: #5A6473;
+        --ro-border: #E8ECF0;
+        --ro-bg: #F8F9FA;
+        --ro-white: #FFFFFF;
+        --ro-red: #E53E3E;
+        --ro-amber: #B7791F;
+    }
+
+    .ro-wrap {
+        font-family: 'Segoe UI', sans-serif;
+        color: var(--ro-text);
+    }
+
+    /* --- Head --------------------------------------------------------------- */
+
+    /* Held at the top: the month being built and the way to save it are wanted at every
+       point of a page that runs to several screens. */
+    .ro-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--ro-bg);
+        padding-bottom: 12px;
+    }
+
+    .ro-titlerow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        margin-bottom: 12px;
+    }
+
+    .ro-title {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+
+    .ro-month {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ro-soft);
+    }
+
+    .ro-chip {
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: .75rem;
+        font-weight: 700;
+    }
+
+    .ro-chip--none { background: #EEF1F5; color: #6B7280; }
+    .ro-chip--draft { background: #FEF9E7; color: #7A6412; }
+    .ro-chip--published { background: #E6F4F3; color: #2E7D72; }
+
+    .ro-saved {
+        font-size: .78rem;
+        color: var(--ro-muted);
+    }
+
+    .ro-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ro-toolbar-gap { flex: 1; }
+
+    .ro-dirty {
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--ro-amber);
+    }
+
+    .ro-note {
+        font-size: .82rem;
+        color: var(--ro-soft);
+    }
+
+    .ro-note--block { margin: 0 0 14px; }
+
+    .ro-hint {
+        margin: 0 0 14px;
+        font-size: .82rem;
+        color: var(--ro-soft);
+        max-width: 72ch;
+    }
+
+    /* --- Buttons and inputs --------------------------------------------------- */
+
+    .ro-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border: 1.5px solid var(--ro-border);
+        border-radius: 10px;
+        background: var(--ro-white);
+        color: var(--ro-text);
+        font-family: inherit;
+        font-size: .85rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+        .ro-btn:hover { border-color: var(--ro-teal); color: var(--ro-teal); }
+        .ro-btn:disabled { opacity: .6; cursor: default; }
+
+    .ro-btn[hidden] { display: none; }
+
+    .ro-btn--primary {
+        background: var(--ro-teal);
+        border-color: var(--ro-teal);
+        color: var(--ro-white);
+    }
+
+        .ro-btn--primary:hover { color: var(--ro-white); filter: brightness(.95); }
+
+    /* Publishing writes trips, so it is set apart from saving the roster. */
+    .ro-btn--dark {
+        background: #1B2A56;
+        border-color: #1B2A56;
+        color: var(--ro-white);
+    }
+
+        .ro-btn--dark:hover { color: var(--ro-white); border-color: #1B2A56; filter: brightness(1.15); }
+
+    .ro-input {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1.5px solid var(--ro-border);
+        border-radius: 8px;
+        background: var(--ro-white);
+        color: var(--ro-text);
+        font-family: inherit;
+        font-size: .82rem;
+    }
+
+        .ro-input:focus { outline: none; border-color: var(--ro-teal); }
+        .ro-input:disabled { background: var(--ro-bg); color: var(--ro-soft); }
+
+    /* --- Banners --------------------------------------------------------------- */
+
+    .ro-banner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: .85rem;
+    }
+
+    .ro-banner[hidden] { display: none; }
+
+    .ro-banner--moved {
+        border: 1px solid #F3C4C4;
+        background: #FDECEC;
+        color: #9B2C2C;
+    }
+
+    .ro-problems {
+        margin: 0 0 14px;
+        padding: 10px 14px;
+        border: 1px solid #F3C4C4;
+        border-radius: 10px;
+        background: #FDECEC;
+        color: #9B2C2C;
+        font-size: .84rem;
+    }
+
+    .ro-problems-t { margin: 0 0 4px; font-weight: 700; }
+    .ro-problems ul { margin: 0; padding-left: 18px; }
+
+    /* --- Route cards --------------------------------------------------------------- */
+
+    .ro-card {
+        margin-bottom: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--ro-border);
+        border-radius: 14px;
+        background: var(--ro-white);
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .ro-card-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+    }
+
+    .ro-card-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    /* Crew resting over floaters working, a day at a time. */
+    .ro-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .ro-day {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #E6F4F3;
+        color: #2E7D72;
+        font-size: .74rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .ro-day--short { background: #FDECEC; color: var(--ro-red); }
+
+    .ro-short {
+        margin: 10px 0 0;
+        padding: 8px 12px;
+        border: 1px solid #E6D6A8;
+        border-radius: 8px;
+        background: #FEF9E7;
+        color: #7A6412;
+        font-size: .82rem;
+    }
+
+    .ro-section-t {
+        margin: 16px 0 8px;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        color: var(--ro-muted);
+    }
+
+    .ro-empty {
+        margin: 0;
+        font-size: .82rem;
+        color: var(--ro-muted);
+    }
+
+    /* A bus and the three shifts it may run, side by side. */
+    .ro-bus {
+        display: grid;
+        grid-template-columns: 150px repeat(3, minmax(0, 1fr));
+        gap: 10px 14px;
+        padding: 10px 0;
+        border-top: 1px solid var(--ro-border);
+    }
+
+    .ro-bus-id {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .ro-bus-name { font-weight: 700; }
+    .ro-bus-plate { font-size: .78rem; color: var(--ro-muted); }
+    .ro-bus-warn { font-size: .76rem; font-weight: 600; color: var(--ro-red); }
+
+    .ro-seat {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;
+    }
+
+    .ro-runs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: .82rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .ro-floaters {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .ro-floater {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1.2fr) auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .ro-unplaced {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+        .ro-unplaced li {
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: #EEF1F5;
+            font-size: .8rem;
+        }
+
+    /* --- What the last publish left ------------------------------------------------------ */
+
+    .ro-count {
+        margin-left: 6px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: #FDECEC;
+        color: var(--ro-red);
+        font-size: .75rem;
+        vertical-align: middle;
+    }
+
+    .ro-card-title--next { margin-top: 18px; }
+
+    .ro-slots {
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .ro-slot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 14px;
+        padding: 10px 0;
+        border-top: 1px solid var(--ro-border);
+    }
+
+    .ro-slot-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .ro-slot-when { font-weight: 700; font-size: .88rem; }
+    .ro-slot-bus { font-size: .8rem; color: var(--ro-soft); }
+    .ro-slot-why { font-size: .78rem; color: var(--ro-amber); }
+
+    .ro-slot-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    /* --- Dialog and toast ------------------------------------------------------------ */
+
+    .ro-box--wide { max-width: 540px; }
+
+    .ro-box-error {
+        margin: 12px 0 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #FDECEC;
+        color: var(--ro-red);
+        font-size: .82rem;
+    }
+
+    .ro-box-error[hidden] { display: none; }
+
+    .ro-report {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        font-size: .86rem;
+        line-height: 1.5;
+    }
+
+    .ro-fill-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 50vh;
+        margin-top: 12px;
+        overflow-y: auto;
+    }
+
+    .ro-fill-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 8px 10px;
+        border: 1px solid var(--ro-border);
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+        .ro-fill-row:has(input:checked) { border-color: var(--ro-teal); background: #F2FAF9; }
+        .ro-fill-row input { margin-top: 3px; }
+
+    .ro-fill-body {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .ro-fill-name { font-weight: 700; font-size: .88rem; }
+    .ro-fill-tier { font-size: .74rem; font-weight: 600; color: #2E7D72; }
+    .ro-fill-tier--3, .ro-fill-tier--4 { color: var(--ro-amber); }
+    .ro-fill-reason { font-size: .76rem; color: var(--ro-soft); }
+    .ro-fill-warn { font-size: .76rem; font-weight: 600; color: var(--ro-amber); }
+
+    .ro-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 4000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(13,28,40,.5);
+    }
+
+    .ro-overlay[hidden] { display: none; }
+
+    .ro-box {
+        width: 100%;
+        max-width: 420px;
+        padding: 22px;
+        border-radius: 14px;
+        background: var(--ro-white);
+        box-shadow: 0 14px 44px rgba(0,0,0,.28);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .ro-box-title { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ro-text); }
+    .ro-box-desc { margin: 8px 0 0; font-size: .85rem; color: var(--ro-soft); }
+
+    .ro-box-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+        .ro-box-actions .ro-btn { justify-content: center; }
+
+    .ro-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        z-index: 4100;
+        transform: translateX(-50%);
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: #1B2A56;
+        color: #fff;
+        font-size: .85rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    }
+
+    .ro-toast[hidden] { display: none; }
+
+/* A laptop too narrow for a bus and three shifts in one row: the shifts go under the bus. */
+@media (max-width: 1100px) {
+    .ro-bus { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ro-bus-id { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+}
+
+/* A phone: one shift, and one floater field, to a line. */
+@media (max-width: 640px) {
+    /* Two rows of toolbar held at the top would take a third of a phone screen. */
+    .ro-sticky { position: static; }
+    .ro-bus { grid-template-columns: minmax(0, 1fr); }
+    .ro-floater { grid-template-columns: minmax(0, 1fr); padding-bottom: 8px; border-bottom: 1px solid var(--ro-border); }
+    .ro-card { padding: 14px; }
+    .ro-toolbar-gap { display: none; }
+}

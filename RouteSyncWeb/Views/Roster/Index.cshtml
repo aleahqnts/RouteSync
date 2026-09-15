@@ -1,0 +1,943 @@
+@model FleetWise.ViewModels.RosterViewModel
+@using FleetWise.Services
+@{
+    ViewData["Title"] = "Roster";
+
+    var shifts = RosterRules.Shifts;
+    var disabled = Model.ReadOnly ? "disabled" : null;
+
+    FleetWise.ViewModels.RosterSeatInput? CrewAt(string vehicleId, string shift) => Model.Seats
+        .FirstOrDefault(s => s.Kind == RosterRules.Crew && s.Shift == shift
+                          && string.Equals(s.VehicleId, vehicleId, StringComparison.OrdinalIgnoreCase));
+
+    string StatusClass(string status) => status switch
+    {
+        "Published" => "ro-chip--published",
+        "Draft" => "ro-chip--draft",
+        _ => "ro-chip--none",
+    };
+}
+
+<div class="ro-wrap" id="roPage"
+     data-month="@Model.MonthKey" data-version="@Model.Version" data-status="@Model.Status"
+     data-readonly="@(Model.ReadOnly ? "true" : "false")">
+
+    <div class="ro-sticky">
+        <div class="ro-titlerow">
+            <h1 class="ro-title">Roster</h1>
+            <span class="ro-month">@Model.Month.ToString("MMMM yyyy")</span>
+            <span class="ro-chip @StatusClass(Model.Status)">@Model.Status</span>
+            @* Saved after it was published: the trips on the board still follow the
+               roster as it was published, until it is published again. *@
+            <span class="ro-chip ro-chip--draft" id="roUnpublished" hidden="@(!Model.ChangedSincePublish)">Changes not published</span>
+            <span class="ro-saved" id="roSaved">@Model.SavedLine</span>
+            @if (Model.PublishedLine is not null)
+            {
+                <span class="ro-saved">@Model.PublishedLine</span>
+            }
+        </div>
+
+        <div class="ro-toolbar">
+            <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.PrevMonthKey">&#8249; @Model.Month.AddMonths(-1).ToString("MMM")</a>
+            <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.NextMonthKey">@Model.Month.AddMonths(1).ToString("MMM") &#8250;</a>
+            <span class="ro-toolbar-gap"></span>
+            @if (Model.ReadOnly)
+            {
+                <span class="ro-note">This month is over. Its roster can be read but not changed.</span>
+            }
+            else
+            {
+                <span class="ro-dirty" id="roDirty" hidden>Unsaved changes</span>
+                @if (Model.HasPreviousRoster && Model.Status != "Published")
+                {
+                    <button type="button" class="ro-btn ro-btn--ghost" id="roGenerate"
+                            data-previous="@Model.Month.AddMonths(-1).ToString("MMMM")">Generate from @Model.Month.AddMonths(-1).ToString("MMM")</button>
+                }
+                <button type="button" class="ro-btn ro-btn--ghost" id="roSuggest">Suggest rest days</button>
+                <button type="button" class="ro-btn ro-btn--primary" id="roSave">Save roster</button>
+                @* Shown once there is a saved roster to publish. *@
+                <button type="button" class="ro-btn ro-btn--dark" id="roPublish" hidden="@(Model.Version == 0)">
+                    @(Model.Status == "Published" ? "Publish changes" : "Publish")
+                </button>
+            }
+        </div>
+
+        @* Somebody else saved this month since the page was drawn. Stays up until the page
+           is reloaded, because until then every save from here would be refused. *@
+        <div class="ro-banner ro-banner--moved" id="roMoved" hidden>
+            <span id="roMovedText"></span>
+            <button type="button" class="ro-btn ro-btn--ghost" onclick="location.reload()">Reload</button>
+        </div>
+    </div>
+
+    <p class="ro-hint">
+        Each bus has a crew: tick the shifts it runs and choose a driver and a rest day for each.
+        Floaters belong to a route and cover its crew's rest days. Drivers keep their bus and rest
+        day every month; only the shift rotates.
+    </p>
+
+    @* What stands between this roster and a save. Asked of the server as the page is
+       edited, and asked again when it is saved. *@
+    <div class="ro-problems" id="roProblems" hidden>
+        <p class="ro-problems-t">Fix these before saving</p>
+        <ul id="roProblemList"></ul>
+    </div>
+
+    @* What the last publish left for a person: slots nobody was free for, and slots kept
+       empty on purpose. Only days still to come, since a past gap is nothing to act on. *@
+    @if (Model.Gaps.Count > 0 || Model.Skips.Count > 0)
+    {
+        <section class="ro-card" id="roPublished">
+            @if (Model.Gaps.Count > 0)
+            {
+                <h2 class="ro-card-title">Unfilled slots <span class="ro-count">@Model.Gaps.Count</span></h2>
+                <p class="ro-empty">Nobody on the roster was free for these when it was published.</p>
+                <ul class="ro-slots">
+                    @foreach (var g in Model.Gaps)
+                    {
+                        <li class="ro-slot" data-date="@g.Date" data-vehicle="@g.VehicleId" data-shift="@g.Shift"
+                            data-label="@($"{g.DateLabel}, {g.Shift} shift, {g.VehicleId}")">
+                            <div class="ro-slot-main">
+                                <span class="ro-slot-when">@g.DateLabel · @g.Shift</span>
+                                <span class="ro-slot-bus">@g.VehicleId@(string.IsNullOrEmpty(g.RouteName) ? "" : $" · {g.RouteName}")</span>
+                                <span class="ro-slot-why">@g.Reason</span>
+                            </div>
+                            @if (!Model.ReadOnly)
+                            {
+                                <div class="ro-slot-actions">
+                                    @if (Model.CanFillGaps)
+                                    {
+                                        <button type="button" class="ro-btn ro-btn--ghost ro-fill">Find a driver</button>
+                                    }
+                                    <button type="button" class="ro-btn ro-btn--ghost ro-notrunning">Bus not running</button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (Model.Skips.Count > 0)
+            {
+                <h2 class="ro-card-title ro-card-title--next">Skipped slots <span class="ro-count">@Model.Skips.Count</span></h2>
+                <p class="ro-empty">A publish never fills these. Restore one to let the next publish fill it.</p>
+                <ul class="ro-slots">
+                    @foreach (var s in Model.Skips)
+                    {
+                        <li class="ro-slot" data-date="@s.Date" data-vehicle="@s.VehicleId" data-shift="@s.Shift">
+                            <div class="ro-slot-main">
+                                <span class="ro-slot-when">@s.DateLabel · @s.Shift</span>
+                                <span class="ro-slot-bus">@s.VehicleId</span>
+                                <span class="ro-slot-why">@s.Reason</span>
+                            </div>
+                            @if (!Model.ReadOnly)
+                            {
+                                <div class="ro-slot-actions">
+                                    <button type="button" class="ro-btn ro-btn--ghost ro-restore">Restore</button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+
+    @if (Model.UnroutedBuses.Count > 0)
+    {
+        <p class="ro-note ro-note--block">
+            @(Model.UnroutedBuses.Count == 1 ? "1 bus has" : $"{Model.UnroutedBuses.Count} buses have") no home route
+            and cannot be rostered: @string.Join(", ", Model.UnroutedBuses).
+            @(Model.UnroutedBuses.Count == 1 ? "Give it a route" : "Give them a route") on the Vehicles page.
+        </p>
+    }
+
+    @foreach (var route in Model.Routes)
+    {
+        var floaters = Model.Seats.Where(s => s.Kind == RosterRules.Floater && s.RouteId == route.RouteId).ToList();
+
+        <section class="ro-card" data-route="@route.RouteId">
+            <div class="ro-card-head">
+                <h2 class="ro-card-title">@route.RouteName</h2>
+                @* Crew resting over floaters working, for each day of the week. A red day is a
+                   rest day nobody is free to cover, every week. *@
+                <div class="ro-strip" id="roStrip-@route.RouteId" aria-label="Rest day cover"></div>
+            </div>
+
+            <p class="ro-short" id="roShort-@route.RouteId" hidden></p>
+
+            <div class="ro-section-t">Buses</div>
+            @if (route.Buses.Count == 0)
+            {
+                <p class="ro-empty">No buses are based on this route.</p>
+            }
+
+            @foreach (var bus in route.Buses)
+            {
+                <div class="ro-bus" data-vehicle="@bus.VehicleId">
+                    <div class="ro-bus-id">
+                        <span class="ro-bus-name">@bus.VehicleId</span>
+                        <span class="ro-bus-plate">@bus.PlateNumber</span>
+                        @if (bus.Warning is not null)
+                        {
+                            <span class="ro-bus-warn">@bus.Warning</span>
+                        }
+                    </div>
+
+                    @foreach (var shift in shifts)
+                    {
+                        var seat = CrewAt(bus.VehicleId, shift);
+                        var runs = seat is not null;
+
+                        <div class="ro-seat" data-shift="@shift">
+                            <label class="ro-runs">
+                                <input type="checkbox" class="ro-runs-box" checked="@runs" disabled="@disabled" />
+                                @shift
+                            </label>
+                            <select class="ro-input ro-driver" aria-label="@bus.VehicleId @shift driver" hidden="@(!runs)" disabled="@disabled">
+                                <option value="">Choose a driver</option>
+                                @foreach (var d in Model.Drivers)
+                                {
+                                    <option value="@d.DriverId" selected="@(seat?.DriverId == d.DriverId)">@d.Label</option>
+                                }
+                            </select>
+                            <select class="ro-input ro-rest" aria-label="@bus.VehicleId @shift rest day" hidden="@(!runs)" disabled="@disabled">
+                                <option value="">Rest day</option>
+                                @foreach (var day in RosterRules.Weekdays)
+                                {
+                                    <option value="@day" selected="@(seat?.RestWeekday == day)">Rests @RosterRules.DayName(day)</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="ro-section-t">Floaters</div>
+            <div class="ro-floaters">
+                @foreach (var f in floaters)
+                {
+                    <div class="ro-floater">
+                        <select class="ro-input ro-driver" aria-label="Floater" disabled="@disabled">
+                            <option value="">Choose a driver</option>
+                            @foreach (var d in Model.Drivers)
+                            {
+                                <option value="@d.DriverId" selected="@(f.DriverId == d.DriverId)">@d.Label</option>
+                            }
+                        </select>
+                        <select class="ro-input ro-home" aria-label="Home shift" disabled="@disabled">
+                            @foreach (var shift in shifts)
+                            {
+                                <option value="@shift" selected="@(f.Shift == shift)">Home shift @shift</option>
+                            }
+                        </select>
+                        <select class="ro-input ro-rest" aria-label="Rest day" disabled="@disabled">
+                            <option value="">Rest day</option>
+                            @foreach (var day in RosterRules.Weekdays)
+                            {
+                                <option value="@day" selected="@(f.RestWeekday == day)">Rests @RosterRules.DayName(day)</option>
+                            }
+                        </select>
+                        @if (!Model.ReadOnly)
+                        {
+                            <button type="button" class="ro-btn ro-btn--ghost ro-remove">Remove</button>
+                        }
+                    </div>
+                }
+            </div>
+            @if (!Model.ReadOnly)
+            {
+                <button type="button" class="ro-btn ro-btn--ghost ro-add-floater">+ Add floater</button>
+            }
+        </section>
+    }
+
+    <section class="ro-card">
+        <h2 class="ro-card-title">Unplaced drivers</h2>
+        @* The shortfall against the people there are to fill it. More drivers short than
+           unplaced means the roster cannot be completed from the drivers on the books. *@
+        <p class="ro-short" id="roHeadcount" hidden></p>
+        <p class="ro-empty" id="roUnplacedNone" hidden>Every active driver has a place.</p>
+        <ul class="ro-unplaced" id="roUnplaced"></ul>
+    </section>
+</div>
+
+@* A new floater row, with every driver and nothing chosen. *@
+<template id="roFloaterTemplate">
+    <div class="ro-floater">
+        <select class="ro-input ro-driver" aria-label="Floater">
+            <option value="">Choose a driver</option>
+            @foreach (var d in Model.Drivers.Where(d => d.Active))
+            {
+                <option value="@d.DriverId">@d.Label</option>
+            }
+        </select>
+        <select class="ro-input ro-home" aria-label="Home shift">
+            @foreach (var shift in shifts)
+            {
+                <option value="@shift">Home shift @shift</option>
+            }
+        </select>
+        <select class="ro-input ro-rest" aria-label="Rest day">
+            <option value="">Rest day</option>
+            @foreach (var day in RosterRules.Weekdays)
+            {
+                <option value="@day">Rests @RosterRules.DayName(day)</option>
+            }
+        </select>
+        <button type="button" class="ro-btn ro-btn--ghost ro-remove">Remove</button>
+    </div>
+</template>
+
+<div class="ro-overlay" id="roConfirm" hidden role="dialog" aria-modal="true" aria-labelledby="roConfirmTitle">
+    <div class="ro-box">
+        <h3 class="ro-box-title" id="roConfirmTitle"></h3>
+        <p class="ro-box-desc" id="roConfirmDesc"></p>
+        <div class="ro-box-actions">
+            <button type="button" class="ro-btn ro-btn--ghost" id="roConfirmNo">Cancel</button>
+            <button type="button" class="ro-btn ro-btn--primary" id="roConfirmYes"></button>
+        </div>
+    </div>
+</div>
+
+@* Publishing: what it would write, then what it wrote. *@
+<div class="ro-overlay" id="roPublishBox" hidden role="dialog" aria-modal="true" aria-labelledby="roPublishTitle">
+    <div class="ro-box ro-box--wide">
+        <h3 class="ro-box-title" id="roPublishTitle">Publish @Model.Month.ToString("MMMM")</h3>
+        <p class="ro-box-desc" id="roPublishLead">Working out what publishing writes&#8230;</p>
+        <ul class="ro-report" id="roPublishLines"></ul>
+        <p class="ro-box-error" id="roPublishError" hidden></p>
+        <div class="ro-box-actions">
+            <button type="button" class="ro-btn ro-btn--ghost" id="roPublishNo">Cancel</button>
+            <button type="button" class="ro-btn ro-btn--dark" id="roPublishYes" disabled>Publish</button>
+        </div>
+    </div>
+</div>
+
+@* Filling a gap: the drivers who could take it, ranked. *@
+<div class="ro-overlay" id="roFillBox" hidden role="dialog" aria-modal="true" aria-labelledby="roFillTitle">
+    <div class="ro-box ro-box--wide">
+        <h3 class="ro-box-title" id="roFillTitle">Find a driver</h3>
+        <p class="ro-box-desc" id="roFillSlot"></p>
+        <div class="ro-fill-list" id="roFillList" role="radiogroup" aria-labelledby="roFillTitle"></div>
+        <p class="ro-box-error" id="roFillError" hidden></p>
+        <div class="ro-box-actions">
+            <button type="button" class="ro-btn ro-btn--ghost" id="roFillNo">Cancel</button>
+            <button type="button" class="ro-btn ro-btn--primary" id="roFillYes" disabled>Book driver</button>
+        </div>
+    </div>
+</div>
+
+<div class="ro-toast" id="roToast" role="status" hidden></div>
+
+@Html.AntiForgeryToken()
+
+<script>
+    (function () {
+        const page = document.getElementById('roPage');
+        const readOnly = page.dataset.readonly === 'true';
+        let version = Number(page.dataset.version);
+        let dirty = false;
+        let checkTimer = null;
+        let checkSeq = 0;
+
+        // ---- The roster as it stands on the page ------------------------------------
+
+        function numberOrNull(value) {
+            return value === '' || value == null ? null : Number(value);
+        }
+
+        function readSeats() {
+            const seats = [];
+            page.querySelectorAll('.ro-card[data-route]').forEach(function (card) {
+                const routeId = Number(card.dataset.route);
+
+                card.querySelectorAll('.ro-bus').forEach(function (bus) {
+                    bus.querySelectorAll('.ro-seat').forEach(function (seat) {
+                        if (!seat.querySelector('.ro-runs-box').checked) return;
+                        seats.push({
+                            driverId: numberOrNull(seat.querySelector('.ro-driver').value),
+                            kind: 'Crew',
+                            routeId: routeId,
+                            vehicleId: bus.dataset.vehicle,
+                            shift: seat.dataset.shift,
+                            restWeekday: numberOrNull(seat.querySelector('.ro-rest').value)
+                        });
+                    });
+                });
+
+                card.querySelectorAll('.ro-floater').forEach(function (row) {
+                    seats.push({
+                        driverId: numberOrNull(row.querySelector('.ro-driver').value),
+                        kind: 'Floater',
+                        routeId: routeId,
+                        vehicleId: null,
+                        shift: row.querySelector('.ro-home').value,
+                        restWeekday: numberOrNull(row.querySelector('.ro-rest').value)
+                    });
+                });
+            });
+            return seats;
+        }
+
+        // ---- What the server says about it ----------------------------------------------
+
+        function showProblems(problems) {
+            const box = document.getElementById('roProblems');
+            const list = document.getElementById('roProblemList');
+            list.replaceChildren();
+            problems.forEach(function (p) {
+                const li = document.createElement('li');
+                li.textContent = p;
+                list.appendChild(li);
+            });
+            box.hidden = problems.length === 0;
+        }
+
+        function showRoute(r) {
+            const strip = document.getElementById('roStrip-' + r.routeId);
+            if (strip) {
+                strip.replaceChildren();
+                r.strip.forEach(function (d) {
+                    const chip = document.createElement('span');
+                    chip.className = 'ro-day' + (d.short ? ' ro-day--short' : '');
+                    chip.textContent = d.day + ' ' + d.resting + '/' + d.covering;
+                    chip.title = d.dayName + ': ' + d.resting + (d.resting === 1 ? ' crew driver rests, ' : ' crew drivers rest, ')
+                        + d.covering + (d.covering === 1 ? ' floater is working' : ' floaters are working');
+                    strip.appendChild(chip);
+                });
+            }
+
+            const note = document.getElementById('roShort-' + r.routeId);
+            if (note) {
+                const parts = [];
+                if (r.unfilledSeats > 0)
+                    parts.push(r.unfilledSeats === 1 ? '1 bus shift has no driver.'
+                        : r.unfilledSeats + ' bus shifts have no driver.');
+                if (r.floatersMissing > 0)
+                    parts.push('Needs ' + r.floatersMissing + ' more ' + (r.floatersMissing === 1 ? 'floater' : 'floaters')
+                        + ': ' + r.crewSeats + ' bus ' + (r.crewSeats === 1 ? 'shift takes ' : 'shifts take ')
+                        + r.floatersNeeded + ' to cover rest days.');
+                if (r.gapsPerWeek > 0)
+                    parts.push(r.gapsPerWeek === 1 ? '1 rest day a week has nobody to cover it.'
+                        : r.gapsPerWeek + ' rest days a week have nobody to cover them.');
+                note.textContent = parts.join(' ');
+                note.hidden = parts.length === 0;
+            }
+        }
+
+        function showUnplaced(drivers) {
+            const list = document.getElementById('roUnplaced');
+            list.replaceChildren();
+            drivers.forEach(function (d) {
+                const li = document.createElement('li');
+                li.textContent = d.name + ' (' + d.driverId + ')';
+                list.appendChild(li);
+            });
+            document.getElementById('roUnplacedNone').hidden = drivers.length > 0;
+        }
+
+        async function check() {
+            const seq = ++checkSeq;
+            try {
+                const res = await fetch('/Roster/Check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seats: readSeats() })
+                });
+                if (!res.ok || res.redirected) return;
+                const said = await res.json();
+                // An answer to an older edit is not shown over a newer one.
+                if (seq !== checkSeq) return;
+                showProblems(said.problems || []);
+                (said.routes || []).forEach(showRoute);
+                showUnplaced(said.unplaced || []);
+
+                const short = (said.routes || []).reduce(function (n, r) { return n + r.driversShort; }, 0);
+                const free = (said.unplaced || []).length;
+                const headcount = document.getElementById('roHeadcount');
+                headcount.textContent = 'The routes need ' + short + ' more ' + (short === 1 ? 'driver' : 'drivers')
+                    + ' and ' + (free === 0 ? 'none are' : free === 1 ? 'only 1 is' : 'only ' + free + ' are') + ' unplaced.';
+                headcount.hidden = short <= free;
+            } catch (e) {
+                console.warn('roster check failed', e);
+            }
+        }
+
+        function changed() {
+            if (readOnly) return;
+            dirty = true;
+            const note = document.getElementById('roDirty');
+            if (note) note.hidden = false;
+            clearTimeout(checkTimer);
+            checkTimer = setTimeout(check, 350);
+        }
+
+        // ---- Editing ----------------------------------------------------------------------
+
+        page.addEventListener('change', function (e) {
+            if (e.target.classList.contains('ro-runs-box')) {
+                const seat = e.target.closest('.ro-seat');
+                seat.querySelectorAll('select').forEach(function (s) { s.hidden = !e.target.checked; });
+            }
+            changed();
+        });
+
+        page.addEventListener('click', function (e) {
+            const add = e.target.closest('.ro-add-floater');
+            if (add) {
+                const card = add.closest('.ro-card');
+                const row = document.getElementById('roFloaterTemplate').content.firstElementChild.cloneNode(true);
+                card.querySelector('.ro-floaters').appendChild(row);
+                row.querySelector('.ro-driver').focus();
+                changed();
+                return;
+            }
+
+            const remove = e.target.closest('.ro-remove');
+            if (remove) {
+                remove.closest('.ro-floater').remove();
+                changed();
+            }
+        });
+
+        window.addEventListener('beforeunload', function (e) {
+            if (!dirty) return;
+            e.preventDefault();
+            e.returnValue = '';
+        });
+
+        let toastTimer = null;
+        function toast(text) {
+            const el = document.getElementById('roToast');
+            el.textContent = text;
+            el.hidden = false;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { el.hidden = true; }, 4000);
+        }
+
+        // ---- Suggest rest days --------------------------------------------------------------
+
+        async function suggest() {
+            try {
+                const res = await fetch('/Roster/Suggest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seats: readSeats() })
+                });
+                if (!res.ok || res.redirected) throw new Error();
+                const seats = (await res.json()).seats || [];
+
+                // Written back in the order the seats were read, which is the order of the page.
+                let i = 0;
+                page.querySelectorAll('.ro-card[data-route]').forEach(function (card) {
+                    card.querySelectorAll('.ro-bus .ro-seat').forEach(function (seat) {
+                        if (!seat.querySelector('.ro-runs-box').checked) return;
+                        const s = seats[i++];
+                        if (s && s.restWeekday != null) seat.querySelector('.ro-rest').value = String(s.restWeekday);
+                    });
+                    card.querySelectorAll('.ro-floater').forEach(function (row) {
+                        const s = seats[i++];
+                        if (!s) return;
+                        if (s.restWeekday != null) row.querySelector('.ro-rest').value = String(s.restWeekday);
+                        row.querySelector('.ro-home').value = s.shift;
+                    });
+                });
+
+                changed();
+                toast('Rest days suggested. Look them over, then save.');
+            } catch (e) {
+                toast('Rest days could not be suggested. Try again.');
+            }
+        }
+
+        // ---- Asking first ----------------------------------------------------------------------
+
+        const confirmBox = document.getElementById('roConfirm');
+        let answer = null;
+
+        function ask(title, desc, yes) {
+            document.getElementById('roConfirmTitle').textContent = title;
+            document.getElementById('roConfirmDesc').textContent = desc;
+            document.getElementById('roConfirmYes').textContent = yes;
+            confirmBox.hidden = false;
+            return new Promise(function (resolve) { answer = resolve; });
+        }
+
+        function answered(value) {
+            confirmBox.hidden = true;
+            if (answer) { const a = answer; answer = null; a(value); }
+        }
+
+        document.getElementById('roConfirmNo').addEventListener('click', function () { answered(false); });
+        document.getElementById('roConfirmYes').addEventListener('click', function () { answered(true); });
+        confirmBox.addEventListener('click', function (e) { if (e.target === confirmBox) answered(false); });
+
+        const suggestBtn = document.getElementById('roSuggest');
+        if (suggestBtn) {
+            suggestBtn.addEventListener('click', async function () {
+                const anyChosen = readSeats().some(function (s) { return s.restWeekday != null; });
+                if (anyChosen && !await ask('Suggest rest days',
+                        'Rest days and floaters\' home shifts already chosen will be replaced with suggestions. '
+                        + 'Nothing is saved until you save the roster.', 'Suggest')) return;
+                suggest();
+            });
+        }
+
+        // ---- Talking to the server --------------------------------------------------------------
+
+        function post(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(body)
+            });
+        }
+
+        // A refusal answers with a sentence, a list of problems or a message; a crash answers
+        // with a page of HTML, which is no use in a dialog.
+        async function said(res, fallback) {
+            const text = (await res.text() || '').trim();
+            if (!text || text[0] === '<') return [fallback];
+            try {
+                const json = JSON.parse(text);
+                if (Array.isArray(json.problems)) return json.problems;
+                if (json.message) return [json.message];
+                if (json.conflict) return [json.conflict];
+                if (typeof json === 'string') return [json];
+            } catch (e) {
+                if (text.length < 300) return [text];
+            }
+            return [fallback];
+        }
+
+        function showMoved(message) {
+            document.getElementById('roMovedText').textContent = message;
+            document.getElementById('roMoved').hidden = false;
+        }
+
+        function reload() {
+            dirty = false;
+            location.reload();
+        }
+
+        // ---- Generate from the month before ------------------------------------------------------
+
+        const generateBtn = document.getElementById('roGenerate');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', async function () {
+                if (dirty) { toast('Save or discard your changes first.'); return; }
+
+                const previous = generateBtn.dataset.previous;
+                if (readSeats().some(function (s) { return s.driverId != null; })
+                    && !await ask('Generate from ' + previous,
+                        'The roster on this page is replaced with ' + previous + '\'s, every shift rotated one step '
+                        + 'backward. Rest days and buses stay. Nothing is published.', 'Generate')) return;
+
+                generateBtn.disabled = true;
+                try {
+                    const res = await post('/Roster/Generate', { month: page.dataset.month, version: version });
+                    if (res.status === 409) { showMoved((await said(res, ''))[0]); return; }
+                    if (!res.ok || res.redirected) { toast((await said(res, 'The roster could not be generated.'))[0]); return; }
+                    reload();
+                } catch (e) {
+                    toast('The roster could not be generated. Try again.');
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            });
+        }
+
+        // ---- Publish --------------------------------------------------------------------------------
+
+        const publishBtn = document.getElementById('roPublish');
+        const publishBox = document.getElementById('roPublishBox');
+        const publishYes = document.getElementById('roPublishYes');
+        const publishNo = document.getElementById('roPublishNo');
+        const publishLead = document.getElementById('roPublishLead');
+        const publishLines = document.getElementById('roPublishLines');
+        const publishError = document.getElementById('roPublishError');
+        let published = false;
+
+        function listInto(el, lines) {
+            el.replaceChildren();
+            lines.forEach(function (line) {
+                const li = document.createElement('li');
+                li.textContent = line;
+                el.appendChild(li);
+            });
+        }
+
+        function publishFailed(lines) {
+            publishError.replaceChildren();
+            lines.forEach(function (line) {
+                const div = document.createElement('div');
+                div.textContent = line;
+                publishError.appendChild(div);
+            });
+            publishError.hidden = false;
+        }
+
+        if (publishBtn) {
+            publishBtn.addEventListener('click', async function () {
+                if (dirty) { toast('Save the roster before publishing it.'); return; }
+
+                published = false;
+                publishLead.textContent = 'Working out what publishing writes…';
+                publishLines.replaceChildren();
+                publishError.hidden = true;
+                publishYes.textContent = 'Publish';
+                publishYes.disabled = true;
+                publishNo.hidden = false;
+                publishBox.hidden = false;
+
+                try {
+                    const res = await post('/Roster/Preview', { month: page.dataset.month, version: version });
+                    if (res.status === 409) { publishBox.hidden = true; showMoved((await said(res, ''))[0]); return; }
+                    if (!res.ok || res.redirected) {
+                        publishLead.textContent = 'This roster cannot be published yet.';
+                        publishFailed(await said(res, 'The plan could not be worked out. Try again.'));
+                        return;
+                    }
+                    listInto(publishLines, (await res.json()).lines || []);
+                    publishLead.textContent = 'Publishing writes the month\'s trips from the saved roster:';
+                    publishYes.disabled = false;
+                } catch (e) {
+                    publishFailed(['The plan could not be worked out. Try again.']);
+                }
+            });
+
+            publishNo.addEventListener('click', function () { publishBox.hidden = true; });
+
+            publishYes.addEventListener('click', async function () {
+                if (published) { reload(); return; }
+
+                publishYes.disabled = true;
+                publishError.hidden = true;
+                try {
+                    const res = await post('/Roster/Publish', { month: page.dataset.month, version: version });
+                    if (!res.ok || res.redirected) {
+                        publishFailed(await said(res, 'The roster could not be published. Try again.'));
+                        publishYes.disabled = false;
+                        return;
+                    }
+
+                    const result = await res.json();
+                    version = result.version;
+                    published = true;
+                    publishLead.textContent = 'Published.';
+                    listInto(publishLines, result.lines || []);
+                    publishNo.hidden = true;
+                    publishYes.textContent = 'Done';
+                    publishYes.disabled = false;
+                } catch (e) {
+                    publishFailed(['The roster could not be published. Try again.']);
+                    publishYes.disabled = false;
+                }
+            });
+        }
+
+        // ---- Unfilled and skipped slots ----------------------------------------------------------------
+
+        function slotOf(button) {
+            const li = button.closest('.ro-slot');
+            return { date: li.dataset.date, vehicleId: li.dataset.vehicle, shift: li.dataset.shift, label: li.dataset.label };
+        }
+
+        const fillBox = document.getElementById('roFillBox');
+        const fillList = document.getElementById('roFillList');
+        const fillYes = document.getElementById('roFillYes');
+        const fillError = document.getElementById('roFillError');
+        let filling = null;   // { slot, override }
+
+        function tierLabel(tier) {
+            return tier === 1 ? 'Free all day' : tier === 2 ? 'Has another shift that day'
+                : tier === 3 ? 'Would be a long run of days' : 'Breaks a rest rule';
+        }
+
+        async function openFill(slot) {
+            filling = { slot: slot, override: false };
+            document.getElementById('roFillSlot').textContent = slot.label;
+            fillList.replaceChildren();
+            fillError.hidden = true;
+            fillYes.textContent = 'Book driver';
+            fillYes.disabled = true;
+            fillBox.hidden = false;
+
+            try {
+                const q = new URLSearchParams({ date: slot.date, vehicleId: slot.vehicleId, shift: slot.shift });
+                const res = await fetch('/Roster/GapCandidates?' + q.toString());
+                if (!res.ok || res.redirected) throw new Error();
+                const candidates = (await res.json()).candidates || [];
+
+                if (!candidates.length) {
+                    fillError.textContent = 'Nobody could take this shift. Mark the bus as not running instead.';
+                    fillError.hidden = false;
+                    return;
+                }
+
+                candidates.forEach(function (c, i) {
+                    const row = document.createElement('label');
+                    row.className = 'ro-fill-row';
+
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'roFillPick';
+                    radio.value = c.driverId;
+                    radio.checked = i === 0;
+
+                    const body = document.createElement('span');
+                    body.className = 'ro-fill-body';
+                    const name = document.createElement('span');
+                    name.className = 'ro-fill-name';
+                    name.textContent = c.name;
+                    const tier = document.createElement('span');
+                    tier.className = 'ro-fill-tier ro-fill-tier--' + c.tier;
+                    tier.textContent = tierLabel(c.tier);
+                    const reason = document.createElement('span');
+                    reason.className = 'ro-fill-reason';
+                    reason.textContent = c.reason;
+                    body.append(name, tier, reason);
+                    if (c.warning) {
+                        const warn = document.createElement('span');
+                        warn.className = 'ro-fill-warn';
+                        warn.textContent = c.warning;
+                        body.appendChild(warn);
+                    }
+
+                    row.append(radio, body);
+                    fillList.appendChild(row);
+                });
+
+                fillYes.disabled = false;
+            } catch (e) {
+                fillError.textContent = 'The drivers could not be listed. Try again.';
+                fillError.hidden = false;
+            }
+        }
+
+        fillList.addEventListener('change', function () {
+            if (!filling) return;
+            filling.override = false;
+            fillYes.textContent = 'Book driver';
+            fillError.hidden = true;
+        });
+
+        document.getElementById('roFillNo').addEventListener('click', function () { fillBox.hidden = true; filling = null; });
+
+        fillYes.addEventListener('click', async function () {
+            const pick = fillList.querySelector('input[name="roFillPick"]:checked');
+            if (!filling || !pick) return;
+
+            fillYes.disabled = true;
+            try {
+                const res = await post('/Roster/FillGap', {
+                    date: filling.slot.date, vehicleId: filling.slot.vehicleId, shift: filling.slot.shift,
+                    driverId: Number(pick.value), override: filling.override
+                });
+
+                // A clash the dispatcher may book past, the same as everywhere else.
+                if (res.status === 409) {
+                    fillError.textContent = (await said(res, 'This clashes with the schedule.'))[0] + ' Book anyway?';
+                    fillError.hidden = false;
+                    filling.override = true;
+                    fillYes.textContent = 'Book anyway';
+                    fillYes.disabled = false;
+                    return;
+                }
+                if (!res.ok || res.redirected) {
+                    fillError.textContent = (await said(res, 'The driver could not be booked. Try again.'))[0];
+                    fillError.hidden = false;
+                    fillYes.disabled = false;
+                    return;
+                }
+                reload();
+            } catch (e) {
+                fillError.textContent = 'The driver could not be booked. Try again.';
+                fillError.hidden = false;
+                fillYes.disabled = false;
+            }
+        });
+
+        page.addEventListener('click', async function (e) {
+            const fill = e.target.closest('.ro-fill');
+            if (fill) { openFill(slotOf(fill)); return; }
+
+            const notRunning = e.target.closest('.ro-notrunning');
+            if (notRunning) {
+                const slot = slotOf(notRunning);
+                if (!await ask('Bus not running', slot.label + ' is kept empty, and no publish fills it. '
+                        + 'It can be restored from the skipped slots.', 'Mark not running')) return;
+                const res = await post('/Roster/SkipGap', slot);
+                if (res.ok && !res.redirected) reload();
+                else toast((await said(res, 'That could not be saved. Try again.'))[0]);
+                return;
+            }
+
+            const restore = e.target.closest('.ro-restore');
+            if (restore) {
+                const res = await post('/Roster/RestoreSkip', slotOf(restore));
+                if (res.ok && !res.redirected) reload();
+                else toast((await said(res, 'That could not be restored. Try again.'))[0]);
+            }
+        });
+
+        // ---- Save -------------------------------------------------------------------------------
+
+        const saveBtn = document.getElementById('roSave');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async function () {
+                saveBtn.disabled = true;
+                try {
+                    const res = await fetch('/Roster/Save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken':
+                                document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ month: page.dataset.month, version: version, seats: readSeats() })
+                    });
+
+                    if (res.status === 409) {
+                        const said = await res.json();
+                        document.getElementById('roMovedText').textContent = said.message;
+                        document.getElementById('roMoved').hidden = false;
+                        return;
+                    }
+
+                    if (res.status === 400) {
+                        const said = await res.json().catch(function () { return {}; });
+                        showProblems(said.problems || ['The roster could not be saved.']);
+                        document.getElementById('roProblems').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+
+                    if (!res.ok || res.redirected) throw new Error();
+
+                    const saved = await res.json();
+                    version = saved.version;
+                    dirty = false;
+                    document.getElementById('roDirty').hidden = true;
+                    document.getElementById('roSaved').textContent = saved.savedLine;
+                    if (publishBtn) publishBtn.hidden = false;
+                    if (page.dataset.status === 'Published') document.getElementById('roUnpublished').hidden = false;
+                    toast('Roster saved.');
+                } catch (e) {
+                    toast('The roster could not be saved. Try again.');
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+        }
+
+        check();
+    })();
+</script>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/roster.css" asp-append-version="true" />
+}

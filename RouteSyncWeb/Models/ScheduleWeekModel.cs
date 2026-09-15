@@ -28,4 +28,12 @@ public class ScheduleWeek : BaseModel
 
     [Column("saved_by")]
     public int? SavedBy { get; set; }
+
+    /// <summary>Whether only a roster publish has written this week, never the planner.</summary>
+    /// <remarks>
+    /// Kept by a trigger, which clears it on every write that is not a publish, so it is
+    /// never sent from here.
+    /// </remarks>
+    [Column("roster_only", ignoreOnInsert: true, ignoreOnUpdate: true)]
+    public bool RosterOnly { get; set; }
 }
