@@ -138,7 +138,7 @@
 
     private List<Trip> trips = new();
     private List<LeaveRequest> leave = new();
-    private HashSet<DateTime> scheduledWeeks = new();
+    private Dictionary<DateTime, bool> scheduledWeeks = new();
     private HashSet<DateTime> publishedMonths = new();
     private readonly Dictionary<int, string> routeNames = new();
 
@@ -298,12 +298,18 @@
 
     /// <summary>Whether a day has been planned, so that no trip on it means no work.</summary>
     /// <remarks>
-    /// Either answer will do: the month has a published roster, or the planner has saved
-    /// the week. Neither is enough alone. A roster covers its own month and no further, and
-    /// a week nobody opened in the planner can still hold a rostered month's first days.
+    /// The day's week has to be marked as built. A week the planner saved answers all of
+    /// its days. A week only a roster publish marked answers the days of a published month
+    /// and no others: its days in the month next door were never planned.
+    ///
+    /// The mark is needed even inside a published month. A roster first published part
+    /// way through its month wrote only the days after that, and the weeks before it were
+    /// never marked, so a driver's empty days there read as unplanned rather than as
+    /// rest days.
     /// </remarks>
     private bool IsScheduled(DateTime d) =>
-        publishedMonths.Contains(new DateTime(d.Year, d.Month, 1)) || scheduledWeeks.Contains(MondayOf(d));
+        scheduledWeeks.TryGetValue(MondayOf(d), out var rosterOnly)
+        && (!rosterOnly || publishedMonths.Contains(new DateTime(d.Year, d.Month, 1)));
 
     private DateTime ThisMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);
 
