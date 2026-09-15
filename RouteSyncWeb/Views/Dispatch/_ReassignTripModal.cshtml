@@ -68,6 +68,7 @@
                         </select>
                     </div>
                     <span class="rtm-hint" id="rtm-vehicle-hint"></span>
+                    <div class="rtm-why" id="rtm-vehicle-why" aria-live="polite"></div>
                 </div>
             </div>
 
@@ -82,6 +83,7 @@
                         </select>
                     </div>
                     <span class="rtm-hint" id="rtm-driver-hint"></span>
+                    <div class="rtm-why" id="rtm-driver-why" aria-live="polite"></div>
                 </div>
             </div>
 
@@ -166,6 +168,8 @@
         const vehicleHint = document.getElementById('rtm-vehicle-hint');
         const driverSel   = document.getElementById('rtm-driver');
         const driverHint  = document.getElementById('rtm-driver-hint');
+        const vehicleWhy  = document.getElementById('rtm-vehicle-why');
+        const driverWhy   = document.getElementById('rtm-driver-why');
         const saveBtn     = document.getElementById('rtm-save-btn');
 
         // Open.
@@ -206,9 +210,9 @@
                     statusBadge.style.display = 'none';
                 }
 
-                // Populate the dropdowns, pre-selecting the current assignments.
-                refreshRtmVehicles(_rtmOptions.tripInfo.currentVehicleId);
-                refreshRtmDrivers(_rtmOptions.tripInfo.currentDriverId);
+                // Populate the dropdowns, ranked best first.
+                refreshRtmVehicles();
+                refreshRtmDrivers();
 
                 loadingEl.style.display = 'none';
                 bodyEl.style.display    = 'block';
@@ -253,66 +257,154 @@
     // Plate numbers and driver names are typed by admins and come straight from the
     // database, so with innerHTML a name like `<img src=x onerror=...>` ran in the
     // session of whoever opened this modal next.
+    //
+    // An item carrying a group lands in an optgroup of that name, created the first time
+    // the name is seen, so groups appear in the order the ranked list reaches them.
     function rtmFillSelect(sel, placeholder, items, selectedId) {
         sel.replaceChildren();
         const blank = document.createElement('option');
         blank.value = '';
         blank.textContent = placeholder;
         sel.appendChild(blank);
+        const groups = {};
         (items || []).forEach(function (it) {
             const opt = document.createElement('option');
             opt.value = it.value;
             opt.textContent = it.label;
             if (it.face !== undefined) opt.dataset.face = it.face;
             if (selectedId != null && it.value == selectedId) opt.selected = true;
-            sel.appendChild(opt);
+
+            let parent = sel;
+            if (it.group) {
+                parent = groups[it.group];
+                if (!parent) {
+                    parent = document.createElement('optgroup');
+                    parent.label = it.group;
+                    sel.appendChild(parent);
+                    groups[it.group] = parent;
+                }
+            }
+            parent.appendChild(opt);
         });
     }
 
-            function refreshRtmVehicles(selectedId) {
-        if (!_rtmOptions) return;
+        // The ranking's tiers, in the words a dispatcher reads them in. The server orders
+        // the candidates; these only name the groups they fall into.
+        const RTM_DRIVER_TIERS = {
+            1: 'Free all day',
+            2: 'Has another shift that day',
+            3: 'Would work 7 or more days in a row',
+            4: 'Breaks a rest rule'
+        };
+        const RTM_VEHICLE_TIERS = {
+            1: 'Based on this route',
+            2: 'From another route',
+            3: 'Needs attention'
+        };
 
-        const list = _rtmOptions.vehicles;
+        // The top pick is called the best match only when taking it costs nothing worth a
+        // warning. A best of a bad lot stays in its own tier, where its cost is named.
+        function rtmGroupOf(c, tiers) {
+            return c.rank === 1 && c.tier <= 2 ? 'Best match' : tiers[c.tier];
+        }
 
-        rtmFillSelect(vehicleSel,
-            list.length === 0 ? 'No vehicles available for this shift' : 'Select a vehicle…',
-            list.map(v => ({ value: v.vehicleId, label: v.vehicleId + ' | ' + v.plateNumber })),
-            selectedId);
+        // Says why the chosen candidate sits where it does, and what taking it costs.
+        function rtmExplain(el, candidate, currentProblem) {
+            el.replaceChildren();
+            const line = function (text, warn) {
+                const p = document.createElement('div');
+                p.className = warn ? 'rtm-why-line rtm-why-line--warn' : 'rtm-why-line';
+                p.textContent = text;
+                el.appendChild(p);
+            };
+            if (candidate) {
+                if (candidate.reason) line(candidate.reason, candidate.onLeave);
+                if (candidate.warning) line(candidate.warning, true);
+            } else if (currentProblem) {
+                line(currentProblem, true);
+            }
+        }
 
-        vehicleHint.textContent = list.length === 0
-            ? 'No non-flagged vehicles are free for this shift.'
-            : '';
-        vehicleHint.classList.toggle('rtm-hint--visible', list.length === 0);
-    }
+        function rtmExplainVehicle() {
+            if (!_rtmOptions) return;
+            const c = _rtmOptions.vehicles.find(v => String(v.vehicleId) === vehicleSel.value);
+            const onCurrent = vehicleSel.value === String(_rtmOptions.currentVehicle.vehicleId);
+            rtmExplain(vehicleWhy, c,
+                onCurrent && _rtmOptions.vehicleIssue ? 'The current bus is out of service.' : null);
+        }
 
-        function refreshRtmDrivers(selectedId) {
+        function rtmExplainDriver() {
+            if (!_rtmOptions) return;
+            const all = _rtmOptions.drivers
+                .concat(_rtmOptions.driversOnLeave.map(d => Object.assign({ onLeave: true }, d)));
+            const c = all.find(d => String(d.driverId) === driverSel.value);
+            const onCurrent = driverSel.value === String(_rtmOptions.currentDriver.driverId);
+            rtmExplain(driverWhy, c,
+                onCurrent && _rtmOptions.driverIssue ? 'The current driver cannot run this trip.' : null);
+        }
+
+        vehicleSel.addEventListener('change', rtmExplainVehicle);
+        driverSel.addEventListener('change', rtmExplainDriver);
+
+        function refreshRtmVehicles() {
             if (!_rtmOptions) return;
 
-            const list = _rtmOptions.drivers;
+            const o = _rtmOptions;
+            const cur = o.currentVehicle;
+            const label = v => v.plateNumber ? v.vehicleId + ' | ' + v.plateNumber : v.vehicleId;
+
+            const items = [{ value: cur.vehicleId, label: label(cur), group: 'Current' }]
+                .concat(o.vehicles.map(v => ({
+                    value: v.vehicleId, label: label(v), group: rtmGroupOf(v, RTM_VEHICLE_TIERS)
+                })));
+
+            // The best replacement is chosen for the dispatcher only when the bus is the
+            // problem. Otherwise the current bus stays chosen, so saving a driver change
+            // never moves the bus as well.
+            const best = o.vehicles[0];
+            const selected = o.vehicleIssue && best && best.tier <= 2 ? best.vehicleId : cur.vehicleId;
+
+            rtmFillSelect(vehicleSel, 'Select a vehicle…', items, selected);
+
+            vehicleHint.textContent = o.vehicles.length === 0 ? 'No other bus is free this shift.' : '';
+            vehicleHint.classList.toggle('rtm-hint--visible', o.vehicles.length === 0);
+            rtmExplainVehicle();
+        }
+
+        function refreshRtmDrivers() {
+            if (!_rtmOptions) return;
+
+            const o = _rtmOptions;
+            const cur = o.currentDriver;
+            const rows = [Object.assign({ group: 'Current' }, cur)]
+                .concat(o.drivers.map(d => Object.assign({ group: rtmGroupOf(d, RTM_DRIVER_TIERS) }, d)))
+                .concat(o.driversOnLeave.map(d => Object.assign({ group: 'On approved leave' }, d)));
 
             // Two drivers can share a name, so the identifier travels with it, in a
             // column of its own so the numbers can be read down the list.
-            const rtmLabels = rsIdLabels(list.map(d => ({ name: d.driverName, id: d.driverId })));
+            const rtmLabels = rsIdLabels(rows.map(d => ({ name: d.driverName, id: d.driverId })));
 
             // A chosen driver is read as a name. The number is only worth the room where
             // two of them answer to it.
-            const rtmShared = rsSharedNames(list.map(d => d.driverName));
+            const rtmShared = rsSharedNames(rows.map(d => d.driverName));
 
-            rtmFillSelect(driverSel,
-                list.length === 0 ? 'No drivers available for this shift' : 'Select a driver…',
-                list.map((d, i) => ({
+            const best = o.drivers[0];
+            const selected = o.driverIssue && best && best.tier <= 2 ? best.driverId : cur.driverId;
+
+            rtmFillSelect(driverSel, 'Select a driver…',
+                rows.map((d, i) => ({
                     value: d.driverId,
                     label: rtmLabels[i],
+                    group: d.group,
                     face: rtmShared(d.driverName) ? d.driverName + ' · ' + d.driverId : d.driverName,
                 })),
-                selectedId);
+                selected);
 
             rsPickFace(driverSel);
 
-            driverHint.textContent = list.length === 0
-                ? 'No available drivers are free for this shift.'
-                : '';
-            driverHint.classList.toggle('rtm-hint--visible', list.length === 0);
+            driverHint.textContent = o.drivers.length === 0 ? 'No other driver is free this shift.' : '';
+            driverHint.classList.toggle('rtm-hint--visible', o.drivers.length === 0);
+            rtmExplainDriver();
         }
 
         // Submit.

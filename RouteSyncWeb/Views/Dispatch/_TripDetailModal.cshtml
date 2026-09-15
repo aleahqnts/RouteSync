@@ -37,6 +37,14 @@
                         <span class="tdm-label">Route</span>
                         <span class="tdm-value" id="tdm-route">—</span>
                     </div>
+                    @* The one hour break. A picker while the shift can still change, and the
+                       slot as text once it cannot. *@
+                    <div class="tdm-info-item tdm-info-item--break">
+                        <label class="tdm-label" for="tdm-break-select">Break</label>
+                        <span class="tdm-value" id="tdm-break">—</span>
+                        <select id="tdm-break-select" class="tdm-break-select" hidden></select>
+                        <span id="tdm-break-note" class="tdm-break-note" hidden></span>
+                    </div>
                 </div>
             </div>
 
@@ -230,6 +238,93 @@
         el.textContent = label;
     }
 
+    // ---- Break --------------------------------------------------------------------
+    //
+    // Saved the moment another slot is picked, the same as a board action: there is no
+    // form here to submit, and a picker that needs a second press is one that gets left
+    // showing a slot nobody saved.
+
+    let tdmBreakTrip = null;
+
+    function tdmBreakText(d) {
+        if (!d.breakLabel) return 'Not set';
+        return d.onBreak ? d.breakLabel + ' · on break now' : d.breakLabel;
+    }
+
+    function renderBreak(d) {
+        const text = document.getElementById('tdm-break');
+        const select = document.getElementById('tdm-break-select');
+        const note = document.getElementById('tdm-break-note');
+
+        tdmBreakTrip = d.tripId;
+        note.hidden = true;
+        note.classList.remove('tdm-break-note--bad');
+        text.textContent = tdmBreakText(d);
+
+        if (!d.breakEditable || !d.breakOptions?.length) {
+            text.hidden = false;
+            select.hidden = true;
+            return;
+        }
+
+        select.replaceChildren();
+        if (!d.breakStart) {
+            const none = document.createElement('option');
+            none.value = '';
+            none.textContent = 'Not set';
+            none.disabled = true;
+            select.appendChild(none);
+        }
+        d.breakOptions.forEach(function (o) {
+            const opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.others === 0 ? o.label
+                : o.label + ' (' + o.others + (o.others === 1 ? ' other bus)' : ' other buses)');
+            select.appendChild(opt);
+        });
+        select.value = d.breakStart ?? '';
+        select.dataset.saved = select.value;
+
+        text.hidden = !d.onBreak;
+        if (d.onBreak) text.textContent = 'On break now';
+        select.hidden = false;
+    }
+
+    document.getElementById('tdm-break-select').addEventListener('change', async function () {
+        const select = this;
+        const note = document.getElementById('tdm-break-note');
+        const trip = tdmBreakTrip;
+
+        select.disabled = true;
+        note.hidden = true;
+        try {
+            const res = await fetch('/Dispatch/SetBreak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tripId: trip, breakStart: select.value })
+            });
+            if (!res.ok) {
+                const said = (await res.text() || '').trim();
+                throw new Error(said && said.length < 200 && said[0] !== '<' && said[0] !== '{'
+                    ? said : 'The break could not be saved. Try again.');
+            }
+            if (trip !== tdmBreakTrip) return;
+            select.dataset.saved = select.value;
+            // Whether the bus is on break now was worked out for the slot it just left.
+            document.getElementById('tdm-break').hidden = true;
+            note.textContent = 'Saved. The driver has been told.';
+            note.classList.remove('tdm-break-note--bad');
+        } catch (e) {
+            if (trip !== tdmBreakTrip) return;
+            select.value = select.dataset.saved;
+            note.textContent = e.message;
+            note.classList.add('tdm-break-note--bad');
+        } finally {
+            select.disabled = false;
+            note.hidden = false;
+        }
+    });
+
     function formatIssueKey(key) {
         return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
@@ -253,6 +348,7 @@
             document.getElementById('tdm-shift-time').textContent =
                 (d.shiftStartTime && d.shiftEndTime) ? `${d.shiftStartTime} – ${d.shiftEndTime}` : '—';
             document.getElementById('tdm-route').textContent = d.routeName ?? '—';
+            renderBreak(d);
 
             // Trip Summary (completed only)
             const summary = document.getElementById('tdm-summary-section');

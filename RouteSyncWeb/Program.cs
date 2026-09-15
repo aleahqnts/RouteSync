@@ -104,6 +104,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditLog>();
 builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<NavCounts>();
+builder.Services.AddScoped<SchedulingData>();
+builder.Services.AddScoped<TripAssignments>();
 
 builder.Services.AddControllersWithViews(options =>
 {

@@ -479,6 +479,61 @@
         color: #9a8434;
     }
 
+    /* A cover chosen for each shift in the way. Scrolls on its own, so a week of shifts
+       does not push the note and the buttons out of the dialog. */
+    .rq-covers {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 44vh;
+        overflow-y: auto;
+    }
+
+        .rq-covers[hidden] { display: none; }
+
+    .rq-cover {
+        padding: 8px 10px;
+        border: 1px solid #EFE3BF;
+        border-radius: 8px;
+        background: var(--rq-white);
+    }
+
+    .rq-cover-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 2px 8px;
+        margin-bottom: 6px;
+        font-size: .78rem;
+    }
+
+    .rq-cover-when { font-weight: 700; color: var(--rq-text); }
+
+    .rq-cover-where {
+        color: #5A6473;
+        text-decoration: underline;
+    }
+
+    .rq-cover-pick { width: 100%; }
+
+    .rq-cover-why {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 4px;
+    }
+
+    .rq-cover-line {
+        font-size: .75rem;
+        line-height: 1.4;
+        color: #5A6473;
+    }
+
+    .rq-cover-line--warn {
+        font-weight: 600;
+        color: #B7791F;
+    }
+
     /* The page had no way to say anything from outside a dialog, so a row action that
        failed failed silently. */
     .rq-toast {

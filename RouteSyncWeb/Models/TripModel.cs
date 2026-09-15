@@ -10,8 +10,12 @@ public class Trip : BaseModel
     [PrimaryKey("trip_id", shouldInsert: false)]
     public string TripId { get; set; }
 
+    // A date column. Normalized on the way in so it is written as the same calendar day
+    // whatever time zone the server runs in; see UnzonedColumn.
+    private DateTime _date;
+
     [Column("date")]
-    public DateTime Date { get; set; }
+    public DateTime Date { get => _date; set => _date = UnzonedColumn.Day(value); }
 
     [Column("shift_type")]
     public string ShiftType { get; set; }
@@ -21,6 +25,11 @@ public class Trip : BaseModel
 
     [Column("shift_end_time")]
     public TimeSpan ShiftEndTime { get; set; }
+
+    // Start of the one hour break, one of three slots inside the shift; see BreakSlots.
+    // Null on trips written before breaks existed.
+    [Column("break_start")]
+    public TimeSpan? BreakStart { get; set; }
 
     [Column("route_id")]
     public int RouteId { get; set; }

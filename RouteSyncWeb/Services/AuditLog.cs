@@ -5,6 +5,11 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
+    /// <summary>One recorded reassignment, as the suggestions saw it.</summary>
+    /// <param name="TookTopSuggestion">Every side that changed went to the top-ranked candidate.</param>
+    /// <param name="FixedIssue">The trip could not run as assigned before the change.</param>
+    public sealed record ReassignmentPick(bool TookTopSuggestion, bool FixedIssue);
+
     /// <summary>
     /// Records administrator actions in the audit trail.
     /// </summary>
@@ -140,6 +145,65 @@ namespace FleetWise.Services
             }
         }
 
+        /// <summary>
+        /// What each reassignment in a span chose, measured against the suggestions offered
+        /// at the time.
+        /// </summary>
+        /// <returns>
+        /// One entry per reassignment that changed a driver or a bus, or null when the read
+        /// failed, so a figure that could not be read is not shown as a month with none.
+        /// </returns>
+        public async Task<List<ReassignmentPick>?> ReassignmentPicksAsync(DateTimeOffset from, DateTimeOffset to)
+        {
+            try
+            {
+                var url = _config["Supabase:Url"];
+                var key = _config["Supabase:Key"];
+                if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(key)) return null;
+
+                var query = "select=changes&action=eq.trip_reassigned"
+                    + $"&occurred_at=gte.{Uri.EscapeDataString(from.ToString("o"))}"
+                    + $"&occurred_at=lt.{Uri.EscapeDataString(to.ToString("o"))}"
+                    + "&limit=10000";
+
+                var req = new HttpRequestMessage(HttpMethod.Get, $"{url}/rest/v1/audit_log?{query}");
+                req.Headers.TryAddWithoutValidation("apikey", key);
+                req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+
+                var res = await _http.SendAsync(req);
+                if (!res.IsSuccessStatusCode) return null;
+
+                using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+                var picks = new List<ReassignmentPick>();
+
+                foreach (var row in doc.RootElement.EnumerateArray())
+                {
+                    // Entries written before suggestions existed, and route-only moves,
+                    // carry no recommendation and say nothing about one.
+                    if (!row.TryGetProperty("changes", out var changes)
+                        || changes.ValueKind != JsonValueKind.Object
+                        || !changes.TryGetProperty("recommendation", out var rec)
+                        || rec.ValueKind != JsonValueKind.Object)
+                        continue;
+
+                    var tookTop = rec.TryGetProperty("via", out var via)
+                                  && via.ValueKind == JsonValueKind.String
+                                  && via.GetString() == "suggestion";
+                    var fixedIssue = rec.TryGetProperty("issues", out var issues)
+                                     && issues.ValueKind == JsonValueKind.Array
+                                     && issues.GetArrayLength() > 0;
+
+                    picks.Add(new ReassignmentPick(tookTop, fixedIssue));
+                }
+
+                return picks;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static AuditEntryViewModel Map(JsonElement e)
         {
             static string? Str(JsonElement el, string name) =>
@@ -167,8 +231,12 @@ namespace FleetWise.Services
                 // The stored record is read into fields and never carried further. It
                 // reads as machine output, and the column names in it are of no use to
                 // anyone reading the trail.
+                // Only a row edit counts. A reassignment's note on how it compared with the
+                // suggestions sits in the same column and is not a change to any column.
                 HasChanges = e.TryGetProperty("changes", out var ch)
-                             && ch.ValueKind is JsonValueKind.Object or JsonValueKind.Array,
+                             && (ch.ValueKind == JsonValueKind.Array
+                                 || (ch.ValueKind == JsonValueKind.Object
+                                     && (ch.TryGetProperty("old", out _) || ch.TryGetProperty("new", out _)))),
                 FieldChanges = ch.ValueKind == JsonValueKind.Object ? FieldChangesOf(ch) : new(),
             };
         }

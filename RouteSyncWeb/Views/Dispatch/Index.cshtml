@@ -306,6 +306,46 @@
                                         {
                                             <span class="dp-badge @badgeClass">@badgeLabel</span>
                                         }
+
+                                        @* The replacement the rules would pick, one click from applied.
+                                           Only a pick that costs nothing is offered here; anything
+                                           with a cost waits in the reassign modal beside its warning. *@
+                                        @if (trip.SuggestedDriver is not null)
+                                        {
+                                            <div class="dp-suggest" title="@trip.SuggestedDriver.Reason">
+                                                <span class="dp-suggest-label">Suggested driver</span>
+                                                <strong class="dp-suggest-name">@trip.SuggestedDriver.Name</strong>
+                                                <button type="button" class="dp-btn-apply"
+                                                        data-trip-id="@trip.TripId"
+                                                        data-driver-id="@trip.SuggestedDriver.DriverId"
+                                                        data-name="@trip.SuggestedDriver.Name"
+                                                        data-reason="@trip.SuggestedDriver.Reason"
+                                                        data-warning="@trip.SuggestedDriver.Warning"
+                                                        onclick="dpApplySuggestion(this)">Apply</button>
+                                            </div>
+                                        }
+                                        else if (trip.NoDriverSuggestion)
+                                        {
+                                            <div class="dp-suggest dp-suggest--none">No driver free without a cost. Open Reassign.</div>
+                                        }
+                                        @if (trip.SuggestedVehicle is not null)
+                                        {
+                                            <div class="dp-suggest" title="@trip.SuggestedVehicle.Reason">
+                                                <span class="dp-suggest-label">Suggested bus</span>
+                                                <strong class="dp-suggest-name">@trip.SuggestedVehicle.VehicleId</strong>
+                                                <button type="button" class="dp-btn-apply"
+                                                        data-trip-id="@trip.TripId"
+                                                        data-vehicle-id="@trip.SuggestedVehicle.VehicleId"
+                                                        data-name="Bus @trip.SuggestedVehicle.VehicleId"
+                                                        data-reason="@trip.SuggestedVehicle.Reason"
+                                                        data-warning="@trip.SuggestedVehicle.Warning"
+                                                        onclick="dpApplySuggestion(this)">Apply</button>
+                                            </div>
+                                        }
+                                        else if (trip.NoVehicleSuggestion)
+                                        {
+                                            <div class="dp-suggest dp-suggest--none">No spare bus this shift.</div>
+                                        }
                                     </td>
                                     <td data-label="Actions">
                                         <div class="dp-actions-cell">
@@ -351,6 +391,23 @@
     </div>
 </div>
 
+@* Applying a suggestion from the board. Asked first, because applying reassigns the trip
+   and notifies a driver, and a button in a crowded table is easy to press by mistake. *@
+<div id="dp-apply-modal" class="dp-msg-overlay" data-dialog-close="dpCloseApply" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="dp-apply-title">
+    <div class="dp-msg-box">
+        <div class="dp-msg-head">
+            <h3 id="dp-apply-title">Apply suggestion?</h3>
+        </div>
+        <p class="dp-apply-text" id="dp-apply-text"></p>
+        <p class="dp-apply-reason" id="dp-apply-reason"></p>
+        <p class="dp-apply-warning" id="dp-apply-warning" hidden></p>
+        <div class="dp-apply-actions">
+            <button type="button" class="dp-apply-cancel" onclick="dpCloseApply()">Cancel</button>
+            <button type="button" class="dp-msg-btn" id="dp-apply-confirm" onclick="dpConfirmApply()">Apply</button>
+        </div>
+    </div>
+</div>
+
 @* Shared message popup (Add Trip / Reassign conflicts) *@
 <div id="dp-msg-modal" class="dp-msg-overlay" style="display:none;">
     <div class="dp-msg-box">
@@ -378,6 +435,74 @@
         document.getElementById('dp-msg-modal').style.display = 'flex';
     }
     function dpCloseMsg() { document.getElementById('dp-msg-modal').style.display = 'none'; }
+
+    // Applying a board suggestion. The button carries what it suggests; the save goes
+    // through the same reassign endpoint as the modal, so the same checks, notice and
+    // audit entry follow.
+    let dpApplyPending = null;
+
+    function dpApplySuggestion(btn) {
+        const d = btn.dataset;
+        dpApplyPending = {
+            tripId: d.tripId,
+            driverId: d.driverId ? parseInt(d.driverId, 10) : null,
+            vehicleId: d.vehicleId || null
+        };
+        document.getElementById('dp-apply-text').textContent = d.driverId
+            ? 'Put ' + d.name + ' on ' + d.tripId + '? They will be notified.'
+            : 'Put ' + d.name + ' on ' + d.tripId + '? The driver will be notified.';
+        document.getElementById('dp-apply-reason').textContent = d.reason || '';
+        const warn = document.getElementById('dp-apply-warning');
+        warn.textContent = d.warning || '';
+        warn.hidden = !d.warning;
+        document.getElementById('dp-apply-modal').style.display = 'flex';
+    }
+
+    function dpCloseApply() {
+        document.getElementById('dp-apply-modal').style.display = 'none';
+        dpApplyPending = null;
+    }
+
+    async function dpConfirmApply() {
+        const pending = dpApplyPending;
+        if (!pending) return;
+        const btn = document.getElementById('dp-apply-confirm');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/Dispatch/ReassignTrip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pending)
+            });
+
+            // The board was read a moment ago and the schedule may have moved since. A
+            // conflict now is handed to the reassign modal, which ranks against the
+            // schedule as it stands and can confirm past a rule.
+            if (res.status === 409) {
+                dpCloseApply();
+                const data = await res.json().catch(() => ({}));
+                dpShowMsg([data.conflict || 'That suggestion no longer fits the schedule.',
+                           'The reassign window has been opened with fresh suggestions.'],
+                          'Schedule changed');
+                openReassignModal(pending.tripId);
+                return;
+            }
+
+            if (!res.ok) {
+                dpCloseApply();
+                dpShowMsg([await res.text() || 'Could not apply the suggestion. Please try again.'], 'Not applied');
+                return;
+            }
+
+            dpCloseApply();
+            window.location.reload();
+        } catch {
+            dpCloseApply();
+            dpShowMsg(['Could not apply the suggestion. Please try again.'], 'Not applied');
+        } finally {
+            btn.disabled = false;
+        }
+    }
 
     // What is left of the fade the marked rows are running. Held so a second press starts
     // it over rather than letting the first one take the mark off partway through.
@@ -676,7 +801,7 @@
                         status === '' ? true
                         : status === '__late' ? row.hasAttribute('data-late')
                         : rowStatus === status;
-                    const textMatches = q === '' || row.textContent.toLowerCase().includes(q);
+                    const textMatches = q === '' || dpRowText(row).includes(q);
                     return routeMatches && statusMatches && textMatches;
                 });
 
@@ -711,6 +836,15 @@
     }
 
     function filterRows() { applyFilters(); }
+
+    // What a row is searched by: its own trip, bus and driver. A suggested replacement is
+    // left out, or searching for a driver would also turn up every trip they are merely
+    // suggested for.
+    function dpRowText(row) {
+        const copy = row.cloneNode(true);
+        copy.querySelectorAll('.dp-suggest').forEach(el => el.remove());
+        return copy.textContent.toLowerCase();
+    }
 
     function handleReassignClick(btn) {
         const status = btn.dataset.status;

@@ -485,12 +485,15 @@
 
            The planner requires the routes permission. A role without it still sees which
            shifts are in the way, listed as plain text, since a link would only bounce
-           off the planner and be recorded as a denied attempt. *@
+           off the planner and be recorded as a denied attempt. A role that holds it is
+           offered a cover for each shift instead, and approves once they are saved. *@
         <div id="rqBlocking" class="rq-blocking" style="display:none;"
-             data-planner="@(User.HasClaim("perm", "routes") ? "/Schedule" : null)">
-            <p class="rq-blocking-t">Clear these shifts before approving</p>
+             data-planner="@(User.HasClaim("perm", "routes") ? "/Schedule" : null)"
+             data-covers="@(User.HasClaim("perm", "routes") ? "true" : null)">
+            <p class="rq-blocking-t" id="rqBlockingTitle">Clear these shifts before approving</p>
             <ul class="rq-blocking-list" id="rqBlockingList"></ul>
-            <p class="rq-blocking-s">
+            <div class="rq-covers" id="rqCovers" hidden></div>
+            <p class="rq-blocking-s" id="rqBlockingNote">
                 This request is held until they are cleared. The driver still sees it as
                 pending.
             </p>
@@ -686,6 +689,7 @@
             note.value = '';
             err.style.display = 'none';
             document.getElementById('rqBlocking').style.display = 'none';
+            rqResetCovers();
             go.textContent = decision === 'Approved' ? 'Approve' : 'Reject';
             go.classList.toggle('rq-btn--reject', decision === 'Rejected');
             // Reopening is a fresh attempt. Left disabled by a previous one, the dialog
@@ -833,6 +837,194 @@
             box.style.display = 'block';
         }
 
+        // ---- Covering the shifts in the way ------------------------------------------
+        //
+        // Offered only to a role that can change the schedule. Each shift arrives with the
+        // driver the rules suggest and the others who could take it at no cost worth a
+        // confirm. Whatever is picked here is checked again on the server before it is
+        // saved.
+
+        const blockingBox = document.getElementById('rqBlocking');
+        const coversEl = document.getElementById('rqCovers');
+        const blockingTitle = document.getElementById('rqBlockingTitle');
+        const blockingNote = document.getElementById('rqBlockingNote');
+        const blockingTitleText = blockingTitle.textContent;
+        const blockingNoteText = blockingNote.textContent;
+        let coversShown = false;
+
+        function rqResetCovers() {
+            coversShown = false;
+            coversEl.replaceChildren();
+            coversEl.hidden = true;
+            document.getElementById('rqBlockingList').hidden = false;
+            blockingTitle.textContent = blockingTitleText;
+            blockingNote.textContent = blockingNoteText;
+        }
+
+        function rqCoverWhy(host, candidate) {
+            host.replaceChildren();
+            if (!candidate) return;
+            [[candidate.reason, false], [candidate.warning, true]].forEach(function (pair) {
+                if (!pair[0]) return;
+                const line = document.createElement('div');
+                line.className = 'rq-cover-line' + (pair[1] ? ' rq-cover-line--warn' : '');
+                line.textContent = pair[0];
+                host.appendChild(line);
+            });
+        }
+
+        function rqCoverRow(s) {
+            const row = document.createElement('div');
+            row.className = 'rq-cover';
+
+            const head = document.createElement('div');
+            head.className = 'rq-cover-head';
+            const when = document.createElement('span');
+            when.className = 'rq-cover-when';
+            when.textContent = s.date + ' · ' + s.shift;
+            const where = document.createElement('a');
+            where.className = 'rq-cover-where';
+            where.href = '/Schedule?start=' + encodeURIComponent(s.week);
+            where.textContent = s.window + ' · ' + s.route + ' · ' + s.vehicleId;
+            head.append(when, where);
+            row.appendChild(head);
+
+            const why = document.createElement('div');
+            why.className = 'rq-cover-why';
+
+            if (!s.candidates.length) {
+                const none = document.createElement('div');
+                none.className = 'rq-cover-line rq-cover-line--warn';
+                none.textContent = 'No driver can take this without a cost. Cover it in the planner.';
+                why.appendChild(none);
+                row.appendChild(why);
+                return row;
+            }
+
+            const pick = document.createElement('select');
+            pick.className = 'rq-input rq-cover-pick';
+            pick.dataset.trip = s.tripId;
+            pick.setAttribute('aria-label', 'Cover for ' + s.date + ', ' + s.shift + ' shift');
+
+            s.candidates.forEach(function (c) {
+                const opt = document.createElement('option');
+                opt.value = c.driverId;
+                // A driver's name is data, not markup.
+                opt.textContent = c.tier === 1 ? c.name : c.name + ' (second shift that day)';
+                pick.appendChild(opt);
+            });
+
+            const skip = document.createElement('option');
+            skip.value = '';
+            skip.textContent = 'Leave for now';
+            pick.appendChild(skip);
+
+            pick.value = s.suggested == null ? '' : String(s.suggested);
+
+            const byId = new Map(s.candidates.map(function (c) { return [String(c.driverId), c]; }));
+            pick.addEventListener('change', function () { rqCoverWhy(why, byId.get(pick.value)); });
+            rqCoverWhy(why, byId.get(pick.value));
+
+            row.append(pick, why);
+            return row;
+        }
+
+        // Replaces the plain list with a cover for each shift. Answers false, leaving the
+        // plain list as it was, when covers are not offered or could not be fetched.
+        async function rqShowCovers(id) {
+            rqResetCovers();
+            if (!blockingBox.dataset.covers) return false;
+
+            let shifts;
+            try {
+                const res = await fetch('/Requests/CoverOptions?requestId=' + encodeURIComponent(id),
+                                        { headers: { 'X-Requested-With': 'fetch' } });
+                if (!res.ok || res.redirected) return false;
+                shifts = (await res.json()).shifts || [];
+            } catch (e) {
+                return false;
+            }
+
+            if (!shifts.length) return false;
+
+            shifts.forEach(function (s) { coversEl.appendChild(rqCoverRow(s)); });
+
+            blockingTitle.textContent = 'Choose who covers each shift';
+            blockingNote.textContent = 'Each driver chosen is sent their new shift. Leave a shift '
+                + 'for now and this request stays held.';
+            document.getElementById('rqBlockingList').hidden = true;
+            coversEl.hidden = false;
+            blockingBox.style.display = 'block';
+            // With nobody to choose anywhere, pressing it only checks again.
+            go.textContent = coversEl.querySelector('.rq-cover-pick') ? 'Cover and Approve' : 'Approve';
+            coversShown = true;
+            return true;
+        }
+
+        async function rqCoverAndApprove() {
+            const id = pending.id;
+            const covers = [...coversEl.querySelectorAll('.rq-cover-pick')]
+                .filter(function (s) { return s.value; })
+                .map(function (s) { return { tripId: s.dataset.trip, driverId: Number(s.value) }; });
+
+            go.disabled = true;
+            try {
+                const res = await fetch('/Requests/CoverAndApprove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken':
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ requestId: id, covers: covers, note: note.value.trim() })
+                });
+
+                // Something is still in the way: a shift left for now, or a cover that could
+                // not be saved. Whatever did save stays saved, and what is left is listed.
+                if (res.status === 409) {
+                    const said = await res.json();
+                    const covered = said.covered || 0;
+
+                    rqShowBlocking(said.message, said.blocking || []);
+                    if (!await rqShowCovers(id)) go.textContent = 'Approve';
+
+                    err.replaceChildren();
+                    [(covered ? covered + (covered === 1 ? ' shift was covered. ' : ' shifts were covered. ') : '')
+                        + said.message].concat(said.failures || []).forEach(function (text) {
+                        const line = document.createElement('div');
+                        line.textContent = text;
+                        err.appendChild(line);
+                    });
+                    err.style.display = 'block';
+
+                    go.disabled = false;
+                    await rqRefresh(true);
+                    return;
+                }
+
+                if (!res.ok || res.redirected) {
+                    const said = res.redirected ? '' : (await res.text() || '').trim();
+                    throw new Error(
+                        said && said.length < 300 && said[0] !== '<'
+                            ? said
+                            : 'The server could not save that (' + res.status + '). Try again.');
+                }
+
+                let covered = 0;
+                try { covered = (await res.json()).covered || 0; } catch (e) { }
+
+                rqCancel();
+                await rqRefresh(true);
+                rqToast(covered
+                    ? 'Leave approved. ' + covered + (covered === 1 ? ' shift' : ' shifts') + ' covered.'
+                    : 'Leave approved.');
+            } catch (e) {
+                err.textContent = e.message || 'That could not be saved. Try again.';
+                err.style.display = 'block';
+                go.disabled = false;
+            }
+        }
+
         // ---- Answering a driver's cancellation ---------------------------------------
 
         const askModal = document.getElementById('rqAskModal');
@@ -958,8 +1150,14 @@
                 return;
             }
 
+            if (pending.decision === 'Approved' && coversShown) {
+                await rqCoverAndApprove();
+                return;
+            }
+
             go.disabled = true;
             try {
+                const id = pending.id;
                 const body = new URLSearchParams({
                     requestId: pending.id,
                     decision: pending.decision,
@@ -980,6 +1178,7 @@
                 if (res.status === 409) {
                     const said = await res.json();
                     rqShowBlocking(said.message, said.blocking || []);
+                    await rqShowCovers(id);
                     go.disabled = false;
                     // The row now reads as held, so the list is brought up to date.
                     await rqRefresh(true);

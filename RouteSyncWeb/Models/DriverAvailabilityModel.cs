@@ -22,6 +22,10 @@ public class DriverAvailability : BaseModel
     [Column("reason")]
     public string Reason { get; set; }
 
+    // A timestamp without time zone, holding Philippine wall-clock time. Normalized on the
+    // way in so the digits are stored as they are on any server; see UnzonedColumn.
+    private DateTime? _updatedAt;
+
     [Column("updated_at")]
-    public DateTime? UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get => _updatedAt; set => _updatedAt = UnzonedColumn.WallClock(value); }
 }

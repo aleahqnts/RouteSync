@@ -24,12 +24,16 @@ public class LeaveRequest : BaseModel
     [Column("leave_type")]
     public string LeaveType { get; set; }
 
+    // Both are date columns, normalized on the way in; see UnzonedColumn.
+    private DateTime _startDate;
+    private DateTime _endDate;
+
     [Column("start_date")]
-    public DateTime StartDate { get; set; }
+    public DateTime StartDate { get => _startDate; set => _startDate = UnzonedColumn.Day(value); }
 
     /// <summary>The same as <see cref="StartDate"/> for a single day.</summary>
     [Column("end_date")]
-    public DateTime EndDate { get; set; }
+    public DateTime EndDate { get => _endDate; set => _endDate = UnzonedColumn.Day(value); }
 
     [Column("reason")]
     public string Reason { get; set; }

@@ -100,8 +100,10 @@ namespace FleetWise.ViewModels
 
         // Optional on purpose: null means "leave this one alone", and the UI clears a
         // slot by sending an empty string, so the pattern has to let both through.
+        // Declared nullable because model binding treats a non-nullable string as required,
+        // which refused a change of driver alone with "The VehicleId field is required."
         [RegularExpression(@"^([A-Za-z0-9-]{1,20})?$", ErrorMessage = "That is not a vehicle ID.")]
-        public string VehicleId { get; set; }   // null = keep existing
+        public string? VehicleId { get; set; }   // null = keep existing
 
         [Range(1, int.MaxValue, ErrorMessage = "That is not a driver.")]
         public int? DriverId { get; set; }   // null = keep existing
@@ -123,6 +125,16 @@ namespace FleetWise.ViewModels
     {
         [Required, RegularExpression(@"^[A-Za-z0-9_-]{1,64}$", ErrorMessage = "That is not a trip ID.")]
         public string TripId { get; set; }
+    }
+
+    // Posted when a dispatcher moves a trip's break to another slot.
+    public class SetBreakRequest
+    {
+        [Required, RegularExpression(@"^[A-Za-z0-9_-]{1,64}$", ErrorMessage = "That is not a trip ID.")]
+        public string TripId { get; set; }
+
+        [Required, RegularExpression(@"^([01][0-9]|2[0-3]):[0-5][0-9]$", ErrorMessage = "That is not a time.")]
+        public string BreakStart { get; set; }
     }
 
     // Posted when a message goes to every driver.
