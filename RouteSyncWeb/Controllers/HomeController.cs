@@ -10,7 +10,14 @@ using FleetWise.Services;
 
 namespace FleetWise.Controllers
 {
-    [AllowAnonymous]
+    /// <summary>Signing in and out, and setting a password, both forgotten and first-time.</summary>
+    /// <remarks>
+    /// Anonymous access is granted action by action rather than on the class.
+    /// [AllowAnonymous] on a controller overrides [Authorize] on every action inside it,
+    /// so a class-wide grant would leave the password change open to a caller who has not
+    /// signed in. Each action carries one attribute or the other, so which it is reads at
+    /// the action itself.
+    /// </remarks>
     public class HomeController : Controller
     {
         private readonly AuthService _authService;
@@ -38,6 +45,7 @@ namespace FleetWise.Controllers
         /// than something alarming. Leaving is what the sign-out button is for, and it asks
         /// first.
         /// </remarks>
+        [AllowAnonymous]
         public IActionResult Index(int? throttled)
         {
             if (User.Identity?.IsAuthenticated == true)
@@ -48,6 +56,7 @@ namespace FleetWise.Controllers
             return View();
         }
 
+        [AllowAnonymous]
         [HttpPost]
         [EnableRateLimiting("login")]
         public async Task<IActionResult> Index(LoginViewModel model)
@@ -111,9 +120,11 @@ namespace FleetWise.Controllers
         // is short-lived and single use, so a copy of it is worth nothing later.
         // ---------------------------------------------------------------------
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("login")]
@@ -148,9 +159,11 @@ namespace FleetWise.Controllers
         /// A step of the reset reached without its form, such as by stepping back to
         /// it, restarts the flow rather than answering with an error.
         /// </summary>
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult VerifyResetCode() => RedirectToAction(nameof(ForgotPassword));
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("login")]
@@ -176,9 +189,11 @@ namespace FleetWise.Controllers
         }
 
         /// <inheritdoc cref="VerifyResetCode()"/>
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult ResetPassword() => RedirectToAction(nameof(ForgotPassword));
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
@@ -267,6 +282,7 @@ namespace FleetWise.Controllers
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
@@ -290,6 +306,7 @@ namespace FleetWise.Controllers
         /// The identifier shown is the one the server logs against the same request, so a
         /// report of a failure can be matched to the entry that describes it.
         /// </remarks>
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error() => View(new ErrorViewModel
         {
