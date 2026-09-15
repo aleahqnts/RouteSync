@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using FleetWise.Models;
 using FleetWise.Services;
@@ -25,11 +26,16 @@ namespace FleetWise.Controllers
     {
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
+        private readonly SchedulingData _scheduling;
+        private readonly TripAssignments _assignments;
 
-        public RequestsController(Supabase.Client supabase, AuditLog audit)
+        public RequestsController(
+            Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments)
         {
             _supabase = supabase;
             _audit = audit;
+            _scheduling = scheduling;
+            _assignments = assignments;
         }
 
         /// <summary>A driver's asking that nobody has answered yet.</summary>
@@ -87,10 +93,7 @@ namespace FleetWise.Controllers
             if (decision != "Approved" && decision != "Rejected")
                 return BadRequest("That is not a decision.");
 
-            var found = (await _supabase.From<LeaveRequest>()
-                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
-                .Get()).Models.FirstOrDefault();
-
+            var found = await FindAsync(requestId);
             if (found is null) return NotFound();
 
             if (!LeaveEntitlement.IsOpen(found.Status))
@@ -102,63 +105,268 @@ namespace FleetWise.Controllers
             // home.
             //
             // So an approval is two steps. The first reports what is in the way and holds
-            // the request. The dispatcher clears those shifts in the planner, where a
-            // driver on leave already highlights. The second runs this check again against
-            // the schedule as it stands by then, and only a clean answer grants the leave.
+            // the request. The dispatcher clears those shifts, either handing them to cover
+            // drivers from here (CoverAndApprove) or in the planner, where a driver on leave
+            // already highlights. The second runs this check again against the schedule as
+            // it stands by then, and only a clean answer grants the leave.
             //
             // The check at the second step is what carries the safety, not the holding.
             // Nothing is believed from the first.
             if (decision == "Approved")
             {
-                // How late leave may be filed is decided here as well as in the driver's
-                // app. The app inserts its own rows under the driver's own token, so the
-                // form it fills in is a courtesy; granting the days is what spends the
-                // allowance, and this is the point that can refuse.
-                //
-                // Only approval is gated. A request that should never have been filed can
-                // still be rejected, which is how it leaves the queue.
-                var late = LeaveEntitlement.BackdatingProblem(
-                    found.LeaveType, found.StartDate, PhClock.OperationalDay);
+                var late = await LateApprovalAsync(found);
+                if (late is not null) return BadRequest(late);
 
-                if (late is not null)
-                {
-                    await _audit.WriteAsync("leave_decided",
-                        $"could not approve {found.LeaveType.ToLowerInvariant()} leave for driver "
-                            + $"{found.UserId} covering {Span(found)}: {late}",
-                        "requests", requestId.ToString(), outcome: "failed");
-
-                    return BadRequest(late);
-                }
-
-                var blocking = await BlockingTripsAsync(found);
+                var blocking = await HoldIfBlockedAsync(found);
                 if (blocking.Count > 0)
-                {
-                    if (!string.Equals(found.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await _supabase.From<LeaveRequest>()
-                            .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
-                            .Set(x => x.Status, "AwaitingChange")
-                            .Update();
-
-                        await _audit.WriteAsync("leave_approval_held",
-                            $"began approving {found.LeaveType.ToLowerInvariant()} leave for driver "
-                                + $"{found.UserId} covering {Span(found)}, held because they are still "
-                                + $"assigned on {blocking.Count} {(blocking.Count == 1 ? "shift" : "shifts")}",
-                            "requests", requestId.ToString());
-                    }
-
-                    return Conflict(new
-                    {
-                        message = blocking.Count == 1
-                            ? "This driver is still assigned to a shift during this leave."
-                            : $"This driver is still assigned to {blocking.Count} shifts during this leave.",
-                        blocking,
-                    });
-                }
+                    return Conflict(new { message = BlockingMessage(blocking.Count), blocking });
             }
 
-            var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var deciderId = int.TryParse(idStr, out var i) ? i : (int?)null;
+            await RecordDecisionAsync(found, decision, note);
+            return Ok();
+        }
+
+        /// <summary>
+        /// The shifts holding an approval, each with the drivers who could take it over.
+        /// </summary>
+        /// <remarks>
+        /// Gated on routes as well as requests, because what it leads to is a change to the
+        /// schedule. A role that decides leave without running dispatch still sees the
+        /// shifts in the way, and leaves clearing them to someone who does.
+        /// </remarks>
+        [HttpGet]
+        [RequirePermission("routes")]
+        public async Task<IActionResult> CoverOptions(long requestId)
+        {
+            var found = await FindAsync(requestId);
+            if (found is null) return NotFound();
+
+            if (!LeaveEntitlement.IsOpen(found.Status))
+                return BadRequest($"This request was already {found.Status.ToLowerInvariant()}.");
+
+            var trips = await BlockingTripRowsAsync(found);
+            if (trips.Count == 0) return Json(new { shifts = Array.Empty<object>() });
+
+            var snapshot = SchedulingRules.AsIfGranted(
+                await _scheduling.LoadAsync(trips.Min(t => t.Date), trips.Max(t => t.Date)), found);
+
+            return Json(new
+            {
+                shifts = SchedulingRules.SuggestCovers(trips, snapshot).Select(c =>
+                {
+                    var (start, end) = TripAssignments.ShiftWindow(c.Trip);
+                    return new
+                    {
+                        tripId = c.Trip.TripId,
+                        date = c.Trip.Date.ToString("ddd, MMM d"),
+                        shift = c.Trip.ShiftType,
+                        window = $"{start} to {end}",
+                        route = snapshot.RouteNames.GetValueOrDefault(c.Trip.RouteId) ?? $"Route {c.Trip.RouteId}",
+                        vehicleId = c.Trip.VehicleId,
+                        week = MondayOf(c.Trip.Date),
+                        suggested = c.Suggested?.DriverId,
+                        candidates = c.Candidates.Select(d => new
+                        {
+                            driverId = d.DriverId,
+                            name = d.Name,
+                            tier = d.Tier,
+                            reason = d.Reason,
+                            warning = d.Warning,
+                        }),
+                    };
+                }),
+            });
+        }
+
+        /// <summary>A driver chosen to take over one shift.</summary>
+        public sealed class CoverPickInput
+        {
+            [Required, RegularExpression(@"^[A-Za-z0-9_-]{1,64}$", ErrorMessage = "That is not a trip ID.")]
+            public string TripId { get; set; } = "";
+
+            [Range(1, int.MaxValue, ErrorMessage = "That is not a driver.")]
+            public int DriverId { get; set; }
+        }
+
+        public sealed class CoverAndApproveInput
+        {
+            public long RequestId { get; set; }
+
+            public List<CoverPickInput> Covers { get; set; } = new();
+
+            [StringLength(300)]
+            public string? Note { get; set; }
+        }
+
+        /// <summary>
+        /// Hands the shifts in the way to the drivers chosen for them, then approves the
+        /// leave if nothing is left in the way.
+        /// </summary>
+        /// <remarks>
+        /// <para>Each cover goes through the same reassignment the dispatch board makes,
+        /// with its checks, its conflict gate and its audit row. The approval is then the
+        /// same check a plain approval runs, against the schedule as it stands once the
+        /// covers are saved. Nothing about the first step is believed by the second.</para>
+        ///
+        /// <para>Only a cover at no cost worth a confirm is saved here, re-ranked on the
+        /// server whatever the page sent. A cover that fails, or a shift left without one,
+        /// leaves the request held with the shifts still in the way listed. Covers that
+        /// did save stay saved: each is a sound reassignment on its own, and the leave is
+        /// never granted while a shift is still uncovered.</para>
+        /// </remarks>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequirePermission("routes")]
+        public async Task<IActionResult> CoverAndApprove([FromBody] CoverAndApproveInput req)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState.FirstError());
+            if (req is null) return BadRequest("Nothing was sent.");
+
+            var found = await FindAsync(req.RequestId);
+            if (found is null) return NotFound();
+
+            if (!LeaveEntitlement.IsOpen(found.Status))
+                return BadRequest($"This request was already {found.Status.ToLowerInvariant()}.");
+
+            // Before any shift is touched. Leave that cannot be granted must not move
+            // another driver onto a shift first.
+            var late = await LateApprovalAsync(found);
+            if (late is not null) return BadRequest(late);
+
+            var trips = await BlockingTripRowsAsync(found);
+            var failures = new List<string>();
+            var covered = 0;
+
+            if (trips.Count > 0)
+            {
+                var snapshot = SchedulingRules.AsIfGranted(
+                    await _scheduling.LoadAsync(trips.Min(t => t.Date), trips.Max(t => t.Date)), found);
+                var senderId = SenderId() ?? 0;
+
+                foreach (var trip in trips)
+                {
+                    // Only a shift actually in the way. This is not a route for moving any
+                    // trip at all under cover of approving leave.
+                    var pick = req.Covers.FirstOrDefault(c => c.TripId == trip.TripId);
+                    if (pick is null) continue;
+
+                    var refusal = SchedulingRules.CoverRefusal(trip, pick.DriverId, snapshot);
+                    if (refusal is not null)
+                    {
+                        failures.Add(refusal);
+                        continue;
+                    }
+
+                    var result = await _assignments.ReassignAsync(
+                        new ReassignChange(trip.TripId, pick.DriverId, null, null, Override: false),
+                        senderId,
+                        snapshot,
+                        purpose: $"covering leave request {found.RequestId}",
+                        syncStatuses: false);
+
+                    if (result.Outcome != ReassignOutcome.Done)
+                    {
+                        failures.Add($"{trip.Date:MMM d}, {trip.ShiftType} shift: {result.Message}");
+                        continue;
+                    }
+
+                    covered++;
+                    snapshot = SchedulingRules.WithDriver(snapshot, trip.TripId, pick.DriverId);
+
+                    // Best effort, and after the cover is saved, like every other notice.
+                    try { await _assignments.NotifyNewShiftAsync(result.Trip!, senderId); }
+                    catch (Exception ex)
+                    {
+                        await _audit.WriteAsync("trip_reassigned",
+                            $"could not tell driver {pick.DriverId} they are covering trip {trip.TripId}: {ex.Message}",
+                            "trips", trip.TripId, outcome: "failed");
+                    }
+                }
+
+                if (covered > 0) await _assignments.SyncTripStatusesAsync();
+            }
+
+            var blocking = await HoldIfBlockedAsync(found);
+            if (blocking.Count > 0)
+                return Conflict(new { message = BlockingMessage(blocking.Count), blocking, failures, covered });
+
+            await RecordDecisionAsync(found, "Approved", req.Note);
+            return Ok(new { covered });
+        }
+
+        private async Task<LeaveRequest?> FindAsync(long requestId) =>
+            (await _supabase.From<LeaveRequest>()
+                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
+                .Get()).Models.FirstOrDefault();
+
+        private int? SenderId() =>
+            int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
+                ? id : null;
+
+        private static string BlockingMessage(int count) =>
+            count == 1
+                ? "This driver is still assigned to a shift during this leave."
+                : $"This driver is still assigned to {count} shifts during this leave.";
+
+        /// <summary>Why this leave is filed too late to be granted, or null.</summary>
+        /// <remarks>
+        /// How late leave may be filed is decided here as well as in the driver's app. The
+        /// app inserts its own rows under the driver's own token, so the form it fills in
+        /// is a courtesy; granting the days is what spends the allowance, and this is the
+        /// point that can refuse.
+        ///
+        /// Only approval is gated. A request that should never have been filed can still be
+        /// rejected, which is how it leaves the queue.
+        /// </remarks>
+        private async Task<string?> LateApprovalAsync(LeaveRequest found)
+        {
+            var late = LeaveEntitlement.BackdatingProblem(
+                found.LeaveType, found.StartDate, PhClock.OperationalDay);
+
+            if (late is not null)
+            {
+                await _audit.WriteAsync("leave_decided",
+                    $"could not approve {found.LeaveType.ToLowerInvariant()} leave for driver "
+                        + $"{found.UserId} covering {Span(found)}: {late}",
+                    "requests", found.RequestId.ToString(), outcome: "failed");
+            }
+
+            return late;
+        }
+
+        /// <summary>
+        /// The shifts standing in the way of approving this leave, holding the request when
+        /// there are any.
+        /// </summary>
+        private async Task<List<BlockingShift>> HoldIfBlockedAsync(LeaveRequest found)
+        {
+            var blocking = (await BlockingTripRowsAsync(found)).Select(ToBlockingShift).ToList();
+            if (blocking.Count == 0) return blocking;
+
+            if (!string.Equals(found.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
+            {
+                await _supabase.From<LeaveRequest>()
+                    .Filter("request_id", Constants.Operator.Equals, found.RequestId.ToString())
+                    .Set(x => x.Status, "AwaitingChange")
+                    .Update();
+
+                await _audit.WriteAsync("leave_approval_held",
+                    $"began approving {found.LeaveType.ToLowerInvariant()} leave for driver "
+                        + $"{found.UserId} covering {Span(found)}, held because they are still "
+                        + $"assigned on {blocking.Count} {(blocking.Count == 1 ? "shift" : "shifts")}",
+                    "requests", found.RequestId.ToString());
+
+                found.Status = "AwaitingChange";
+            }
+
+            return blocking;
+        }
+
+        /// <summary>Stores a decision on a request still waiting, and tells the driver.</summary>
+        private async Task RecordDecisionAsync(LeaveRequest found, string decision, string? note)
+        {
+            var requestId = found.RequestId;
+            var deciderId = SenderId();
 
             found.Status = decision;
             found.DecidedBy = deciderId;
@@ -204,8 +412,6 @@ namespace FleetWise.Controllers
                     + $"{found.UserId} covering {Span(found)}"
                     + (string.IsNullOrWhiteSpace(note) ? "" : $": {note.Trim()}"),
                 "requests", requestId.ToString());
-
-            return Ok();
         }
 
         /// <summary>
@@ -439,6 +645,7 @@ namespace FleetWise.Controllers
         /// <summary>One shift standing in the way of an approval.</summary>
         public sealed class BlockingShift
         {
+            public string TripId { get; set; } = "";
             public string Date { get; set; } = "";
             public string Shift { get; set; } = "";
 
@@ -459,7 +666,7 @@ namespace FleetWise.Controllers
         /// This is what lets leave be filed for a day already past. The shift on it has
         /// finished, so it asks nothing of the schedule and blocks nothing.
         /// </remarks>
-        private async Task<List<BlockingShift>> BlockingTripsAsync(LeaveRequest r)
+        private async Task<List<Trip>> BlockingTripRowsAsync(LeaveRequest r)
         {
             var trips = await _supabase.From<Trip>()
                 .Filter("driver_id", Constants.Operator.Equals, r.UserId.ToString())
@@ -474,14 +681,19 @@ namespace FleetWise.Controllers
                 // A day already handed back is not leave, so a shift on it blocks nothing.
                 .Where(t => !LeaveEntitlement.IsRevokedOn(r, t.Date))
                 .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
-                .Select(t => new BlockingShift
-                {
-                    Date = t.Date.ToString("MMM d"),
-                    Shift = t.ShiftType,
-                    Week = t.Date.AddDays(-(((int)t.Date.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd"),
-                })
                 .ToList();
         }
+
+        private static BlockingShift ToBlockingShift(Trip t) => new()
+        {
+            TripId = t.TripId,
+            Date = t.Date.ToString("MMM d"),
+            Shift = t.ShiftType,
+            Week = MondayOf(t.Date),
+        };
+
+        private static string MondayOf(DateTime day) =>
+            day.AddDays(-(((int)day.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");
 
         /// <summary>
         /// Puts a held approval back in the queue.
