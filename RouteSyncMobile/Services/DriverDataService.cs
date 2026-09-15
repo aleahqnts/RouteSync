@@ -604,30 +604,29 @@ public class DriverDataService
         return r.Models;
     }
 
-    /// <summary>The Mondays of the weeks the planner has saved, within a span.</summary>
+    /// <summary>The weeks marked as built within a span, by Monday, and whether only a roster publish marked each.</summary>
     /// <remarks>
-    /// What separates a rest day from a day nobody has scheduled yet. Returned as the set
-    /// of week starts rather than a set of days, because the planner saves a week at a
-    /// time and every day in a saved week is answered.
+    /// What separates a rest day from a day nobody has scheduled yet. Keyed by week start
+    /// rather than by day, because the planner saves a week at a time and every day in a
+    /// saved week is answered.
     ///
-    /// A week only a roster publish has marked is left out. The publish answers the days
-    /// of its own month, which <see cref="GetPublishedMonthsAsync"/> covers, and not the
-    /// days of that week that fall in the month next door.
+    /// A week only a roster publish has marked answers just the days of a published month
+    /// in it. The publish wrote those days, and not the days of that week that fall in the
+    /// month next door.
     /// </remarks>
-    public async Task<HashSet<DateTime>> GetScheduledWeeksAsync(DateTime from, DateTime to)
+    public async Task<Dictionary<DateTime, bool>> GetScheduledWeeksAsync(DateTime from, DateTime to)
     {
         var r = await _supabase.From<ScheduleWeek>()
             .Filter("week_start", Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-dd"))
             .Filter("week_start", Operator.LessThanOrEqual, to.ToString("yyyy-MM-dd"))
             .Get();
-        return r.Models.Where(w => !w.RosterOnly).Select(w => w.WeekStart.Date).ToHashSet();
+        return r.Models.GroupBy(w => w.WeekStart.Date).ToDictionary(g => g.Key, g => g.All(w => w.RosterOnly));
     }
 
     /// <summary>The first days of the months with a published roster, within a span.</summary>
     /// <remarks>
-    /// Every day of a published month is answered, whether or not the planner has saved
-    /// its weeks. Empty when the roster tables do not exist yet, so the calendar falls back
-    /// to the planner's weeks alone rather than failing.
+    /// Empty when the roster tables do not exist yet, so the calendar falls back to the
+    /// planner's weeks alone rather than failing.
     /// </remarks>
     public async Task<HashSet<DateTime>> GetPublishedMonthsAsync(DateTime from, DateTime to)
     {
