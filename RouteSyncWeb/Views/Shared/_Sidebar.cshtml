@@ -58,6 +58,14 @@
                   </svg>",
 
 
+            ["roster"] =
+                @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'
+                      stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>
+                    <rect x='3' y='4' width='18' height='17' rx='2'/>
+                    <path d='M16 2v4M8 2v4M3 10h18'/>
+                    <path d='M8 14h3M8 17h6'/>
+                  </svg>",
+
             ["reports"] =
                 @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'
                       stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>
@@ -107,6 +115,9 @@
         new { Label = "Fleet Map", Short = "Map",      Controller = "FleetMap",  Action = "Index", IconKey = "map",       Perm = "routes"    },
         new { Label = "Vehicles",  Short = "Vehicles", Controller = "Vehicles",  Action = "Index", IconKey = "vehicles",  Perm = "vehicles"  },
         new { Label = "Dispatch",  Short = "Dispatch", Controller = "Dispatch",  Action = "Index", IconKey = "dispatch",  Perm = "routes"    },
+        // Who drives which bus for the month is decided apart from running the day, so the
+        // roster carries its own permission.
+        new { Label = "Roster",    Short = "Roster",   Controller = "Roster",    Action = "Index", IconKey = "roster",    Perm = "roster"    },
         new { Label = "Reports",   Short = "Reports",  Controller = "Reports",   Action = "Index", IconKey = "reports",   Perm = "reports"   },
         new { Label = "Users",     Short = "Users",    Controller = "Users",     Action = "Index", IconKey = "users",     Perm = "users"     },
         // Deciding who is off is not the same job as managing accounts, so it carries its
@@ -118,7 +129,7 @@
     };
 
     // What each tab is holding. Read once for the page and handed to both the rail and
-    // the phone bar below, which draw the same eight destinations.
+    // the phone bar below, which draw the same destinations.
     var badges = await NavCounts.ReadAsync();
 
     FleetWise.Services.NavBadge BadgeFor(string controller) => controller switch
@@ -126,6 +137,7 @@
         "Dispatch" => badges.Dispatch,
         "Requests" => badges.Requests,
         "Vehicles" => badges.Vehicles,
+        "Roster" => badges.Roster,
         _ => FleetWise.Services.NavBadge.None,
     };
 
@@ -136,6 +148,7 @@
         "Dispatch" => "dispatch",
         "Requests" => "requests",
         "Vehicles" => "vehicles",
+        "Roster" => "roster",
         _ => null,
     };
 }
@@ -179,7 +192,7 @@
                         @if (key is not null)
                         {
                             <span class="fw-sidebar__badge @(badge.Urgent ? "fw-sidebar__badge--urgent" : "")"
-                                  data-badge="@key" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
+                                  data-badge="@key" title="@badge.Note" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
                         }
                     </a>
                 </li>
@@ -378,8 +391,9 @@
         var marks = document.querySelectorAll('[data-badge]');
         if (!marks.length) return;
 
-        function paint(el, count, urgent) {
+        function paint(el, count, urgent, note) {
             el.textContent = count;
+            if (note !== undefined) el.title = note || '';
             el.hidden = count === 0;
             el.classList.toggle('fw-sidebar__badge--urgent',
                 urgent && el.classList.contains('fw-sidebar__badge'));
@@ -396,7 +410,7 @@
 
             marks.forEach(function (el) {
                 var b = data[el.dataset.badge];
-                if (b) paint(el, b.count, b.urgent);
+                if (b) paint(el, b.count, b.urgent, b.note);
             });
 
             // The sheet's own total, so the button that opens it says how much is inside.

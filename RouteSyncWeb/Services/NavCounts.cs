@@ -16,16 +16,17 @@ namespace FleetWise.Services
     /// highest severity of anything it holds, so one urgent request among five ordinary
     /// ones makes the Requests badge urgent and the other four do not quieten it.
     /// </remarks>
-    public sealed record NavBadge(int Count, bool Urgent)
+    /// <param name="Note">What the count is about, for a tab whose number alone does not say.</param>
+    public sealed record NavBadge(int Count, bool Urgent, string? Note = null)
     {
         public static readonly NavBadge None = new(0, false);
     }
 
     /// <summary>Every badge the sidebar can draw.</summary>
-    public sealed record NavBadges(NavBadge Dispatch, NavBadge Requests, NavBadge Vehicles)
+    public sealed record NavBadges(NavBadge Dispatch, NavBadge Requests, NavBadge Vehicles, NavBadge Roster)
     {
         public static readonly NavBadges Empty =
-            new(NavBadge.None, NavBadge.None, NavBadge.None);
+            new(NavBadge.None, NavBadge.None, NavBadge.None, NavBadge.None);
     }
 
     /// <summary>
@@ -86,6 +87,7 @@ namespace FleetWise.Services
     {
         private readonly Supabase.Client _supabase;
         private readonly IMemoryCache _cache;
+        private readonly IConfiguration _config;
 
         private const string Key = "nav_badges";
 
@@ -109,10 +111,11 @@ namespace FleetWise.Services
         /// </remarks>
         public static readonly TimeSpan UrgentWithin = TimeSpan.FromHours(4);
 
-        public NavCounts(Supabase.Client supabase, IMemoryCache cache)
+        public NavCounts(Supabase.Client supabase, IMemoryCache cache, IConfiguration config)
         {
             _supabase = supabase;
             _cache = cache;
+            _config = config;
         }
 
         /// <summary>Drops the standing count, so the next reading is worked out again.</summary>
@@ -288,7 +291,72 @@ namespace FleetWise.Services
             return new NavBadges(
                 new NavBadge(dispatch, dispatch > 0),
                 new NavBadge(openCount, urgent),
-                new NavBadge(flagged.Count, false));
+                new NavBadge(flagged.Count, false),
+                await CountRosterAsync(today));
+        }
+
+        /// <summary>
+        /// Roster slots nobody is on for the days ahead, and a month's roster waiting on a
+        /// person once the draft day has come.
+        /// </summary>
+        /// <remarks>
+        /// Counted on its own and failing on its own, so a roster table that cannot be read
+        /// takes down the roster badge rather than every badge on the rail.
+        ///
+        /// Urgent when a slot is empty within the next two days: that is a bus with nobody to
+        /// drive it, and time is short to find somebody.
+        /// </remarks>
+        private async Task<NavBadge> CountRosterAsync(DateTime today)
+        {
+            try
+            {
+                var thisMonth = RosterPublisher.FirstOf(today);
+                var nextMonth = thisMonth.AddMonths(1);
+                var from = today.AddDays(1).ToString("yyyy-MM-dd");
+
+                var monthsTask = _supabase.From<RosterMonth>()
+                    .Filter("month", Operator.In, new List<object> { thisMonth.ToString("yyyy-MM-dd"), nextMonth.ToString("yyyy-MM-dd") })
+                    .Get();
+                var gapsTask = _supabase.From<RosterGap>()
+                    .Filter("date", Operator.GreaterThanOrEqual, from)
+                    .Get();
+                var skipsTask = _supabase.From<RosterSkip>()
+                    .Filter("date", Operator.GreaterThanOrEqual, from)
+                    .Get();
+
+                await Task.WhenAll(monthsTask, gapsTask, skipsTask);
+
+                var gaps = gapsTask.Result.Models;
+                var open = new List<RosterGap>();
+                if (gaps.Count > 0)
+                {
+                    var taken = (await _supabase.From<Trip>()
+                        .Filter("date", Operator.In, gaps.Select(g => (object)g.Date.ToString("yyyy-MM-dd")).Distinct().ToList())
+                        .Get()).Models
+                        .Select(t => (t.Date.Date, t.VehicleId.ToUpperInvariant(), t.ShiftType))
+                        .Concat(skipsTask.Result.Models.Select(s => (s.Date.Date, s.VehicleId.ToUpperInvariant(), s.Shift)))
+                        .ToHashSet();
+                    open = gaps.Where(g => !taken.Contains((g.Date.Date, g.VehicleId.ToUpperInvariant(), g.Shift))).ToList();
+                }
+
+                var notes = new List<string>();
+                if (open.Count > 0)
+                    notes.Add(open.Count == 1 ? "1 roster slot has nobody on it" : $"{open.Count} roster slots have nobody on them");
+
+                var next = monthsTask.Result.Models.FirstOrDefault(m => m.Month.Date == nextMonth);
+                var waiting = today.Day >= RosterCycleService.DraftDay(_config) && next?.Status != "Published";
+                if (waiting)
+                    notes.Add(next is null ? $"Build the {nextMonth:MMMM} roster" : $"{nextMonth:MMMM} roster ready for review");
+
+                return new NavBadge(
+                    open.Count + (waiting ? 1 : 0),
+                    open.Any(g => g.Date.Date <= today.AddDays(2)),
+                    notes.Count == 0 ? null : string.Join(". ", notes));
+            }
+            catch
+            {
+                return NavBadge.None;
+            }
         }
     }
 }

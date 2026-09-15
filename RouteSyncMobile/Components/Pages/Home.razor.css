@@ -62,6 +62,15 @@
 }
 
 .prompt-card,
+/* Tucked up under the card above it, which it describes the month of. */
+.month-line {
+    margin: -6px 4px 14px;
+    color: #5b6578;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
 .info-card.row {
     display: flex;
     align-items: center;

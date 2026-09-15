@@ -68,8 +68,40 @@ namespace FleetWise.ViewModels
         /// </remarks>
         public string SavedAt { get; set; } = "";
 
+        /// <summary>The days of this week that belong to a month with a roster, as yyyy-MM-dd.</summary>
+        /// <remarks>
+        /// Copy last week leaves these alone. The roster fills them, and a trip copied in by
+        /// hand is one a publish must build around and can never replace: a slot left empty
+        /// on purpose last week would come back as a trip nobody rostered.
+        /// </remarks>
+        public HashSet<string> RosterDays { get; set; } = new();
+
+        /// <summary>The days in <see cref="RosterDays"/> as a phrase, such as "Oct 1 to Oct 5".</summary>
+        public string RosterSpan { get; set; } = "";
+
+        /// <summary>What the roster means for this week, or empty when no roster covers any of it.</summary>
+        public string RosterNote { get; set; } = "";
+
+        /// <summary>Roster slots with nobody on them, keyed like <see cref="Cells"/>.</summary>
+        /// <remarks>
+        /// Slots the last publish could not fill, still without a trip or a skip, on shifts
+        /// that have not finished.
+        /// </remarks>
+        public Dictionary<string, List<ScheduleGapMark>> Gaps { get; set; } = new();
+
+        public bool AllRostered => RosterDays.Count == Days.Count;
+
         public bool SlotClosed(string shift, DateTime day) =>
             ClosedSlots.Contains($"{shift}|{day:yyyy-MM-dd}");
+    }
+
+    /// <summary>A bus the roster runs on a shift with no driver on it.</summary>
+    public class ScheduleGapMark
+    {
+        public string VehicleId { get; set; }
+
+        /// <summary>Why the publish left it empty, such as a crew driver's rest day with no floater free.</summary>
+        public string Reason { get; set; }
     }
 
     public class ScheduleCell

@@ -194,6 +194,14 @@ else
             </div>
         }
 
+        @* The month as a whole, under the one day above it. A driver's bus, shift and rest
+           day hold for the month once its roster is published, and are otherwise only
+           in the message that announced them. *@
+        @if (MonthLine is string monthLine)
+        {
+            <p class="month-line">@monthLine</p>
+        }
+
         @* The rest of the month, from the screen already showing one day of it. A driver
            looking at today's assignment is the one asking whether they are on next
            Thursday, and the answer was nowhere in the app. *@
@@ -281,6 +289,11 @@ else
     private Trip? lastTrip;
     private LeaveRequest? leaveToday;
 
+    /// <summary>The driver's place on this month's published roster, when they have one.</summary>
+    private RosterSlot? monthSlot;
+    private string? monthSlotRoute;
+    private DateTime monthSlotReadAt = DateTime.MinValue;
+
     private bool showUnavailModal;
     private string? reasonChoice;
     private string reasonNote = "";
@@ -346,6 +359,14 @@ else
         checklistBlocked
             ? "This bus is out of service after a failed inspection. Wait here for a reassignment."
             : "This bus is out of service. Ask your dispatcher for a reassignment.";
+
+    /// <summary>"This month: Bus V001, Evening, rest day Tuesday", or the floater's version.</summary>
+    private string? MonthLine => monthSlot switch
+    {
+        null => null,
+        { IsFloater: true } s => $"This month: Floater on {monthSlotRoute ?? $"Route {s.RouteId}"}, rest day {s.RestDayName}",
+        var s => $"This month: Bus {s.VehicleId}, {s.Shift}, rest day {s.RestDayName}",
+    };
 
     private string Greeting
     {
@@ -493,6 +514,12 @@ else
                 route = null; vehicle = null; checklist = null;
             }
 
+            // A roster changes once a month, not between two polls, so the poll reads it
+            // again once a minute rather than every five seconds. Opening the page always
+            // reads it.
+            if (!silent || PhTime.Now - monthSlotReadAt > TimeSpan.FromMinutes(1))
+                await LoadMonthSlotAsync(uid);
+
             statusMsg = null; // a successful (re)load clears any stale error banner
         }
         catch (Exception ex)
@@ -525,6 +552,29 @@ else
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Home.EndPending] {ex}"); }
         }
+    }
+
+    /// <summary>Reads the driver's roster place for the month of today's service day.</summary>
+    /// <remarks>
+    /// The service day rather than the calendar, so at two in the morning on the 1st a
+    /// driver still on the last night of the month is shown that month.
+    /// </remarks>
+    private async Task LoadMonthSlotAsync(int uid)
+    {
+        var day = PhTime.OperationalDay;
+        var month = new DateTime(day.Year, day.Month, 1);
+
+        var slot = (await Data.GetRosterSlotsAsync(uid, month, month)).FirstOrDefault();
+
+        string? routeName = null;
+        if (slot is { IsFloater: true })
+            routeName = route?.RouteId == slot.RouteId
+                ? route.RouteName
+                : (await Data.GetRouteAsync(slot.RouteId))?.RouteName;
+
+        monthSlot = slot;
+        monthSlotRoute = routeName;
+        monthSlotReadAt = PhTime.Now;
     }
 
     private async Task ToggleAvailability()

@@ -35,6 +35,9 @@ namespace FleetWise.Controllers
             if (User.HasClaim("perm", "vehicles"))
                 mine["vehicles"] = new { count = b.Vehicles.Count, urgent = b.Vehicles.Urgent };
 
+            if (User.HasClaim("perm", "roster"))
+                mine["roster"] = new { count = b.Roster.Count, urgent = b.Roster.Urgent, note = b.Roster.Note };
+
             return Json(mine);
         }
     }

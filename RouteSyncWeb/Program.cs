@@ -106,6 +106,7 @@ builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<NavCounts>();
 builder.Services.AddScoped<SchedulingData>();
 builder.Services.AddScoped<TripAssignments>();
+builder.Services.AddScoped<RosterPublisher>();
 
 builder.Services.AddControllersWithViews(options =>
 {
@@ -137,6 +138,11 @@ builder.Services.AddHostedService<StaleTripCloserService>();
 // Removes ghost trips left on the shared database by an outdated build, so they do not
 // linger on the map or the dashboard.
 builder.Services.AddHostedService<TripReaperService>();
+
+// Drafts next month's roster from the 20th and publishes a draft still waiting by the 25th,
+// checking on startup and every half hour because the host sleeps. Roster:AutoCycle turns
+// it off.
+builder.Services.AddHostedService<RosterCycleService>();
 
 var app = builder.Build();
 

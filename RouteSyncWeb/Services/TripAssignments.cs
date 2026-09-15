@@ -24,6 +24,12 @@ namespace FleetWise.Services
     /// <param name="Trip">The trip as saved, when it was.</param>
     public sealed record ReassignResult(ReassignOutcome Outcome, string? Message = null, Trip? Trip = null);
 
+    /// <summary>A trip to add by hand: one bus and one driver on one shift of one day.</summary>
+    /// <param name="Override">The dispatcher was shown a scheduling conflict and chose to save anyway.</param>
+    public sealed record NewTrip(
+        DateTime Date, string Shift, TimeSpan Start, TimeSpan End,
+        int RouteId, string VehicleId, int DriverId, bool Override);
+
     /// <summary>
     /// Who drives what: the one path every reassignment goes through, and the assignment
     /// rules it enforces.
@@ -164,6 +170,66 @@ namespace FleetWise.Services
                 changes: tag?.ToAuditChanges());
 
             return new(ReassignOutcome.Done, Trip: trip);
+        }
+
+        /// <summary>Adds a trip by hand, after the same checks every booking goes through.</summary>
+        /// <param name="purpose">Appended to the audit summary, saying why the trip was added.</param>
+        /// <remarks>
+        /// A shift that has finished cannot be booked into, and that is not overridable:
+        /// confirming it would not put the shift back. A scheduling conflict can be confirmed
+        /// past. The break takes the least-used slot among the route's buses already on that
+        /// shift that day.
+        ///
+        /// The trip carries no roster month, so a re-publish of the roster treats it as made
+        /// by hand and builds around it.
+        /// </remarks>
+        public async Task<ReassignResult> CreateAsync(NewTrip t, int senderId, string? purpose = null)
+        {
+            var day = t.Date.Date;
+
+            if (TripStatus.Closed(day, t.Start, t.End, PhClock.Now))
+                return new(ReassignOutcome.Refused, day == PhClock.OperationalDay
+                    ? $"The {t.Shift} shift has already finished. Pick a shift that is still running."
+                    : $"The {t.Shift} shift on {day:MMMM d} has already finished.");
+
+            if (!t.Override)
+            {
+                var conflict = await ValidateAssignmentAsync(day, t.Shift, t.VehicleId, t.DriverId, null);
+                if (conflict != null) return new(ReassignOutcome.Conflict, conflict);
+            }
+
+            var alongside = (await _supabase.From<Trip>()
+                .Filter("date", Operator.Equals, day.ToString("yyyy-MM-dd"))
+                .Filter("route_id", Operator.Equals, t.RouteId.ToString())
+                .Filter("shift_type", Operator.Equals, t.Shift)
+                .Get()).Models;
+
+            var inserted = (await _supabase.From<Trip>().Insert(new Trip
+            {
+                Date = day,
+                ShiftType = t.Shift,
+                ShiftStartTime = t.Start,
+                ShiftEndTime = t.End,
+                BreakStart = BreakSlots.LeastUsed(t.Start, alongside.Select(x => x.BreakStart)),
+                RouteId = t.RouteId,
+                VehicleId = t.VehicleId,
+                DriverId = t.DriverId,
+                TripStatus = "Not Yet Started",
+                EstimatedRevenue = 0
+            })).Models.FirstOrDefault();
+
+            if (day == PhClock.OperationalDay) await SyncTripStatusesAsync();
+
+            // An override records that the dispatcher was warned about a clash and
+            // proceeded, which is the part of the decision worth auditing.
+            await _audit.WriteAsync("trip_created",
+                $"created a {t.Shift} trip for bus {t.VehicleId} with driver {t.DriverId}"
+                    + (day == PhClock.OperationalDay ? "" : $" on {day:MMM d}")
+                    + (t.Override ? ", overriding a scheduling conflict" : "")
+                    + (string.IsNullOrWhiteSpace(purpose) ? "" : $", {purpose}"),
+                "trips", inserted?.TripId);
+
+            return new(ReassignOutcome.Done, Trip: inserted);
         }
 
         /// <summary>

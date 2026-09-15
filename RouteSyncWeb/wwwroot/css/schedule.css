@@ -32,6 +32,10 @@
     .sch-btn-save:disabled { background:#9AA5B4; cursor:not-allowed; }
     .sch-hint { font-size:.8rem; color:#9AA5B4; margin:0 0 18px; }
 
+    /* Which days a roster covers, and what editing them means. Kept on a phone, unlike
+       the hint above: it is about this week, not about how the page works. */
+    .sch-roster-note { font-size:.8rem; color:#2F5F5B; background:#F2FAF9; border:1px solid #DCEFEC; border-radius:8px; padding:8px 12px; margin:0 0 18px; }
+
     /* No overflow of its own. A box that hides its overflow is a scrollport, and a
        heading held inside one is held against that box rather than against the page, which
        is the whole of what makes it stick. The corners it was rounding are rounded by the
@@ -157,6 +161,13 @@
        that carries a trip, since there is nothing here to read. */
     .sch-locked--empty { opacity:.55; }
     .sch-locked--empty .sch-lock-txt { font-style:italic; }
+
+    /* A bus the roster runs on this shift and day with nobody on it. Dashed like Add bus,
+       since pressing it adds the bus to a lane, and amber because it is still a hole. */
+    .sch-gap { display:flex; align-items:center; gap:5px; width:100%; margin-top:6px; padding:4px 8px; border:1px dashed #E0A84E; border-radius:7px; background:#FFF8EC; color:#94560A; font-size:.72rem; font-weight:700; text-align:left; cursor:pointer; }
+    .sch-gap:hover { background:#FDEFD6; border-color:#D69E2E; }
+    .sch-gap[hidden] { display:none; }
+    .sch-gap-ico { font-size:.8rem; line-height:1; }
 
     /* The week is a record rather than a plan, said where the Save button would be. */
     .sch-closed-note {

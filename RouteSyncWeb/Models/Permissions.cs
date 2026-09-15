@@ -23,6 +23,7 @@ namespace FleetWise.Models
         {
             ("dashboard", "Dashboard"),
             ("routes",    "Routes"),
+            ("roster",    "Roster"),
             ("vehicles",  "Vehicles"),
             ("reports",   "Reports"),
             ("users",     "Users"),
