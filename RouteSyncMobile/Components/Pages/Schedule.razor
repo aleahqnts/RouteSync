@@ -139,6 +139,7 @@
     private List<Trip> trips = new();
     private List<LeaveRequest> leave = new();
     private HashSet<DateTime> scheduledWeeks = new();
+    private HashSet<DateTime> publishedMonths = new();
     private readonly Dictionary<int, string> routeNames = new();
 
     // The three shifts the planner writes, and nothing else. Keeping the words identical
@@ -260,12 +261,14 @@
             var tripsTask = Data.GetTripsBetweenAsync(uid, from, to);
             var leaveTask = Data.GetApprovedLeaveBetweenAsync(uid, from, to);
             var weeksTask = Data.GetScheduledWeeksAsync(from, to);
+            var monthsTask = Data.GetPublishedMonthsAsync(from, to);
 
-            await Task.WhenAll(tripsTask, leaveTask, weeksTask);
+            await Task.WhenAll(tripsTask, leaveTask, weeksTask, monthsTask);
 
             trips = tripsTask.Result;
             leave = leaveTask.Result;
             scheduledWeeks = weeksTask.Result;
+            publishedMonths = monthsTask.Result;
 
             foreach (var id in trips.Select(t => t.RouteId).Distinct().Where(id => !routeNames.ContainsKey(id)))
             {
@@ -283,6 +286,7 @@
             trips = new();
             leave = new();
             scheduledWeeks = new();
+            publishedMonths = new();
         }
 
         loading = false;
@@ -292,8 +296,14 @@
 
     private int LeadingBlanks => ((int)new DateTime(month.Year, month.Month, 1).DayOfWeek + 6) % 7;
 
-    /// <summary>Whether the week a day belongs to has been built by the planner.</summary>
-    private bool IsScheduled(DateTime d) => scheduledWeeks.Contains(MondayOf(d));
+    /// <summary>Whether a day has been planned, so that no trip on it means no work.</summary>
+    /// <remarks>
+    /// Either answer will do: the month has a published roster, or the planner has saved
+    /// the week. Neither is enough alone. A roster covers its own month and no further, and
+    /// a week nobody opened in the planner can still hold a rostered month's first days.
+    /// </remarks>
+    private bool IsScheduled(DateTime d) =>
+        publishedMonths.Contains(new DateTime(d.Year, d.Month, 1)) || scheduledWeeks.Contains(MondayOf(d));
 
     private DateTime ThisMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);
 

@@ -26,4 +26,13 @@ public class ScheduleWeek : BaseModel
 
     [Column("saved_by")]
     public int? SavedBy { get; set; }
+
+    /// <summary>Whether only a roster publish has written this week, never the planner.</summary>
+    /// <remarks>
+    /// A publish marks every week it puts trips in, including the days of those weeks that
+    /// fall in the month next door. Such a row says nothing about those days, so it does not
+    /// count as the week being built.
+    /// </remarks>
+    [Column("roster_only")]
+    public bool RosterOnly { get; set; }
 }

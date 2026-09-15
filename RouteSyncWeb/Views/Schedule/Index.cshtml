@@ -54,8 +54,9 @@
             <a class="sch-btn-ghost" href="/Schedule?start=@Model.NextWeekStart">Next &#8250;</a>
         </div>
         @* Next week is last week with edits, which is why the rotation is monthly.
-           Fills the blanks in the week on screen and writes nothing until Save. *@
-        @if (!Model.WeekClosed)
+           Fills the blanks in the week on screen and writes nothing until Save. Not
+           offered on a week a roster covers whole, which the roster fills instead. *@
+        @if (!Model.WeekClosed && !Model.AllRostered)
         {
             <button type="button" class="sch-btn-ghost" id="sch-copy" onclick="schCopyLastWeek()">
                 Copy last week
@@ -132,6 +133,11 @@
         run more than one bus on the same shift. Trips already under way are locked.
         Conflicts are reported when the schedule is saved.
     </p>
+
+    @if (!string.IsNullOrEmpty(Model.RosterNote))
+    {
+        <p class="sch-roster-note">@Model.RosterNote</p>
+    }
 
     @foreach (var route in Model.Routes)
     {
@@ -239,6 +245,22 @@
                                                         <span class="rs-pick-face" aria-hidden="true">@(picked is null ? "" : DriverFace(picked.DriverName, picked.DriverId))</span>
                                                     </span>
                                                 </div>
+                                            }
+
+                                            @* Buses the roster runs here that its last publish left without a
+                                               driver. Under the first lane only, whatever lane ends up filling
+                                               them. *@
+                                            @if (lane == 0 && Model.Gaps.TryGetValue(CellKey(route.RouteId, shift, day), out var gaps))
+                                            {
+                                                @foreach (var gap in gaps)
+                                                {
+                                                    <button type="button" class="sch-gap" data-veh="@gap.VehicleId"
+                                                            data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")"
+                                                            title="@gap.Reason" onclick="schFillGap(this)">
+                                                        <span class="sch-gap-ico" aria-hidden="true">&#9888;</span>
+                                                        @gap.VehicleId has no driver
+                                                    </button>
+                                                }
                                             }
                                         </td>
                                     }
@@ -411,6 +433,10 @@
     // after the page loaded is built here rather than by the server, and without this it
     // would draw pickers over days the save is bound to refuse.
     const SCH_CLOSED = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClosedSlots));
+    // Days of this week a roster covers, which copying from last week leaves to it, and
+    // the same days as a phrase for saying so.
+    const SCH_ROSTER_DAYS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RosterDays));
+    const SCH_ROSTER_SPAN = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RosterSpan));
 
     /* The height of the block held at the top, written where the stylesheet can read it,
        so every route heading knows what to come to rest under.
@@ -1171,6 +1197,77 @@
                 });
             });
         });
+
+        // Every change that can take a bus lands here, so this is also where a roster gap
+        // learns it has been filled.
+        schMarkGaps();
+    }
+
+    // A roster gap reads as filled once some lane on its shift and day holds its bus with
+    // a driver, on whichever route. Hidden rather than removed, so emptying that lane again
+    // brings it back.
+    function schMarkGaps() {
+        document.querySelectorAll('.sch-gap').forEach(function (mark) {
+            const veh = mark.dataset.veh.toUpperCase();
+            const same = '[data-shift="' + mark.dataset.shift + '"][data-date="' + mark.dataset.date + '"]';
+
+            const locked = Array.prototype.some.call(
+                document.querySelectorAll('.sch-locked' + same),
+                el => (el.dataset.veh || '').toUpperCase() === veh);
+
+            const booked = locked || Array.prototype.some.call(
+                document.querySelectorAll('.sch-cell' + same),
+                el => el.querySelector('.sch-veh').value.toUpperCase() === veh
+                   && el.querySelector('.sch-drv').value !== '');
+
+            mark.hidden = booked;
+        });
+    }
+
+    // Puts a gap's bus into a free lane on its shift and day and opens the driver list,
+    // so filling it is choosing a driver and saving like any other slot. A lane already
+    // holding the bus is used as it is, and a new lane is added when none is free.
+    function schFillGap(mark) {
+        const tbody = mark.closest('.sch-shift-body');
+        const dayIndex = Number(mark.closest('.sch-cell-td').dataset.schDay);
+        const veh = mark.dataset.veh;
+
+        const cellIn = row => {
+            const td = row.querySelectorAll('.sch-cell-td')[dayIndex];
+            return td ? td.querySelector('.sch-cell') : null;
+        };
+        const rows = () => Array.from(tbody.querySelectorAll(':scope > tr'));
+
+        let cell = rows().map(cellIn).find(c => c && c.querySelector('.sch-veh').value.toUpperCase() === veh.toUpperCase())
+                || rows().map(cellIn).find(c => c && !c.querySelector('.sch-veh').value && !c.querySelector('.sch-drv').value);
+
+        if (!cell) {
+            schAddLane(tbody);
+            cell = cellIn(rows()[rows().length - 1]);
+        }
+        if (!cell) return;
+
+        const vehSel = cell.querySelector('.sch-veh');
+        if (vehSel.value.toUpperCase() !== veh.toUpperCase()) {
+            const opt = Array.from(vehSel.options).find(o => o.value.toUpperCase() === veh.toUpperCase());
+            if (!opt) {
+                schToast(veh + ' cannot be booked right now. It may be out of service.', 4200);
+                return;
+            }
+            if (opt.disabled) {
+                schToast(veh + ' is already picked on another route for this shift.', 4200);
+                return;
+            }
+            vehSel.value = opt.value;
+            vehSel.dispatchEvent(new Event('change'));
+        }
+
+        const drvSel = cell.querySelector('.sch-drv');
+        cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        drvSel.focus();
+        if (typeof drvSel.showPicker === 'function') {
+            try { drvSel.showPicker(); } catch (e) { /* needs a user gesture in some browsers */ }
+        }
     }
 
     document.querySelectorAll('.sch-cell').forEach(schWireCell);
@@ -1312,9 +1409,14 @@
         // Two reasons a slot is passed over, counted apart because they ask different
         // things of the planner. A shift that has finished wants nothing. A bus or driver
         // that can no longer be booked leaves a hole somebody has to fill.
-        let filled = 0, kept = 0, skipped = 0, finished = 0;
+        let filled = 0, kept = 0, skipped = 0, finished = 0, rostered = 0;
 
         cells.forEach(c => {
+            // A day the roster covers is the roster's to fill. A trip copied into it by
+            // hand would be one every publish has to keep, including into slots somebody
+            // emptied on purpose.
+            if (SCH_ROSTER_DAYS.indexOf(SCH_DAYS[c.dayIndex]) !== -1) { rostered++; return; }
+
             const tbody = document.querySelector(
                 '.sch-shift-body[data-route="' + c.routeId + '"][data-shift="' + c.shift + '"]');
             // A route that has since been removed has no row to fill.
@@ -1371,12 +1473,19 @@
         if (finished) parts.push(finished + (finished === 1 ? ' shift had' : ' shifts had') + ' already finished.');
         if (skipped) parts.push(skipped + (skipped === 1 ? ' could not be placed.' : ' could not be placed.'));
 
+        const rosterLine = SCH_ROSTER_SPAN
+            + (SCH_ROSTER_DAYS.length === 1 ? ' follows the roster, so nothing was copied into it.'
+                                           : ' follow the roster, so nothing was copied into them.');
+        if (rostered) parts.push(rosterLine);
+
         // Nothing landed, and the reason decides what to say. Naming buses and drivers when
         // the week had simply gone sends the planner looking for a fleet problem that is
         // not there.
         const nothing = filled === 0 && kept === 0;
         schToast(
-            nothing && skipped && !finished
+            nothing && rostered && !skipped && !finished
+                ? 'Nothing was filled. ' + rosterLine
+                : nothing && skipped && !finished
                 ? 'Nothing could be placed. Those buses and drivers are no longer available.'
                 : nothing && finished && !skipped
                 ? 'Nothing was filled. Every shift in this week has already finished.'

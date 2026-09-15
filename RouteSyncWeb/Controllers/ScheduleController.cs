@@ -62,8 +62,10 @@ namespace FleetWise.Controllers
                                 .Filter("week_start", Operator.Equals, weekStart.ToString("yyyy-MM-dd"))
                                 .Get();
 
+            var rosterTask = ReadRosterWeekAsync(weekStart, weekEnd);
+
             await Task.WhenAll(routesTask, vehiclesTask, driversTask, availabilityTask,
-                               tripsTask, leaveTask, markerTask);
+                               tripsTask, leaveTask, markerTask, rosterTask);
 
             // A bus or a driver already holding a slot this week stays on its list even when
             // it can no longer be booked. Dropping it would leave that slot showing nothing,
@@ -142,6 +144,8 @@ namespace FleetWise.Controllers
 
             vm.WeekClosed = vm.ClosedSlots.Count == vm.Days.Count * ShiftTimes.Count;
 
+            FillRoster(vm, rosterTask.Result, trips, vehiclesTask.Result.Models);
+
             foreach (var t in trips.OrderBy(t => t.VehicleId))
             {
                 var key = $"{t.RouteId}|{t.ShiftType}|{t.Date:yyyy-MM-dd}";
@@ -164,6 +168,106 @@ namespace FleetWise.Controllers
 
             return View(vm);
         }
+
+        private sealed record RosterWeek(List<RosterMonth> Months, List<RosterGap> Gaps, List<RosterSkip> Skips);
+
+        /// <summary>The rosters, gaps and skips touching a week.</summary>
+        /// <remarks>
+        /// Empty rather than failing when the roster tables do not exist. The week can still
+        /// be planned by hand, and only the roster's marks are missing from it.
+        /// </remarks>
+        private async Task<RosterWeek> ReadRosterWeekAsync(DateTime weekStart, DateTime weekEnd)
+        {
+            var from = weekStart.ToString("yyyy-MM-dd");
+            var to = weekEnd.ToString("yyyy-MM-dd");
+
+            try
+            {
+                var monthsTask = _supabase.From<RosterMonth>()
+                    .Filter("month", Operator.GreaterThanOrEqual, RosterPublisher.FirstOf(weekStart).ToString("yyyy-MM-dd"))
+                    .Filter("month", Operator.LessThanOrEqual, to)
+                    .Get();
+                var gapsTask = _supabase.From<RosterGap>()
+                    .Filter("date", Operator.GreaterThanOrEqual, from)
+                    .Filter("date", Operator.LessThanOrEqual, to)
+                    .Get();
+                var skipsTask = _supabase.From<RosterSkip>()
+                    .Filter("date", Operator.GreaterThanOrEqual, from)
+                    .Filter("date", Operator.LessThanOrEqual, to)
+                    .Get();
+
+                await Task.WhenAll(monthsTask, gapsTask, skipsTask);
+                return new(monthsTask.Result.Models, gapsTask.Result.Models, skipsTask.Result.Models);
+            }
+            catch (Postgrest.Exceptions.PostgrestException)
+            {
+                return new(new(), new(), new());
+            }
+        }
+
+        /// <summary>Marks the days a roster covers, and the roster slots nobody is on.</summary>
+        private static void FillRoster(ScheduleViewModel vm, RosterWeek roster, List<Trip> trips, List<Vehicle> vehicles)
+        {
+            var en = System.Globalization.CultureInfo.InvariantCulture;
+            var notes = new List<string>();
+
+            foreach (var month in roster.Months.OrderBy(m => m.Month))
+            {
+                var days = vm.Days.Where(d => RosterPublisher.FirstOf(d) == month.Month.Date).ToList();
+                if (days.Count == 0) continue;
+
+                foreach (var d in days) vm.RosterDays.Add(d.ToString("yyyy-MM-dd"));
+
+                var name = month.Month.ToString("MMMM", en);
+                var published = month.Status == "Published";
+
+                if (days.Count == vm.Days.Count)
+                {
+                    notes.Add(published
+                        ? $"This week follows the {name} roster. A trip changed or removed here stays that way when the roster is published again."
+                        : $"This week belongs to the {name} roster, which fills it when it is published.");
+                }
+                else
+                {
+                    var span = Span(days, en);
+                    var many = days.Count > 1;
+                    notes.Add(published
+                        ? $"{span} {(many ? "follow" : "follows")} the {name} roster. A trip changed or removed on {(many ? "those days" : "that day")} stays that way when the roster is published again."
+                        : $"{span} {(many ? "belong" : "belongs")} to the {name} roster, which fills {(many ? "them" : "it")} when it is published.");
+                }
+            }
+
+            vm.RosterNote = string.Join(" ", notes);
+            vm.RosterSpan = Span(vm.Days.Where(d => vm.RosterDays.Contains(d.ToString("yyyy-MM-dd"))).ToList(), en);
+
+            // A gap reads as open while its slot has no trip and no skip, on whatever route.
+            var taken = new HashSet<(DateTime, string, string)>();
+            foreach (var t in trips) taken.Add((t.Date.Date, t.VehicleId.ToUpperInvariant(), t.ShiftType));
+            foreach (var s in roster.Skips) taken.Add((s.Date.Date, s.VehicleId.ToUpperInvariant(), s.Shift));
+
+            var routeOf = new Dictionary<string, int?>();
+            foreach (var v in vehicles) routeOf.TryAdd(v.VehicleId.ToUpperInvariant(), v.RouteId);
+
+            foreach (var gap in roster.Gaps.OrderBy(g => g.VehicleId, StringComparer.Ordinal))
+            {
+                if (taken.Contains((gap.Date.Date, gap.VehicleId.ToUpperInvariant(), gap.Shift))) continue;
+                if (vm.SlotClosed(gap.Shift, gap.Date)) continue;
+                if ((gap.RouteId ?? routeOf.GetValueOrDefault(gap.VehicleId.ToUpperInvariant())) is not int routeId) continue;
+
+                var key = $"{routeId}|{gap.Shift}|{gap.Date:yyyy-MM-dd}";
+                if (!vm.Gaps.TryGetValue(key, out var marks))
+                    vm.Gaps[key] = marks = new List<ScheduleGapMark>();
+                marks.Add(new ScheduleGapMark { VehicleId = gap.VehicleId, Reason = gap.Reason });
+            }
+        }
+
+        /// <summary>A run of days as "Oct 1", or "Sep 29 to Oct 1". Empty for none.</summary>
+        private static string Span(List<DateTime> days, IFormatProvider en) => days.Count switch
+        {
+            0 => "",
+            1 => days[0].ToString("MMM d", en),
+            _ => $"{days[0].ToString("MMM d", en)} to {days[^1].ToString("MMM d", en)}",
+        };
 
         /// <summary>One week's trips, laid out the way the planner draws them.</summary>
         /// <remarks>
@@ -600,11 +704,21 @@ namespace FleetWise.Controllers
                 return "The saved record of this week is no longer available. Please reload "
                      + "before saving, so that your changes are applied to the current schedule.";
 
-            var who = await SavedByNameAsync(week);
             var saved = WallClock(week.SavedAt);
             var when = saved.Date == PhClock.Today
                 ? saved.ToString("h:mm tt")
                 : saved.ToString("MMM d, h:mm tt");
+
+            // Nobody has saved the week, but a roster publish has put trips in it.
+            if (week.RosterOnly)
+                return $"A roster was published into this week at {when}, after you opened it. "
+                     + (refused
+                        ? "Nothing was written, to avoid removing its trips. "
+                        : "The week on screen is now out of date. ")
+                     + "Reload to bring in those trips. Your unsaved changes will be "
+                     + "reapplied, and any that conflict will be listed for review.";
+
+            var who = await SavedByNameAsync(week);
 
             return $"{who} saved this week at {when}, after you opened it. "
                  + (refused
