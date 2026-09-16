@@ -8,8 +8,10 @@ namespace FleetWise.Services
     /// <param name="VehicleId">The bus, for crew. Null for a floater.</param>
     /// <param name="Shift">Crew: the shift driven. Floater: the home shift, preferred and not a lock.</param>
     /// <param name="RestWeekday">ISO weekday, 1 Monday to 7 Sunday, or null while unset.</param>
+    /// <param name="Suggested">Why auto-fill filled or emptied this place, or null for a place a person set.</param>
     public sealed record RosterSeat(
-        int? DriverId, string Kind, int RouteId, string? VehicleId, string Shift, int? RestWeekday);
+        int? DriverId, string Kind, int RouteId, string? VehicleId, string Shift, int? RestWeekday,
+        string? Suggested = null);
 
     /// <summary>How one weekday stands on a route: crew resting against floaters working.</summary>
     public sealed record DayCover(int Weekday, int Resting, int Covering)
@@ -46,7 +48,7 @@ namespace FleetWise.Services
     /// route and cover its crew's rest days, one a day each, so a route needs a floater
     /// for every six crew seats, rounded up.</para>
     /// </remarks>
-    public static class RosterRules
+    public static partial class RosterRules
     {
         public const string Crew = "Crew";
         public const string Floater = "Floater";
@@ -71,7 +73,9 @@ namespace FleetWise.Services
         /// <list type="bullet">
         /// <item>A driver sits in one place a month: one crew seat or one floater row.</item>
         /// <item>Every crew driver and floater has a rest day.</item>
-        /// <item>A shift the bus runs has a driver, and only one.</item>
+        /// <item>A shift the bus runs has one driver at most. It may have none yet: a publish
+        /// covers such a place from the route's floaters, or leaves it unfilled with a reason,
+        /// and the route's shortfall note counts it.</item>
         /// <item>A retired bus holds no crew, and a crew sits on the route its bus is based on.</item>
         /// <item>Only an active driver account is placed.</item>
         /// </list>
@@ -122,9 +126,6 @@ namespace FleetWise.Services
                         else if (bus.RouteId != s.RouteId)
                             problems.Add($"{bus.VehicleId} is not based on {Route(s.RouteId)}. Move its crew to the route it runs.");
                     }
-
-                    if (s.DriverId is null)
-                        problems.Add($"{s.VehicleId} runs the {s.Shift} shift with no driver.");
                 }
                 else if (s.DriverId is null)
                 {

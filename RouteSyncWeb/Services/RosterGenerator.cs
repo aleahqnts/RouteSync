@@ -97,8 +97,9 @@ namespace FleetWise.Services
     /// <item>A slot on a retired bus becomes a gap.</item>
     /// <item>The crew driver takes it when free: not resting, not on leave, active, not
     /// booked on that shift, breaking no rest rule, and not into a seventh day running.</item>
-    /// <item>Otherwise one of the route's floaters free by the same test takes it, the
-    /// floater whose home shift it is first. None free makes it a gap, with why.</item>
+    /// <item>Otherwise, or when the seat has nobody on it, one of the route's floaters free
+    /// by the same test takes it, the floater whose home shift it is first. None free makes
+    /// it a gap, with why.</item>
     /// </list>
     /// <para>A roster trip still untouched is rewritten in place when the plan for its slot
     /// changed, removed when its slot no longer runs or cannot be filled, and left alone
@@ -128,6 +129,9 @@ namespace FleetWise.Services
         /// direction that leaves eight hours between the last shift of one month and the first
         /// of the next. A crew of two on Morning and Afternoon swaps. A floater's home shift
         /// moves the same way within the shifts its route runs.
+        ///
+        /// What auto-fill said about last month's places is not carried: it explained last
+        /// month's choices, not this one's.
         /// </remarks>
         public static IReadOnlyList<RosterSeat> Rotate(IReadOnlyList<RosterSeat> seats)
         {
@@ -144,7 +148,7 @@ namespace FleetWise.Services
                 var runs = s.Kind == RosterRules.Crew
                     ? busShifts.GetValueOrDefault(s.VehicleId ?? "")
                     : routeShifts.GetValueOrDefault(s.RouteId);
-                return s with { Shift = StepBack(s.Shift, runs) };
+                return s with { Shift = StepBack(s.Shift, runs), Suggested = null };
             }).ToList();
         }
 
@@ -171,7 +175,10 @@ namespace FleetWise.Services
 
             var busById = w.Vehicles.ToDictionary(v => v.VehicleId, Ci);
             var driverById = w.Drivers.ToDictionary(d => d.UserId);
-            var seats = w.Seats.Where(s => s.DriverId is not null && s.RestWeekday is not null).ToList();
+            // A crew seat with nobody on it still runs: every day of it needs a floater.
+            var seats = w.Seats
+                .Where(s => (s.DriverId is not null && s.RestWeekday is not null) || (s.Kind == RosterRules.Crew && s.DriverId is null))
+                .ToList();
 
             bool Regenerable(Trip t) =>
                 w.Marks.TryGetValue(t.TripId, out var m)
@@ -243,8 +250,8 @@ namespace FleetWise.Services
                             if (!started && (mark?.RosterMonth is null || mark.HandEdited))
                                 plan.Kept.Add(new KeptTrip(trip.TripId, day, shift, busId, trip.DriverId, ByHand: mark?.RosterMonth is not null));
 
-                            var crew = seat.DriverId!.Value;
-                            if (trip.DriverId != crew && Unavailable(crew, day, shift, seat.RestWeekday!.Value) is null)
+                            if (seat.DriverId is int crew && trip.DriverId != crew
+                                && Unavailable(crew, day, shift, seat.RestWeekday!.Value) is null)
                                 plan.Idle.Add(new IdleDriver(crew, day, shift, busId));
                             continue;
                         }
@@ -257,8 +264,8 @@ namespace FleetWise.Services
                             continue;
                         }
 
-                        var crewDriver = seat.DriverId!.Value;
-                        var crewReason = Unavailable(crewDriver, day, shift, seat.RestWeekday!.Value);
+                        var crewDriver = seat.DriverId;
+                        var crewReason = crewDriver is int c ? Unavailable(c, day, shift, seat.RestWeekday!.Value) : NobodyRostered;
 
                         int? chosen = crewReason is null ? crewDriver : null;
                         var isCover = false;
@@ -282,7 +289,7 @@ namespace FleetWise.Services
                             if (pick is null)
                             {
                                 plan.Gaps.Add(new PlannedGap(day, busId, seat.RouteId, shift,
-                                    GapReason(NameOf(driverById, crewDriver), crewReason!, free.Select(x => x.why))));
+                                    GapReason(crewDriver is int who ? NameOf(driverById, who) : null, crewReason!, free.Select(x => x.why))));
                                 if (trip is not null) plan.Deletes.Add(trip.TripId);
                                 continue;
                             }
@@ -324,9 +331,12 @@ namespace FleetWise.Services
             return plan;
         }
 
+        private const string NobodyRostered = "nobody rostered";
+
         /// <summary>Why a slot went unfilled, in a line a dispatcher can act on.</summary>
         /// <example>Pedro Reyes on their rest day, no floater free (1 resting, 1 on leave)</example>
-        private static string GapReason(string crewName, string crewReason, IEnumerable<string?> floaterReasons)
+        /// <param name="crewName">The crew driver, or null for a seat with nobody on it.</param>
+        private static string GapReason(string? crewName, string crewReason, IEnumerable<string?> floaterReasons)
         {
             var counts = floaterReasons
                 .Where(r => r is not null)
@@ -340,7 +350,9 @@ namespace FleetWise.Services
                 ? "the route has no floaters"
                 : $"no floater free ({string.Join(", ", counts)})";
 
-            return $"{crewName} {CrewPhrase(crewReason)}, {floaters}";
+            return crewName is null
+                ? $"Nobody is rostered on this shift, {floaters}"
+                : $"{crewName} {CrewPhrase(crewReason)}, {floaters}";
         }
 
         private static string CrewPhrase(string reason) => reason switch
