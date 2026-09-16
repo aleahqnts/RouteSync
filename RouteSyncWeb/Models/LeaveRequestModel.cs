@@ -82,8 +82,7 @@ public class LeaveRequest : BaseModel
     /// the calendar and refuses an assignment, exactly as it did before the driver asked.
     /// A new status would have had to be taught to every one of those readers.
     ///
-    /// Cleared either way. Accepting cancels the request outright; declining leaves the
-    /// leave standing with nothing to show it was ever questioned except the audit trail.
+    /// Kept either way once answered; <see cref="WithdrawAnsweredAt"/> says it is settled.
     /// </remarks>
     [Column("withdraw_requested_at")]
     public DateTime? WithdrawRequestedAt { get; set; }
@@ -103,6 +102,22 @@ public class LeaveRequest : BaseModel
     /// </remarks>
     [Column("withdraw_answered_at")]
     public DateTime? WithdrawAnsweredAt { get; set; }
+
+    /// <summary>Who answered the driver's asking, and what they wrote back.</summary>
+    /// <remarks>
+    /// Kept apart from the decision fields for the same reason as the revocation.
+    /// Accepting cancels leave that was approved, and writing the acceptance into
+    /// decided_by and decision_note would leave no record that it ever was.
+    ///
+    /// Rows answered before these columns existed have them empty. An accepted one of
+    /// those carries the acceptance in the decision fields instead; see
+    /// <see cref="LeaveEntitlement.DecisionIsAcceptance"/>.
+    /// </remarks>
+    [Column("withdraw_answered_by")]
+    public int? WithdrawAnsweredBy { get; set; }
+
+    [Column("withdraw_answer_note")]
+    public string WithdrawAnswerNote { get; set; }
 
     /// <summary>
     /// When notice arrived. BGC asks for three days on a vacation and two hours on a
@@ -224,6 +239,33 @@ public static class LeaveEntitlement
 
     public static bool IsOpen(string status) =>
         OpenStatuses.Any(s => string.Equals(status, s, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Whether a request was cancelled by agreeing to the driver's asking.</summary>
+    /// <remarks>
+    /// Granted leave the driver asked to hand back, and the dispatcher accepted. A request
+    /// the driver withdrew while it was still waiting is Cancelled too, but was never
+    /// asked about.
+    /// </remarks>
+    public static bool AskAccepted(LeaveRequest r) =>
+        string.Equals(r.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+        && r.WithdrawRequestedAt is not null
+        && r.WithdrawAnsweredAt is not null;
+
+    /// <summary>
+    /// Whether the decision fields hold an accepted cancellation rather than the approval.
+    /// </summary>
+    /// <remarks>
+    /// An acceptance is written to the answer fields and leaves the approval where it is.
+    /// Rows accepted before the answer fields existed carry the acceptance over the
+    /// approval instead, and name no answerer. An approval always comes before the asking
+    /// it allowed, so a decision stamped at or after the asking is the acceptance.
+    /// </remarks>
+    public static bool DecisionIsAcceptance(LeaveRequest r) =>
+        AskAccepted(r)
+        && r.WithdrawAnsweredBy is null
+        && r.DecidedAt is DateTime decided
+        && r.WithdrawRequestedAt is DateTime asked
+        && decided >= asked;
 
     /// <summary>Whether a day inside a request has been handed back.</summary>
     public static bool IsRevokedOn(LeaveRequest r, DateTime day) =>

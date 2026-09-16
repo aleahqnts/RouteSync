@@ -457,7 +457,10 @@
                         <span class="rq-hist-body">
                             <span class="rq-hist-action">@e.Action</span>
                             <span class="rq-hist-when">@e.When</span>
-                            <span class="rq-hist-by">by @e.By</span>
+                            @if (!string.IsNullOrEmpty(e.By))
+                            {
+                                <span class="rq-hist-by">by @e.By</span>
+                            }
                             @if (!string.IsNullOrWhiteSpace(e.Note))
                             {
                                 <span class="rq-hist-note">@e.Note</span>

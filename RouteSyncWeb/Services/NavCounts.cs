@@ -187,10 +187,12 @@ namespace FleetWise.Services
 
             // Granted leave a driver has asked to hand back and has not been answered on.
             // Asked for separately because the row itself is Approved: what is open about it
-            // is the asking, and no filter on the status would find it.
+            // is the asking, and no filter on the status would find it. Leave revoked outright
+            // is left out: nothing is left to cancel, so its asking needs no answer.
             var leaveAskedTask = _supabase.From<LeaveRequest>()
                 .Filter<object>("withdraw_requested_at", Operator.Not, null)
                 .Filter<object>("withdraw_answered_at", Operator.Is, null)
+                .Filter("status", Operator.Equals, "Approved")
                 .Get();
 
             // Leave that takes a driver off today, which is what makes one of today's trips

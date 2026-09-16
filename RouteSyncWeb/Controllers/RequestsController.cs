@@ -39,8 +39,14 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>A driver's asking that nobody has answered yet.</summary>
+        /// <remarks>
+        /// Only on leave that still stands. Leave revoked outright has nothing left to hand
+        /// back, so an asking on it is settled whether or not it was answered, and holding it
+        /// open would keep a request in the queue that neither answer can be given to.
+        /// </remarks>
         private static bool IsAskOutstanding(LeaveRequest r) =>
-            r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null;
+            r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null
+            && string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase);
 
         public async Task<IActionResult> Index(string? status)
         {
@@ -484,6 +490,14 @@ namespace FleetWise.Controllers
                 // Nothing of it stands, so the request itself is the thing revoked and the
                 // day list has nothing left to say.
                 write = write.Set(x => x.Status, "Revoked");
+
+                // A cancellation the driver asked for is settled with it, since there is no
+                // leave left to cancel. Stamped so the driver's app stops showing it waiting.
+                if (IsAskOutstanding(found))
+                {
+                    write = write.Set(x => x.WithdrawAnsweredAt, PhClock.Now);
+                    if (by.HasValue) write = write.Set(x => x.WithdrawAnsweredBy, by.Value);
+                }
             }
             else
             {
@@ -550,8 +564,12 @@ namespace FleetWise.Controllers
         /// those days now need a driver. It cannot make anybody do it, and it should not
         /// pretend the days filled themselves.
         ///
-        /// Declining clears the mark and leaves the leave exactly as it was. Either way
-        /// the driver is told and the audit trail keeps both the asking and the answer.
+        /// Declining leaves the leave exactly as it was. Either way the driver is told, the
+        /// row keeps who answered and what they wrote, and the audit trail keeps both the
+        /// asking and the answer.
+        ///
+        /// Accepting changes the status and nothing of the approval. The approval stays in
+        /// the decision fields, so the history reads approved, asked about, then cancelled.
         ///
         /// Whole only. Handing part of a leave back is Revoke, which is the dispatcher's.
         /// </remarks>
@@ -581,16 +599,10 @@ namespace FleetWise.Controllers
                 // anybody else could see it had been asked about at all.
                 .Set(x => x.WithdrawAnsweredAt, PhClock.Now);
 
-            if (accept)
-            {
-                write = write
-                    .Set(x => x.Status, "Cancelled")
-                    .Set(x => x.DecidedAt, PhClock.Now)
-                    .Set(x => x.DecisionNote,
-                         string.IsNullOrWhiteSpace(note) ? "Cancelled at the driver's request." : note.Trim());
+            if (by.HasValue) write = write.Set(x => x.WithdrawAnsweredBy, by.Value);
+            if (!string.IsNullOrWhiteSpace(note)) write = write.Set(x => x.WithdrawAnswerNote, note.Trim());
 
-                if (by.HasValue) write = write.Set(x => x.DecidedBy, by.Value);
-            }
+            if (accept) write = write.Set(x => x.Status, "Cancelled");
 
             await write.Update();
 
@@ -820,13 +832,13 @@ namespace FleetWise.Controllers
                 BalanceAfter = Math.Max(0, entitlement - granted - (spends ? LeaveEntitlement.EffectiveDays(r) : 0)),
                 EntitlementOfType = entitlement,
                 OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),
-                DecisionNote = r.DecisionNote,
-                WithdrawAsked = r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null,
+                DecisionNote = LeaveHistory.StatusNote(r),
+                WithdrawAsked = IsAskOutstanding(r),
                 WithdrawReason = r.WithdrawReason,
                 WithdrawAskedWhen = r.WithdrawRequestedAt?.ToString("MMM d, yyyy h:mm tt"),
                 RevokedCount = r.RevokedDates?.Count ?? 0,
                 RevokableDays = RevokableDaysOf(r),
-                History = HistoryOf(r, names),
+                History = LeaveHistory.Of(r, names),
             };
         }
 
@@ -859,93 +871,6 @@ namespace FleetWise.Controllers
             }
 
             return days;
-        }
-
-        /// <summary>
-        /// What happened to a request, read off the row rather than kept in a table of its
-        /// own: a request is filed once and settled once, and both moments are stored.
-        /// </summary>
-        private static List<LeaveEventViewModel> HistoryOf(
-            LeaveRequest r, IReadOnlyDictionary<int, string> names)
-        {
-            string Who(int? id) =>
-                id is int i && names.TryGetValue(i, out var n) ? n : "Unknown";
-
-            var events = new List<LeaveEventViewModel>
-            {
-                new()
-                {
-                    Action = "Filed",
-                    At = r.FiledAt,
-                    When = r.FiledAt.ToString("MMM d, yyyy h:mm tt"),
-                    By = Who(r.UserId),
-                    Note = r.Reason,
-                },
-            };
-
-            if (r.DecidedAt is DateTime decided
-                && !string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
-            {
-                events.Add(new LeaveEventViewModel
-                {
-                    Action = r.Status,
-                    At = decided,
-                    When = decided.ToString("MMM d, yyyy h:mm tt"),
-                    // A withdrawal is the driver's own doing and carries no decider.
-                    By = r.DecidedBy is null ? Who(r.UserId) : Who(r.DecidedBy),
-                    Note = r.DecisionNote,
-                });
-            }
-
-            if (r.WithdrawRequestedAt is DateTime asked)
-            {
-                events.Add(new LeaveEventViewModel
-                {
-                    Action = "Cancellation asked for",
-                    At = asked,
-                    When = asked.ToString("MMM d, yyyy h:mm tt"),
-                    By = Who(r.UserId),
-                    Note = r.WithdrawReason,
-                });
-
-                // Accepting cancels the request, which the decision below already reports.
-                // Declining leaves the leave standing, and without this there would be
-                // nothing to say the asking was ever answered.
-                if (r.WithdrawAnsweredAt is DateTime answered
-                    && string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase))
-                {
-                    events.Add(new LeaveEventViewModel
-                    {
-                        Action = "Cancellation declined",
-                        At = answered,
-                        When = answered.ToString("MMM d, yyyy h:mm tt"),
-                        By = Who(r.DecidedBy),
-                    });
-                }
-            }
-
-            // After the decision, not instead of it. Leave that was granted and then taken
-            // back has two things that happened to it, and a history showing only the
-            // second reads as though it was never granted.
-            if (r.RevokedAt is DateTime revoked)
-            {
-                var which = r.RevokedDates is { Count: > 0 }
-                    ? $"{r.RevokedDates.Count} {(r.RevokedDates.Count == 1 ? "day" : "days")} taken back"
-                    : "All days taken back";
-
-                events.Add(new LeaveEventViewModel
-                {
-                    Action = "Revoked",
-                    At = revoked,
-                    When = revoked.ToString("MMM d, yyyy h:mm tt"),
-                    By = Who(r.RevokedBy),
-                    Note = string.IsNullOrWhiteSpace(r.RevokeNote) ? which : $"{which}. {r.RevokeNote}",
-                });
-            }
-
-            // In the order they happened, not the order they were assembled. OrderBy is
-            // stable, so two stamped the same second keep the order they were added in.
-            return events.OrderBy(e => e.At).ToList();
         }
     }
 }

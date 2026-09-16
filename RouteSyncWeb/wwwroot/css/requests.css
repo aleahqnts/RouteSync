@@ -665,6 +665,7 @@
     .rq-hist-dot--approved  { background: #27AE60; }
     .rq-hist-dot--rejected  { background: #E53E3E; }
     .rq-hist-dot--cancelled { background: #9AA5B4; }
+    .rq-hist-dot--revoked   { background: #C0392B; }
 
     .rq-hist-body {
         display: flex;
