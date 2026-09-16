@@ -1,0 +1,85 @@
+# Deploys the web dashboard to Azure App Service whenever master changes it.
+#
+# Only RouteSyncWeb is built. The repository also holds the phone apps, which need
+# Android tooling and are never deployed from here, so a push that changes only them
+# does not start a run.
+#
+# Signing in to Azure uses OpenID Connect: GitHub vouches for this repository and
+# branch, and Azure trusts that through a federated credential on a user-assigned
+# managed identity. No password or publish profile is stored anywhere. The identity
+# holds Website Contributor on the one web app and nothing else.
+#
+# Repository settings it reads (Settings, Secrets and variables, Actions):
+#   secrets   AZURE_CLIENT_ID        the managed identity's client ID
+#             AZURE_TENANT_ID        the Azure tenant ID
+#             AZURE_SUBSCRIPTION_ID  the subscription holding the web app
+#   variable  AZURE_WEBAPP_NAME      the web app's name, as in <name>.azurewebsites.net
+#
+# Until AZURE_WEBAPP_NAME is set the job is skipped rather than failed, so pushes made
+# before Azure is set up leave no failed run behind.
+#
+# The identity trusts two subjects for the master branch, one per format GitHub issues:
+#   repo:aleahqnts/RouteSync:ref:refs/heads/master
+#   repo:aleahqnts@255285269/RouteSync@1264882197:ref:refs/heads/master
+# The first is the default for this repository; the second, with the owner and repository
+# IDs, applies once immutable subject claims are turned on. Giving the job an environment,
+# or running it from another branch, changes the subject and the sign-in is refused, which
+# is intended.
+#
+# The Supabase service key is not here. It lives only in the web app's own settings as
+# Supabase__Key, and the app refuses to start without it.
+
+name: Deploy dashboard
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'RouteSyncWeb/**'
+      - 'RouteSyncWeb.Tests/**'
+      - '.github/workflows/deploy-dashboard.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# One deploy at a time, and a newer push waits for the one running rather than
+# interrupting it halfway through.
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.AZURE_WEBAPP_NAME != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # A failing test stops the deploy, so the site keeps running the last build that
+      # passed.
+      - name: Test
+        run: dotnet test RouteSyncWeb.Tests/RouteSyncWeb.Tests.csproj -c Release
+
+      - name: Publish
+        run: dotnet publish RouteSyncWeb/FleetWise.csproj -c Release -o publish
+
+      - name: Sign in to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          package: publish
