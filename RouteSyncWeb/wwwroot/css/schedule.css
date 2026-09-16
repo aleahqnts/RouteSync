@@ -27,6 +27,12 @@
     .sch-pick input[type=date] { padding:7px 10px; border:1.5px solid #E2E8F0; border-radius:8px; font-size:.85rem; }
     .sch-btn-ghost { padding:7px 14px; border:1.5px solid #E2E8F0; border-radius:8px; background:#fff; color:#2D3748; font-weight:600; font-size:.85rem; cursor:pointer; text-decoration:none; }
     .sch-btn-ghost:hover { border-color:#4AADA8; color:#4AADA8; }
+
+    /* The way to the Roster page, carrying what the roster needs from a person. */
+    .sch-roster-link { display:inline-flex; align-items:center; gap:7px; }
+    .sch-roster-badge { min-width:18px; height:18px; padding:0 5px; border-radius:20px; display:inline-flex; align-items:center; justify-content:center; background:#64748B; color:#fff; font-size:.68rem; font-weight:800; line-height:1; }
+    .sch-roster-badge--urgent { background:#E74C3C; }
+    .sch-roster-badge[hidden] { display:none; }
     .sch-btn-save { margin-left:auto; padding:9px 22px; border:none; border-radius:9px; background:#4AADA8; color:#fff; font-weight:700; font-size:.88rem; cursor:pointer; }
     .sch-btn-save:hover { background:#3d9490; }
     .sch-btn-save:disabled { background:#9AA5B4; cursor:not-allowed; }
@@ -121,6 +127,13 @@
     .sch-sel:focus { outline:none; border-color:#4AADA8; }
     .sch-cell.sch-dirty .sch-sel { border-color:#4AADA8; }
 
+    /* A bus the roster runs on this shift and day with nobody on it: an empty lane of its own,
+       dashed and amber because it is still a hole. Kept above the away and conflict rules, so
+       those still read on a cell that is also a gap. */
+    .sch-cell.sch-cell--gap .sch-sel { border-style:dashed; border-color:#E0A84E; background:#FFF8EC; }
+    .sch-cell.sch-cell--gap .sch-veh { color:#94560A; font-weight:700; }
+    .sch-cell.sch-cell--gap { --rs-pick-bg:#FFF8EC; }
+
     /* Set on the wrapper, so the face laid over the closed control inherits the type the
        control itself is set in. */
     .sch-cell .rs-pick { font-size:.78rem; color:#2D3748; }
@@ -162,12 +175,6 @@
     .sch-locked--empty { opacity:.55; }
     .sch-locked--empty .sch-lock-txt { font-style:italic; }
 
-    /* A bus the roster runs on this shift and day with nobody on it. Dashed like Add bus,
-       since pressing it adds the bus to a lane, and amber because it is still a hole. */
-    .sch-gap { display:flex; align-items:center; gap:5px; width:100%; margin-top:6px; padding:4px 8px; border:1px dashed #E0A84E; border-radius:7px; background:#FFF8EC; color:#94560A; font-size:.72rem; font-weight:700; text-align:left; cursor:pointer; }
-    .sch-gap:hover { background:#FDEFD6; border-color:#D69E2E; }
-    .sch-gap[hidden] { display:none; }
-    .sch-gap-ico { font-size:.8rem; line-height:1; }
 
     /* The week is a record rather than a plan, said where the Save button would be. */
     .sch-closed-note {

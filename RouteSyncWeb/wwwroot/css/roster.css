@@ -18,12 +18,9 @@
 
     /* --- Head --------------------------------------------------------------- */
 
-    /* Held at the top: the month being built and the way to save it are wanted at every
-       point of a page that runs to several screens. */
+    /* Held at the top by the shared rule for a board's controls (data-sticky-head): the
+       month being built and the way to save it are wanted at every point of the page. */
     .ro-sticky {
-        position: sticky;
-        top: 0;
-        z-index: 20;
         background: var(--ro-bg);
         padding-bottom: 12px;
     }
@@ -31,21 +28,25 @@
     .ro-titlerow {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: baseline;
         gap: 8px 14px;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
     }
 
+    /* Spaced the way every other board spaces its heading. The face, the capitals and the
+       weight come from the shared rule in site.css. */
     .ro-title {
         margin: 0;
         font-size: 1.6rem;
-        font-weight: 700;
+        color: #1a2a4a;
     }
 
+    /* The month, set like the planner's week beside its heading. */
     .ro-month {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--ro-soft);
+        margin-left: auto;
+        font-size: .95rem;
+        font-weight: 700;
+        color: #1a2a4a;
     }
 
     .ro-chip {
@@ -198,6 +199,73 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px 16px;
+    }
+
+    /* A route's heading stays while its own rows are read, and is pushed off by the next
+       route's as that card arrives. It sits under the page's held controls, whose height
+       the shared script measures into --rs-head.
+
+       Grown out to the card's edges over the card's padding, so it covers the rows passing
+       beneath it from side to side. The card clips nothing, which is what lets it stick. */
+    .ro-route > .ro-card-head {
+        position: sticky;
+        top: calc(var(--rs-bar, 0px) + var(--rs-head, 0px));
+        z-index: 3;
+        margin: -16px -18px 0;
+        padding: 12px 18px;
+        border-bottom: 1px solid #CDE9E4;
+        border-radius: 13px 13px 0 0;
+        background: var(--fw-teal-light, #E8F6F5);
+        color: #1a2a4a;
+        box-shadow: 0 2px 6px rgba(13, 28, 40, .08);
+    }
+
+    .ro-route-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+        .ro-route-toggle:focus-visible {
+            outline: 2px solid var(--ro-teal);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+
+    /* Points down while the route is open, and right once it is folded. */
+    .ro-chev {
+        flex: 0 0 auto;
+        width: 8px;
+        height: 8px;
+        margin-bottom: 3px;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(45deg);
+        transition: transform .15s ease;
+    }
+
+    .ro-route--folded .ro-chev {
+        margin-bottom: 0;
+        transform: rotate(-45deg);
+    }
+
+    .ro-card-body { margin-top: 4px; }
+    .ro-card-body[hidden] { display: none; }
+
+    /* Folded, the heading is the whole card. */
+    .ro-route--folded { padding-bottom: 0; }
+
+    .ro-route--folded > .ro-card-head {
+        margin-bottom: 0;
+        border-bottom: 0;
+        border-radius: 13px;
     }
 
     .ro-card-title {
@@ -413,6 +481,25 @@
         line-height: 1.5;
     }
 
+    /* A long list of changes scrolls inside its dialog rather than past the screen. */
+    .ro-report--scroll {
+        max-height: 55vh;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    .ro-changes-n {
+        min-width: 18px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #EAF6F5;
+        color: #2E7D72;
+        font-size: .72rem;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
+    }
+
     .ro-fill-list {
         display: flex;
         flex-direction: column;
@@ -483,6 +570,8 @@
 
         .ro-box-actions .ro-btn { justify-content: center; }
 
+    .ro-box-actions--single { grid-template-columns: 1fr; }
+
     .ro-toast {
         position: fixed;
         left: 50%;
@@ -507,10 +596,16 @@
 
 /* A phone: one shift, and one floater field, to a line. */
 @media (max-width: 640px) {
-    /* Two rows of toolbar held at the top would take a third of a phone screen. */
-    .ro-sticky { position: static; }
     .ro-bus { grid-template-columns: minmax(0, 1fr); }
+    .ro-route > .ro-card-head { margin: -14px -14px 0; padding: 10px 14px; }
     .ro-floater { grid-template-columns: minmax(0, 1fr); padding-bottom: 8px; border-bottom: 1px solid var(--ro-border); }
     .ro-card { padding: 14px; }
     .ro-toolbar-gap { display: none; }
+}
+
+/* The bar across the top carries the page name on a phone, as it does for every board, so
+   the row keeps the month and where the roster stands. */
+@media (max-width: 599px) {
+    .ro-title { display: none; }
+    .ro-month { margin-left: 0; }
 }
