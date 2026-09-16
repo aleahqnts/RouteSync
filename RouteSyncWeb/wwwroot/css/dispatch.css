@@ -319,6 +319,25 @@
             color: #fff;
         }
 
+    /* What the roster needs from a person, on the way to the Roster page. */
+    .dp-roster-badge {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #64748B;
+        color: #fff;
+        font-size: .68rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .dp-roster-badge--urgent { background: #E74C3C; }
+    .dp-roster-badge[hidden] { display: none; }
+
     .dp-btn-secondary {
         background: var(--rp-white);
         border: 1.5px solid var(--rp-border);

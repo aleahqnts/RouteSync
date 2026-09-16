@@ -203,7 +203,8 @@ namespace FleetWise.Services
                     + (fill.Changed ? "; auto-fill " + AutoFillSummary(fill) : ""),
                 "roster_months", month.ToString("yyyy-MM-dd"));
 
-            return saved with { Lines = fill.Notes };
+            // Said only when auto-fill had something to say: a change, or a place nobody was free for.
+            return saved with { Lines = fill.Changed || fill.LeftEmpty > 0 ? fill.Notes : Array.Empty<string>() };
         }
 
         /// <summary>What auto-fill did, counted, for an audit line or a badge.</summary>

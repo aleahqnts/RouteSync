@@ -1,7 +1,15 @@
 ﻿@model FleetWise.ViewModels.DispatchViewModel
+@inject FleetWise.Services.NavCounts NavCounts
 @{
     ViewData["Title"] = "Dispatch";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // The Roster page lives behind Edit Schedule, so what it needs from a person is shown
+    // on the way there.
+    var rosterBadge = User.HasClaim("perm", "roster")
+        ? (await NavCounts.ReadAsync()).Roster
+        : FleetWise.Services.NavBadge.None;
+    var showRosterBadge = User.HasClaim("perm", "roster");
 }
 
 @* PAGE TITLE *@
@@ -119,7 +127,14 @@
         <i class="ti ti-plus"></i> Add Trip
     </button>
     <button class="dp-btn-secondary" onclick="openBroadcastModal()"><i class="ti ti-speakerphone"></i> Broadcast Message</button>
-    <a class="dp-btn-secondary" href="/Schedule" style="text-decoration:none;"><i class="ti ti-calendar-week"></i> Edit Schedule</a>
+    <a class="dp-btn-secondary" href="/Schedule" style="text-decoration:none;"><i class="ti ti-calendar-week"></i> Edit Schedule
+        @if (showRosterBadge)
+        {
+            <span class="dp-roster-badge @(rosterBadge.Urgent ? "dp-roster-badge--urgent" : "")"
+                  data-badge="roster" data-urgent-class="dp-roster-badge--urgent"
+                  title="@rosterBadge.Note" hidden="@(rosterBadge.Count == 0 ? "hidden" : null)">@rosterBadge.Count</span>
+        }
+    </a>
     <div class="dp-search-wrap">
         <i class="ti ti-search dp-search-icon"></i>
         <input type="text" id="searchInput" class="dp-search-input" placeholder="Search bus, plate, driver or ID…" oninput="filterRows()" />
@@ -1018,6 +1033,12 @@
     </button>
     <a class="dp-more-item" href="/Schedule">
         <i class="ti ti-calendar-week"></i> Edit Schedule
+        @if (showRosterBadge)
+        {
+            <span class="dp-roster-badge @(rosterBadge.Urgent ? "dp-roster-badge--urgent" : "")"
+                  data-badge="roster" data-urgent-class="dp-roster-badge--urgent"
+                  title="@rosterBadge.Note" hidden="@(rosterBadge.Count == 0 ? "hidden" : null)">@rosterBadge.Count</span>
+        }
     </a>
 </div>
 
