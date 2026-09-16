@@ -181,6 +181,7 @@
                     <col class="dp-col-shift" />
                     <col class="dp-col-trip" />
                     <col class="dp-col-bus" />
+                    <col class="dp-col-driver-id" />
                     <col class="dp-col-driver" />
                     <col class="dp-col-status" />
                     <col class="dp-col-actions" />
@@ -190,6 +191,7 @@
                         <th>Shift</th>
                         <th>Trip ID</th>
                         <th>Bus ID</th>
+                        <th>Driver ID</th>
                         <th>Driver</th>
                         <th>Trip Status</th>
                         <th>Actions</th>
@@ -199,7 +201,7 @@
                     @if (!route.Shifts.Any())
                     {
                         <tr class="dp-trip-row dp-empty-row" data-trip-status="">
-                            <td colspan="6" class="dp-empty-cell">No trips scheduled for this operational day.</td>
+                            <td colspan="7" class="dp-empty-cell">No trips scheduled for this operational day.</td>
                         </tr>
                     }
                     else
@@ -293,17 +295,25 @@
                                             }
                                         </div>
                                     </td>
+                                    @* A column of its own, so the name beside it never wraps around
+                                       it and the number reads straight down the board. The search
+                                       reads the row, so the row is still findable by it. *@
+                                    <td data-label="Driver ID">
+                                        @if (trip.DriverId > 0)
+                                        {
+                                            <span class="dp-trip-id">@trip.DriverId</span>
+                                        }
+                                    </td>
                                     <td data-label="Driver">
-                                        @* Laid out as the bus beside it: what is read first in weight,
-                                           what identifies it quietly after. The identifier is also what
-                                           makes the row findable by it, since the search reads the row. *@
                                         <div class="dp-status-wrap">
                                             <span class="dp-status-dot @dDotClass"></span>
                                             <span class="dp-tooltip">@dTooltip</span>
                                             <strong>@trip.DriverName</strong>
+                                            @* A card on a phone has no columns, so there the number
+                                               stays beside the name, as the plate does beside the bus. *@
                                             @if (trip.DriverId > 0)
                                             {
-                                                <span class="rp-plate">| @trip.DriverId</span>
+                                                <span class="rp-plate dp-driver-id-inline">| @trip.DriverId</span>
                                             }
                                         </div>
                                     </td>
