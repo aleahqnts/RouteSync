@@ -339,29 +339,55 @@
         };
 
         var waiting = new List<Moment>();
+        var standing = string.Equals(h.Status, "Approved", StringComparison.OrdinalIgnoreCase);
+        var revoked = string.Equals(h.Status, "Revoked", StringComparison.OrdinalIgnoreCase);
+        var accepted = LeaveEntitlement.AskAccepted(h);
+        var acceptanceInDecision = LeaveEntitlement.DecisionIsAcceptance(h);
 
         if (h.WithdrawRequestedAt is DateTime asked)
         {
             done.Add(new(asked, "You asked to cancel", "", h.WithdrawReason));
 
-            // Accepting cancels the request, which the decision reports. Declining leaves
-            // the leave standing, and only this says so.
-            if (h.WithdrawAnsweredAt is DateTime answered
-                && string.Equals(h.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+            // Either answer is said here, with what the dispatcher wrote back. Leave revoked
+            // outright has nothing left to cancel, so its asking waits on nobody.
+            if (h.WithdrawAnsweredAt is DateTime answered && standing)
             {
-                done.Add(new(answered, "Cancellation declined", "rejected", null));
+                done.Add(new(answered, "Cancellation declined", "rejected", h.WithdrawAnswerNote));
             }
-            else if (h.WithdrawAnsweredAt is null)
+            else if (acceptanceInDecision)
+            {
+                done.Add(new(h.DecidedAt, "Cancellation accepted", "cancelled", h.DecisionNote));
+            }
+            else if (accepted)
+            {
+                done.Add(new(h.WithdrawAnsweredAt, "Cancellation accepted", "cancelled", h.WithdrawAnswerNote));
+            }
+            else if (h.WithdrawAnsweredAt is null && standing)
             {
                 waiting.Add(new(null, "Waiting on your dispatcher", "", null));
             }
         }
 
-        if (h.DecidedAt is DateTime decided && !LeaveEntitlement.IsOpen(h.Status))
+        if (h.DecidedAt is DateTime decided && !LeaveEntitlement.IsOpen(h.Status) && !acceptanceInDecision)
         {
             // Carried whichever way it went. An approval that came with a condition on it
-            // says so here, not only a refusal.
-            done.Add(new(decided, Shown(h.Status), h.Status.ToLowerInvariant(), h.DecisionNote));
+            // says so here, not only a refusal. Revoking and accepting a cancellation both
+            // keep the approval and change only the status, so either way this was the
+            // approval.
+            var decision = revoked || accepted ? "Approved" : Shown(h.Status);
+            done.Add(new(decided, decision, decision.ToLowerInvariant(), h.DecisionNote));
+        }
+
+        // After the approval, not in place of it, whether the whole leave or some of its
+        // days were taken back.
+        if (h.RevokedAt is DateTime taken)
+        {
+            var which = revoked || h.RevokedDates is not { Count: > 0 }
+                ? "All days taken back"
+                : $"{h.RevokedDates.Count} {(h.RevokedDates.Count == 1 ? "day" : "days")} taken back";
+
+            done.Add(new(taken, "Revoked", "revoked",
+                string.IsNullOrWhiteSpace(h.RevokeNote) ? which : $"{which}. {h.RevokeNote}"));
         }
 
         if (LeaveEntitlement.IsOpen(h.Status))
@@ -678,11 +704,11 @@
     private static string? WithdrawChip(LeaveRequest r)
     {
         if (r.WithdrawRequestedAt is null) return null;
-        if (r.WithdrawAnsweredAt is null) return "Cancel asked";
 
-        return string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)
-            ? "Cancel refused"
-            : null;
+        // Leave no longer standing has nothing left to cancel, and its badge says why.
+        if (!string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)) return null;
+
+        return r.WithdrawAnsweredAt is null ? "Cancel asked" : "Cancel refused";
     }
 
     private static bool CanAskToCancel(LeaveRequest r) =>

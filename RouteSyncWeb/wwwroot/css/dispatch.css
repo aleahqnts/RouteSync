@@ -558,15 +558,19 @@
     }
 
     .dp-col-shift {
-        width: 14%;
+        width: 11%;
     }
 
     .dp-col-trip {
-        width: 13%;
+        width: 12%;
     }
 
     .dp-col-bus {
-        width: 19%;
+        width: 16%;
+    }
+
+    .dp-col-driver-id {
+        width: 8%;
     }
 
     .dp-col-driver {
@@ -574,7 +578,7 @@
     }
 
     .dp-col-status {
-        width: 16%;
+        width: 15%;
     }
 
     .dp-col-actions {
@@ -589,6 +593,11 @@
         font-weight: 600;
         color: var(--rp-text);
         letter-spacing: -.01em;
+    }
+
+    /* The driver's number has a column of its own on a desk. */
+    .dp-driver-id-inline {
+        display: none;
     }
 
     .dp-shift-cell {
@@ -2566,6 +2575,7 @@
     .dp-col-shift,
     .dp-col-trip,
     .dp-col-bus,
+    .dp-col-driver-id,
     .dp-col-driver,
     .dp-col-status,
     .dp-col-actions {
@@ -2700,6 +2710,16 @@
 
     .dp-table td[data-label="Driver"] {
         padding-bottom: 6px;
+    }
+
+    /* A card has no columns, so the number goes back beside the name, and its own
+       cell would push the status badge off the line it rides up to. */
+    .dp-table td[data-label="Driver ID"] {
+        display: none;
+    }
+
+    .dp-driver-id-inline {
+        display: inline;
     }
 
     .dp-status-wrap {
