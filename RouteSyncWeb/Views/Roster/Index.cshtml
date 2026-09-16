@@ -24,10 +24,10 @@
      data-month="@Model.MonthKey" data-version="@Model.Version" data-status="@Model.Status"
      data-readonly="@(Model.ReadOnly ? "true" : "false")">
 
-    <div class="ro-sticky">
+    @* Held at the top the way every board holds its controls. *@
+    <div class="ro-sticky" data-sticky-head>
         <div class="ro-titlerow">
             <h1 class="ro-title">Roster</h1>
-            <span class="ro-month">@Model.Month.ToString("MMMM yyyy")</span>
             <span class="ro-chip @StatusClass(Model.Status)">@Model.Status</span>
             @* Saved after it was published: the trips on the board still follow the
                roster as it was published, until it is published again. *@
@@ -37,9 +37,11 @@
             {
                 <span class="ro-saved">@Model.PublishedLine</span>
             }
+            <span class="ro-month">@Model.Month.ToString("MMMM yyyy")</span>
         </div>
 
         <div class="ro-toolbar">
+            <a class="ro-btn ro-btn--ghost" href="/Schedule">&#8592; Back to Edit Schedule</a>
             <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.PrevMonthKey">&#8249; @Model.Month.AddMonths(-1).ToString("MMM")</a>
             <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.NextMonthKey">@Model.Month.AddMonths(1).ToString("MMM") &#8250;</a>
             <span class="ro-toolbar-gap"></span>
@@ -59,6 +61,11 @@
                    places by rule. Changes the page only; Undo puts it back as it was. *@
                 <button type="button" class="ro-btn ro-btn--ghost" id="roAutoFill">Auto-fill</button>
                 <button type="button" class="ro-btn ro-btn--ghost" id="roUndoFill" hidden>Undo auto-fill</button>
+                @* What the last auto-fill changed, in a dialog that can be opened as often as needed. *@
+                <button type="button" class="ro-btn ro-btn--ghost" id="roSeeChanges" hidden
+                        aria-haspopup="dialog" aria-controls="roChangesBox">
+                    See changes <span class="ro-changes-n" id="roChangesCount"></span>
+                </button>
                 <button type="button" class="ro-btn ro-btn--ghost" id="roSuggest">Suggest rest days</button>
                 <button type="button" class="ro-btn ro-btn--primary" id="roSave">Save roster</button>
                 @* Shown once there is a saved roster to publish. *@
@@ -77,10 +84,8 @@
     </div>
 
     <p class="ro-hint">
-        Each bus has a crew: tick the shifts it runs and choose a driver and a rest day for each.
-        Floaters belong to a route and cover its crew's rest days. Drivers keep their bus and rest
-        day every month; only the shift rotates. Auto-fill takes off drivers no longer active and
-        buses no longer running, then fills empty places for you to review; what it chose is marked.
+        Assign a driver and rest day to each bus shift, and floaters to cover rest days. Shifts
+        rotate each month. Auto-fill completes empty places and marks its choices for review.
     </p>
 
     @* What stands between this roster and a save. Asked of the server as the page is
@@ -89,14 +94,6 @@
         <p class="ro-problems-t">Fix these before saving</p>
         <ul id="roProblemList"></ul>
     </div>
-
-    @* What the last auto-fill changed, in sentences. Shown until the page is saved or reloaded;
-       the places themselves stay marked until the roster is published. *@
-    <section class="ro-card ro-fillnotes" id="roFillNotes" hidden>
-        <h2 class="ro-card-title">What auto-fill changed</h2>
-        <p class="ro-empty">Each marked place says why. Nothing is saved until you save the roster.</p>
-        <ul class="ro-report" id="roFillNoteList"></ul>
-    </section>
 
     @* What the last publish left for a person: slots nobody was free for, and slots kept
        empty on purpose. Only days still to come, since a past gap is nothing to act on. *@
@@ -171,14 +168,22 @@
     {
         var floaters = Model.Seats.Where(s => s.Kind == RosterRules.Floater && s.RouteId == route.RouteId).ToList();
 
-        <section class="ro-card" data-route="@route.RouteId">
+        <section class="ro-card ro-route" data-route="@route.RouteId">
+            @* Held at the top while the route's own rows are read, and pushed off by the next
+               route. Pressing the name folds the route away. *@
             <div class="ro-card-head">
-                <h2 class="ro-card-title">@route.RouteName</h2>
+                <h2 class="ro-card-title">
+                    <button type="button" class="ro-route-toggle" aria-expanded="true" aria-controls="roRouteBody-@route.RouteId">
+                        <span class="ro-chev" aria-hidden="true"></span>
+                        @route.RouteName
+                    </button>
+                </h2>
                 @* Crew resting over floaters working, for each day of the week. A red day is a
                    rest day nobody is free to cover, every week. *@
                 <div class="ro-strip" id="roStrip-@route.RouteId" aria-label="Rest day cover"></div>
             </div>
 
+            <div class="ro-card-body" id="roRouteBody-@route.RouteId">
             <p class="ro-short" id="roShort-@route.RouteId" hidden></p>
 
             <div class="ro-section-t">Buses</div>
@@ -274,6 +279,7 @@
             {
                 <button type="button" class="ro-btn ro-btn--ghost ro-add-floater">+ Add floater</button>
             }
+            </div>
         </section>
     }
 
@@ -313,6 +319,19 @@
         <button type="button" class="ro-btn ro-btn--ghost ro-remove">Remove</button>
     </div>
 </template>
+
+@* What the last auto-fill changed, in sentences. The places themselves stay marked until the
+   roster is published. *@
+<div class="ro-overlay" id="roChangesBox" hidden role="dialog" aria-modal="true" aria-labelledby="roChangesTitle">
+    <div class="ro-box ro-box--wide">
+        <h3 class="ro-box-title" id="roChangesTitle">What auto-fill changed</h3>
+        <p class="ro-box-desc">Each marked place says why. Nothing is saved until you save the roster.</p>
+        <ul class="ro-report ro-report--scroll" id="roChangesList"></ul>
+        <div class="ro-box-actions ro-box-actions--single">
+            <button type="button" class="ro-btn ro-btn--primary" id="roChangesClose">Close</button>
+        </div>
+    </div>
+</div>
 
 <div class="ro-overlay" id="roConfirm" hidden role="dialog" aria-modal="true" aria-labelledby="roConfirmTitle">
     <div class="ro-box">
@@ -620,16 +639,43 @@
             return shown === seats.length;
         }
 
+        // ---- What auto-fill changed ------------------------------------------------------------
+
+        const seeChangesBtn = document.getElementById('roSeeChanges');
+        const changesBox = document.getElementById('roChangesBox');
+
+        // Keeps the list for the dialog, and offers See changes while there is one.
         function showFillNotes(notes) {
-            const list = document.getElementById('roFillNoteList');
+            const lines = notes || [];
+            const list = document.getElementById('roChangesList');
             list.replaceChildren();
-            (notes || []).forEach(function (line) {
+            lines.forEach(function (line) {
                 const li = document.createElement('li');
                 li.textContent = line;
                 list.appendChild(li);
             });
-            document.getElementById('roFillNotes').hidden = !notes || notes.length === 0;
+            if (seeChangesBtn) {
+                seeChangesBtn.hidden = lines.length === 0;
+                document.getElementById('roChangesCount').textContent = lines.length;
+            }
         }
+
+        function closeChanges() {
+            if (changesBox.hidden) return;
+            changesBox.hidden = true;
+            if (seeChangesBtn && !seeChangesBtn.hidden) seeChangesBtn.focus();
+        }
+
+        if (seeChangesBtn) {
+            seeChangesBtn.addEventListener('click', function () {
+                changesBox.hidden = false;
+                document.getElementById('roChangesList').scrollTop = 0;
+                document.getElementById('roChangesClose').focus();
+            });
+        }
+        document.getElementById('roChangesClose').addEventListener('click', closeChanges);
+        changesBox.addEventListener('click', function (e) { if (e.target === changesBox) closeChanges(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeChanges(); });
 
         const autoFillBtn = document.getElementById('roAutoFill');
         const undoFillBtn = document.getElementById('roUndoFill');
@@ -649,7 +695,6 @@
                     const result = await res.json();
 
                     if (!result.changed) {
-                        showFillNotes(result.notes);
                         toast((result.notes || [])[0] || 'Nothing to change.');
                         return;
                     }
@@ -664,7 +709,7 @@
                     undoFillBtn.hidden = false;
                     showFillNotes(result.notes);
                     changed();
-                    document.getElementById('roFillNotes').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    toast('Auto-fill updated the roster. Marked places show its choices; See changes lists them all.');
                 } catch (e) {
                     toast('Auto-fill could not run. Try again.');
                 } finally {
@@ -1104,7 +1149,6 @@
                     document.getElementById('roSaved').textContent = saved.savedLine;
                     beforeFill = null;
                     if (undoFillBtn) undoFillBtn.hidden = true;
-                    showFillNotes([]);
                     if (publishBtn) publishBtn.hidden = false;
                     if (page.dataset.status === 'Published') document.getElementById('roUnpublished').hidden = false;
                     toast('Roster saved.');
@@ -1115,6 +1159,51 @@
                 }
             });
         }
+
+        // ---- Folding a route away --------------------------------------------------------------
+
+        // Which routes are folded, remembered in this browser only.
+        const foldKey = 'roFoldedRoutes';
+
+        function foldedRoutes() {
+            try { return JSON.parse(localStorage.getItem(foldKey) || '[]'); } catch (e) { return []; }
+        }
+
+        function rememberFolded(list) {
+            try { localStorage.setItem(foldKey, JSON.stringify(list)); } catch (e) { /* kept for this visit only */ }
+        }
+
+        function setFolded(card, folded) {
+            card.classList.toggle('ro-route--folded', folded);
+            card.querySelector('.ro-route-toggle').setAttribute('aria-expanded', folded ? 'false' : 'true');
+            card.querySelector('.ro-card-body').hidden = folded;
+        }
+
+        const startFolded = foldedRoutes();
+        page.querySelectorAll('.ro-card[data-route]').forEach(function (card) {
+            if (startFolded.indexOf(card.dataset.route) !== -1) setFolded(card, true);
+        });
+
+        page.addEventListener('click', function (e) {
+            const toggle = e.target.closest('.ro-route-toggle');
+            if (!toggle) return;
+
+            const card = toggle.closest('.ro-card');
+            const fold = !card.classList.contains('ro-route--folded');
+            setFolded(card, fold);
+
+            const list = foldedRoutes().filter(function (id) { return id !== card.dataset.route; });
+            if (fold) list.push(card.dataset.route);
+            rememberFolded(list);
+
+            // Folded while its heading was held at the top, the route would be left above the
+            // screen. It is brought back to rest where its heading was held.
+            if (fold) {
+                const heldAt = parseFloat(getComputedStyle(card.querySelector('.ro-card-head')).top) || 0;
+                const top = card.getBoundingClientRect().top;
+                if (top < heldAt) window.scrollBy({ top: top - heldAt, behavior: 'instant' });
+            }
+        });
 
         // What Generate's auto-fill did, carried across the reload that shows its result.
         try {

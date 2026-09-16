@@ -1,4 +1,5 @@
 ﻿@model FleetWise.ViewModels.ScheduleViewModel
+@inject FleetWise.Services.NavCounts NavCounts
 @{
     ViewData["Title"] = "Edit Schedule";
     string CellKey(int routeId, string shift, DateTime day) => $"{routeId}|{shift}|{day:yyyy-MM-dd}";
@@ -61,6 +62,19 @@
             <button type="button" class="sch-btn-ghost" id="sch-copy" onclick="schCopyLastWeek()">
                 Copy last week
             </button>
+        }
+        @* The monthly roster the planner's weeks are written from. Its count is what the
+           roster needs from a person: unfilled slots, a draft to review, or a place whose
+           driver or bus can no longer run. *@
+        @if (User.HasClaim("perm", "roster"))
+        {
+            var rosterBadge = (await NavCounts.ReadAsync()).Roster;
+            <a class="sch-btn-ghost sch-roster-link" href="/Roster">
+                Roster
+                <span class="sch-roster-badge @(rosterBadge.Urgent ? "sch-roster-badge--urgent" : "")"
+                      data-badge="roster" data-urgent-class="sch-roster-badge--urgent"
+                      title="@rosterBadge.Note" hidden="@(rosterBadge.Count == 0 ? "hidden" : null)">@rosterBadge.Count</span>
+            </a>
         }
         <div class="sch-pick">
             <label>Week starting</label>
@@ -161,12 +175,15 @@
                     </thead>
                     @foreach (var shift in Model.Shifts)
                     {
-                        // lanes = most buses on any single day this shift (>=1)
+                        // lanes = most buses on any single day this shift (>=1), counting each
+                        // roster gap as a bus, since a gap is drawn as an empty lane of its own
                         var laneCount = 1;
                         foreach (var day in Model.Days)
                         {
-                            if (Model.Cells.TryGetValue(CellKey(route.RouteId, shift, day), out var lst))
-                                laneCount = Math.Max(laneCount, lst.Count);
+                            var key = CellKey(route.RouteId, shift, day);
+                            var trips = Model.Cells.TryGetValue(key, out var lst) ? lst.Count : 0;
+                            var open = Model.Gaps.TryGetValue(key, out var dayGaps) ? dayGaps.Count : 0;
+                            laneCount = Math.Max(laneCount, trips + open);
                         }
 
                         <tbody class="sch-shift-body" data-route="@route.RouteId" data-shift="@shift">
@@ -188,6 +205,15 @@
                                         var day = Model.Days[dayIndex];
                                         Model.Cells.TryGetValue(CellKey(route.RouteId, shift, day), out var lst);
                                         var cell = lst != null && lane < lst.Count ? lst[lane] : null;
+
+                                        @* A bus the roster runs here that its last publish left without a
+                                           driver, in the first empty lane after the day's trips. *@
+                                        var gapIndex = lane - (lst?.Count ?? 0);
+                                        var gap = cell == null && gapIndex >= 0
+                                                  && Model.Gaps.TryGetValue(CellKey(route.RouteId, shift, day), out var slotGaps)
+                                                  && gapIndex < slotGaps.Count
+                                            ? slotGaps[gapIndex]
+                                            : null;
 
                                         @* A finished shift is drawn read-only whether or not it holds a
                                            trip. An empty picker over one reads as a slot still to fill,
@@ -217,7 +243,8 @@
                                             }
                                             else
                                             {
-                                                <div class="sch-cell" data-route="@route.RouteId" data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")" data-tripid="@(cell?.TripId ?? "")">
+                                                <div class="sch-cell" data-route="@route.RouteId" data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")" data-tripid="@(cell?.TripId ?? "")"
+                                                     data-gap-veh="@gap?.VehicleId" data-gap-why="@gap?.Reason">
                                                     @* One that cannot be booked appears only where this slot already
                                                        holds it, marked, so the slot still reads true. *@
                                                     <select class="sch-sel sch-veh">
@@ -247,21 +274,6 @@
                                                 </div>
                                             }
 
-                                            @* Buses the roster runs here that its last publish left without a
-                                               driver. Under the first lane only, whatever lane ends up filling
-                                               them. *@
-                                            @if (lane == 0 && Model.Gaps.TryGetValue(CellKey(route.RouteId, shift, day), out var gaps))
-                                            {
-                                                @foreach (var gap in gaps)
-                                                {
-                                                    <button type="button" class="sch-gap" data-veh="@gap.VehicleId"
-                                                            data-shift="@shift" data-date="@day.ToString("yyyy-MM-dd")"
-                                                            title="@gap.Reason" onclick="schFillGap(this)">
-                                                        <span class="sch-gap-ico" aria-hidden="true">&#9888;</span>
-                                                        @gap.VehicleId has no driver
-                                                    </button>
-                                                }
-                                            }
                                         </td>
                                     }
                                 </tr>
@@ -1107,6 +1119,7 @@
                 if (sel.classList.contains('sch-drv') && sel.value) {
                     const note = schAwayNote(sel.value, cell.dataset.date);
                     if (note) { schAskAway(sel, cell.dataset.date, note); return; }
+                    schTakeGapBus(cell);
                 }
 
                 sel.dataset.prev = sel.value;
@@ -1141,7 +1154,10 @@
     }
 
     function schConfirmAway() {
-        if (schAwaySel) schAwaySel.dataset.prev = schAwaySel.value;
+        if (schAwaySel) {
+            schAwaySel.dataset.prev = schAwaySel.value;
+            schTakeGapBus(schAwaySel.closest('.sch-cell'));
+        }
         schCloseAway();
         schSaveDraft();
     }
@@ -1203,71 +1219,55 @@
         schMarkGaps();
     }
 
-    // A roster gap reads as filled once some lane on its shift and day holds its bus with
-    // a driver, on whichever route. Hidden rather than removed, so emptying that lane again
-    // brings it back.
+    // A roster gap is drawn as an empty lane of its own, highlighted, with its bus named where
+    // the vehicle list would say Vehicle and why it is empty on hover. The highlight stays
+    // while the lane is empty or holds that bus without a driver, and goes once some lane on
+    // the shift and day, on whichever route, holds the bus with a driver. It comes back if
+    // that lane is emptied again. A lane given another bus is the dispatcher's to use.
     function schMarkGaps() {
-        document.querySelectorAll('.sch-gap').forEach(function (mark) {
-            const veh = mark.dataset.veh.toUpperCase();
-            const same = '[data-shift="' + mark.dataset.shift + '"][data-date="' + mark.dataset.date + '"]';
+        document.querySelectorAll('.sch-cell[data-gap-veh]').forEach(function (cell) {
+            const gapVeh = cell.dataset.gapVeh;
+            if (!gapVeh) return;
 
-            const locked = Array.prototype.some.call(
-                document.querySelectorAll('.sch-locked' + same),
-                el => (el.dataset.veh || '').toUpperCase() === veh);
+            const veh = gapVeh.toUpperCase();
+            const same = '[data-shift="' + cell.dataset.shift + '"][data-date="' + cell.dataset.date + '"]';
 
-            const booked = locked || Array.prototype.some.call(
-                document.querySelectorAll('.sch-cell' + same),
-                el => el.querySelector('.sch-veh').value.toUpperCase() === veh
-                   && el.querySelector('.sch-drv').value !== '');
+            const booked = Array.prototype.some.call(
+                    document.querySelectorAll('.sch-locked' + same),
+                    el => (el.dataset.veh || '').toUpperCase() === veh)
+                || Array.prototype.some.call(
+                    document.querySelectorAll('.sch-cell' + same),
+                    el => el.querySelector('.sch-veh').value.toUpperCase() === veh
+                       && el.querySelector('.sch-drv').value !== '');
 
-            mark.hidden = booked;
+            const vehSel = cell.querySelector('.sch-veh');
+            const own = vehSel.value === '' || vehSel.value.toUpperCase() === veh;
+            const open = !booked && own;
+
+            cell.classList.toggle('sch-cell--gap', open);
+            if (open) cell.title = gapVeh + ' has no driver. ' + (cell.dataset.gapWhy || '');
+            else cell.removeAttribute('title');
+
+            const blank = vehSel.options[0];
+            if (blank && blank.value === '') blank.textContent = open ? gapVeh + ' · no driver' : 'Vehicle…';
         });
     }
 
-    // Puts a gap's bus into a free lane on its shift and day and opens the driver list,
-    // so filling it is choosing a driver and saving like any other slot. A lane already
-    // holding the bus is used as it is, and a new lane is added when none is free.
-    function schFillGap(mark) {
-        const tbody = mark.closest('.sch-shift-body');
-        const dayIndex = Number(mark.closest('.sch-cell-td').dataset.schDay);
-        const veh = mark.dataset.veh;
-
-        const cellIn = row => {
-            const td = row.querySelectorAll('.sch-cell-td')[dayIndex];
-            return td ? td.querySelector('.sch-cell') : null;
-        };
-        const rows = () => Array.from(tbody.querySelectorAll(':scope > tr'));
-
-        let cell = rows().map(cellIn).find(c => c && c.querySelector('.sch-veh').value.toUpperCase() === veh.toUpperCase())
-                || rows().map(cellIn).find(c => c && !c.querySelector('.sch-veh').value && !c.querySelector('.sch-drv').value);
-
-        if (!cell) {
-            schAddLane(tbody);
-            cell = cellIn(rows()[rows().length - 1]);
-        }
-        if (!cell) return;
+    // A driver chosen in a gap's empty lane is for the gap's bus, so the bus goes in with
+    // them, unless it has since been picked in another lane.
+    function schTakeGapBus(cell) {
+        if (!cell || !cell.dataset.gapVeh) return;
 
         const vehSel = cell.querySelector('.sch-veh');
-        if (vehSel.value.toUpperCase() !== veh.toUpperCase()) {
-            const opt = Array.from(vehSel.options).find(o => o.value.toUpperCase() === veh.toUpperCase());
-            if (!opt) {
-                schToast(veh + ' cannot be booked right now. It may be out of service.', 4200);
-                return;
-            }
-            if (opt.disabled) {
-                schToast(veh + ' is already picked on another route for this shift.', 4200);
-                return;
-            }
-            vehSel.value = opt.value;
-            vehSel.dispatchEvent(new Event('change'));
-        }
-
         const drvSel = cell.querySelector('.sch-drv');
-        cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        drvSel.focus();
-        if (typeof drvSel.showPicker === 'function') {
-            try { drvSel.showPicker(); } catch (e) { /* needs a user gesture in some browsers */ }
-        }
+        if (vehSel.value || !drvSel.value) return;
+
+        const want = cell.dataset.gapVeh.toUpperCase();
+        const opt = Array.from(vehSel.options).find(o => o.value.toUpperCase() === want && !o.disabled);
+        if (!opt) return;
+
+        vehSel.value = opt.value;
+        vehSel.dataset.prev = vehSel.value;
     }
 
     document.querySelectorAll('.sch-cell').forEach(schWireCell);

@@ -58,14 +58,6 @@
                   </svg>",
 
 
-            ["roster"] =
-                @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'
-                      stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>
-                    <rect x='3' y='4' width='18' height='17' rx='2'/>
-                    <path d='M16 2v4M8 2v4M3 10h18'/>
-                    <path d='M8 14h3M8 17h6'/>
-                  </svg>",
-
             ["reports"] =
                 @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'
                       stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>
@@ -114,10 +106,9 @@
         new { Label = "Dashboard", Short = "Home",     Controller = "Dashboard", Action = "Index", IconKey = "dashboard", Perm = "dashboard" },
         new { Label = "Fleet Map", Short = "Map",      Controller = "FleetMap",  Action = "Index", IconKey = "map",       Perm = "routes"    },
         new { Label = "Vehicles",  Short = "Vehicles", Controller = "Vehicles",  Action = "Index", IconKey = "vehicles",  Perm = "vehicles"  },
+        // The Roster page is reached from Edit Schedule, which is reached from Dispatch, and
+        // its count is shown on the buttons on the way there rather than on the rail.
         new { Label = "Dispatch",  Short = "Dispatch", Controller = "Dispatch",  Action = "Index", IconKey = "dispatch",  Perm = "routes"    },
-        // Who drives which bus for the month is decided apart from running the day, so the
-        // roster carries its own permission.
-        new { Label = "Roster",    Short = "Roster",   Controller = "Roster",    Action = "Index", IconKey = "roster",    Perm = "roster"    },
         new { Label = "Reports",   Short = "Reports",  Controller = "Reports",   Action = "Index", IconKey = "reports",   Perm = "reports"   },
         new { Label = "Users",     Short = "Users",    Controller = "Users",     Action = "Index", IconKey = "users",     Perm = "users"     },
         // Deciding who is off is not the same job as managing accounts, so it carries its
@@ -137,7 +128,6 @@
         "Dispatch" => badges.Dispatch,
         "Requests" => badges.Requests,
         "Vehicles" => badges.Vehicles,
-        "Roster" => badges.Roster,
         _ => FleetWise.Services.NavBadge.None,
     };
 
@@ -148,7 +138,6 @@
         "Dispatch" => "dispatch",
         "Requests" => "requests",
         "Vehicles" => "vehicles",
-        "Roster" => "roster",
         _ => null,
     };
 }
@@ -401,6 +390,8 @@
                 urgent && el.classList.contains('fw-bar__badge'));
             el.classList.toggle('fw-sheet__badge--urgent',
                 urgent && el.classList.contains('fw-sheet__badge'));
+            // A count shown on a page's own button names the class that marks it urgent.
+            if (el.dataset.urgentClass) el.classList.toggle(el.dataset.urgentClass, !!urgent);
         }
 
         async function read() {
@@ -408,7 +399,9 @@
             if (!res.ok) return;
             var data = await res.json();
 
-            marks.forEach(function (el) {
+            // Looked up again each time rather than kept from when this script ran: a page's
+            // own counts sit further down the document than the rail and did not exist yet.
+            document.querySelectorAll('[data-badge]').forEach(function (el) {
                 var b = data[el.dataset.badge];
                 if (b) paint(el, b.count, b.urgent, b.note);
             });
