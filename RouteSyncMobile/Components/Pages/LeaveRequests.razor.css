@@ -365,6 +365,7 @@
 .lv-hist-dot.approved  { background: #27ae60; }
 .lv-hist-dot.rejected  { background: #e53e3e; }
 .lv-hist-dot.cancelled { background: #9aa5b4; }
+.lv-hist-dot.revoked   { background: #c0392b; }
 
 .lv-hist-body {
     display: flex;
@@ -428,6 +429,7 @@
 .lv-badge.approved  { background: #e8f8ee; color: #27ae60; }
 .lv-badge.rejected  { background: #fdecec; color: #e53e3e; }
 .lv-badge.cancelled { background: #eef0f4; color: #6b7280; }
+.lv-badge.revoked   { background: #fdecec; color: #c0392b; }
 
 .lv-cancel {
     flex: 0 0 auto;
