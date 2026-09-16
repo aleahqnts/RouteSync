@@ -101,6 +101,10 @@ namespace FleetWise.ViewModels
 
         [Range(1, 7, ErrorMessage = "A rest day is a day of the week.")]
         public int? RestWeekday { get; set; }
+
+        /// <summary>Why auto-fill filled or emptied this place, kept until a person changes it.</summary>
+        [MaxLength(600, ErrorMessage = "That note about an auto-filled place is too long.")]
+        public string? Suggested { get; set; }
     }
 
     public class RosterCheckInput

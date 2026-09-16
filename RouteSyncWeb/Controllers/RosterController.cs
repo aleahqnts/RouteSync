@@ -12,9 +12,9 @@ namespace FleetWise.Controllers
     /// The standing monthly roster: each bus's crew, each route's floaters, and every rest day.
     /// </summary>
     /// <remarks>
-    /// <para>Built by hand once and carried from month to month, rotating only the shift. It
-    /// writes no trips. What it holds is expanded into the month's trips when the roster
-    /// is published.</para>
+    /// <para>Built by hand, or by auto-fill for a person to review, and carried from month
+    /// to month, rotating only the shift. It writes no trips. What it holds is expanded into
+    /// the month's trips when the roster is published.</para>
     ///
     /// <para>Gated on its own permission. Deciding who drives which bus for a month is a
     /// different job from running the day's dispatch, which keeps the routes permission.</para>
@@ -73,6 +73,11 @@ namespace FleetWise.Controllers
 
             var roster = monthTask.Result.Models.FirstOrDefault();
             var slots = slotsTask.Result.Models;
+
+            // What auto-fill chose is marked until the roster is published: publishing is the
+            // choices being accepted. Saved again after a publish, the new marks show again.
+            var showSuggested = roster is null || roster.Status != "Published"
+                || (roster.SavedAt is DateTime savedAt && roster.PublishedAt is DateTime publishedAt && savedAt > publishedAt);
             var vehicles = vehiclesTask.Result.Models;
             var drivers = driversTask.Result.Models;
             var routes = routesTask.Result.Models.OrderBy(r => r.RouteId).ToList();
@@ -99,6 +104,7 @@ namespace FleetWise.Controllers
                     VehicleId = s.VehicleId,
                     Shift = s.Shift,
                     RestWeekday = s.RestWeekday,
+                    Suggested = showSuggested && !string.IsNullOrWhiteSpace(s.Suggested) ? s.Suggested : null,
                 }).ToList(),
                 UnroutedBuses = vehicles
                     .Where(v => v.RetiredAt == null && v.RouteId is null)
@@ -207,6 +213,35 @@ namespace FleetWise.Controllers
             });
         }
 
+        /// <summary>
+        /// The roster on the page with drivers and buses that can no longer be on it cleared,
+        /// and its empty places filled by rule. Nothing is saved.
+        /// </summary>
+        /// <remarks>See <see cref="RosterRules.AutoFill"/> for the rules and their order.</remarks>
+        [HttpPost]
+        public async Task<IActionResult> AutoFill([FromBody] RosterCheckInput req)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState.FirstError());
+
+            var fill = await _publisher.AutoFillAsync(ToSeats(req.Seats));
+
+            return Json(new
+            {
+                seats = fill.Seats.Select(s => new
+                {
+                    driverId = s.DriverId,
+                    kind = s.Kind,
+                    routeId = s.RouteId,
+                    vehicleId = s.VehicleId,
+                    shift = s.Shift,
+                    restWeekday = s.RestWeekday,
+                    suggested = s.Suggested,
+                }),
+                notes = fill.Notes,
+                changed = fill.Changed,
+            });
+        }
+
         /// <summary>The roster with rest days and floaters' home shifts suggested. Nothing is saved.</summary>
         [HttpPost]
         public IActionResult Suggest([FromBody] RosterCheckInput req)
@@ -285,7 +320,10 @@ namespace FleetWise.Controllers
             seats.Select(s => new RosterSeat(
                 s.DriverId, s.Kind, s.RouteId,
                 string.IsNullOrWhiteSpace(s.VehicleId) || s.Kind == RosterRules.Floater ? null : s.VehicleId.Trim(),
-                s.Shift, s.RestWeekday)).ToList();
+                s.Shift,
+                // A place with nobody on it has no rest day, whatever the page still had selected.
+                s.DriverId is null ? null : s.RestWeekday,
+                string.IsNullOrWhiteSpace(s.Suggested) ? null : s.Suggested.Trim())).ToList();
 
         private int? SenderId() =>
             int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;

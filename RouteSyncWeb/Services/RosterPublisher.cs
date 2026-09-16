@@ -76,7 +76,31 @@ namespace FleetWise.Services
         }
 
         public static RosterSeat ToSeat(RosterSlot s) =>
-            new(s.DriverId, s.Kind, s.RouteId, s.VehicleId, s.Shift, s.RestWeekday);
+            new(s.DriverId, s.Kind, s.RouteId, s.VehicleId, s.Shift, s.RestWeekday,
+                string.IsNullOrWhiteSpace(s.Suggested) ? null : s.Suggested);
+
+        /// <summary>Who drove which bus and route over the last <see cref="SchedulingData.HistoryDays"/> days.</summary>
+        public async Task<RosterHistory> ReadHistoryAsync()
+        {
+            var today = PhClock.OperationalDay;
+            var trips = await PagedRead.AllAsync(() => _supabase.From<Trip>()
+                .Filter("date", Operator.GreaterThanOrEqual, today.AddDays(-SchedulingData.HistoryDays).ToString("yyyy-MM-dd"))
+                .Filter("date", Operator.LessThanOrEqual, today.ToString("yyyy-MM-dd"))
+                .Order("trip_id", Ordering.Ascending));
+            return new RosterHistory(trips);
+        }
+
+        /// <summary>A roster cleared of drivers and buses that can no longer be on it, and its empty places filled by rule.</summary>
+        /// <remarks>Nothing is saved. See <see cref="RosterRules.AutoFill"/>.</remarks>
+        public async Task<AutoFillResult> AutoFillAsync(IReadOnlyList<RosterSeat> seats)
+        {
+            var fleetTask = ReadFleetAsync();
+            var historyTask = ReadHistoryAsync();
+            await Task.WhenAll(fleetTask, historyTask);
+
+            var (routes, vehicles, drivers) = fleetTask.Result;
+            return RosterRules.AutoFill(seats, vehicles, drivers, routes, historyTask.Result);
+        }
 
         /// <summary>Gaps still to come that nothing has filled: no trip on the slot and no skip.</summary>
         public async Task<List<RosterGap>> OpenGapsAsync(
@@ -115,6 +139,7 @@ namespace FleetWise.Services
                         ["vehicle_id"] = s.VehicleId,
                         ["shift"] = s.Shift,
                         ["rest_weekday"] = s.RestWeekday,
+                        ["suggested"] = s.Suggested,
                     }).ToList(),
                     ["p_saved_by"] = savedBy,
                 });
@@ -136,7 +161,15 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>Fills a month's draft with the month before's roster, every shift rotated one step backward.</summary>
+        /// <summary>
+        /// Fills a month's draft with the month before's roster, every shift rotated one step
+        /// backward, then auto-filled.
+        /// </summary>
+        /// <remarks>
+        /// Auto-filled so a driver deactivated or a bus retired since last month is dealt with in
+        /// the draft, with what changed marked for review, rather than stopping the publish on
+        /// the 25th. Lines says what auto-fill did.
+        /// </remarks>
         /// <param name="by">The person generating it, or null when the monthly cycle does.</param>
         public async Task<RosterStepResult> GenerateAsync(DateTime month, int baseVersion, int? by)
         {
@@ -149,7 +182,9 @@ namespace FleetWise.Services
             if (slots.Count == 0)
                 return Refused($"{previous:MMMM} has no roster to carry forward.");
 
-            var seats = RosterGenerator.Rotate(slots.Select(ToSeat).ToList());
+            var rotated = RosterGenerator.Rotate(slots.Select(ToSeat).ToList());
+            var fill = await AutoFillAsync(rotated);
+            var seats = fill.Seats;
 
             var saved = await SaveAsync(month, baseVersion, seats, by, "roster_generated");
             if (saved.Step != RosterStep.Done) return saved;
@@ -164,10 +199,22 @@ namespace FleetWise.Services
                 (by is null ? "drafted" : "generated")
                     + $" the {month:MMMM yyyy} roster from {previous:MMMM}'s, every shift rotated: "
                     + $"{seats.Count(s => s.Kind == RosterRules.Crew)} crew seats, "
-                    + $"{seats.Count(s => s.Kind == RosterRules.Floater)} floaters",
+                    + $"{seats.Count(s => s.Kind == RosterRules.Floater)} floaters"
+                    + (fill.Changed ? "; auto-fill " + AutoFillSummary(fill) : ""),
                 "roster_months", month.ToString("yyyy-MM-dd"));
 
-            return saved;
+            return saved with { Lines = fill.Notes };
+        }
+
+        /// <summary>What auto-fill did, counted, for an audit line or a badge.</summary>
+        public static string AutoFillSummary(AutoFillResult fill)
+        {
+            var parts = new List<string>();
+            if (fill.Filled > 0) parts.Add(fill.Filled == 1 ? "filled 1 place" : $"filled {fill.Filled} places");
+            if (fill.Emptied > 0) parts.Add(fill.Emptied == 1 ? "emptied 1 place" : $"emptied {fill.Emptied} places");
+            if (fill.RestDaysSet > 0) parts.Add(fill.RestDaysSet == 1 ? "set 1 rest day" : $"set {fill.RestDaysSet} rest days");
+            if (fill.LeftEmpty > 0) parts.Add(fill.LeftEmpty == 1 ? "left 1 place empty" : $"left {fill.LeftEmpty} places empty");
+            return parts.Count == 0 ? "changed nothing" : string.Join(", ", parts);
         }
 
         // ---- Publishing -----------------------------------------------------------------------------
@@ -178,7 +225,7 @@ namespace FleetWise.Services
             var built = await BuildPlanAsync(month, version);
             if (built.Refusal is not null) return built.Refusal;
 
-            return new(RosterStep.Done, version, ReportLines(month, built.Plan!, built.Names!, result: null));
+            return new(RosterStep.Done, version, ReportLines(month, built.Plan!, built.Names!, built.Seats!, result: null));
         }
 
         /// <summary>Publishes the saved roster as the month's trips, and tells the drivers.</summary>
@@ -226,7 +273,7 @@ namespace FleetWise.Services
                 return Refused("The roster could not be published: " + (DatabaseMessage(ex.Content) ?? "the database refused it."));
             }
 
-            var lines = ReportLines(month, plan, built.Names!, result);
+            var lines = ReportLines(month, plan, built.Names!, built.Seats!, result);
 
             await _audit.WriteAsync("roster_published",
                 (by is null ? "published on schedule" : "published")
@@ -378,7 +425,8 @@ namespace FleetWise.Services
         /// <summary>What a publish would do, or did, in plain sentences.</summary>
         /// <param name="result">Null for a preview, which is written in the future tense.</param>
         private static List<string> ReportLines(
-            DateTime month, PublishPlan plan, IReadOnlyDictionary<int, string> names, PublishResult? result)
+            DateTime month, PublishPlan plan, IReadOnlyDictionary<int, string> names,
+            IReadOnlyList<RosterSeat> seats, PublishResult? result)
         {
             var done = result is not null;
             var lines = new List<string>();
@@ -414,6 +462,11 @@ namespace FleetWise.Services
             if (plan.CoversFilled > 0)
                 lines.Add((done ? "Filled " : "Fills ") + (plan.CoversFilled == 1 ? "1 rest day or absence" : $"{N(plan.CoversFilled)} rest days and absences") + " from floaters.");
 
+            var nobody = seats.Count(s => s.Kind == RosterRules.Crew && s.DriverId is null);
+            if (nobody > 0)
+                lines.Add((nobody == 1 ? "1 bus shift has" : $"{N(nobody)} bus shifts have")
+                    + " nobody rostered on it, so floaters cover " + (nobody == 1 ? "it" : "them") + " where they can.");
+
             if (plan.Gaps.Count > 0)
                 lines.Add(plan.Gaps.Count == 1 ? "1 slot is left unfilled." : $"{N(plan.Gaps.Count)} slots are left unfilled.");
 
@@ -448,10 +501,12 @@ namespace FleetWise.Services
         private async Task TellEveryDriverAsync(
             DateTime month, IReadOnlyList<RosterSeat> seats, IReadOnlyDictionary<int, string> routes, int sender)
         {
+            // The same order the publish staggers breaks by: every bus the route runs on the
+            // shift, whether or not anybody is rostered on it.
             var breakIndex = seats.Where(s => s.Kind == RosterRules.Crew)
-                .GroupBy(s => (s.RouteId, s.Shift))
+                .GroupBy(s => (s.RouteId, Shift: s.Shift.ToUpperInvariant()))
                 .SelectMany(g => g.OrderBy(s => s.VehicleId, StringComparer.Ordinal).Select((s, i) => (s, i)))
-                .ToDictionary(x => x.s.DriverId!.Value, x => x.i);
+                .ToDictionary(x => (Bus: x.s.VehicleId!.ToUpperInvariant(), Shift: x.s.Shift.ToUpperInvariant()), x => x.i);
 
             var messages = seats.Where(s => s.DriverId is not null).Select(s =>
             {
@@ -461,7 +516,7 @@ namespace FleetWise.Services
                 if (s.Kind == RosterRules.Crew && TripStatus.Windows.TryGetValue(s.Shift, out var window))
                 {
                     var slots = BreakSlots.For(window.Start);
-                    var breakStart = slots[breakIndex.GetValueOrDefault(s.DriverId!.Value) % slots.Count];
+                    var breakStart = slots[breakIndex.GetValueOrDefault((s.VehicleId!.ToUpperInvariant(), s.Shift.ToUpperInvariant())) % slots.Count];
                     body = $"You are assigned to Bus {s.VehicleId} on the {s.Shift} shift, "
                          + $"{Clock(window.Start)} to {Clock(window.End)}. Your rest day is {rest} and your break is "
                          + $"from {BreakSlots.Label(breakStart)}. You can view each day in your schedule calendar.";

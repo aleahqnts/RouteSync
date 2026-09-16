@@ -6,8 +6,10 @@
     var shifts = RosterRules.Shifts;
     var disabled = Model.ReadOnly ? "disabled" : null;
 
-    FleetWise.ViewModels.RosterSeatInput? CrewAt(string vehicleId, string shift) => Model.Seats
-        .FirstOrDefault(s => s.Kind == RosterRules.Crew && s.Shift == shift
+    // By route as well as bus and shift: a bus moved to another route shows on both cards, and
+    // its crew belongs only to the card of the route they were rostered on.
+    FleetWise.ViewModels.RosterSeatInput? CrewAt(int routeId, string vehicleId, string shift) => Model.Seats
+        .FirstOrDefault(s => s.Kind == RosterRules.Crew && s.RouteId == routeId && s.Shift == shift
                           && string.Equals(s.VehicleId, vehicleId, StringComparison.OrdinalIgnoreCase));
 
     string StatusClass(string status) => status switch
@@ -53,6 +55,10 @@
                     <button type="button" class="ro-btn ro-btn--ghost" id="roGenerate"
                             data-previous="@Model.Month.AddMonths(-1).ToString("MMMM")">Generate from @Model.Month.AddMonths(-1).ToString("MMM")</button>
                 }
+                @* Clears drivers and buses that can no longer be on the roster, then fills the empty
+                   places by rule. Changes the page only; Undo puts it back as it was. *@
+                <button type="button" class="ro-btn ro-btn--ghost" id="roAutoFill">Auto-fill</button>
+                <button type="button" class="ro-btn ro-btn--ghost" id="roUndoFill" hidden>Undo auto-fill</button>
                 <button type="button" class="ro-btn ro-btn--ghost" id="roSuggest">Suggest rest days</button>
                 <button type="button" class="ro-btn ro-btn--primary" id="roSave">Save roster</button>
                 @* Shown once there is a saved roster to publish. *@
@@ -73,7 +79,8 @@
     <p class="ro-hint">
         Each bus has a crew: tick the shifts it runs and choose a driver and a rest day for each.
         Floaters belong to a route and cover its crew's rest days. Drivers keep their bus and rest
-        day every month; only the shift rotates.
+        day every month; only the shift rotates. Auto-fill takes off drivers no longer active and
+        buses no longer running, then fills empty places for you to review; what it chose is marked.
     </p>
 
     @* What stands between this roster and a save. Asked of the server as the page is
@@ -82,6 +89,14 @@
         <p class="ro-problems-t">Fix these before saving</p>
         <ul id="roProblemList"></ul>
     </div>
+
+    @* What the last auto-fill changed, in sentences. Shown until the page is saved or reloaded;
+       the places themselves stay marked until the roster is published. *@
+    <section class="ro-card ro-fillnotes" id="roFillNotes" hidden>
+        <h2 class="ro-card-title">What auto-fill changed</h2>
+        <p class="ro-empty">Each marked place says why. Nothing is saved until you save the roster.</p>
+        <ul class="ro-report" id="roFillNoteList"></ul>
+    </section>
 
     @* What the last publish left for a person: slots nobody was free for, and slots kept
        empty on purpose. Only days still to come, since a past gap is nothing to act on. *@
@@ -186,14 +201,20 @@
 
                     @foreach (var shift in shifts)
                     {
-                        var seat = CrewAt(bus.VehicleId, shift);
+                        var seat = CrewAt(route.RouteId, bus.VehicleId, shift);
                         var runs = seat is not null;
 
-                        <div class="ro-seat" data-shift="@shift">
-                            <label class="ro-runs">
-                                <input type="checkbox" class="ro-runs-box" checked="@runs" disabled="@disabled" />
-                                @shift
-                            </label>
+                        <div class="ro-seat @(seat?.Suggested is null ? "" : "ro-suggested")" data-shift="@shift" data-suggested="@seat?.Suggested">
+                            <div class="ro-seat-head">
+                                <label class="ro-runs">
+                                    <input type="checkbox" class="ro-runs-box" checked="@runs" disabled="@disabled" />
+                                    @shift
+                                </label>
+                                @if (seat?.Suggested is not null)
+                                {
+                                    <button type="button" class="ro-why" title="@seat.Suggested" aria-label="Why auto-fill chose this: @seat.Suggested">Auto-fill</button>
+                                }
+                            </div>
                             <select class="ro-input ro-driver" aria-label="@bus.VehicleId @shift driver" hidden="@(!runs)" disabled="@disabled">
                                 <option value="">Choose a driver</option>
                                 @foreach (var d in Model.Drivers)
@@ -217,7 +238,7 @@
             <div class="ro-floaters">
                 @foreach (var f in floaters)
                 {
-                    <div class="ro-floater">
+                    <div class="ro-floater @(f.Suggested is null ? "" : "ro-suggested")" data-suggested="@f.Suggested">
                         <select class="ro-input ro-driver" aria-label="Floater" disabled="@disabled">
                             <option value="">Choose a driver</option>
                             @foreach (var d in Model.Drivers)
@@ -238,6 +259,10 @@
                                 <option value="@day" selected="@(f.RestWeekday == day)">Rests @RosterRules.DayName(day)</option>
                             }
                         </select>
+                        @if (f.Suggested is not null)
+                        {
+                            <button type="button" class="ro-why" title="@f.Suggested" aria-label="Why auto-fill chose this: @f.Suggested">Auto-fill</button>
+                        }
                         @if (!Model.ReadOnly)
                         {
                             <button type="button" class="ro-btn ro-btn--ghost ro-remove">Remove</button>
@@ -361,7 +386,8 @@
                             routeId: routeId,
                             vehicleId: bus.dataset.vehicle,
                             shift: seat.dataset.shift,
-                            restWeekday: numberOrNull(seat.querySelector('.ro-rest').value)
+                            restWeekday: numberOrNull(seat.querySelector('.ro-rest').value),
+                            suggested: seat.dataset.suggested || null
                         });
                     });
                 });
@@ -373,7 +399,8 @@
                         routeId: routeId,
                         vehicleId: null,
                         shift: row.querySelector('.ro-home').value,
-                        restWeekday: numberOrNull(row.querySelector('.ro-rest').value)
+                        restWeekday: numberOrNull(row.querySelector('.ro-rest').value),
+                        suggested: row.dataset.suggested || null
                     });
                 });
             });
@@ -480,6 +507,9 @@
                 const seat = e.target.closest('.ro-seat');
                 seat.querySelectorAll('select').forEach(function (s) { s.hidden = !e.target.checked; });
             }
+            // A place a person has changed is theirs, not auto-fill's.
+            const place = e.target.closest('.ro-seat, .ro-floater');
+            if (place) markSuggested(place, null);
             changed();
         });
 
@@ -513,8 +543,153 @@
             el.textContent = text;
             el.hidden = false;
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(function () { el.hidden = true; }, 4000);
+            toastTimer = setTimeout(function () { el.hidden = true; }, Math.max(4000, text.length * 60));
         }
+
+        // ---- Auto-fill --------------------------------------------------------------------------
+
+        // Marks a place as auto-fill's, with why, or takes the mark off.
+        function markSuggested(place, text) {
+            let chip = place.querySelector('.ro-why');
+            if (!text) {
+                delete place.dataset.suggested;
+                place.classList.remove('ro-suggested');
+                if (chip) chip.remove();
+                return;
+            }
+            place.dataset.suggested = text;
+            place.classList.add('ro-suggested');
+            if (!chip) {
+                chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'ro-why';
+                chip.textContent = 'Auto-fill';
+                const head = place.querySelector('.ro-seat-head');
+                if (head) head.appendChild(chip);
+                else place.insertBefore(chip, place.querySelector('.ro-remove'));
+            }
+            chip.title = text;
+            chip.setAttribute('aria-label', 'Why auto-fill chose this: ' + text);
+        }
+
+        // Sets a list to a value, borrowing the option from a bus's list when this one lacks it:
+        // a new floater row lists active drivers only, and undoing may put back one who is not.
+        function setSelect(select, value) {
+            const v = value == null ? '' : String(value);
+            if (v && !Array.prototype.some.call(select.options, function (o) { return o.value === v; })) {
+                const donor = page.querySelector('.ro-bus .ro-driver option[value="' + v + '"]');
+                if (donor) select.appendChild(donor.cloneNode(true));
+            }
+            select.value = v;
+        }
+
+        // Draws a whole roster onto the page: ticks, drivers, rest days, floater rows and marks.
+        // Answers whether every place found somewhere to be drawn.
+        function applySeats(seats) {
+            let shown = 0;
+            page.querySelectorAll('.ro-card[data-route]').forEach(function (card) {
+                const routeId = Number(card.dataset.route);
+
+                card.querySelectorAll('.ro-bus').forEach(function (bus) {
+                    bus.querySelectorAll('.ro-seat').forEach(function (el) {
+                        const s = seats.find(function (x) {
+                            return x.kind === 'Crew' && x.routeId === routeId && x.shift === el.dataset.shift
+                                && (x.vehicleId || '').toUpperCase() === bus.dataset.vehicle.toUpperCase();
+                        });
+                        el.querySelector('.ro-runs-box').checked = !!s;
+                        el.querySelectorAll('select').forEach(function (sel) { sel.hidden = !s; });
+                        setSelect(el.querySelector('.ro-driver'), s ? s.driverId : null);
+                        setSelect(el.querySelector('.ro-rest'), s ? s.restWeekday : null);
+                        markSuggested(el, s ? s.suggested : null);
+                        if (s) shown++;
+                    });
+                });
+
+                const list = card.querySelector('.ro-floaters');
+                list.replaceChildren();
+                seats.filter(function (x) { return x.kind === 'Floater' && x.routeId === routeId; }).forEach(function (s) {
+                    const row = document.getElementById('roFloaterTemplate').content.firstElementChild.cloneNode(true);
+                    setSelect(row.querySelector('.ro-driver'), s.driverId);
+                    row.querySelector('.ro-home').value = s.shift;
+                    setSelect(row.querySelector('.ro-rest'), s.restWeekday);
+                    list.appendChild(row);
+                    markSuggested(row, s.suggested);
+                    shown++;
+                });
+            });
+            return shown === seats.length;
+        }
+
+        function showFillNotes(notes) {
+            const list = document.getElementById('roFillNoteList');
+            list.replaceChildren();
+            (notes || []).forEach(function (line) {
+                const li = document.createElement('li');
+                li.textContent = line;
+                list.appendChild(li);
+            });
+            document.getElementById('roFillNotes').hidden = !notes || notes.length === 0;
+        }
+
+        const autoFillBtn = document.getElementById('roAutoFill');
+        const undoFillBtn = document.getElementById('roUndoFill');
+        let beforeFill = null;
+
+        if (autoFillBtn) {
+            autoFillBtn.addEventListener('click', async function () {
+                autoFillBtn.disabled = true;
+                try {
+                    const before = readSeats();
+                    const res = await fetch('/Roster/AutoFill', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ seats: before })
+                    });
+                    if (!res.ok || res.redirected) throw new Error();
+                    const result = await res.json();
+
+                    if (!result.changed) {
+                        showFillNotes(result.notes);
+                        toast((result.notes || [])[0] || 'Nothing to change.');
+                        return;
+                    }
+
+                    if (!applySeats(result.seats || [])) {
+                        applySeats(before);
+                        toast('Auto-fill moved a place this page cannot show. Reload the page and try again.');
+                        return;
+                    }
+
+                    beforeFill = before;
+                    undoFillBtn.hidden = false;
+                    showFillNotes(result.notes);
+                    changed();
+                    document.getElementById('roFillNotes').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } catch (e) {
+                    toast('Auto-fill could not run. Try again.');
+                } finally {
+                    autoFillBtn.disabled = false;
+                }
+            });
+
+            undoFillBtn.addEventListener('click', function () {
+                if (!beforeFill) return;
+                applySeats(beforeFill);
+                beforeFill = null;
+                undoFillBtn.hidden = true;
+                showFillNotes([]);
+                changed();
+                toast('Auto-fill undone.');
+            });
+        }
+
+        // The mark says why when pressed, for a screen with no pointer to hover with.
+        page.addEventListener('click', function (e) {
+            const why = e.target.closest('.ro-why');
+            if (!why) return;
+            const place = why.closest('.ro-seat, .ro-floater');
+            if (place && place.dataset.suggested) toast(place.dataset.suggested);
+        });
 
         // ---- Suggest rest days --------------------------------------------------------------
 
@@ -635,13 +810,17 @@
                 if (readSeats().some(function (s) { return s.driverId != null; })
                     && !await ask('Generate from ' + previous,
                         'The roster on this page is replaced with ' + previous + '\'s, every shift rotated one step '
-                        + 'backward. Rest days and buses stay. Nothing is published.', 'Generate')) return;
+                        + 'backward, then auto-filled: drivers no longer active and buses no longer running come off, '
+                        + 'and empty places are filled for you to review. Nothing is published.', 'Generate')) return;
 
                 generateBtn.disabled = true;
                 try {
                     const res = await post('/Roster/Generate', { month: page.dataset.month, version: version });
                     if (res.status === 409) { showMoved((await said(res, ''))[0]); return; }
                     if (!res.ok || res.redirected) { toast((await said(res, 'The roster could not be generated.'))[0]); return; }
+                    try {
+                        sessionStorage.setItem('roFillNotes:' + page.dataset.month, JSON.stringify((await res.json()).notes || []));
+                    } catch (e) { /* the marks on the page still say what changed */ }
                     reload();
                 } catch (e) {
                     toast('The roster could not be generated. Try again.');
@@ -923,6 +1102,9 @@
                     dirty = false;
                     document.getElementById('roDirty').hidden = true;
                     document.getElementById('roSaved').textContent = saved.savedLine;
+                    beforeFill = null;
+                    if (undoFillBtn) undoFillBtn.hidden = true;
+                    showFillNotes([]);
                     if (publishBtn) publishBtn.hidden = false;
                     if (page.dataset.status === 'Published') document.getElementById('roUnpublished').hidden = false;
                     toast('Roster saved.');
@@ -933,6 +1115,16 @@
                 }
             });
         }
+
+        // What Generate's auto-fill did, carried across the reload that shows its result.
+        try {
+            const key = 'roFillNotes:' + page.dataset.month;
+            const carried = sessionStorage.getItem(key);
+            if (carried) {
+                sessionStorage.removeItem(key);
+                showFillNotes(JSON.parse(carried));
+            }
+        } catch (e) { /* nothing carried */ }
 
         check();
     })();

@@ -51,7 +51,7 @@ public class RosterRulesTests
         {
             CrewSeat(1, "V001", "Morning", 2),
             FloaterSeat(1, 4),                          // placed twice
-            CrewSeat(null, "V001", "Afternoon"),        // a shift the bus runs, nobody on it
+            CrewSeat(null, "V001", "Afternoon"),        // a shift the bus runs, nobody on it: allowed
             CrewSeat(2, "V002", "Morning"),             // no rest day
             CrewSeat(3, "V666", "Morning", 1),          // retired bus
             CrewSeat(4, "V009", "Morning", 1),          // bus based on another route
@@ -61,12 +61,25 @@ public class RosterRulesTests
         var problems = Problems(seats, Buses(), drivers, Routes);
 
         Assert.Contains("D1 Cruz is placed more than once: V001 on the Morning shift and a North Loop floater.", problems);
-        Assert.Contains("V001 runs the Afternoon shift with no driver.", problems);
         Assert.Contains("D2 Cruz has no rest day.", problems);
         Assert.Contains("V666 is retired and cannot hold a crew.", problems);
         Assert.Contains("V009 is not based on North Loop. Move its crew to the route it runs.", problems);
         Assert.Contains("Gone Cruz is not an active driver.", problems);
-        Assert.Equal(6, problems.Count);
+        Assert.Equal(5, problems.Count);
+    }
+
+    [Fact]
+    public void A_bus_shift_with_nobody_on_it_does_not_stop_a_save()
+    {
+        var seats = new List<RosterSeat>
+        {
+            CrewSeat(1, "V001", "Morning", 2),
+            CrewSeat(null, "V001", "Afternoon"),
+            FloaterSeat(2, 5),
+        };
+
+        Assert.Empty(Problems(seats, Buses(), Drivers(1, 2), Routes));
+        Assert.Equal(1, Shortfall(North, seats).UnfilledSeats);
     }
 
     [Fact]

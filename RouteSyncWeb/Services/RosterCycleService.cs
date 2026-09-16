@@ -8,7 +8,9 @@ namespace FleetWise.Services
     /// </summary>
     /// <remarks>
     /// <para>From the draft day (the 20th unless <c>Roster:DraftDay</c> says otherwise), a month
-    /// with no roster yet is drafted from the month before, every shift rotated. From the
+    /// with no roster yet is drafted from the month before, every shift rotated, then
+    /// auto-filled: a driver no longer active or a bus no longer running comes off, and empty
+    /// places are filled by rule and marked for review, so neither stops the publish. From the
     /// publish day (the 25th, <c>Roster:PublishDay</c>), a roster still in draft is published
     /// as trips and every driver on it is told.</para>
     ///
