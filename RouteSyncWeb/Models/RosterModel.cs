@@ -43,7 +43,7 @@ public class RosterMonth : BaseModel
     public string GeneratedBy { get; set; }
 }
 
-/// <summary>A driver's place in a month's roster: a crew seat on a bus shift, or a floater on a route.</summary>
+/// <summary>A place in a month's roster: a crew seat on a bus shift, or a floater on a route.</summary>
 [Table("roster_slots")]
 public class RosterSlot : BaseModel
 {
@@ -52,8 +52,9 @@ public class RosterSlot : BaseModel
     [Column("month")]
     public DateTime Month { get => _month; set => _month = UnzonedColumn.Day(value); }
 
+    /// <summary>Null for a crew seat the bus runs with nobody on it yet. A floater always has a driver.</summary>
     [Column("driver_id")]
-    public int DriverId { get; set; }
+    public int? DriverId { get; set; }
 
     /// <summary>Crew or Floater.</summary>
     [Column("kind")]
@@ -70,7 +71,11 @@ public class RosterSlot : BaseModel
     [Column("shift")]
     public string Shift { get; set; }
 
-    /// <summary>ISO weekday, 1 Monday to 7 Sunday.</summary>
+    /// <summary>ISO weekday, 1 Monday to 7 Sunday. Null exactly when the seat has no driver.</summary>
     [Column("rest_weekday")]
-    public int RestWeekday { get; set; }
+    public int? RestWeekday { get; set; }
+
+    /// <summary>Why auto-fill filled or emptied this place. Null for a place a person set.</summary>
+    [Column("suggested")]
+    public string Suggested { get; set; }
 }

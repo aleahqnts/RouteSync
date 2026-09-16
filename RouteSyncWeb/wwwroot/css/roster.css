@@ -276,6 +276,35 @@
         min-width: 0;
     }
 
+    .ro-seat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+    }
+
+    /* A place auto-fill filled or emptied, until a person changes it or the roster is published. */
+    .ro-suggested {
+        border-radius: 8px;
+        box-shadow: 0 0 0 4px #EAF6F5;
+        background: #EAF6F5;
+    }
+
+    .ro-why {
+        flex: 0 0 auto;
+        padding: 1px 8px;
+        border: 1px solid #B7DDD9;
+        border-radius: 999px;
+        background: var(--ro-white);
+        color: #2E7D72;
+        font: inherit;
+        font-size: .7rem;
+        font-weight: 700;
+        cursor: help;
+    }
+
+        .ro-why:hover { border-color: var(--ro-teal); }
+
     .ro-runs {
         display: flex;
         align-items: center;
@@ -294,7 +323,7 @@
 
     .ro-floater {
         display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1.2fr) auto;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1.2fr) auto auto;
         gap: 8px;
         align-items: center;
     }

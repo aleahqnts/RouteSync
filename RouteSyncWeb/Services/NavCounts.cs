@@ -296,8 +296,9 @@ namespace FleetWise.Services
         }
 
         /// <summary>
-        /// Roster slots nobody is on for the days ahead, and a month's roster waiting on a
-        /// person once the draft day has come.
+        /// Roster slots nobody is on for the days ahead, a month's roster waiting on a person
+        /// once the draft day has come, and places on this month's published roster that no
+        /// longer hold: a driver no longer active, or a bus retired or moved.
         /// </summary>
         /// <remarks>
         /// Counted on its own and failing on its own, so a roster table that cannot be read
@@ -305,6 +306,11 @@ namespace FleetWise.Services
         ///
         /// Urgent when a slot is empty within the next two days: that is a bus with nobody to
         /// drive it, and time is short to find somebody.
+        ///
+        /// A published month is never auto-filled by itself, since it is already running. Its
+        /// broken places are counted instead, so the deactivation is noticed and dealt with on
+        /// the Roster page, where Auto-fill and Publish changes move the trips and tell the
+        /// drivers.
         /// </remarks>
         private async Task<NavBadge> CountRosterAsync(DateTime today)
         {
@@ -323,8 +329,11 @@ namespace FleetWise.Services
                 var skipsTask = _supabase.From<RosterSkip>()
                     .Filter("date", Operator.GreaterThanOrEqual, from)
                     .Get();
+                var slotsTask = _supabase.From<RosterSlot>()
+                    .Filter("month", Operator.In, new List<object> { thisMonth.ToString("yyyy-MM-dd"), nextMonth.ToString("yyyy-MM-dd") })
+                    .Get();
 
-                await Task.WhenAll(monthsTask, gapsTask, skipsTask);
+                await Task.WhenAll(monthsTask, gapsTask, skipsTask, slotsTask);
 
                 var gaps = gapsTask.Result.Models;
                 var open = new List<RosterGap>();
@@ -343,13 +352,30 @@ namespace FleetWise.Services
                 if (open.Count > 0)
                     notes.Add(open.Count == 1 ? "1 roster slot has nobody on it" : $"{open.Count} roster slots have nobody on them");
 
+                var slots = slotsTask.Result.Models;
+                var current = monthsTask.Result.Models.FirstOrDefault(m => m.Month.Date == thisMonth);
+                var broken = 0;
+                if (current?.Status == "Published")
+                {
+                    var live = slots.Where(s => s.Month.Date == thisMonth).ToList();
+                    broken = await CountBrokenPlacesAsync(live);
+                    if (broken > 0)
+                        notes.Add($"The {thisMonth:MMMM} roster has {(broken == 1 ? "1 place" : $"{broken} places")} "
+                            + "with a driver no longer active or a bus no longer running. Auto-fill it and publish the changes");
+                }
+
                 var next = monthsTask.Result.Models.FirstOrDefault(m => m.Month.Date == nextMonth);
                 var waiting = today.Day >= RosterCycleService.DraftDay(_config) && next?.Status != "Published";
                 if (waiting)
-                    notes.Add(next is null ? $"Build the {nextMonth:MMMM} roster" : $"{nextMonth:MMMM} roster ready for review");
+                {
+                    var marked = slots.Count(s => s.Month.Date == nextMonth && !string.IsNullOrWhiteSpace(s.Suggested));
+                    notes.Add(next is null ? $"Build the {nextMonth:MMMM} roster"
+                        : marked > 0 ? $"{nextMonth:MMMM} roster ready for review: {(marked == 1 ? "1 place" : $"{marked} places")} auto-filled"
+                        : $"{nextMonth:MMMM} roster ready for review");
+                }
 
                 return new NavBadge(
-                    open.Count + (waiting ? 1 : 0),
+                    open.Count + broken + (waiting ? 1 : 0),
                     open.Any(g => g.Date.Date <= today.AddDays(2)),
                     notes.Count == 0 ? null : string.Join(". ", notes));
             }
@@ -357,6 +383,35 @@ namespace FleetWise.Services
             {
                 return NavBadge.None;
             }
+        }
+
+        /// <summary>Places on a roster whose driver is no longer active, or whose bus is retired, unrouted or moved route.</summary>
+        private async Task<int> CountBrokenPlacesAsync(IReadOnlyList<RosterSlot> slots)
+        {
+            if (slots.Count == 0) return 0;
+
+            var driverIds = slots.Where(s => s.DriverId is not null).Select(s => (object)s.DriverId!.Value.ToString()).Distinct().ToList();
+            var busIds = slots.Where(s => s.VehicleId != null).Select(s => (object)s.VehicleId).Distinct().ToList();
+
+            var driversTask = driverIds.Count == 0
+                ? Task.FromResult(new List<UserModel>())
+                : _supabase.From<UserModel>().Filter("user_id", Operator.In, driverIds).Get().ContinueWith(t => t.Result.Models);
+            var busesTask = busIds.Count == 0
+                ? Task.FromResult(new List<Vehicle>())
+                : _supabase.From<Vehicle>().Filter("vehicle_id", Operator.In, busIds).Get().ContinueWith(t => t.Result.Models);
+
+            await Task.WhenAll(driversTask, busesTask);
+
+            var active = driversTask.Result
+                .Where(d => string.Equals(d.AccountStatus, "Activated", StringComparison.OrdinalIgnoreCase))
+                .Select(d => d.UserId)
+                .ToHashSet();
+            var buses = busesTask.Result.ToDictionary(v => v.VehicleId, StringComparer.OrdinalIgnoreCase);
+
+            return slots.Count(s =>
+                (s.DriverId is int id && !active.Contains(id))
+                || (s.VehicleId != null
+                    && (!buses.TryGetValue(s.VehicleId, out var bus) || bus.RetiredAt != null || bus.RouteId != s.RouteId)));
         }
     }
 }

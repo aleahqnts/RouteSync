@@ -16,7 +16,7 @@ namespace FleetWise.Controllers
     {
         private static readonly CultureInfo En = CultureInfo.InvariantCulture;
 
-        /// <summary>Fills this month's draft with last month's roster, every shift rotated one step backward.</summary>
+        /// <summary>Fills this month's draft with last month's roster, every shift rotated one step backward, then auto-filled.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Generate([FromBody] RosterMonthInput req)
@@ -25,7 +25,8 @@ namespace FleetWise.Controllers
             if (!TryParseMonth(req.Month, out var month)) return BadRequest("That is not a month.");
             if (month < FirstOf(PhClock.OperationalDay)) return BadRequest("That month is over, so its roster can no longer be changed.");
 
-            return Answer(await _publisher.GenerateAsync(month, req.Version, SenderId()), r => Ok(new { version = r.Version }));
+            return Answer(await _publisher.GenerateAsync(month, req.Version, SenderId()),
+                r => Ok(new { version = r.Version, notes = r.Lines ?? Array.Empty<string>() }));
         }
 
         /// <summary>What publishing the saved roster would write, without writing it.</summary>
