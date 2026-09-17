@@ -152,8 +152,9 @@ namespace FleetWise.Controllers
             // A replacement for every trip that cannot run as assigned, and for every running
             // trip whose driver needs relieving. Only a pick that breaks nothing is offered
             // from the board: one that costs a rest day or a rest rule is left to the reassign
-            // modal, where the cost is spelled out beside it.
-            var suggestions = new Dictionary<string, (DriverCandidate? Driver, bool NoDriver, VehicleCandidate? Vehicle, bool NoVehicle)>();
+            // modal, where the cost is spelled out beside it. When no pick is free of a cost,
+            // the board says why in counts instead.
+            var suggestions = new Dictionary<string, (DriverCandidate? Driver, string? DriverShortfall, VehicleCandidate? Vehicle, string? VehicleShortfall)>();
             var needsHelp = trips
                 .Where(t => resolved[t.TripId].TripStatus == "Assignment Issue"
                          || (resolved[t.TripId].TripStatus == "Active" && resolved[t.TripId].DriverStatus == "Unavailable"))
@@ -167,18 +168,26 @@ namespace FleetWise.Controllers
                     foreach (var trip in needsHelp)
                     {
                         var issues = SchedulingRules.IssuesOf(trip, snapshot);
-                        var driverSide = SchedulingRules.IsDriverIssue(issues);
-                        var vehicleSide = SchedulingRules.IsVehicleIssue(issues);
 
-                        var driver = driverSide
-                            ? SchedulingRules.RankDrivers(trip, snapshot).Candidates.FirstOrDefault(c => c.Tier <= 2)
-                            : null;
-                        var vehicle = vehicleSide
-                            ? SchedulingRules.RankVehicles(trip, snapshot).FirstOrDefault(c => c.Tier <= 2)
-                            : null;
+                        DriverCandidate? driver = null;
+                        string? driverShortfall = null;
+                        if (SchedulingRules.IsDriverIssue(issues))
+                        {
+                            var ranking = SchedulingRules.RankDrivers(trip, snapshot);
+                            driver = ranking.Candidates.FirstOrDefault(c => c.Tier <= SchedulingRules.NoCostTier);
+                            driverShortfall = SchedulingRules.DriverShortfall(ranking);
+                        }
 
-                        suggestions[trip.TripId] = (driver, driverSide && driver is null,
-                                                    vehicle, vehicleSide && vehicle is null);
+                        VehicleCandidate? vehicle = null;
+                        string? vehicleShortfall = null;
+                        if (SchedulingRules.IsVehicleIssue(issues))
+                        {
+                            var ranking = SchedulingRules.RankVehicles(trip, snapshot);
+                            vehicle = ranking.Candidates.FirstOrDefault(c => c.Tier <= SchedulingRules.NoCostTier);
+                            vehicleShortfall = SchedulingRules.VehicleShortfall(ranking);
+                        }
+
+                        suggestions[trip.TripId] = (driver, driverShortfall, vehicle, vehicleShortfall);
                     }
                 }
                 catch (Exception ex)
@@ -255,9 +264,11 @@ namespace FleetWise.Controllers
                         shift.Trips.Add(new TripRow
                         {
                             SuggestedDriver = suggestion.Driver,
-                            NoDriverSuggestion = suggestion.NoDriver,
+                            SuggestedDriverReason = suggestion.Driver is null ? null : KeepFiguresWhole(SchedulingRules.PickSentence(suggestion.Driver)),
+                            DriverShortfall = suggestion.DriverShortfall,
                             SuggestedVehicle = suggestion.Vehicle,
-                            NoVehicleSuggestion = suggestion.NoVehicle,
+                            SuggestedVehicleReason = suggestion.Vehicle is null ? null : KeepFiguresWhole(SchedulingRules.PickSentence(suggestion.Vehicle)),
+                            VehicleShortfall = suggestion.VehicleShortfall,
                             TripId = trip.TripId,
                             VehicleId = trip.VehicleId,
                             PlateNumber = r.Vehicle?.PlateNumber ?? "—",
@@ -627,6 +638,7 @@ namespace FleetWise.Controllers
                 tier = c.Tier,
                 reason = c.Reason,
                 warning = c.Warning,
+                facts = CandidateJson.Facts(c.Facts),
             };
 
             return Json(new
@@ -634,6 +646,7 @@ namespace FleetWise.Controllers
                 tripInfo = new
                 {
                     tripId = trip.TripId,
+                    date = trip.Date.ToString("ddd, MMM d", System.Globalization.CultureInfo.InvariantCulture),
                     shiftType = trip.ShiftType,
                     shiftStart = TripAssignments.ShiftWindow(trip).Start,
                     shiftEnd = TripAssignments.ShiftWindow(trip).End,
@@ -666,7 +679,7 @@ namespace FleetWise.Controllers
                         ? $"Driver {trip.DriverId}"
                         : $"{currentDriver.FirstName} {currentDriver.LastName}".Trim(),
                 },
-                vehicles = vehicleRanking.Select(c => new
+                vehicles = vehicleRanking.Candidates.Select(c => new
                 {
                     vehicleId = c.VehicleId,
                     plateNumber = c.PlateNumber,
@@ -674,9 +687,14 @@ namespace FleetWise.Controllers
                     tier = c.Tier,
                     reason = c.Reason,
                     warning = c.Warning,
+                    facts = CandidateJson.Facts(c.Facts),
                 }),
                 drivers = driverRanking.Candidates.Select(Driver),
                 driversOnLeave = driverRanking.OnLeave.Select(Driver),
+
+                // Why nothing on a list is free of cost, when nothing is; null otherwise.
+                vehicleShortfall = SchedulingRules.VehicleShortfall(vehicleRanking),
+                driverShortfall = SchedulingRules.DriverShortfall(driverRanking),
             });
         }
 
@@ -694,7 +712,8 @@ namespace FleetWise.Controllers
 
             var result = await _assignments.ReassignAsync(
                 new ReassignChange(req.TripId, req.DriverId, req.VehicleId, req.RouteId, req.Override),
-                senderId);
+                senderId,
+                screen: PickScreen.IsKnown(req.Source) ? req.Source : null);
 
             // A 409 marks a conflict the dispatcher can confirm past; a 400 is final.
             return result.Outcome switch
@@ -967,6 +986,13 @@ namespace FleetWise.Controllers
 
             return Ok();
         }
+
+        /// <summary>
+        /// A line for a narrow column, with each figure held on the same line as the word after
+        /// it, so it wraps as "40 seats" and never as "40" above "seats".
+        /// </summary>
+        private static string KeepFiguresWhole(string text) =>
+            System.Text.RegularExpressions.Regex.Replace(text, @"(\d) ", "$1\u00A0");
 
         /// <summary>The message subject for an audit entry. The body is never recorded.</summary>
         private static string Topic(string? subject) =>

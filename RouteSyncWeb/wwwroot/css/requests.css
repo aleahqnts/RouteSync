@@ -452,6 +452,22 @@
         background: #FEF9E7;
     }
 
+    .rq-blocking-lead {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin: 0 0 8px;
+        font-size: .84rem;
+        font-weight: 600;
+        line-height: 1.4;
+        color: #94560A;
+    }
+
+        .rq-blocking-lead i {
+            flex: none;
+            margin-top: 2px;
+        }
+
     .rq-blocking-t {
         margin: 0 0 6px;
         font-size: .8rem;
@@ -479,31 +495,54 @@
         color: #9a8434;
     }
 
-    /* A cover chosen for each shift in the way. Scrolls on its own, so a week of shifts
-       does not push the note and the buttons out of the dialog. */
+    /* With covers to choose, the box is a plain section of the dialog rather than a
+       tinted notice, so the rows inside it are not a card within a card. */
+    .rq-blocking--covers {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+    }
+
+        .rq-blocking--covers .rq-blocking-t {
+            font-size: .85rem;
+            color: var(--rq-text);
+        }
+
+        .rq-blocking--covers .rq-blocking-s { color: #5F6F85; }
+
+    /* Room for a list's figures beside the names. Two classes, to outrank the dialog's own
+       width further down. */
+    .rq-box.rq-box--wide { max-width: 560px; }
+
+    /* On a desk, a dialog that scrolls rather than running off a short window. A phone's
+       sheet already does. */
+    @media (min-width: 600px) {
+        .rq-box.rq-box--wide {
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+        }
+    }
+
+    /* A cover for each shift in the way, one row each, divided by a hairline. The dialog
+       scrolls as a whole rather than this list inside it. */
     .rq-covers {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        max-height: 44vh;
-        overflow-y: auto;
+        border-top: 1px solid #E8ECF0;
+        border-bottom: 1px solid #E8ECF0;
     }
 
         .rq-covers[hidden] { display: none; }
 
-    .rq-cover {
-        padding: 8px 10px;
-        border: 1px solid #EFE3BF;
-        border-radius: 8px;
-        background: var(--rq-white);
-    }
+    .rq-cover { padding: 10px 2px; }
+
+        .rq-cover + .rq-cover { border-top: 1px solid #E8ECF0; }
 
     .rq-cover-head {
         display: flex;
         flex-wrap: wrap;
         justify-content: space-between;
         gap: 2px 8px;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         font-size: .78rem;
     }
 
@@ -514,25 +553,90 @@
         text-decoration: underline;
     }
 
-    .rq-cover-pick { width: 100%; }
+    .rq-cover-line {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
 
-    .rq-cover-why {
+    .rq-cover-who {
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 2px;
-        margin-top: 4px;
     }
 
-    .rq-cover-line {
-        font-size: .75rem;
-        line-height: 1.4;
-        color: #5A6473;
+    .rq-cover-nameline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0 8px;
     }
 
-    .rq-cover-line--warn {
+    .rq-cover-name {
+        font-size: .88rem;
+        font-weight: 700;
+        color: var(--rq-text);
+    }
+
+    .rq-cover-name--none {
         font-weight: 600;
-        color: #B7791F;
+        color: #5F6F85;
     }
+
+    .rq-cover-why,
+    .rq-cover-updated {
+        font-size: .78rem;
+        line-height: 1.4;
+        color: #5F6F85;
+    }
+
+    .rq-cover-cost {
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        font-size: .78rem;
+        line-height: 1.4;
+        color: #94560A;
+    }
+
+        .rq-cover-cost i {
+            flex: none;
+            margin-top: 2px;
+        }
+
+    .rq-cover-planner,
+    .rq-cover-change,
+    .rq-cover-leave {
+        align-self: flex-start;
+        min-height: 24px;
+        padding: 2px 0;
+        border: 0;
+        background: none;
+        font-size: .8rem;
+        font-weight: 600;
+        color: #2e7d72;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        cursor: pointer;
+    }
+
+    .rq-cover-change { flex: none; }
+
+    .rq-cover-leave {
+        margin-top: 4px;
+        color: #5F6F85;
+    }
+
+        .rq-cover-planner:focus-visible,
+        .rq-cover-change:focus-visible,
+        .rq-cover-leave:focus-visible {
+            outline: 2px solid #4AADA8;
+            outline-offset: 2px;
+        }
+
+    .rq-cover-list { margin-top: 8px; }
 
     /* The page had no way to say anything from outside a dialog, so a row action that
        failed failed silently. */
@@ -1151,5 +1255,19 @@
         max-height: 92dvh;
         overflow-y: auto;
         padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* A phone. The buttons on each cover row are targets a thumb can hit. */
+@media (max-width: 599px) {
+    .rq-cover-change,
+    .rq-cover-leave,
+    .rq-cover-planner {
+        min-height: 44px;
+    }
+
+    .rq-cover-planner {
+        display: inline-flex;
+        align-items: center;
     }
 }

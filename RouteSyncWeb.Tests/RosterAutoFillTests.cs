@@ -153,6 +153,11 @@ public class RosterAutoFillTests
         Assert.Equal(rita.UserId, At(r, b02, "Morning").DriverId);
         Assert.Contains("B01 is retired, so its Morning and Afternoon places came off the roster and Rita Cruz and Sam Cruz were released.", r.Notes);
         Assert.Equal(2, r.Emptied);
+
+        // Nothing on the roster is left to carry that, so it is kept apart from what the
+        // marks say.
+        Assert.Equal(new[] { "B01 is retired, so its Morning and Afternoon places came off the roster and Rita Cruz and Sam Cruz were released." }, r.Unmarked);
+        Assert.DoesNotContain(r.Unmarked, n => n.StartsWith("Put "));
     }
 
     [Fact]
@@ -191,6 +196,26 @@ public class RosterAutoFillTests
         Assert.Equal(1, r.Seats[2].RestWeekday);     // no floater rests Monday, and no crew
         Assert.Equal(2, r.Seats[1].RestWeekday);     // most cover to spare, earliest on a tie
         Assert.Equal(2, r.RestDaysSet);
+
+        // A rest day is all auto-fill did to these places; the drivers are the ones a person chose.
+        Assert.False(MarkIsAboutDriver(r.Seats[1].Suggested));
+        Assert.False(MarkIsAboutDriver(r.Seats[2].Suggested));
+        Assert.Empty(r.Unmarked);
+    }
+
+    [Fact]
+    public void A_mark_on_a_place_auto_fill_chose_the_driver_for_is_about_the_driver()
+    {
+        var w = new World();
+        var b01 = w.Bus("B01");
+        var ana = w.Driver("Ana"); var flo = w.Driver("Flo");
+
+        var r = Fill(w, new List<RosterSeat> { CrewOn(null, b01, "Morning"), FloaterOn(flo, 3) });
+        var place = At(r, b01, "Morning");
+
+        Assert.Equal(ana.UserId, place.DriverId);
+        Assert.True(MarkIsAboutDriver(place.Suggested));
+        Assert.False(MarkIsAboutDriver(null));
     }
 
     [Fact]

@@ -26,7 +26,12 @@ namespace FleetWise.Controllers
             if (month < FirstOf(PhClock.OperationalDay)) return BadRequest("That month is over, so its roster can no longer be changed.");
 
             return Answer(await _publisher.GenerateAsync(month, req.Version, SenderId()),
-                r => Ok(new { version = r.Version, notes = r.Lines ?? Array.Empty<string>() }));
+                r => Ok(new
+                {
+                    version = r.Version,
+                    notes = r.Lines ?? Array.Empty<string>(),
+                    unmarked = r.Unmarked ?? Array.Empty<string>(),
+                }));
         }
 
         /// <summary>What publishing the saved roster would write, without writing it.</summary>
@@ -123,39 +128,20 @@ namespace FleetWise.Controllers
         [RequirePermission("routes")]
         public async Task<IActionResult> GapCandidates(string date, string vehicleId, string shift)
         {
-            if (!TryParseDay(date, out var day) || !TripStatus.Windows.TryGetValue(shift ?? "", out var window))
+            if (!TryParseDay(date, out var day) || !TripStatus.Windows.ContainsKey(shift ?? ""))
                 return BadRequest("That is not a slot on the roster.");
 
             var snapshot = await _scheduling.LoadAsync(day, day);
             var bus = snapshot.Vehicles.FirstOrDefault(v => string.Equals(v.VehicleId, vehicleId, StringComparison.OrdinalIgnoreCase));
             if (bus is null) return NotFound("That bus does not exist.");
 
-            // The trip the gap would be, with nobody on it yet.
-            var ghost = new Trip
-            {
-                TripId = "",
-                Date = day,
-                ShiftType = shift!,
-                ShiftStartTime = window.Start,
-                ShiftEndTime = window.End,
-                RouteId = bus.RouteId ?? 0,
-                VehicleId = bus.VehicleId,
-                DriverId = 0,
-                TripStatus = "Not Yet Started",
-            };
-
-            var ranking = SchedulingRules.RankDrivers(ghost, snapshot);
+            var ranking = SchedulingRules.RankDrivers(
+                SchedulingRules.OpenSlot(day, shift!, bus.RouteId ?? 0, bus.VehicleId), snapshot);
 
             return Json(new
             {
-                candidates = ranking.Candidates.Select(c => new
-                {
-                    driverId = c.DriverId,
-                    name = c.Name,
-                    tier = c.Tier,
-                    reason = c.Reason,
-                    warning = c.Warning,
-                }),
+                candidates = ranking.Candidates.Select(CandidateJson.Driver),
+                shortfall = SchedulingRules.DriverShortfall(ranking),
             });
         }
 
@@ -176,10 +162,27 @@ namespace FleetWise.Controllers
             var bus = (await _supabase.From<Vehicle>().Filter("vehicle_id", Operator.Equals, req.VehicleId).Get()).Models.FirstOrDefault();
             if (bus is null || bus.RouteId is null) return BadRequest("That bus has no route to run.");
 
+            // Where the booked driver sat in the ranking for the gap, measured before the
+            // booking, and never allowed to stand in its way.
+            ReassignmentTag? tag = null;
+            try
+            {
+                var snapshot = await _scheduling.LoadAsync(day, day);
+                tag = SchedulingRules.TagFill(
+                    SchedulingRules.OpenSlot(day, req.Shift, bus.RouteId.Value, bus.VehicleId),
+                    req.DriverId, snapshot, PickScreen.Roster);
+            }
+            catch (Exception ex)
+            {
+                await _audit.WriteAsync("trip_created",
+                    $"could not rank the gap on bus {bus.VehicleId} for the record: {ex.Message}",
+                    "trips", outcome: "failed");
+            }
+
             var senderId = SenderId() ?? 0;
             var result = await _assignments.CreateAsync(
                 new NewTrip(day, req.Shift, window.Start, window.End, bus.RouteId.Value, bus.VehicleId, req.DriverId, req.Override),
-                senderId, purpose: "filling a roster gap");
+                senderId, purpose: "filling a roster gap", tag: tag);
 
             if (result.Outcome == ReassignOutcome.Conflict) return Conflict(new { conflict = result.Message });
             if (result.Outcome != ReassignOutcome.Done) return BadRequest(result.Message);

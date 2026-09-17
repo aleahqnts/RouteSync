@@ -1,12 +1,20 @@
 ﻿@* Views/Dispatch/_ReassignTripModal.cshtml *@
 
-<div id="reassignModal" data-dialog-close="closeReassignModal" class="rtm-overlay" role="dialog" aria-modal="true" style="display:none;">
+@* Loaded here, ahead of the script below that builds its lists. *@
+<script src="~/js/candidate-list.js" asp-append-version="true"></script>
+
+<div id="reassignModal" data-dialog-close="closeReassignModal" class="rtm-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="rtm-title" aria-describedby="rtm-subtitle" style="display:none;">
     <div class="rtm-dialog">
 
-        @* Header *@
+        @* Header. Names the trip being changed, so a dispatcher working through several
+           problem trips can see which one this is without going back to the board. *@
         <div class="rtm-header">
-            <h2 class="rtm-title">Reassign Trip</h2>
-            <button class="rtm-close" onclick="closeReassignModal()">&times;</button>
+            <div class="rtm-heading">
+                <h2 class="rtm-title" id="rtm-title">Reassign Trip</h2>
+                <p class="rtm-subtitle" id="rtm-subtitle"></p>
+            </div>
+            <button class="rtm-close" onclick="closeReassignModal()" aria-label="Close">&times;</button>
         </div>
 
         @* Loading state *@
@@ -56,44 +64,47 @@
                 </div>
             </div>
 
-            @* Vehicle Details *@
-            <div class="rtm-section-label">Vehicle Details</div>
+            @* Bus, then driver. The side with the problem opens on its ranked list; the other
+               says what it keeps, with Change to open its list. *@
+            <div class="rtm-section-label">Bus</div>
             <div class="rtm-section">
-                
-                <div class="rtm-field">
-                    <label class="rtm-label" for="rtm-vehicle-id">Vehicle ID</label>
-                    <div class="rtm-select-wrap">
-                        <select id="rtm-vehicle-id" class="rtm-select">
-                            <option value="">Loading…</option>
-                        </select>
+                <div class="rtm-keep" id="rtm-vehicle-keep" hidden>
+                    <div class="rtm-keep-main" id="rtm-vehicle-keep-main">
+                        <span class="rtm-keep-label">Current</span>
+                        <span class="rtm-keep-line">
+                            <span class="rtm-keep-name" id="rtm-vehicle-keep-name"></span>
+                            <span class="rtm-keep-sub" id="rtm-vehicle-keep-sub"></span>
+                        </span>
                     </div>
-                    <span class="rtm-hint" id="rtm-vehicle-hint"></span>
-                    <div class="rtm-why" id="rtm-vehicle-why" aria-live="polite"></div>
+                    <button type="button" class="rtm-change" id="rtm-vehicle-change" aria-describedby="rtm-vehicle-keep-main">Change</button>
                 </div>
+                <div id="rtm-vehicle-list" hidden></div>
             </div>
 
-            @* Driver Details *@
-            <div class="rtm-section-label">Driver Details</div>
+            <div class="rtm-section-label">Driver</div>
             <div class="rtm-section rtm-section--last">
-                <div class="rtm-field">
-                    <label class="rtm-label" for="rtm-driver">Driver Name</label>
-                    <div class="rtm-select-wrap">
-                        <select id="rtm-driver" class="rtm-select rs-id-list">
-                            <option value="">Loading…</option>
-                        </select>
+                <div class="rtm-keep" id="rtm-driver-keep" hidden>
+                    <div class="rtm-keep-main" id="rtm-driver-keep-main">
+                        <span class="rtm-keep-label">Current</span>
+                        <span class="rtm-keep-line">
+                            <span class="rtm-keep-name" id="rtm-driver-keep-name"></span>
+                            <span class="rtm-keep-sub" id="rtm-driver-keep-sub"></span>
+                        </span>
                     </div>
-                    <span class="rtm-hint" id="rtm-driver-hint"></span>
-                    <div class="rtm-why" id="rtm-driver-why" aria-live="polite"></div>
+                    <button type="button" class="rtm-change" id="rtm-driver-change" aria-describedby="rtm-driver-keep-main">Change</button>
                 </div>
+                <div id="rtm-driver-list" hidden></div>
             </div>
 
         </div>
 
         @* Footer *@
         <div class="rtm-footer">
+            @* Taking a trip off the schedule, asked for here since a list has no blank to clear. *@
+            <button type="button" class="rtm-btn-remove" id="rtm-remove-btn" onclick="rtmAskRemove()">Remove trip</button>
             <button class="rtm-btn-cancel" onclick="closeReassignModal()">Cancel</button>
             <button class="rtm-btn-save" id="rtm-save-btn" onclick="submitReassign()">
-                <span id="rtm-save-label">Save Changes</span>
+                <span id="rtm-save-label">Save changes</span>
                 <span id="rtm-save-spinner" style="display:none;">
                     <svg class="rtm-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none"
                          stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -136,8 +147,7 @@
         </div>
         <div class="rtm-section rtm-section--last">
             <p style="margin:0; font-size:0.9rem; color:#4A5568;">
-                You cleared both the bus and driver. This deletes the trip from the schedule.
-                This can't be undone.
+                This deletes the trip from the schedule. It can't be undone.
             </p>
         </div>
         <div class="rtm-footer">
@@ -162,20 +172,51 @@
         const statusText  = document.getElementById('rtm-status-text');
         const shiftTypeEl = document.getElementById('rtm-shift-type');
         const shiftTimeEl = document.getElementById('rtm-shift-time');
+        const subtitleEl  = document.getElementById('rtm-subtitle');
         const routeSel    = document.getElementById('rtm-route-sel');
         const routeHint   = document.getElementById('rtm-route-hint');
-        const vehicleSel  = document.getElementById('rtm-vehicle-id');
-        const vehicleHint = document.getElementById('rtm-vehicle-hint');
-        const driverSel   = document.getElementById('rtm-driver');
-        const driverHint  = document.getElementById('rtm-driver-hint');
-        const vehicleWhy  = document.getElementById('rtm-vehicle-why');
-        const driverWhy   = document.getElementById('rtm-driver-why');
         const saveBtn     = document.getElementById('rtm-save-btn');
+
+        // Each side of the trip: the line saying what is kept, and the list to choose from.
+        const sides = {
+            vehicle: {
+                keep: document.getElementById('rtm-vehicle-keep'),
+                keepName: document.getElementById('rtm-vehicle-keep-name'),
+                keepSub: document.getElementById('rtm-vehicle-keep-sub'),
+                change: document.getElementById('rtm-vehicle-change'),
+                host: document.getElementById('rtm-vehicle-list'),
+                list: null
+            },
+            driver: {
+                keep: document.getElementById('rtm-driver-keep'),
+                keepName: document.getElementById('rtm-driver-keep-name'),
+                keepSub: document.getElementById('rtm-driver-keep-sub'),
+                change: document.getElementById('rtm-driver-change'),
+                host: document.getElementById('rtm-driver-list'),
+                list: null
+            }
+        };
+
+        // Where focus goes back to when the modal closes.
+        let _rtmOpener = null;
+
+        function rtmOpenSide(side, open) {
+            side.keep.hidden = open;
+            side.host.hidden = !open;
+        }
+
+        Object.values(sides).forEach(function (side) {
+            side.change.addEventListener('click', function () {
+                rtmOpenSide(side, true);
+                if (side.list) side.list.focus();
+            });
+        });
 
         // Open.
         window.openReassignModal = async function (tripId) {
             _rtmTripId  = tripId;
             _rtmOptions = null;
+            _rtmOpener  = document.activeElement;
 
             // Reset UI
             loadingEl.style.display = 'flex';
@@ -191,7 +232,8 @@
 
                 // Populate trip info
                 const info = _rtmOptions.tripInfo;
-                shiftTypeEl.textContent = info.shiftType ? info.shiftType + ' Shift' : '—';
+                shiftTypeEl.textContent = info.shiftType ? info.shiftType + ' shift' : '—';
+                subtitleEl.textContent = [info.tripId, info.date].filter(Boolean).join(' on ');
                 shiftTimeEl.textContent = `${info.shiftStart} – ${info.shiftEnd}`;
                 rtmFillSelect(routeSel, 'Select a route…',
                     (_rtmOptions.routes || []).map(function (r) {
@@ -210,12 +252,22 @@
                     statusBadge.style.display = 'none';
                 }
 
-                // Populate the dropdowns, ranked best first.
+                // The two ranked lists, best first.
                 refreshRtmVehicles();
                 refreshRtmDrivers();
 
                 loadingEl.style.display = 'none';
                 bodyEl.style.display    = 'block';
+
+                // A list's column heads stay in view below the header while it scrolls.
+                const dialogEl = overlay.querySelector('.rtm-dialog');
+                dialogEl.style.setProperty('--rsc-stick', dialogEl.querySelector('.rtm-header').offsetHeight + 'px');
+
+                // Focus lands where the decision is: the open list on the problem side, or
+                // the first Change when nothing is wrong.
+                const open = [sides.vehicle, sides.driver].find(s => !s.host.hidden);
+                if (open && open.list) open.list.focus();
+                else sides.vehicle.change.focus();
 
             } catch {
                 loadingEl.innerHTML = '<span style="color:#E74C3C;">Failed to load trip details. Please try again.</span>';
@@ -226,6 +278,8 @@
         window.closeReassignModal = function () {
             overlay.style.display = 'none';
             document.body.style.overflow = '';
+            if (_rtmOpener && document.contains(_rtmOpener)) _rtmOpener.focus();
+            _rtmOpener = null;
         };
 
         overlay.addEventListener('click', e => {
@@ -288,87 +342,42 @@
         });
     }
 
-        // The ranking's tiers, in the words a dispatcher reads them in. The server orders
-        // the candidates; these only name the groups they fall into.
-        const RTM_DRIVER_TIERS = {
-            1: 'Free all day',
-            2: 'Has another shift that day',
-            3: 'Would work 7 or more days in a row',
-            4: 'Breaks a rest rule'
-        };
-        const RTM_VEHICLE_TIERS = {
-            1: 'Based on this route',
-            2: 'From another route',
-            3: 'Needs attention'
-        };
-
-        // The top pick is called the best match only when taking it costs nothing worth a
-        // warning. A best of a bad lot stays in its own tier, where its cost is named.
-        function rtmGroupOf(c, tiers) {
-            return c.rank === 1 && c.tier <= 2 ? 'Best match' : tiers[c.tier];
+        // The best replacement is chosen for the dispatcher only on the side that has the
+        // problem, and only when taking it costs nothing. Otherwise what the trip has stays
+        // chosen, so saving a driver change never moves the bus as well.
+        function rtmStartingPick(problem, best, currentId, idOf) {
+            return problem && best && best.tier <= RsCandidateList.NO_COST_TIER ? idOf(best) : currentId;
         }
-
-        // Says why the chosen candidate sits where it does, and what taking it costs.
-        function rtmExplain(el, candidate, currentProblem) {
-            el.replaceChildren();
-            const line = function (text, warn) {
-                const p = document.createElement('div');
-                p.className = warn ? 'rtm-why-line rtm-why-line--warn' : 'rtm-why-line';
-                p.textContent = text;
-                el.appendChild(p);
-            };
-            if (candidate) {
-                if (candidate.reason) line(candidate.reason, candidate.onLeave);
-                if (candidate.warning) line(candidate.warning, true);
-            } else if (currentProblem) {
-                line(currentProblem, true);
-            }
-        }
-
-        function rtmExplainVehicle() {
-            if (!_rtmOptions) return;
-            const c = _rtmOptions.vehicles.find(v => String(v.vehicleId) === vehicleSel.value);
-            const onCurrent = vehicleSel.value === String(_rtmOptions.currentVehicle.vehicleId);
-            rtmExplain(vehicleWhy, c,
-                onCurrent && _rtmOptions.vehicleIssue ? 'The current bus is out of service.' : null);
-        }
-
-        function rtmExplainDriver() {
-            if (!_rtmOptions) return;
-            const all = _rtmOptions.drivers
-                .concat(_rtmOptions.driversOnLeave.map(d => Object.assign({ onLeave: true }, d)));
-            const c = all.find(d => String(d.driverId) === driverSel.value);
-            const onCurrent = driverSel.value === String(_rtmOptions.currentDriver.driverId);
-            rtmExplain(driverWhy, c,
-                onCurrent && _rtmOptions.driverIssue ? 'The current driver cannot run this trip.' : null);
-        }
-
-        vehicleSel.addEventListener('change', rtmExplainVehicle);
-        driverSel.addEventListener('change', rtmExplainDriver);
 
         function refreshRtmVehicles() {
             if (!_rtmOptions) return;
 
             const o = _rtmOptions;
             const cur = o.currentVehicle;
-            const label = v => v.plateNumber ? v.vehicleId + ' | ' + v.plateNumber : v.vehicleId;
+            const side = sides.vehicle;
+            const plate = p => p ? 'Plate ' + p : '';
 
-            const items = [{ value: cur.vehicleId, label: label(cur), group: 'Current' }]
-                .concat(o.vehicles.map(v => ({
-                    value: v.vehicleId, label: label(v), group: rtmGroupOf(v, RTM_VEHICLE_TIERS)
-                })));
+            side.list = RsCandidateList.create(side.host, {
+                kind: 'vehicle',
+                label: 'Bus',
+                current: {
+                    id: cur.vehicleId,
+                    name: cur.vehicleId,
+                    sub: plate(cur.plateNumber),
+                    problem: o.vehicleIssue ? 'Out of service' : null
+                },
+                items: o.vehicles.map(v => ({
+                    id: v.vehicleId, name: v.vehicleId, sub: plate(v.plateNumber),
+                    tier: v.tier, rank: v.rank, warning: v.warning, reason: v.reason, facts: v.facts
+                })),
+                selected: rtmStartingPick(o.vehicleIssue, o.vehicles[0], cur.vehicleId, v => v.vehicleId),
+                shortfall: o.vehicleShortfall
+            });
 
-            // The best replacement is chosen for the dispatcher only when the bus is the
-            // problem. Otherwise the current bus stays chosen, so saving a driver change
-            // never moves the bus as well.
-            const best = o.vehicles[0];
-            const selected = o.vehicleIssue && best && best.tier <= 2 ? best.vehicleId : cur.vehicleId;
-
-            rtmFillSelect(vehicleSel, 'Select a vehicle…', items, selected);
-
-            vehicleHint.textContent = o.vehicles.length === 0 ? 'No other bus is free this shift.' : '';
-            vehicleHint.classList.toggle('rtm-hint--visible', o.vehicles.length === 0);
-            rtmExplainVehicle();
+            side.keepName.textContent = cur.vehicleId;
+            side.keepSub.textContent = plate(cur.plateNumber);
+            side.keepSub.hidden = !cur.plateNumber;
+            rtmOpenSide(side, !!o.vehicleIssue);
         }
 
         function refreshRtmDrivers() {
@@ -376,35 +385,30 @@
 
             const o = _rtmOptions;
             const cur = o.currentDriver;
-            const rows = [Object.assign({ group: 'Current' }, cur)]
-                .concat(o.drivers.map(d => Object.assign({ group: rtmGroupOf(d, RTM_DRIVER_TIERS) }, d)))
-                .concat(o.driversOnLeave.map(d => Object.assign({ group: 'On approved leave' }, d)));
+            const side = sides.driver;
+            const onLeave = (o.issues || []).indexOf('driver_on_leave') !== -1;
 
-            // Two drivers can share a name, so the identifier travels with it, in a
-            // column of its own so the numbers can be read down the list.
-            const rtmLabels = rsIdLabels(rows.map(d => ({ name: d.driverName, id: d.driverId })));
-
-            // A chosen driver is read as a name. The number is only worth the room where
-            // two of them answer to it.
-            const rtmShared = rsSharedNames(rows.map(d => d.driverName));
-
-            const best = o.drivers[0];
-            const selected = o.driverIssue && best && best.tier <= 2 ? best.driverId : cur.driverId;
-
-            rtmFillSelect(driverSel, 'Select a driver…',
-                rows.map((d, i) => ({
-                    value: d.driverId,
-                    label: rtmLabels[i],
-                    group: d.group,
-                    face: rtmShared(d.driverName) ? d.driverName + ' · ' + d.driverId : d.driverName,
+            side.list = RsCandidateList.create(side.host, {
+                kind: 'driver',
+                label: 'Driver',
+                current: {
+                    id: cur.driverId,
+                    name: cur.driverName,
+                    problem: o.driverIssue ? (onLeave ? 'On approved leave that day' : 'Cannot drive this trip') : null
+                },
+                items: o.drivers.map(d => ({
+                    id: d.driverId, name: d.driverName,
+                    tier: d.tier, rank: d.rank, warning: d.warning, reason: d.reason, facts: d.facts
                 })),
-                selected);
+                onLeave: o.driversOnLeave.map(d => ({ id: d.driverId, name: d.driverName, reason: d.reason })),
+                selected: rtmStartingPick(o.driverIssue, o.drivers[0], cur.driverId, d => d.driverId),
+                shortfall: o.driverShortfall
+            });
 
-            rsPickFace(driverSel);
-
-            driverHint.textContent = o.drivers.length === 0 ? 'No other driver is free this shift.' : '';
-            driverHint.classList.toggle('rtm-hint--visible', o.drivers.length === 0);
-            rtmExplainDriver();
+            side.keepName.textContent = cur.driverName;
+            side.keepSub.textContent = '';
+            side.keepSub.hidden = true;
+            rtmOpenSide(side, !!o.driverIssue);
         }
 
         // Submit.
@@ -413,15 +417,11 @@
         let _rtmPending = null;
 
         window.submitReassign = async function (force) {
-            // Both explicitly cleared -> remove the trip (mirrors clearing a schedule cell).
-            if (!vehicleSel.value && !driverSel.value) {
-                document.getElementById('rtm-remove-modal').style.display = 'flex';
-                return;
-            }
+            if (!_rtmOptions) return;
 
-            // Use selected value, falling back to the current assignment
-            const vehicleId = vehicleSel.value || _rtmOptions.tripInfo.currentVehicleId;
-            const driverId  = parseInt(driverSel.value) || _rtmOptions.tripInfo.currentDriverId;
+            // What each list has chosen, falling back to the current assignment.
+            const vehicleId = (sides.vehicle.list && sides.vehicle.list.value()) || _rtmOptions.tripInfo.currentVehicleId;
+            const driverId  = parseInt(sides.driver.list && sides.driver.list.value()) || _rtmOptions.tripInfo.currentDriverId;
 
             const routeId = parseInt(routeSel.value) || _rtmOptions.tripInfo.currentRouteId;
 
@@ -430,7 +430,8 @@
                 vehicleId: vehicleId || null,
                 driverId,
                 routeId,
-                override: !!force
+                override: !!force,
+                source: 'reassign'
             };
 
             saveBtn.disabled = true;
@@ -484,7 +485,12 @@
             submitReassign(true);   // re-send with override:true (skips the conflict gate)
         };
 
-        // Remove trip (both bus + driver cleared).
+        // Remove trip.
+        window.rtmAskRemove = function () {
+            if (!_rtmOptions) return;
+            document.getElementById('rtm-remove-modal').style.display = 'flex';
+        };
+
         window.rtmCancelRemove = function () {
             document.getElementById('rtm-remove-modal').style.display = 'none';
         };

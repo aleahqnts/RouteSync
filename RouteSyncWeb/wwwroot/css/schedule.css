@@ -134,6 +134,31 @@
     .sch-cell.sch-cell--gap .sch-veh { color:#94560A; font-weight:700; }
     .sch-cell.sch-cell--gap { --rs-pick-bg:#FFF8EC; }
 
+    /* Suggest on a gap lane, and the ranked drivers it opens beside the cell. */
+    .sch-suggest { align-self:flex-start; min-height:24px; padding:2px 0; border:0; background:none; font-size:.74rem; font-weight:600; color:#2e7d72; text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+    .sch-suggest[hidden] { display:none; }
+    .sch-suggest:hover { color:#1f5e56; }
+    .sch-suggest:focus-visible { outline:2px solid #4AADA8; outline-offset:2px; }
+
+    .sch-suggest-pop { position:fixed; z-index:2100; flex-direction:column; min-height:0; background:#fff; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 12px 36px rgba(13,28,40,.22); overflow:hidden; }
+    .sch-suggest-head { padding:14px 16px 4px; }
+    .sch-suggest-title { margin:0; font-size:.95rem; font-weight:700; color:#1a2a4a; }
+    .sch-suggest-slot { margin:2px 0 0; font-size:.8rem; color:#5F6F85; }
+    .sch-suggest-why { margin:4px 0 0; font-size:.78rem; line-height:1.4; color:#94560A; }
+    .sch-suggest-why[hidden] { display:none; }
+    .sch-suggest-body { flex:1 1 auto; min-height:0; overflow-y:auto; padding:6px 16px 4px; }
+    .sch-suggest-wait { margin:6px 0; font-size:.82rem; color:#5F6F85; }
+    .sch-suggest-wait[hidden] { display:none; }
+    .sch-suggest-cost { display:flex; align-items:flex-start; gap:6px; margin:4px 16px 0; font-size:.8rem; line-height:1.4; color:#94560A; }
+    .sch-suggest-cost i { flex:none; margin-top:2px; }
+    .sch-suggest-error { margin:4px 16px 0; font-size:.8rem; color:#C0392B; }
+    .sch-suggest-cost[hidden], .sch-suggest-error[hidden] { display:none; }
+    .sch-suggest-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px 14px; }
+    .sch-suggest-use { border:none; border-radius:8px; padding:7px 18px; font-size:.85rem; font-weight:700; color:#fff; background:#4AADA8; cursor:pointer; }
+    .sch-suggest-use:hover { background:#3d9490; }
+    .sch-suggest-use:disabled { opacity:.55; cursor:default; }
+    .sch-suggest-use[hidden] { display:none; }
+
     /* Set on the wrapper, so the face laid over the closed control inherits the type the
        control itself is set in. */
     .sch-cell .rs-pick { font-size:.78rem; color:#2D3748; }
@@ -538,3 +563,35 @@
         .sch-modal { max-width: none; max-height: 92vh; max-height: 92dvh; overflow-y: auto;
                      border-radius: 16px 16px 0 0; }
     }
+
+/* A phone. Suggest takes the whole screen, its heading and buttons held in place while the
+   list scrolls between them. */
+@media (max-width: 599px) {
+    .sch-suggest-pop {
+        inset: 0;
+        z-index: 4000;
+        width: auto;
+        max-height: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .sch-suggest-head {
+        padding-top: 18px;
+        border-bottom: 1px solid #EDF0F3;
+    }
+
+    .sch-suggest-actions {
+        border-top: 1px solid #EDF0F3;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+
+        .sch-suggest-actions button {
+            min-height: 44px;
+        }
+
+    .sch-suggest {
+        min-height: 44px;
+    }
+}

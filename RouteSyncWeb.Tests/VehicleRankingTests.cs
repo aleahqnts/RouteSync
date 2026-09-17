@@ -18,7 +18,7 @@ public class VehicleRankingTests
         var otherRoute = w.Bus("B04", route: SecondRoute);
         var home = w.Bus("B05");
 
-        var ranked = SchedulingRules.RankVehicles(trip, w.Snapshot());
+        var ranked = SchedulingRules.RankVehicles(trip, w.Snapshot()).Candidates;
 
         Assert.Equal(new[] { "B05", "B03", "B04", "B02" }, ranked.Select(c => c.VehicleId));
         Assert.Equal(new[] { 1, 2, 2, 3 }, ranked.Select(c => c.Tier));
@@ -42,7 +42,7 @@ public class VehicleRankingTests
         var laterShift = w.Bus("B05");
         w.Trip(Wednesday, "Afternoon", w.Driver("Mario"), laterShift);
 
-        var ranked = SchedulingRules.RankVehicles(trip, w.Snapshot());
+        var ranked = SchedulingRules.RankVehicles(trip, w.Snapshot()).Candidates;
 
         Assert.Equal(new[] { "B05" }, ranked.Select(c => c.VehicleId));
     }
@@ -61,7 +61,7 @@ public class VehicleRankingTests
         var b05 = w.Bus("B05", capacity: 50);
         var b04 = w.Bus("B04", capacity: 55);
 
-        var ranked = SchedulingRules.RankVehicles(trip, w.Snapshot());
+        var ranked = SchedulingRules.RankVehicles(trip, w.Snapshot()).Candidates;
 
         Assert.Equal(new[] { "B04", "B05", "B03", "B02" }, ranked.Select(c => c.VehicleId));
         Assert.Contains("30 seats, fewer than B01", ranked[^1].Reason);

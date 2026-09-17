@@ -236,8 +236,10 @@ namespace FleetWise.Controllers
                     shift = s.Shift,
                     restWeekday = s.RestWeekday,
                     suggested = s.Suggested,
+                    aboutDriver = RosterRules.MarkIsAboutDriver(s.Suggested),
                 }),
                 notes = fill.Notes,
+                unmarked = fill.Unmarked,
                 changed = fill.Changed,
             });
         }

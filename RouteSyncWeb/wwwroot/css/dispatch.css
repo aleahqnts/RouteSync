@@ -80,18 +80,28 @@
     .dp-msg-btn:hover { background:#3d9490; }
     .dp-msg-btn:disabled { opacity:.6; cursor:default; }
 
-    /* A suggested replacement under an issue badge. */
-    .dp-suggest { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; margin-top:6px; font-size:.78rem; color:#41505e; }
-    .dp-suggest-label { color:#8a98a3; }
+    /* The rules' best match under an issue badge: who, why in one line, and the two ways on.
+       When nobody is free without a cost, why in counts, in the amber the lists use for a cost. */
+    .dp-suggest { margin-top:8px; font-size:.78rem; line-height:1.35; color:#41505e; }
+    .dp-suggest-head { display:flex; align-items:baseline; flex-wrap:wrap; gap:0 6px; }
+    .dp-suggest-label { color:#237A75; font-weight:700; }
     .dp-suggest-name { color:#1a2a4a; font-weight:700; }
-    .dp-suggest--none { color:#8a98a3; font-style:italic; }
-    .dp-btn-apply { border:1px solid #CDE9E4; background:#EAF7F5; color:#2e7d72; border-radius:6px; padding:2px 10px; font-size:.76rem; font-weight:700; cursor:pointer; }
+    .dp-suggest-why { margin:2px 0 0; color:#5F6F85; }
+    .dp-suggest-short { display:flex; align-items:flex-start; gap:5px; margin:0; color:#94560A; }
+    .dp-suggest-short i { flex:none; margin-top:2px; }
+    .dp-suggest-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; margin-top:6px; }
+    .dp-btn-apply { min-height:24px; border:1px solid #CDE9E4; background:#EAF7F5; color:#2e7d72; border-radius:6px; padding:2px 10px; font-size:.76rem; font-weight:700; cursor:pointer; }
     .dp-btn-apply:hover { background:#d6efeb; }
+    .dp-suggest-more { min-height:24px; border:none; background:none; padding:2px 0; color:#2e7d72; font-size:.76rem; font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+    .dp-suggest-more:hover { color:#1f5e56; }
+    .dp-btn-apply:focus-visible,
+    .dp-suggest-more:focus-visible { outline:2px solid #4AADA8; outline-offset:2px; }
 
-    /* Confirming a suggestion before it is applied. */
+    /* Confirming a best match before it is assigned. */
     .dp-apply-text { margin:0 0 8px; font-size:.9rem; color:#1a2a4a; line-height:1.45; }
     .dp-apply-reason { margin:0 0 8px; font-size:.82rem; color:#5A6473; line-height:1.4; }
-    .dp-apply-warning { margin:0 0 8px; font-size:.82rem; color:#B7791F; font-weight:600; line-height:1.4; }
+    .dp-apply-note { margin:0 0 8px; font-size:.82rem; color:#5F6F85; line-height:1.4; }
+    .dp-apply-source { margin:0; font-size:.76rem; color:#8a98a3; }
     .dp-apply-actions { display:flex; gap:10px; margin-top:16px; }
     .dp-apply-actions .dp-msg-btn { flex:1; }
     .dp-apply-cancel { flex:1; border:1px solid #E2E8F0; border-radius:10px; padding:11px; font-size:.9rem; font-weight:700; color:#41505e; background:#fff; cursor:pointer; }
@@ -558,11 +568,11 @@
     }
 
     .dp-col-shift {
-        width: 11%;
+        width: 10%;
     }
 
     .dp-col-trip {
-        width: 12%;
+        width: 11%;
     }
 
     .dp-col-bus {
@@ -570,15 +580,17 @@
     }
 
     .dp-col-driver-id {
-        width: 8%;
+        width: 7%;
     }
 
     .dp-col-driver {
-        width: 17%;
+        width: 16%;
     }
 
+    /* Wide enough on a 1366 pixel screen for a best match to keep its reason to two lines
+       and its Assign and Other options to one. */
     .dp-col-status {
-        width: 15%;
+        width: 19%;
     }
 
     .dp-col-actions {
@@ -1635,12 +1647,28 @@
         z-index: 1;
     }
 
+    .rtm-heading {
+        min-width: 0;
+    }
+
     .rtm-title {
         font-size: 1.15rem;
         font-weight: 700;
         color: #1a2a4a;
         margin: 0;
     }
+
+    /* Which trip this is: its ID and day. */
+    .rtm-subtitle {
+        margin: 3px 0 0;
+        font-size: 0.84rem;
+        color: #5F6F85;
+        font-variant-numeric: tabular-nums;
+    }
+
+        .rtm-subtitle:empty {
+            display: none;
+        }
 
     .rtm-close {
         background: none;
@@ -1807,25 +1835,90 @@
         display: block;
     }
 
-    /* Why the chosen replacement ranks where it does. Quiet by default, since most of
-       the time it only confirms the choice; a cost is set apart in amber. */
-    .rtm-why {
+    /* The side of the trip being kept: what it keeps, and Change to open its list. */
+    /* The side that stays as it is: what it holds now, read the way the list's own Current
+       row reads, with Change to open the list. */
+    .rtm-keep {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 10px;
+    }
+
+    .rtm-keep-main {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        margin-top: 2px;
+        gap: 3px;
+        min-width: 0;
     }
 
-    .rtm-why-line {
+    .rtm-keep-label {
         font-size: 0.78rem;
-        color: #5A6473;
-        line-height: 1.4;
+        font-weight: 600;
+        color: #4A5568;
     }
 
-    .rtm-why-line--warn {
-        color: #B7791F;
-        font-weight: 600;
+    .rtm-keep-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 8px;
     }
+
+    .rtm-keep-name {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1a2a4a;
+        overflow-wrap: anywhere;
+    }
+
+    .rtm-keep-sub {
+        font-size: 0.84rem;
+        color: #5F6F85;
+    }
+
+        .rtm-keep-sub[hidden] {
+            display: none;
+        }
+
+    .rtm-change {
+        flex-shrink: 0;
+        padding: 6px 12px;
+        border: 1.5px solid #E2E8F0;
+        border-radius: 8px;
+        background: #fff;
+        color: #2D3748;
+        font-size: 0.84rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+        .rtm-change:hover {
+            border-color: #4AADA8;
+            color: #237A75;
+        }
+
+        .rtm-change:focus-visible {
+            outline: 2px solid #4AADA8;
+            outline-offset: 2px;
+        }
+
+    /* Kept to one side of the footer, away from Save, since it cannot be undone. */
+    .rtm-btn-remove {
+        margin-right: auto;
+        padding: 10px 4px;
+        border: none;
+        background: none;
+        color: #C0392B;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+        .rtm-btn-remove:hover {
+            text-decoration: underline;
+        }
 
     /* Footer. */
     .rtm-footer {
@@ -2708,6 +2801,13 @@
         pointer-events: auto;
     }
 
+    /* A best match reads from the left like the rest of the card, and its buttons take taps
+       the cell around it lets through. */
+    .dp-table td[data-label="Status"] .dp-suggest {
+        pointer-events: auto;
+        text-align: left;
+    }
+
     .dp-table td[data-label="Driver"] {
         padding-bottom: 6px;
     }
@@ -2863,5 +2963,56 @@
     /* The number sits on that strip, so it comes down with it. */
     .dp-table td[data-label="Trip ID"] {
         margin-top: -29px;
+    }
+}
+
+/* ===========================================================================
+   A phone, for choosing a replacement. Reassign takes the whole screen, its heading
+   and buttons held in place while the lists scroll between them. A best match on a
+   board card gets a full-width Assign.
+   =========================================================================== */
+
+@media (max-width: 599px) {
+    .rtm-dialog {
+        height: 100vh;
+        height: 100dvh;
+        max-height: none;
+        border-radius: 0;
+    }
+
+    .rtm-header {
+        border-radius: 0;
+    }
+
+    .rtm-footer {
+        gap: 8px;
+        padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
+    }
+
+        .rtm-footer button {
+            min-height: 44px;
+            white-space: nowrap;
+        }
+
+    .rtm-change {
+        min-height: 44px;
+    }
+
+    .dp-table td[data-label="Status"] .dp-suggest-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+    }
+
+    .dp-table td[data-label="Status"] .dp-btn-apply {
+        width: 100%;
+        min-height: 44px;
+        font-size: 0.85rem;
+    }
+
+    .dp-table td[data-label="Status"] .dp-suggest-more {
+        align-self: flex-start;
+        min-height: 44px;
     }
 }

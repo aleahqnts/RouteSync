@@ -139,10 +139,16 @@ namespace FleetWise.Controllers
         /// Gated on routes as well as requests, because what it leads to is a change to the
         /// schedule. A role that decides leave without running dispatch still sees the
         /// shifts in the way, and leaves clearing them to someone who does.
+        ///
+        /// A driver the dispatcher has already chosen for a shift is sent back as a pin,
+        /// "TRIP000123:45", and kept: the shifts after it are ranked around the choice, and a
+        /// choice that no longer fits says why rather than being replaced. A shift left
+        /// uncovered for now is pinned to driver 0, "TRIP000123:0".
         /// </remarks>
+        /// <param name="pin">Chosen drivers, each "tripId:driverId". Pins for trips not in the way are ignored.</param>
         [HttpGet]
         [RequirePermission("routes")]
-        public async Task<IActionResult> CoverOptions(long requestId)
+        public async Task<IActionResult> CoverOptions(long requestId, [FromQuery] string[]? pin)
         {
             var found = await FindAsync(requestId);
             if (found is null) return NotFound();
@@ -156,9 +162,22 @@ namespace FleetWise.Controllers
             var snapshot = SchedulingRules.AsIfGranted(
                 await _scheduling.LoadAsync(trips.Min(t => t.Date), trips.Max(t => t.Date)), found);
 
+            var pinned = new Dictionary<string, int>();
+            foreach (var p in pin ?? Array.Empty<string>())
+            {
+                var parts = (p ?? "").Split(':');
+                if (parts.Length == 2
+                    && System.Text.RegularExpressions.Regex.IsMatch(parts[0], "^[A-Za-z0-9_-]{1,64}$")
+                    && int.TryParse(parts[1], out var driverId) && driverId >= SchedulingRules.LeftForNow
+                    && trips.Any(t => t.TripId == parts[0]))
+                {
+                    pinned[parts[0]] = driverId;
+                }
+            }
+
             return Json(new
             {
-                shifts = SchedulingRules.SuggestCovers(trips, snapshot).Select(c =>
+                shifts = SchedulingRules.SuggestCovers(trips, snapshot, pinned).Select(c =>
                 {
                     var (start, end) = TripAssignments.ShiftWindow(c.Trip);
                     return new
@@ -171,14 +190,10 @@ namespace FleetWise.Controllers
                         vehicleId = c.Trip.VehicleId,
                         week = MondayOf(c.Trip.Date),
                         suggested = c.Suggested?.DriverId,
-                        candidates = c.Candidates.Select(d => new
-                        {
-                            driverId = d.DriverId,
-                            name = d.Name,
-                            tier = d.Tier,
-                            reason = d.Reason,
-                            warning = d.Warning,
-                        }),
+                        pinned = c.PinnedDriverId,
+                        pinnedProblem = c.PinnedProblem,
+                        shortfall = c.Shortfall,
+                        candidates = c.Candidates.Select(CandidateJson.Driver),
                     };
                 }),
             });
@@ -268,7 +283,8 @@ namespace FleetWise.Controllers
                         senderId,
                         snapshot,
                         purpose: $"covering leave request {found.RequestId}",
-                        syncStatuses: false);
+                        syncStatuses: false,
+                        screen: PickScreen.Cover);
 
                     if (result.Outcome != ReassignOutcome.Done)
                     {
