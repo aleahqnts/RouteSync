@@ -493,9 +493,13 @@
         <div id="rqBlocking" class="rq-blocking" style="display:none;"
              data-planner="@(User.HasClaim("perm", "routes") ? "/Schedule" : null)"
              data-covers="@(User.HasClaim("perm", "routes") ? "true" : null)">
+            @* Why the approval is held. A notice rather than an error: nothing failed, and the
+               shifts below are what to do about it. *@
+            <p class="rq-blocking-lead" id="rqBlockingLead" role="status"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span id="rqBlockingLeadText"></span></p>
             <p class="rq-blocking-t" id="rqBlockingTitle">Clear these shifts before approving</p>
             <ul class="rq-blocking-list" id="rqBlockingList"></ul>
             <div class="rq-covers" id="rqCovers" hidden></div>
+            <p class="visually-hidden" id="rqCoversLive" aria-live="polite"></p>
             <p class="rq-blocking-s" id="rqBlockingNote">
                 This request is held until they are cleared. The driver still sees it as
                 pending.
@@ -514,6 +518,7 @@
 
 @Html.AntiForgeryToken()
 
+<script src="~/js/candidate-list.js" asp-append-version="true"></script>
 <script>
     (function () {
         let pending = null;   // { id, decision }
@@ -815,8 +820,8 @@
         };
 
         function rqShowBlocking(message, shifts) {
-            err.textContent = message;
-            err.style.display = 'block';
+            err.style.display = 'none';
+            document.getElementById('rqBlockingLeadText').textContent = message;
 
             const box = document.getElementById('rqBlocking');
             const planner = box.dataset.planner;
@@ -842,93 +847,330 @@
 
         // ---- Covering the shifts in the way ------------------------------------------
         //
-        // Offered only to a role that can change the schedule. Each shift arrives with the
-        // driver the rules suggest and the others who could take it at no cost worth a
-        // confirm. Whatever is picked here is checked again on the server before it is
-        // saved.
+        // Offered only to a role that can change the schedule. Each shift is one row with
+        // the driver the rules suggest and why. Change opens that shift's list of the drivers
+        // who could take it at no cost worth a confirm, one list open at a time.
+        //
+        // A driver chosen by hand, or a shift left for now, is the dispatcher's and is never
+        // replaced. The shifts not touched are ranked again around those choices, and say
+        // so. Whatever is sent is checked again on the server before it is saved.
 
         const blockingBox = document.getElementById('rqBlocking');
         const coversEl = document.getElementById('rqCovers');
+        const coversLive = document.getElementById('rqCoversLive');
         const blockingTitle = document.getElementById('rqBlockingTitle');
         const blockingNote = document.getElementById('rqBlockingNote');
         const blockingTitleText = blockingTitle.textContent;
         const blockingNoteText = blockingNote.textContent;
+        const decideBox = modal.querySelector('.rq-box');
         let coversShown = false;
+        let coverRows = [];          // one per shift, in date order
+        let coverNames = new Map();  // driver ID to name, for a chosen driver no longer listed
+        let coverSeq = 0;            // the latest ranking asked for; older answers are dropped
+        let coverTimer = null;
+        let coverDirty = null;       // the row picked from and not yet ranked around
+        let coverRerank = null;      // the ranking under way, if any
 
         function rqResetCovers() {
             coversShown = false;
+            coverRows = [];
+            coverNames = new Map();
+            coverSeq++;
+            clearTimeout(coverTimer);
+            coverDirty = null;
+            coverRerank = null;
             coversEl.replaceChildren();
             coversEl.hidden = true;
+            coversLive.textContent = '';
+            blockingBox.classList.remove('rq-blocking--covers');
+            decideBox.classList.remove('rq-box--wide');
             document.getElementById('rqBlockingList').hidden = false;
             blockingTitle.textContent = blockingTitleText;
             blockingNote.textContent = blockingNoteText;
         }
 
-        function rqCoverWhy(host, candidate) {
-            host.replaceChildren();
-            if (!candidate) return;
-            [[candidate.reason, false], [candidate.warning, true]].forEach(function (pair) {
-                if (!pair[0]) return;
-                const line = document.createElement('div');
-                line.className = 'rq-cover-line' + (pair[1] ? ' rq-cover-line--warn' : '');
-                line.textContent = pair[0];
-                host.appendChild(line);
+        // Names, reasons and dates are data, so they are always set as text.
+        function rqEl(tag, className, text) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text != null) node.textContent = text;
+            return node;
+        }
+
+        // A figure stays on the line of the word after it, so a reason never breaks as
+        // "30" above "days".
+        function rqKeepFigures(text) {
+            return String(text).replace(/(\d) /g, '$1\u00A0');
+        }
+
+        function rqCost(text) {
+            const line = rqEl('span', 'rq-cover-cost');
+            const icon = rqEl('i', 'ti ti-alert-triangle');
+            icon.setAttribute('aria-hidden', 'true');
+            line.append(icon, rqEl('span', null, text));
+            return line;
+        }
+
+        function rqShiftLabel(s) {
+            return s.date + ', ' + s.shift + ' shift';
+        }
+
+        function rqCandidateOf(row, driverId) {
+            return row.s.candidates.find(function (c) { return c.driverId === driverId; }) || null;
+        }
+
+        // A driver is chosen and the rules, as last asked, have no objection to them.
+        function rqCoverReady(row) {
+            return row.choice > 0 && !row.s.pinnedProblem && !!rqCandidateOf(row, row.choice);
+        }
+
+        function rqCoverButton() {
+            if (!coversShown) return;
+            const ready = coverRows.filter(rqCoverReady).length;
+            // With nobody chosen anywhere, pressing it only checks again. With a shift still
+            // uncovered, the covers are saved and the request stays held, so it does not
+            // promise an approval.
+            go.textContent = ready === 0
+                ? 'Approve'
+                : (ready === 1 ? 'Cover 1 shift' : 'Cover ' + ready + ' shifts')
+                    + (ready === coverRows.length ? ' and approve' : '');
+        }
+
+        // What a row says: who covers the shift and why, or why nobody does. With its list
+        // open, only who, since the list below says the rest.
+        function rqRenderCover(row) {
+            const s = row.s;
+            row.who.replaceChildren();
+
+            if (row.choice > 0) {
+                const c = rqCandidateOf(row, row.choice);
+                const line = rqEl('span', 'rq-cover-nameline');
+                line.appendChild(rqEl('span', 'rq-cover-name',
+                    c ? c.name : (coverNames.get(row.choice) || 'Driver ' + row.choice)));
+                if (c && s.candidates[0] === c) line.appendChild(rqEl('span', 'rsc-best', 'Best match'));
+                row.who.appendChild(line);
+
+                if (!row.open && c && !s.pinnedProblem) {
+                    row.who.appendChild(rqEl('span', 'rq-cover-why', rqKeepFigures(c.sentence || c.reason)));
+                    if (c.tier === 2 && c.warning) row.who.appendChild(rqEl('span', 'rq-cover-why', c.warning));
+                } else if (!row.open) {
+                    row.who.appendChild(rqCost(s.pinnedProblem || 'No longer free for this shift.'));
+                }
+            } else if (row.choice === 0) {
+                row.who.appendChild(rqEl('span', 'rq-cover-name rq-cover-name--none', 'Left for now'));
+                if (!row.open) {
+                    row.who.appendChild(rqEl('span', 'rq-cover-why', 'Nobody takes this shift yet, so the request stays held.'));
+                }
+            } else {
+                row.who.appendChild(rqCost(s.shortfall || 'No driver can take this shift without a cost.'));
+                const planner = rqEl('a', 'rq-cover-planner', 'Cover it in the planner');
+                planner.href = '/Schedule?start=' + encodeURIComponent(s.week);
+                row.who.appendChild(planner);
+            }
+
+            if (row.updated) {
+                row.who.appendChild(rqEl('span', 'rq-cover-updated', 'Updated after your pick on ' + row.updated));
+            }
+
+            row.change.hidden = row.choice === null && s.candidates.length === 0;
+            row.change.textContent = row.open ? 'Done' : row.choice === 0 ? 'Choose' : 'Change';
+            row.change.setAttribute('aria-expanded', row.open ? 'true' : 'false');
+            row.leave.hidden = row.choice === 0;
+        }
+
+        function rqOpenCover(row, moveFocus) {
+            coverRows.forEach(function (r) { if (r !== row && r.open) rqCloseCover(r, false); });
+
+            const s = row.s;
+            const lost = row.choice > 0 && !rqCandidateOf(row, row.choice);
+
+            row.open = true;
+            row.listWrap.hidden = false;
+            row.list = RsCandidateList.create(row.listHost, {
+                kind: 'driver',
+                label: 'Cover for ' + rqShiftLabel(s),
+                items: s.candidates.map(function (c) {
+                    return {
+                        id: c.driverId, name: c.name, tier: c.tier, rank: c.rank,
+                        warning: c.warning, reason: c.reason, facts: c.facts
+                    };
+                }),
+                // A chosen driver the rules no longer offer stays in sight, with why.
+                current: lost
+                    ? {
+                        id: row.choice,
+                        name: coverNames.get(row.choice) || 'Driver ' + row.choice,
+                        problem: s.pinnedProblem || 'No longer free for this shift.'
+                    }
+                    : null,
+                selected: row.choice > 0 ? row.choice : null,
+                shortfall: s.candidates.length ? null : s.shortfall,
+                limit: 3,
+                onChange: function (id) { rqPickCover(row, Number(id)); }
             });
+
+            rqRenderCover(row);
+            if (moveFocus) row.list.focus();
+        }
+
+        function rqCloseCover(row, returnFocus) {
+            row.open = false;
+            row.listWrap.hidden = true;
+            row.listHost.replaceChildren();
+            row.list = null;
+            rqRenderCover(row);
+            if (returnFocus) row.change.focus();
+        }
+
+        function rqPickCover(row, driverId) {
+            row.choice = driverId;
+            row.touched = true;
+            row.updated = null;
+
+            const c = driverId > 0 ? rqCandidateOf(row, driverId) : null;
+            if (c) coverNames.set(c.driverId, c.name);
+            // A problem found with the previous choice is not this one's.
+            row.s = Object.assign({}, row.s, { pinned: driverId, pinnedProblem: null });
+
+            rqRenderCover(row);
+            rqCoverButton();
+
+            // Ranked once the dispatcher settles, not on every arrow key through the list.
+            clearTimeout(coverTimer);
+            coverDirty = row;
+            coverTimer = setTimeout(function () {
+                const picked = coverDirty;
+                coverDirty = null;
+                if (picked) rqStartRerank(picked);
+            }, 300);
+        }
+
+        function rqStartRerank(changed) {
+            const run = rqRerankCovers(changed).finally(function () {
+                if (coverRerank === run) coverRerank = null;
+            });
+            coverRerank = run;
+            return run;
+        }
+
+        // Asks for the ranking again with every choice pinned, and moves the shifts nobody
+        // has touched to what it now suggests. Answers how many of those changed.
+        async function rqRerankCovers(changed) {
+            if (!pending || !coversShown) return 0;
+            const seq = ++coverSeq;
+
+            const params = new URLSearchParams({ requestId: pending.id });
+            coverRows.forEach(function (r) {
+                if (r.touched) params.append('pin', r.s.tripId + ':' + r.choice);
+            });
+
+            let shifts;
+            try {
+                const res = await fetch('/Requests/CoverOptions?' + params.toString(),
+                                        { headers: { 'X-Requested-With': 'fetch' } });
+                if (!res.ok || res.redirected) return 0;
+                shifts = (await res.json()).shifts || [];
+            } catch (e) {
+                return 0;
+            }
+
+            if (seq !== coverSeq || !coversShown) return 0;
+
+            const fresh = new Map(shifts.map(function (s) { return [s.tripId, s]; }));
+            let updated = 0;
+
+            coverRows.forEach(function (r) {
+                const s = fresh.get(r.s.tripId);
+                if (!s) return;
+                s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
+                r.s = s;
+
+                if (!r.touched) {
+                    const next = s.suggested == null ? null : s.suggested;
+                    if (next !== r.choice) {
+                        r.choice = next;
+                        r.updated = changed.s.date;
+                        updated++;
+
+                        // Opened before the answer came, its list is built again around the
+                        // new suggestion, keeping focus in it only if it was there.
+                        if (r.open) {
+                            rqOpenCover(r, r.listWrap.contains(document.activeElement));
+                            return;
+                        }
+                    }
+                }
+
+                // Any other open list is left as it is, so focus stays where it was put.
+                rqRenderCover(r);
+            });
+
+            rqCoverButton();
+            if (updated) {
+                coversLive.textContent = (updated === 1 ? '1 shift' : updated + ' shifts')
+                    + ' updated after your pick on ' + changed.s.date + '.';
+            }
+            return updated;
+        }
+
+        // Finishes any ranking still to come. Answers how many untouched shifts it changed.
+        async function rqFlushCovers() {
+            clearTimeout(coverTimer);
+            let updated = 0;
+            if (coverRerank) updated += await coverRerank;
+            if (coverDirty) {
+                const picked = coverDirty;
+                coverDirty = null;
+                updated += await rqStartRerank(picked);
+            }
+            return updated;
         }
 
         function rqCoverRow(s) {
-            const row = document.createElement('div');
-            row.className = 'rq-cover';
+            const row = {
+                s: s,
+                choice: s.suggested == null ? null : s.suggested,
+                touched: false,
+                open: false,
+                updated: null,
+                list: null
+            };
 
-            const head = document.createElement('div');
-            head.className = 'rq-cover-head';
-            const when = document.createElement('span');
-            when.className = 'rq-cover-when';
-            when.textContent = s.date + ' · ' + s.shift;
-            const where = document.createElement('a');
-            where.className = 'rq-cover-where';
+            row.el = rqEl('div', 'rq-cover');
+
+            const head = rqEl('div', 'rq-cover-head');
+            const when = rqEl('span', 'rq-cover-when', rqShiftLabel(s));
+            when.id = 'rqCoverWhen-' + s.tripId;
+            const where = rqEl('a', 'rq-cover-where', s.window + ', ' + s.route + ', ' + s.vehicleId);
             where.href = '/Schedule?start=' + encodeURIComponent(s.week);
-            where.textContent = s.window + ' · ' + s.route + ' · ' + s.vehicleId;
             head.append(when, where);
-            row.appendChild(head);
 
-            const why = document.createElement('div');
-            why.className = 'rq-cover-why';
-
-            if (!s.candidates.length) {
-                const none = document.createElement('div');
-                none.className = 'rq-cover-line rq-cover-line--warn';
-                none.textContent = 'No driver can take this without a cost. Cover it in the planner.';
-                why.appendChild(none);
-                row.appendChild(why);
-                return row;
-            }
-
-            const pick = document.createElement('select');
-            pick.className = 'rq-input rq-cover-pick';
-            pick.dataset.trip = s.tripId;
-            pick.setAttribute('aria-label', 'Cover for ' + s.date + ', ' + s.shift + ' shift');
-
-            s.candidates.forEach(function (c) {
-                const opt = document.createElement('option');
-                opt.value = c.driverId;
-                // A driver's name is data, not markup.
-                opt.textContent = c.tier === 1 ? c.name : c.name + ' (second shift that day)';
-                pick.appendChild(opt);
+            const line = rqEl('div', 'rq-cover-line');
+            row.who = rqEl('div', 'rq-cover-who');
+            row.change = rqEl('button', 'rq-cover-change');
+            row.change.type = 'button';
+            row.change.setAttribute('aria-controls', 'rqCoverList-' + s.tripId);
+            row.change.setAttribute('aria-describedby', when.id);
+            row.change.addEventListener('click', function () {
+                if (row.open) rqCloseCover(row, true);
+                else rqOpenCover(row, true);
             });
+            line.append(row.who, row.change);
 
-            const skip = document.createElement('option');
-            skip.value = '';
-            skip.textContent = 'Leave for now';
-            pick.appendChild(skip);
+            row.listWrap = rqEl('div', 'rq-cover-list');
+            row.listWrap.id = 'rqCoverList-' + s.tripId;
+            row.listWrap.hidden = true;
+            row.listHost = rqEl('div');
+            row.leave = rqEl('button', 'rq-cover-leave', 'Leave for now');
+            row.leave.type = 'button';
+            row.leave.setAttribute('aria-describedby', when.id);
+            row.leave.addEventListener('click', function () {
+                rqPickCover(row, 0);
+                rqCloseCover(row, true);
+            });
+            row.listWrap.append(row.listHost, row.leave);
 
-            pick.value = s.suggested == null ? '' : String(s.suggested);
-
-            const byId = new Map(s.candidates.map(function (c) { return [String(c.driverId), c]; }));
-            pick.addEventListener('change', function () { rqCoverWhy(why, byId.get(pick.value)); });
-            rqCoverWhy(why, byId.get(pick.value));
-
-            row.append(pick, why);
+            row.el.append(head, line, row.listWrap);
             return row;
         }
 
@@ -950,27 +1192,45 @@
 
             if (!shifts.length) return false;
 
-            shifts.forEach(function (s) { coversEl.appendChild(rqCoverRow(s)); });
+            coverRows = shifts.map(function (s) {
+                s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
+                return rqCoverRow(s);
+            });
+            coverRows.forEach(function (row) {
+                coversEl.appendChild(row.el);
+                rqRenderCover(row);
+            });
 
             blockingTitle.textContent = 'Choose who covers each shift';
             blockingNote.textContent = 'Each driver chosen is sent their new shift. Leave a shift '
                 + 'for now and this request stays held.';
             document.getElementById('rqBlockingList').hidden = true;
+            blockingBox.classList.add('rq-blocking--covers');
+            decideBox.classList.add('rq-box--wide');
             coversEl.hidden = false;
             blockingBox.style.display = 'block';
-            // With nobody to choose anywhere, pressing it only checks again.
-            go.textContent = coversEl.querySelector('.rq-cover-pick') ? 'Cover and Approve' : 'Approve';
             coversShown = true;
+            rqCoverButton();
             return true;
         }
 
         async function rqCoverAndApprove() {
             const id = pending.id;
-            const covers = [...coversEl.querySelectorAll('.rq-cover-pick')]
-                .filter(function (s) { return s.value; })
-                .map(function (s) { return { tripId: s.dataset.trip, driverId: Number(s.value) }; });
-
             go.disabled = true;
+
+            // A pick still being ranked around is finished first. When that moves a shift the
+            // dispatcher has not seen since, nothing is sent: the change is shown, and the
+            // next press sends what is on screen.
+            if (await rqFlushCovers() > 0) {
+                go.disabled = false;
+                return;
+            }
+            if (!pending || pending.id !== id) return;
+
+            const covers = coverRows.filter(rqCoverReady).map(function (r) {
+                return { tripId: r.s.tripId, driverId: r.choice };
+            });
+
             try {
                 const res = await fetch('/Requests/CoverAndApprove', {
                     method: 'POST',
@@ -988,17 +1248,20 @@
                     const said = await res.json();
                     const covered = said.covered || 0;
 
-                    rqShowBlocking(said.message, said.blocking || []);
+                    rqShowBlocking((covered ? covered + (covered === 1 ? ' shift was covered. ' : ' shifts were covered. ') : '')
+                        + said.message, said.blocking || []);
                     if (!await rqShowCovers(id)) go.textContent = 'Approve';
 
+                    // A cover that could not be saved is a failure and reads as one. What is
+                    // still in the way is said by the notice above the shifts.
+                    const failures = said.failures || [];
                     err.replaceChildren();
-                    [(covered ? covered + (covered === 1 ? ' shift was covered. ' : ' shifts were covered. ') : '')
-                        + said.message].concat(said.failures || []).forEach(function (text) {
+                    failures.forEach(function (text) {
                         const line = document.createElement('div');
                         line.textContent = text;
                         err.appendChild(line);
                     });
-                    err.style.display = 'block';
+                    err.style.display = failures.length ? 'block' : 'none';
 
                     go.disabled = false;
                     await rqRefresh(true);
@@ -1212,6 +1475,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/requests.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/candidates.css" asp-append-version="true" />
 }
 
 @section TopbarContent {

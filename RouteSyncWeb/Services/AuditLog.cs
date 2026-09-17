@@ -8,7 +8,8 @@ namespace FleetWise.Services
     /// <summary>One recorded reassignment, as the suggestions saw it.</summary>
     /// <param name="TookTopSuggestion">Every side that changed went to the top-ranked candidate.</param>
     /// <param name="FixedIssue">The trip could not run as assigned before the change.</param>
-    public sealed record ReassignmentPick(bool TookTopSuggestion, bool FixedIssue);
+    /// <param name="Screen">Where the pick was made, one of <see cref="PickScreen"/>, or null for a pick recorded before screens were.</param>
+    public sealed record ReassignmentPick(bool TookTopSuggestion, bool FixedIssue, string? Screen = null);
 
     /// <summary>
     /// Records administrator actions in the audit trail.
@@ -146,12 +147,16 @@ namespace FleetWise.Services
         }
 
         /// <summary>
-        /// What each reassignment in a span chose, measured against the suggestions offered
-        /// at the time.
+        /// What each pick from a ranking in a span chose, measured against the suggestions
+        /// offered at the time.
         /// </summary>
+        /// <remarks>
+        /// Reassignments, and trips made by hand into a roster gap, which carry the same
+        /// record. A trip made by hand anywhere else carries none and is not counted.
+        /// </remarks>
         /// <returns>
-        /// One entry per reassignment that changed a driver or a bus, or null when the read
-        /// failed, so a figure that could not be read is not shown as a month with none.
+        /// One entry per pick, or null when the read failed, so a figure that could not be
+        /// read is not shown as a month with none.
         /// </returns>
         public async Task<List<ReassignmentPick>?> ReassignmentPicksAsync(DateTimeOffset from, DateTimeOffset to)
         {
@@ -161,7 +166,7 @@ namespace FleetWise.Services
                 var key = _config["Supabase:Key"];
                 if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(key)) return null;
 
-                var query = "select=changes&action=eq.trip_reassigned"
+                var query = "select=changes&action=in.(trip_reassigned,trip_created)"
                     + $"&occurred_at=gte.{Uri.EscapeDataString(from.ToString("o"))}"
                     + $"&occurred_at=lt.{Uri.EscapeDataString(to.ToString("o"))}"
                     + "&limit=10000";
@@ -193,7 +198,13 @@ namespace FleetWise.Services
                                      && issues.ValueKind == JsonValueKind.Array
                                      && issues.GetArrayLength() > 0;
 
-                    picks.Add(new ReassignmentPick(tookTop, fixedIssue));
+                    var screen = rec.TryGetProperty("screen", out var s)
+                                 && s.ValueKind == JsonValueKind.String
+                                 && PickScreen.IsKnown(s.GetString())
+                        ? s.GetString()
+                        : null;
+
+                    picks.Add(new ReassignmentPick(tookTop, fixedIssue, screen));
                 }
 
                 return picks;

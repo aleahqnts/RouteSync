@@ -47,8 +47,13 @@ namespace FleetWise.Services
     /// <param name="Emptied">Places emptied or taken off the roster: an inactive driver, a retired or moved bus.</param>
     /// <param name="RestDaysSet">Rest days and floaters' usual shifts set where they were missing.</param>
     /// <param name="LeftEmpty">Places still without a driver, for want of anybody free.</param>
+    /// <param name="Notes">Everything auto-fill did, a sentence each.</param>
+    /// <param name="Unmarked">
+    /// The notes that say what no place's mark says: places and rows that came off, crews
+    /// released, and floaters nobody could be found for. The rest are said by a mark as well.
+    /// </param>
     public sealed record AutoFillResult(
-        IReadOnlyList<RosterSeat> Seats, IReadOnlyList<string> Notes,
+        IReadOnlyList<RosterSeat> Seats, IReadOnlyList<string> Notes, IReadOnlyList<string> Unmarked,
         int Filled, int Emptied, int RestDaysSet, int LeftEmpty)
     {
         public bool Changed => Filled + Emptied + RestDaysSet > 0;
@@ -105,7 +110,15 @@ namespace FleetWise.Services
             bool Active(int id) => driverById.TryGetValue(id, out var d) && IsActiveDriver(d);
 
             var notes = new List<string>();
+            var unmarked = new List<string>();
             var places = new List<Place>();
+
+            // A note about something no place is left to carry a mark for.
+            void NoteUnmarked(string note)
+            {
+                notes.Add(note);
+                unmarked.Add(note);
+            }
             var placed = new HashSet<int>();
             var busShifts = new HashSet<(string Bus, string Shift)>();
             int emptied = 0, filled = 0, restSet = 0, leftEmpty = 0;
@@ -153,7 +166,7 @@ namespace FleetWise.Services
 
                     if (!busShifts.Add((bus.VehicleId.ToUpperInvariant(), s.Shift)))
                     {
-                        notes.Add($"Removed a second {s.Shift} place on {bus.VehicleId}.");
+                        NoteUnmarked($"Removed a second {s.Shift} place on {bus.VehicleId}.");
                         emptied++;
                         continue;
                     }
@@ -185,13 +198,13 @@ namespace FleetWise.Services
                     {
                         if (!Active(id))
                         {
-                            notes.Add($"Removed {Name(id)} from the {Route(s.RouteId)} floaters: no longer an active driver.");
+                            NoteUnmarked($"Removed {Name(id)} from the {Route(s.RouteId)} floaters: no longer an active driver.");
                             emptied++;
                             continue;
                         }
                         if (!placed.Add(id))
                         {
-                            notes.Add($"Removed a second place for {Name(id)} among the {Route(s.RouteId)} floaters.");
+                            NoteUnmarked($"Removed a second place for {Name(id)} among the {Route(s.RouteId)} floaters.");
                             emptied++;
                             continue;
                         }
@@ -202,11 +215,11 @@ namespace FleetWise.Services
             }
 
             foreach (var (busId, g) in gone.OrderBy(kv => kv.Key, StringComparer.Ordinal))
-                notes.Add($"{busId} {g.Why}, so its {Joined(g.Shifts)} {Plural(g.Shifts.Count, "place", "places")} came off the roster"
+                NoteUnmarked($"{busId} {g.Why}, so its {Joined(g.Shifts)} {Plural(g.Shifts.Count, "place", "places")} came off the roster"
                     + (g.Released.Count > 0 ? $" and {Joined(g.Released)} {(g.Released.Count == 1 ? "was" : "were")} released." : "."));
 
             foreach (var (busId, m) in moved.OrderBy(kv => kv.Key, StringComparer.Ordinal))
-                notes.Add($"{busId} now runs on {m.To}, so its {Joined(m.Shifts)} {Plural(m.Shifts.Count, "place", "places")} moved there from {m.From}"
+                NoteUnmarked($"{busId} now runs on {m.To}, so its {Joined(m.Shifts)} {Plural(m.Shifts.Count, "place", "places")} moved there from {m.From}"
                     + (m.Released.Count > 0 ? $" and {Joined(m.Released)} {(m.Released.Count == 1 ? "was" : "were")} released." : "."));
 
             var free = drivers
@@ -311,11 +324,11 @@ namespace FleetWise.Services
                 if (p.NewFloater)
                 {
                     places.Remove(p);
-                    notes.Add($"{Route(p.Seat.RouteId)} needs another floater and no active driver is free.");
+                    NoteUnmarked($"{Route(p.Seat.RouteId)} needs another floater and no active driver is free.");
                 }
                 else
                 {
-                    notes.Add($"No active driver is free for the empty {Route(p.Seat.RouteId)} floater row.");
+                    NoteUnmarked($"No active driver is free for the empty {Route(p.Seat.RouteId)} floater row.");
                     leftEmpty++;
                 }
             }
@@ -342,7 +355,7 @@ namespace FleetWise.Services
                         .First();
 
                     f.Seat = f.Seat with { RestWeekday = day };
-                    f.Said.Add($"Rests {DayName(day)}, the day fewest {Route(routeId)} floaters rest.");
+                    f.Said.Add($"{RestDayMark}{DayName(day)}, the day fewest {Route(routeId)} floaters rest.");
                     floatersResting[day]++;
                     restSet++;
                 }
@@ -363,7 +376,7 @@ namespace FleetWise.Services
                         .First();
 
                     c.Seat = c.Seat with { RestWeekday = day };
-                    c.Said.Add($"Rests {DayName(day)}, the day with the most floater cover to spare.");
+                    c.Said.Add($"{RestDayMark}{DayName(day)}, the day with the most floater cover to spare.");
                     crewResting[day]++;
                     restSet++;
                 }
@@ -403,8 +416,24 @@ namespace FleetWise.Services
                 .Select(p => p.Said.Count > 0 ? p.Seat with { Suggested = string.Join(" ", p.Said) } : p.Seat)
                 .ToList();
 
-            return new AutoFillResult(result, notes, filled, emptied, restSet, leftEmpty);
+            return new AutoFillResult(result, notes, unmarked, filled, emptied, restSet, leftEmpty);
         }
+
+        /// <summary>How a mark that sets a rest day begins.</summary>
+        private const string RestDayMark = "Rests ";
+
+        /// <summary>
+        /// Whether a place's auto-fill mark is about who is in the place, rather than only its
+        /// rest day.
+        /// </summary>
+        /// <remarks>
+        /// A place whose driver a person chose is only ever given a rest day, so a mark that is
+        /// nothing but the rest day leaves the driver as the person chose them. Any other mark
+        /// begins with what auto-fill did about the driver: chose one, found nobody, or took one
+        /// off. Read from the mark itself, so a mark saved with the roster answers the same.
+        /// </remarks>
+        public static bool MarkIsAboutDriver(string? suggested) =>
+            !string.IsNullOrEmpty(suggested) && !suggested.StartsWith(RestDayMark, StringComparison.Ordinal);
 
         private static bool IsActiveDriver(UserModel d) =>
             d.RoleId == DriverRoleId && Ci.Equals(d.AccountStatus, "Activated");

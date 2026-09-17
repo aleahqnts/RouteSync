@@ -1,0 +1,266 @@
+/* ===========================================================================
+   The ranked list a replacement is chosen from, the same on every screen that
+   shows one. A plain list inside whatever dialog or panel holds it: rows divided by
+   a hairline, the chosen row tinted, tiers named in ordinary headings, costs in
+   amber, figures in columns that line up.
+   =========================================================================== */
+
+.rsc {
+    font-size: 0.88rem;
+    color: #2D3748;
+}
+
+/* Why nobody is free without a cost. Said once, above the rows it explains. */
+.rsc-shortfall {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #FFF8EC;
+    color: #94560A;
+    font-size: 0.84rem;
+    line-height: 1.4;
+}
+
+.rsc-head,
+.rsc-row {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 5.25rem 4.5rem;
+    column-gap: 10px;
+    align-items: start;
+}
+
+/* Names the two figure columns once, above the rows. */
+.rsc-head {
+    position: sticky;
+    top: var(--rsc-stick, 0px);
+    z-index: 1;
+    padding: 4px 10px;
+    background: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #5F6F85;
+}
+
+    .rsc-head[hidden] {
+        display: none;
+    }
+
+    .rsc-head span:nth-child(n+3) {
+        text-align: right;
+    }
+
+.rsc-tier {
+    padding: 12px 10px 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #4A5568;
+}
+
+.rsc-row {
+    padding: 9px 10px;
+    border-top: 1px solid #EDF0F3;
+    cursor: pointer;
+}
+
+.rsc-tier + .rsc-row {
+    border-top-color: transparent;
+}
+
+    .rsc-row:hover {
+        background: #F7FAFB;
+    }
+
+.rsc-row--selected,
+.rsc-row--selected:hover {
+    background: #EAF6F5;
+}
+
+/* The ring sits on the whole row, since the whole row is what is being chosen. */
+.rsc-row:has(.rsc-radio:focus-visible) {
+    outline: 2px solid #4AADA8;
+    outline-offset: -2px;
+    border-radius: 6px;
+}
+
+.rsc-radio {
+    width: 16px;
+    height: 16px;
+    margin: 2px 0 0;
+    accent-color: #4AADA8;
+    cursor: pointer;
+}
+
+    .rsc-radio:focus-visible {
+        outline: none;
+    }
+
+.rsc-body {
+    min-width: 0;
+}
+
+.rsc-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+}
+
+.rsc-name {
+    font-weight: 600;
+    color: #1a2a4a;
+    overflow-wrap: anywhere;
+}
+
+.rsc-sub {
+    font-size: 0.8rem;
+    color: #5F6F85;
+}
+
+.rsc-best {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #237A75;
+}
+
+.rsc-note {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.8rem;
+    color: #5F6F85;
+}
+
+.rsc-cost {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 3px;
+    font-size: 0.8rem;
+    color: #94560A;
+}
+
+    .rsc-cost .ti,
+    .rsc-shortfall .ti {
+        margin-top: 1px;
+        font-size: 0.95em;
+    }
+
+.rsc-fig {
+    padding-top: 1px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: #2D3748;
+}
+
+/* What Best match means, said once under the list that shows one. */
+.rsc-foot {
+    margin: 6px 10px 0;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: #5F6F85;
+}
+
+    .rsc-foot[hidden] {
+        display: none;
+    }
+
+.rsc-more {
+    margin: 2px 0 0;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: #237A75;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .rsc-more:hover {
+        text-decoration: underline;
+    }
+
+    .rsc-more:focus-visible {
+        outline: 2px solid #4AADA8;
+    }
+
+.rsc-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ===========================================================================
+   A phone. Too narrow for columns, so each row stacks: the name, then its figures
+   in words, then any note and cost. The whole row is the target, at least 44px tall.
+   =========================================================================== */
+
+@media (max-width: 599px) {
+    .rsc-head {
+        display: none;
+    }
+
+    .rsc-row {
+        grid-template-columns: 22px minmax(0, 1fr);
+        min-height: 44px;
+        padding: 11px 12px;
+    }
+
+        .rsc-row .rsc-radio {
+            grid-column: 1;
+            grid-row: 1 / span 4;
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+        }
+
+        .rsc-row .rsc-body {
+            display: contents;
+        }
+
+        .rsc-row .rsc-line {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        /* The figures a screen reader hears, shown in words where the columns were. */
+        .rsc-row > .rsc-sr {
+            position: static;
+            grid-column: 2;
+            grid-row: 2;
+            width: auto;
+            height: auto;
+            margin: 2px 0 0;
+            overflow: visible;
+            clip: auto;
+            white-space: normal;
+            font-size: 0.8rem;
+            color: #4A5568;
+        }
+
+        .rsc-row .rsc-note {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .rsc-row .rsc-cost {
+            grid-column: 2;
+            grid-row: 4;
+        }
+
+        .rsc-row .rsc-fig {
+            display: none;
+        }
+
+    .rsc-more {
+        min-height: 44px;
+    }
+}

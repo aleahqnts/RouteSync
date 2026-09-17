@@ -85,14 +85,26 @@ namespace FleetWise.ViewModels
         /// <summary>The best driver to put on this trip instead, when its driver cannot run it.</summary>
         public DriverCandidate SuggestedDriver { get; set; }
 
-        /// <summary>Its driver cannot run it and nobody is free without a cost.</summary>
-        public bool NoDriverSuggestion { get; set; }
+        /// <summary>Why that driver, in one line: "Free all day, 2 North Loop trips in the last 30 days".</summary>
+        public string? SuggestedDriverReason { get; set; }
+
+        /// <summary>
+        /// Why no driver can take this trip without a cost, in counts, when its driver cannot
+        /// run it and nobody can. Null otherwise.
+        /// </summary>
+        public string? DriverShortfall { get; set; }
 
         /// <summary>The best bus to put on this trip instead, when its bus cannot run it.</summary>
         public VehicleCandidate SuggestedVehicle { get; set; }
 
-        /// <summary>Its bus cannot run it and no other bus is free this shift.</summary>
-        public bool NoVehicleSuggestion { get; set; }
+        /// <summary>Why that bus, in one line: "Based on North Loop, 40 seats".</summary>
+        public string? SuggestedVehicleReason { get; set; }
+
+        /// <summary>
+        /// Why no bus can take this trip without a cost, in counts, when its bus cannot run it
+        /// and no other bus can. Null otherwise.
+        /// </summary>
+        public string? VehicleShortfall { get; set; }
 
         /// <summary>How late, in the fewest words that still say it.</summary>
         /// <remarks>

@@ -65,12 +65,14 @@ namespace FleetWise.Services
         /// Whether to bring today's trip statuses up to date afterwards. A caller making
         /// several changes in a row does it once at the end instead.
         /// </param>
+        /// <param name="screen">Where the change was made, one of <see cref="PickScreen"/>, recorded with its rank.</param>
         public async Task<ReassignResult> ReassignAsync(
             ReassignChange change,
             int senderId,
             SchedulingSnapshot? snapshot = null,
             string? purpose = null,
-            bool syncStatuses = true)
+            bool syncStatuses = true,
+            string? screen = null)
         {
             var tripResp = await _supabase.From<Trip>()
                 .Filter("trip_id", Operator.Equals, change.TripId)
@@ -105,6 +107,7 @@ namespace FleetWise.Services
             {
                 snapshot ??= await _scheduling.LoadAsync(trip.Date, trip.Date);
                 tag = SchedulingRules.TagReassignment(trip, change.DriverId, change.VehicleId, snapshot);
+                if (tag is not null && screen is not null) tag = tag with { Screen = screen };
             }
             catch (Exception ex)
             {
@@ -183,7 +186,8 @@ namespace FleetWise.Services
         /// The trip carries no roster month, so a re-publish of the roster treats it as made
         /// by hand and builds around it.
         /// </remarks>
-        public async Task<ReassignResult> CreateAsync(NewTrip t, int senderId, string? purpose = null)
+        /// <param name="tag">Where the driver sat in the ranking for the shift, when the trip fills a slot a ranking was offered for.</param>
+        public async Task<ReassignResult> CreateAsync(NewTrip t, int senderId, string? purpose = null, ReassignmentTag? tag = null)
         {
             var day = t.Date.Date;
 
@@ -227,7 +231,8 @@ namespace FleetWise.Services
                     + (day == PhClock.OperationalDay ? "" : $" on {day:MMM d}")
                     + (t.Override ? ", overriding a scheduling conflict" : "")
                     + (string.IsNullOrWhiteSpace(purpose) ? "" : $", {purpose}"),
-                "trips", inserted?.TripId);
+                "trips", inserted?.TripId,
+                changes: tag?.ToAuditChanges());
 
             return new(ReassignOutcome.Done, Trip: inserted);
         }

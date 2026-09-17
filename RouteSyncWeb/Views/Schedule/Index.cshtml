@@ -271,6 +271,13 @@
                                                         </select>
                                                         <span class="rs-pick-face" aria-hidden="true">@(picked is null ? "" : DriverFace(picked.DriverName, picked.DriverId))</span>
                                                     </span>
+                                                    @* Shown while the gap is still open; the ranked drivers open beside the cell. *@
+                                                    @if (gap is not null)
+                                                    {
+                                                        <button type="button" class="sch-suggest" hidden aria-haspopup="dialog" aria-controls="sch-suggest"
+                                                                aria-label="Suggest a driver for @gap.VehicleId, @shift shift, @day.ToString("ddd, MMM d")"
+                                                                onclick="schSuggestOpen(this)">Suggest</button>
+                                                    }
                                                 </div>
                                             }
 
@@ -394,12 +401,36 @@
             </div>
         </div>
     </div>
+
+    @* The drivers who could take a roster gap, beside the cell it was opened from. Use fills
+       the lane; nothing is saved until the week is. *@
+    <div id="sch-suggest" class="sch-suggest-pop" style="display:none;" role="dialog" aria-modal="false"
+         aria-labelledby="sch-suggest-title" data-dialog-close="schSuggestClose">
+        <div class="sch-suggest-head">
+            <h3 class="sch-suggest-title" id="sch-suggest-title">Suggest a driver</h3>
+            <p class="sch-suggest-slot" id="sch-suggest-slot"></p>
+            @* Why the lane is empty, which a desk also reads by hovering the cell. *@
+            <p class="sch-suggest-why" id="sch-suggest-why" hidden></p>
+        </div>
+        <div class="sch-suggest-body">
+            <p class="sch-suggest-wait" id="sch-suggest-wait" hidden>Finding who is free&#8230;</p>
+            <div id="sch-suggest-list"></div>
+        </div>
+        <p class="sch-suggest-cost" id="sch-suggest-cost" hidden></p>
+        <p class="sch-suggest-error" id="sch-suggest-error" hidden></p>
+        <div class="sch-suggest-actions">
+            <button type="button" class="sch-btn-ghost" id="sch-suggest-cancel" onclick="schSuggestClose()">Cancel</button>
+            <button type="button" class="sch-suggest-use" id="sch-suggest-use" onclick="schSuggestUse()" disabled>Use</button>
+        </div>
+    </div>
 </div>
 
 @section Styles {
     <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/candidates.css" asp-append-version="true" />
 }
 
+<script src="~/js/candidate-list.js" asp-append-version="true"></script>
 <script>
     // Who the draft below belongs to. Storage is shared by everything served from this
     // origin, and a tab outlives a sitting: without this, signing in after somebody else
@@ -1249,7 +1280,14 @@
             else cell.removeAttribute('title');
 
             const blank = vehSel.options[0];
-            if (blank && blank.value === '') blank.textContent = open ? gapVeh + ' · no driver' : 'Vehicle…';
+            if (blank && blank.value === '') blank.textContent = open ? gapVeh + ', no driver' : 'Vehicle…';
+
+            const suggest = cell.querySelector('.sch-suggest');
+            if (suggest) {
+                // Filled since it was opened, the lane has no gap left to suggest for.
+                if (!open && schSuggesting && schSuggesting.cell === cell) schSuggestClose(false);
+                suggest.hidden = !open;
+            }
         });
     }
 
@@ -1269,6 +1307,199 @@
         vehSel.value = opt.value;
         vehSel.dataset.prev = vehSel.value;
     }
+
+    // ---- Suggesting a driver for a roster gap ------------------------------------------------
+    //
+    // Only on a gap lane still open. The list is the one every screen shows, ranked on the
+    // server with the drivers already placed on this shift and day in other cells counted as
+    // on it, saved or not; a save measures the pick the same way. Use puts the driver in the
+    // lane as though chosen by hand, so the gap's bus goes in with them and a driver who is
+    // away is still asked about.
+
+    const schSuggestPop = document.getElementById('sch-suggest');
+    let schSuggesting = null;   // { cell, opener, list, candidates }
+
+    // Beside the cell: below it when it fits, above it otherwise, kept on screen either way.
+    // A phone's stylesheet gives it the whole screen instead.
+    const schSuggestSheet = window.matchMedia('(max-width: 599px)');
+
+    function schSuggestPlace() {
+        if (!schSuggesting) return;
+        if (schSuggestSheet.matches) {
+            ['top', 'left', 'width', 'maxHeight'].forEach(k => { schSuggestPop.style[k] = ''; });
+            return;
+        }
+        const r = schSuggesting.cell.getBoundingClientRect();
+        const margin = 16, gap = 8;
+        const width = Math.min(380, window.innerWidth - margin * 2);
+
+        schSuggestPop.style.width = width + 'px';
+        schSuggestPop.style.maxHeight = '';
+        const height = schSuggestPop.offsetHeight;
+        const below = window.innerHeight - r.bottom - gap - margin;
+        const above = r.top - gap - margin;
+
+        if (height <= below || below >= above) {
+            schSuggestPop.style.top = (r.bottom + gap) + 'px';
+            schSuggestPop.style.maxHeight = Math.max(200, below) + 'px';
+        } else {
+            const room = Math.max(200, above);
+            schSuggestPop.style.top = Math.max(margin, r.top - gap - Math.min(height, room)) + 'px';
+            schSuggestPop.style.maxHeight = room + 'px';
+        }
+        schSuggestPop.style.left = Math.min(Math.max(margin, r.left), window.innerWidth - width - margin) + 'px';
+    }
+
+    // Drivers in the other cells on this cell's shift and day, saved or not.
+    function schPlacedBeside(cell) {
+        const same = '[data-shift="' + cell.dataset.shift + '"][data-date="' + cell.dataset.date + '"]';
+        const placed = new Set();
+        document.querySelectorAll('.sch-locked' + same).forEach(el => { if (el.dataset.drv) placed.add(el.dataset.drv); });
+        document.querySelectorAll('.sch-cell' + same).forEach(el => {
+            if (el === cell) return;
+            const drv = el.querySelector('.sch-drv').value;
+            if (drv) placed.add(drv);
+        });
+        return placed;
+    }
+
+    async function schSuggestOpen(btn) {
+        const cell = btn.closest('.sch-cell');
+        if (!cell || !cell.classList.contains('sch-cell--gap')) return;
+
+        schSuggestClose(false);
+        const current = { cell: cell, opener: btn, list: null, candidates: [] };
+        schSuggesting = current;
+
+        const listHost = document.getElementById('sch-suggest-list');
+        const useBtn = document.getElementById('sch-suggest-use');
+        const cancelBtn = document.getElementById('sch-suggest-cancel');
+
+        document.getElementById('sch-suggest-slot').textContent =
+            cell.dataset.gapVeh + ', ' + cell.dataset.shift + ' shift, '
+            + new Date(cell.dataset.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const why = document.getElementById('sch-suggest-why');
+        why.textContent = cell.dataset.gapWhy || '';
+        why.hidden = !cell.dataset.gapWhy;
+        listHost.replaceChildren();
+        document.getElementById('sch-suggest-wait').hidden = false;
+        document.getElementById('sch-suggest-cost').hidden = true;
+        document.getElementById('sch-suggest-error').hidden = true;
+        useBtn.hidden = false;
+        useBtn.disabled = true;
+        cancelBtn.textContent = 'Cancel';
+        schSuggestPop.style.display = 'flex';
+        schSuggestPlace();
+        cancelBtn.focus();
+
+        try {
+            const q = new URLSearchParams({
+                date: cell.dataset.date, vehicleId: cell.dataset.gapVeh,
+                shift: cell.dataset.shift, routeId: cell.dataset.route
+            });
+            schPlacedBeside(cell).forEach(id => q.append('placed', id));
+
+            const res = await fetch('/Schedule/GapCandidates?' + q.toString(), { headers: { 'X-Requested-With': 'fetch' } });
+            if (!res.ok || res.redirected) throw new Error();
+            const data = await res.json();
+            if (schSuggesting !== current) return;
+
+            const candidates = data.candidates || [];
+            const best = candidates[0] && candidates[0].tier <= RsCandidateList.NO_COST_TIER ? candidates[0] : null;
+
+            document.getElementById('sch-suggest-wait').hidden = true;
+            current.candidates = candidates;
+            current.list = RsCandidateList.create(listHost, {
+                kind: 'driver',
+                label: 'Driver for ' + document.getElementById('sch-suggest-slot').textContent,
+                items: candidates.map(c => ({
+                    id: c.driverId, name: c.name, tier: c.tier, rank: c.rank,
+                    warning: c.warning, reason: c.reason, facts: c.facts
+                })),
+                selected: best ? best.driverId : null,
+                shortfall: data.shortfall,
+                limit: 3,
+                onChange: id => schSuggestPicked(Number(id))
+            });
+
+            // Nobody at all: the lane stays empty, and all there is to do is close this.
+            if (!candidates.length) {
+                useBtn.hidden = true;
+                cancelBtn.textContent = 'Close';
+            } else {
+                useBtn.disabled = !best;
+            }
+
+            schSuggestPlace();
+            if (candidates.length) current.list.focus();
+            else cancelBtn.focus();
+        } catch (e) {
+            if (schSuggesting !== current) return;
+            document.getElementById('sch-suggest-wait').hidden = true;
+            const err = document.getElementById('sch-suggest-error');
+            err.textContent = 'The drivers could not be listed. Try again.';
+            err.hidden = false;
+        }
+    }
+
+    function schSuggestPicked(driverId) {
+        if (!schSuggesting) return;
+        document.getElementById('sch-suggest-use').disabled = false;
+        document.getElementById('sch-suggest-error').hidden = true;
+
+        // A pick with a cost is said again beside the button that uses it.
+        const c = schSuggesting.candidates.find(x => x.driverId === driverId);
+        const cost = c && c.tier > RsCandidateList.NO_COST_TIER ? c.warning : null;
+        const line = document.getElementById('sch-suggest-cost');
+        line.replaceChildren();
+        if (cost) {
+            const icon = document.createElement('i');
+            icon.className = 'ti ti-alert-triangle';
+            icon.setAttribute('aria-hidden', 'true');
+            const text = document.createElement('span');
+            text.textContent = c.name + ': ' + cost + '.';
+            line.append(icon, text);
+        }
+        line.hidden = !cost;
+    }
+
+    function schSuggestUse() {
+        const current = schSuggesting;
+        const id = current && current.list ? current.list.value() : '';
+        if (!id) return;
+
+        const drv = current.cell.querySelector('.sch-drv');
+        const opt = Array.from(drv.options).find(o => o.value === id);
+        if (!opt || opt.disabled) {
+            const err = document.getElementById('sch-suggest-error');
+            err.textContent = 'That driver can no longer be chosen in this lane.';
+            err.hidden = false;
+            return;
+        }
+
+        schSuggestClose(false);
+        drv.value = id;
+        drv.dispatchEvent(new Event('change', { bubbles: true }));
+        drv.focus();
+    }
+
+    // Closed without a choice, focus goes back to the Suggest that opened it.
+    function schSuggestClose(returnFocus) {
+        if (!schSuggesting) return;
+        const opener = schSuggesting.opener;
+        schSuggesting = null;
+        schSuggestPop.style.display = 'none';
+        if (returnFocus !== false && opener && document.body.contains(opener) && !opener.hidden) opener.focus();
+    }
+
+    document.addEventListener('pointerdown', function (e) {
+        if (!schSuggesting || schSuggestPop.contains(e.target) || schSuggesting.opener.contains(e.target)) return;
+        schSuggestClose(false);
+    });
+    window.addEventListener('resize', schSuggestPlace);
+    document.addEventListener('scroll', function (e) {
+        if (schSuggesting && !schSuggestPop.contains(e.target)) schSuggestPlace();
+    }, true);
 
     document.querySelectorAll('.sch-cell').forEach(schWireCell);
     schNarrowChoices();
