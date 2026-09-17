@@ -13,11 +13,13 @@ namespace FleetWise.Controllers
     {
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
+        private readonly SchedulingData _scheduling;
 
-        public ScheduleController(Supabase.Client supabase, AuditLog audit)
+        public ScheduleController(Supabase.Client supabase, AuditLog audit, SchedulingData scheduling)
         {
             _supabase = supabase;
             _audit = audit;
+            _scheduling = scheduling;
         }
 
         // The shift windows every surface books against, defined once in TripStatus.
@@ -170,6 +172,110 @@ namespace FleetWise.Controllers
         }
 
         private sealed record RosterWeek(List<RosterMonth> Months, List<RosterGap> Gaps, List<RosterSkip> Skips);
+
+        private static string GapKey(DateTime day, string shift, string vehicleId) =>
+            $"{day:yyyy-MM-dd}|{shift}|{vehicleId.ToUpperInvariant()}";
+
+        /// <summary>Drivers who could take a roster gap, ranked by the same rules as every replacement.</summary>
+        /// <remarks>
+        /// Under the planner's own permission, so a dispatcher without the roster permission
+        /// can use it. It reads the schedule as saved, with the drivers the page has placed on
+        /// the same shift and day in cells not saved yet counted as on it. A save measures the
+        /// pick against the same list.
+        /// </remarks>
+        /// <param name="placed">Drivers in the page's other cells on this shift and day.</param>
+        [HttpGet]
+        public async Task<IActionResult> GapCandidates(string date, string vehicleId, string shift, int routeId, [FromQuery] int[]? placed)
+        {
+            if (!DateTime.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                                        System.Globalization.DateTimeStyles.None, out var day)
+                || !ShiftTimes.ContainsKey(shift ?? "")
+                || string.IsNullOrWhiteSpace(vehicleId) || routeId <= 0)
+                return BadRequest(new { message = "That is not a shift in the planner." });
+
+            var snapshot = await _scheduling.LoadAsync(day, day);
+            var bus = snapshot.Vehicles.FirstOrDefault(v => string.Equals(v.VehicleId, vehicleId, StringComparison.OrdinalIgnoreCase));
+            if (bus is null) return NotFound(new { message = "That bus does not exist." });
+
+            if (placed is { Length: > 200 }) return BadRequest(new { message = "Too many drivers placed." });
+
+            var ranking = SchedulingRules.RankDrivers(
+                SchedulingRules.OpenSlot(day, shift!, routeId, bus.VehicleId),
+                SchedulingRules.WithPlaced(snapshot, day, shift!, placed ?? Array.Empty<int>()));
+
+            return Json(new
+            {
+                candidates = ranking.Candidates.Select(CandidateJson.Driver),
+                shortfall = SchedulingRules.DriverShortfall(ranking),
+            });
+        }
+
+        /// <summary>
+        /// The roster gaps a save fills with a new trip, keyed by <see cref="GapKey"/>, each
+        /// with where its driver sat in the ranking for the gap.
+        /// </summary>
+        /// <remarks>
+        /// Ranked against the schedule before the save writes anything. Measuring must never
+        /// stand in the way of saving, so a failure leaves the fills unrecorded and is itself
+        /// recorded.
+        /// </remarks>
+        private async Task<Dictionary<string, (int DriverId, ReassignmentTag Tag)>> RankGapFillsAsync(
+            List<ScheduleCellInput> cells, List<Trip> existing, DateTime weekStart, DateTime weekEnd, DateTime now)
+        {
+            var fills = new Dictionary<string, (int DriverId, ReassignmentTag Tag)>();
+
+            try
+            {
+                var roster = await ReadRosterWeekAsync(weekStart, weekEnd);
+                if (roster.Gaps.Count == 0) return fills;
+
+                var taken = existing.Select(t => GapKey(t.Date, t.ShiftType, t.VehicleId ?? ""))
+                    .Concat(roster.Skips.Select(s => GapKey(s.Date, s.Shift, s.VehicleId)))
+                    .ToHashSet();
+                var open = roster.Gaps
+                    .Where(g => !taken.Contains(GapKey(g.Date, g.Shift, g.VehicleId)))
+                    .GroupBy(g => GapKey(g.Date, g.Shift, g.VehicleId))
+                    .ToDictionary(g => g.Key, g => g.First());
+
+                var filling = new List<(string Key, DateTime Day, ScheduleCellInput Cell, RosterGap Gap)>();
+                foreach (var c in cells)
+                {
+                    if (!string.IsNullOrEmpty(c.TripId) || string.IsNullOrEmpty(c.VehicleId) || c.DriverId == 0) continue;
+                    if (!DateTime.TryParse(c.Date, out var day) || !ShiftTimes.TryGetValue(c.Shift ?? "", out var window)) continue;
+                    if (TripStatus.Closed(day, window.Start, window.End, now)) continue;
+
+                    var key = GapKey(day, c.Shift!, c.VehicleId);
+                    if (open.TryGetValue(key, out var gap)) filling.Add((key, day.Date, c, gap));
+                }
+
+                if (filling.Count == 0) return fills;
+
+                var snapshot = await _scheduling.LoadAsync(filling.Min(f => f.Day), filling.Max(f => f.Day));
+                foreach (var f in filling)
+                {
+                    var slot = SchedulingRules.OpenSlot(f.Day, f.Cell.Shift, f.Gap.RouteId ?? f.Cell.RouteId, f.Cell.VehicleId!);
+
+                    // Every other driver this save puts on the shift, as the page left them out
+                    // of the gap's suggestions.
+                    var others = cells
+                        .Where(c => !ReferenceEquals(c, f.Cell) && c.DriverId > 0 && c.Shift == f.Cell.Shift
+                                    && DateTime.TryParse(c.Date, out var d) && d.Date == f.Day)
+                        .Select(c => c.DriverId);
+
+                    fills[f.Key] = (f.Cell.DriverId, SchedulingRules.TagFill(
+                        slot, f.Cell.DriverId, SchedulingRules.WithPlaced(snapshot, f.Day, f.Cell.Shift, others), PickScreen.Planner));
+                }
+            }
+            catch (Exception ex)
+            {
+                await _audit.WriteAsync("schedule_saved",
+                    $"could not rank the roster gaps filled in the week of {weekStart:MMM d} for the record: {ex.Message}",
+                    "trips", outcome: "failed");
+                fills.Clear();
+            }
+
+            return fills;
+        }
 
         /// <summary>The rosters, gaps and skips touching a week.</summary>
         /// <remarks>
@@ -433,6 +539,10 @@ namespace FleetWise.Controllers
             if (!req.Override && conflicts.Count > 0)
                 return Conflict(new { message = "This schedule breaks a booking rule.", conflicts });
 
+            // Roster gaps this save fills, each ranked before anything is written, so its
+            // record says where the chosen driver sat.
+            var gapFills = await RankGapFillsAsync(cells, existing, weekStart, weekEnd, now);
+
             // Cells whose shift closed while the planner was open. The rest of the save
             // still goes through and the planner is told to reload the week: forty good
             // cells are not worth losing to one that went stale.
@@ -514,7 +624,7 @@ namespace FleetWise.Controllers
                         var breakStart = BreakSlots.LeastUsed(window.Start, taken);
                         taken.Add(breakStart);
 
-                        await _supabase.From<Trip>().Insert(new Trip
+                        var inserted = (await _supabase.From<Trip>().Insert(new Trip
                         {
                             Date = date,
                             ShiftType = c.Shift,
@@ -526,9 +636,18 @@ namespace FleetWise.Controllers
                             DriverId = c.DriverId,
                             TripStatus = "Not Yet Started",
                             EstimatedRevenue = 0
-                        });
+                        })).Models.FirstOrDefault();
                         added++;
                         Moved(c.DriverId, date);
+
+                        if (gapFills.TryGetValue(GapKey(date, c.Shift, c.VehicleId), out var fill) && fill.DriverId == c.DriverId)
+                        {
+                            await _audit.WriteAsync("trip_created",
+                                $"created a {c.Shift} trip for bus {c.VehicleId} with driver {c.DriverId} on {date:MMM d}, "
+                                    + "filling a roster gap from the planner",
+                                "trips", inserted?.TripId,
+                                changes: fill.Tag.ToAuditChanges());
+                        }
                     }
                 }
 

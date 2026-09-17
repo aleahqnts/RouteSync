@@ -358,9 +358,13 @@
         background: #EAF6F5;
     }
 
+    /* The mark on a place auto-fill chose. Opens See changes at its line. */
     .ro-why {
         flex: 0 0 auto;
-        padding: 1px 8px;
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 1px 9px;
         border: 1px solid #B7DDD9;
         border-radius: 999px;
         background: var(--ro-white);
@@ -368,7 +372,7 @@
         font: inherit;
         font-size: .7rem;
         font-weight: 700;
-        cursor: help;
+        cursor: pointer;
     }
 
         .ro-why:hover { border-color: var(--ro-teal); }
@@ -481,11 +485,92 @@
         line-height: 1.5;
     }
 
-    /* A long list of changes scrolls inside its dialog rather than past the screen. */
-    .ro-report--scroll {
+    /* What auto-fill changed. A long list scrolls inside its dialog rather than past the
+       screen. A line for each marked place, divided by a hairline, then what no place is
+       left to mark. */
+    .ro-changes-scroll {
         max-height: 55vh;
-        overflow-y: auto;
+        margin-top: 10px;
         padding-right: 8px;
+        overflow-y: auto;
+    }
+
+    .ro-changes {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .ro-change {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px 6px;
+        border-top: 1px solid var(--ro-border);
+        border-radius: 0;
+    }
+
+        .ro-change:first-child { border-top: 0; }
+
+        .ro-change:focus { outline: none; }
+        .ro-change:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: -2px; }
+
+    /* The line a mark was pressed to see. */
+    .ro-change--here { background: #EAF6F5; }
+
+    .ro-change--none {
+        font-size: .85rem;
+        color: var(--ro-soft);
+    }
+
+    .ro-change-main {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .ro-change-place {
+        font-size: .76rem;
+        font-weight: 700;
+        color: var(--ro-soft);
+    }
+
+    .ro-change-driver {
+        font-size: .88rem;
+        font-weight: 700;
+        color: var(--ro-text);
+    }
+
+    .ro-change-driver--none {
+        font-weight: 600;
+        color: var(--ro-soft);
+    }
+
+    .ro-change-why {
+        font-size: .8rem;
+        line-height: 1.4;
+        color: #5F6F85;
+    }
+
+    .ro-change-clear { flex: 0 0 auto; }
+
+    .ro-changes-sub {
+        margin: 14px 0 0;
+        font-size: .8rem;
+        font-weight: 700;
+        color: var(--ro-text);
+    }
+
+    .ro-changes-sub[hidden],
+    .ro-report[hidden],
+    .ro-changes-lost[hidden] { display: none; }
+
+    .ro-changes-lost {
+        margin: 12px 0 0;
+        font-size: .78rem;
+        color: var(--ro-soft);
     }
 
     .ro-changes-n {
@@ -500,40 +585,34 @@
         text-align: center;
     }
 
+    /* Finding a driver for a gap: the shared ranked list, scrolling inside the dialog. */
     .ro-fill-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
         max-height: 50vh;
         margin-top: 12px;
         overflow-y: auto;
     }
 
-    .ro-fill-row {
+    .ro-fill-wait {
+        margin: 12px 0 0;
+        font-size: .85rem;
+        color: var(--ro-soft);
+    }
+
+    /* The cost of the driver chosen, said again beside the button that assigns them. */
+    .ro-fill-cost {
         display: flex;
-        gap: 10px;
         align-items: flex-start;
-        padding: 8px 10px;
-        border: 1px solid var(--ro-border);
-        border-radius: 10px;
-        cursor: pointer;
+        gap: 6px;
+        margin: 10px 0 0;
+        font-size: .82rem;
+        line-height: 1.4;
+        color: #94560A;
     }
 
-        .ro-fill-row:has(input:checked) { border-color: var(--ro-teal); background: #F2FAF9; }
-        .ro-fill-row input { margin-top: 3px; }
+        .ro-fill-cost i { flex: none; margin-top: 2px; }
 
-    .ro-fill-body {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-    }
-
-    .ro-fill-name { font-weight: 700; font-size: .88rem; }
-    .ro-fill-tier { font-size: .74rem; font-weight: 600; color: #2E7D72; }
-    .ro-fill-tier--3, .ro-fill-tier--4 { color: var(--ro-amber); }
-    .ro-fill-reason { font-size: .76rem; color: var(--ro-soft); }
-    .ro-fill-warn { font-size: .76rem; font-weight: 600; color: var(--ro-amber); }
+    .ro-fill-wait[hidden],
+    .ro-fill-cost[hidden] { display: none; }
 
     .ro-overlay {
         position: fixed;
@@ -608,4 +687,60 @@
 @media (max-width: 599px) {
     .ro-title { display: none; }
     .ro-month { margin-left: 0; }
+}
+
+/* A phone. Finding a driver and seeing what auto-fill changed take the whole screen, the
+   heading held at the top and the buttons at the bottom, with the list scrolling between. */
+@media (max-width: 599px) {
+    #roFillBox,
+    #roChangesBox {
+        align-items: stretch;
+        padding: 0;
+    }
+
+        #roFillBox .ro-box,
+        #roChangesBox .ro-box {
+            display: flex;
+            flex-direction: column;
+            max-width: none;
+            height: 100vh;
+            height: 100dvh;
+            padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+            border-radius: 0;
+        }
+
+        #roFillBox .ro-box > *,
+        #roChangesBox .ro-box > * {
+            flex: none;
+        }
+
+        #roFillBox .ro-fill-list,
+        #roChangesBox .ro-changes-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: none;
+        }
+
+        #roFillBox .ro-box-actions,
+        #roChangesBox .ro-box-actions {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--ro-border);
+        }
+
+    .ro-change-clear {
+        min-height: 44px;
+    }
+
+    /* The mark stays a small pill, with a taller area to tap that stops short of the list
+       below it. */
+    .ro-why {
+        position: relative;
+    }
+
+        .ro-why::after {
+            content: "";
+            position: absolute;
+            inset: -12px -4px -4px;
+        }
 }

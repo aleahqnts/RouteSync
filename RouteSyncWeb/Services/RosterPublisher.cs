@@ -25,7 +25,8 @@ namespace FleetWise.Services
         int Version = 0,
         IReadOnlyList<string>? Lines = null,
         IReadOnlyList<string>? Problems = null,
-        string? Message = null);
+        string? Message = null,
+        IReadOnlyList<string>? Unmarked = null);
 
     /// <summary>
     /// Saving, generating and publishing a month's roster, for the Roster page and for the
@@ -204,7 +205,11 @@ namespace FleetWise.Services
                 "roster_months", month.ToString("yyyy-MM-dd"));
 
             // Said only when auto-fill had something to say: a change, or a place nobody was free for.
-            return saved with { Lines = fill.Changed || fill.LeftEmpty > 0 ? fill.Notes : Array.Empty<string>() };
+            return saved with
+            {
+                Lines = fill.Changed || fill.LeftEmpty > 0 ? fill.Notes : Array.Empty<string>(),
+                Unmarked = fill.Unmarked,
+            };
         }
 
         /// <summary>What auto-fill did, counted, for an audit line or a badge.</summary>

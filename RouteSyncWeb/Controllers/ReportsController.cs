@@ -25,8 +25,8 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>
-        /// How often a reassignment took the top replacement suggestion, over the month of
-        /// the chosen day.
+        /// How often a pick from a ranking took the Best match, over the month of the chosen
+        /// day, overall and screen by screen.
         /// </summary>
         /// <remarks>
         /// Read from the audit trail, where every reassignment records where its choice sat
@@ -56,6 +56,25 @@ namespace FleetWise.Controllers
                 tookTop = picks.Count(p => p.TookTopSuggestion),
                 issueTotal = issues.Count,
                 issueTookTop = issues.Count(p => p.TookTopSuggestion),
+
+                // In the order the screens are listed, leaving out any with no picks. Picks
+                // recorded before screens were come last, as not recorded.
+                byScreen = PickScreen.All.Append(null)
+                    .Select(screen => new
+                    {
+                        screen = screen switch
+                        {
+                            PickScreen.Board => "Board",
+                            PickScreen.Reassign => "Reassign",
+                            PickScreen.Cover => "Cover",
+                            PickScreen.Roster => "Roster",
+                            PickScreen.Planner => "Planner",
+                            _ => "Not recorded",
+                        },
+                        total = picks.Count(p => p.Screen == screen),
+                        tookTop = picks.Count(p => p.Screen == screen && p.TookTopSuggestion),
+                    })
+                    .Where(s => s.total > 0),
             });
         }
 

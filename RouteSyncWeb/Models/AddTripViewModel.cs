@@ -117,6 +117,11 @@ namespace FleetWise.ViewModels
 
         // Dispatcher acknowledged the conflict and chose to save the reassignment anyway.
         public bool Override { get; set; }
+
+        /// <summary>The screen the change was made on, board or reassign, for the audit trail.</summary>
+        /// <remarks>Only labels the record. The pick's rank is always worked out on the server.</remarks>
+        [RegularExpression(@"^(board|reassign)?$", ErrorMessage = "That is not a screen.")]
+        public string? Source { get; set; }
     }
 
     // Posted when a trip is removed. Clearing both the bus and the driver in the reassign

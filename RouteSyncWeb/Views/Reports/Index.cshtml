@@ -256,14 +256,15 @@
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
         </span>
-        <span class="rp-card-title">Replacement Suggestions</span>
+        <span class="rp-card-title">Scheduling Suggestions</span>
         <span class="rp-suggest-month ms-auto" id="rpSuggestMonth"></span>
     </div>
     <div class="rp-suggest-body">
         <div class="rp-suggest-figure">
-            <div class="rp-summary-sublabel">Top suggestion used</div>
+            <div class="rp-summary-sublabel">Best match taken</div>
             <div class="rp-summary-big" id="rpSuggestPct">—</div>
             <div class="rp-vs-label" id="rpSuggestOf"></div>
+            <div class="rp-vs-label rp-suggest-screens" id="rpSuggestScreens"></div>
         </div>
         <div class="rp-suggest-figure">
             <div class="rp-summary-sublabel">When fixing an assignment issue</div>
@@ -940,7 +941,11 @@
 
             document.getElementById('rpSuggestMonth').textContent = s.month;
             pct.textContent = share(s.tookTop, s.total);
-            of.textContent = phrase(s.tookTop, s.total, s.total === 1 ? 'reassignment' : 'reassignments');
+            of.textContent = phrase(s.tookTop, s.total, s.total === 1 ? 'pick' : 'picks');
+            // Screen by screen, so a high figure on one screen cannot hide a low one on another.
+            document.getElementById('rpSuggestScreens').textContent = (s.byScreen || [])
+                .map(x => x.screen + ' ' + x.tookTop + ' of ' + x.total)
+                .join(', ');
             issuePct.textContent = share(s.issueTookTop, s.issueTotal);
             issueOf.textContent = phrase(s.issueTookTop, s.issueTotal, s.issueTotal === 1 ? 'issue' : 'issues');
         } catch (e) {
@@ -949,6 +954,7 @@
             issuePct.textContent = '—';
             of.textContent = 'Could not be read';
             issueOf.textContent = '';
+            document.getElementById('rpSuggestScreens').textContent = '';
         }
     }
 
