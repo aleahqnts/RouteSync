@@ -150,6 +150,29 @@ var app = builder.Build();
 // sees the request as the browser made it.
 app.UseForwardedHeaders();
 
+// The bare domain and www lead to the dashboard's own address rather than serving it
+// themselves. Sign-in cookies belong to one host name, so the same site answering on three
+// would sign a person in three separate times, and a bookmark on one would not carry to the
+// others. Any host not named as an alias, such as the platform's own address or localhost,
+// is served as it is.
+var canonicalHost = app.Configuration["Hosting:CanonicalHost"];
+var aliasHosts = app.Configuration.GetSection("Hosting:AliasHosts").Get<string[]>() ?? Array.Empty<string>();
+
+if (!string.IsNullOrWhiteSpace(canonicalHost) && aliasHosts.Length > 0)
+{
+    app.Use(async (context, next) =>
+    {
+        if (aliasHosts.Contains(context.Request.Host.Host, StringComparer.OrdinalIgnoreCase))
+        {
+            var target = $"https://{canonicalHost}{context.Request.PathBase}{context.Request.Path}{context.Request.QueryString}";
+            context.Response.Redirect(target, permanent: true);
+            return;
+        }
+
+        await next();
+    });
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

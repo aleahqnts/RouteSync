@@ -30,8 +30,22 @@ namespace FleetWise.Services
     /// </remarks>
     public class AuditLog
     {
-        private static readonly HttpClient _http = new();
-        private static readonly TimeSpan WriteTimeout = TimeSpan.FromSeconds(3);
+        // One client for every audit read and write. Its pooling is set here because the
+        // default keeps a connection until the far end drops it: the write after a quiet spell
+        // then goes out on a socket nobody is listening to any more and waits for the network
+        // to give up, which reads as the audit trail timing out for no reason. Connections are
+        // retired while they are still known good instead, and a connection that cannot be made
+        // fails quickly rather than eating the whole write budget.
+        private static readonly HttpClient _http = new(new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+            ConnectTimeout = TimeSpan.FromSeconds(5),
+        });
+
+        // Long enough for a write that has to open a connection first, short enough that a
+        // database which has stopped answering cannot hold a sign-in open.
+        private static readonly TimeSpan WriteTimeout = TimeSpan.FromSeconds(10);
 
         private readonly IConfiguration _config;
         private readonly IHttpContextAccessor _accessor;
@@ -346,9 +360,12 @@ namespace FleetWise.Services
 
                 await _http.SendAsync(req, cts.Token);
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallowed on purpose (see header).
+                // Swallowed on purpose (see header), and said where a developer can see it:
+                // an entry that never reached the table is worth knowing about while working,
+                // even though nothing about the action itself failed.
+                System.Diagnostics.Debug.WriteLine($"[AuditLog] entry not recorded: {ex.Message}");
             }
         }
 

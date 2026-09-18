@@ -46,10 +46,8 @@ public class TelemetryRetentionService : BackgroundService
             _retentionMinutes, sweepInterval);
 
         // The first sweep waits for startup to finish rather than competing with it.
-        try { await Task.Delay(StartupDelay, stoppingToken); }
-        catch (OperationCanceledException) { return; }
+        if (!await HostedWait.ForAsync(StartupDelay, stoppingToken)) return;
 
-        using var timer = new PeriodicTimer(sweepInterval);
         do
         {
             try
@@ -63,8 +61,7 @@ public class TelemetryRetentionService : BackgroundService
                 _logger.LogWarning(ex, "Telemetry retention sweep failed; will retry next interval.");
             }
         }
-        while (!stoppingToken.IsCancellationRequested &&
-               await timer.WaitForNextTickAsync(stoppingToken));
+        while (await HostedWait.ForAsync(sweepInterval, stoppingToken));
     }
 
     private static TimeSpan ResolveSweepInterval(int retentionMinutes)

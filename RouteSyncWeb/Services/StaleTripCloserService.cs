@@ -43,10 +43,8 @@ namespace FleetWise.Services
                 "Stale trip closer active: trips are closed {Hours}h past their scheduled end, swept every {Interval}.",
                 Grace.TotalHours, SweepInterval);
 
-            try { await Task.Delay(StartupDelay, stoppingToken); }
-            catch (OperationCanceledException) { return; }
+            if (!await HostedWait.ForAsync(StartupDelay, stoppingToken)) return;
 
-            using var timer = new PeriodicTimer(SweepInterval);
             do
             {
                 try
@@ -60,8 +58,7 @@ namespace FleetWise.Services
                     _logger.LogWarning(ex, "Stale trip sweep failed; will retry next interval.");
                 }
             }
-            while (!stoppingToken.IsCancellationRequested &&
-                   await timer.WaitForNextTickAsync(stoppingToken));
+            while (await HostedWait.ForAsync(SweepInterval, stoppingToken));
         }
 
         private async Task SweepAsync()
