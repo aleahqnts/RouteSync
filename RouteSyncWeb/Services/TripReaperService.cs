@@ -46,10 +46,8 @@ public class TripReaperService : BackgroundService
         _logger.LogInformation("Trip reaper active: sweeping ghost trips every {Interval}.", SweepInterval);
 
         // Let the app finish starting before the first sweep.
-        try { await Task.Delay(StartupDelay, stoppingToken); }
-        catch (OperationCanceledException) { return; }
+        if (!await HostedWait.ForAsync(StartupDelay, stoppingToken)) return;
 
-        using var timer = new PeriodicTimer(SweepInterval);
         do
         {
             try
@@ -63,8 +61,7 @@ public class TripReaperService : BackgroundService
                 _logger.LogWarning(ex, "Trip reaper sweep failed; will retry next interval.");
             }
         }
-        while (!stoppingToken.IsCancellationRequested &&
-               await timer.WaitForNextTickAsync(stoppingToken));
+        while (await HostedWait.ForAsync(SweepInterval, stoppingToken));
     }
 
     private async Task SweepAsync()

@@ -61,10 +61,8 @@ namespace FleetWise.Services
             _logger.LogInformation("Roster cycle active: drafts from day {Draft}, publishes from day {Publish}, checked every {Interval}.",
                 DraftDay(_config), PublishDay(_config), SweepInterval);
 
-            try { await Task.Delay(StartupDelay, stoppingToken); }
-            catch (OperationCanceledException) { return; }
+            if (!await HostedWait.ForAsync(StartupDelay, stoppingToken)) return;
 
-            using var timer = new PeriodicTimer(SweepInterval);
             do
             {
                 try
@@ -78,7 +76,7 @@ namespace FleetWise.Services
                     _logger.LogWarning(ex, "Roster cycle sweep failed; will retry next interval.");
                 }
             }
-            while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken));
+            while (await HostedWait.ForAsync(SweepInterval, stoppingToken));
         }
 
         private async Task SweepAsync()
