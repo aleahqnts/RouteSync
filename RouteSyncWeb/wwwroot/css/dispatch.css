@@ -86,7 +86,6 @@
     .dp-suggest-head { display:flex; align-items:baseline; flex-wrap:wrap; gap:0 6px; }
     .dp-suggest-label { color:#237A75; font-weight:700; }
     .dp-suggest-name { color:#1a2a4a; font-weight:700; }
-    .dp-suggest-why { margin:2px 0 0; color:#5F6F85; }
     .dp-suggest-short { display:flex; align-items:flex-start; gap:5px; margin:0; color:#94560A; }
     .dp-suggest-short i { flex:none; margin-top:2px; }
     .dp-suggest-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; margin-top:6px; }
@@ -1624,7 +1623,7 @@
         background: #fff;
         border-radius: 20px;
         width: 100%;
-        max-width: 500px;
+        max-width: 520px;
         max-height: 90vh;
         max-height: 90dvh;
         overflow-y: auto;
@@ -1637,8 +1636,8 @@
     .rtm-header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 22px 28px 18px;
+        gap: 10px;
+        padding: 14px 22px;
         border-bottom: 1px solid #E8ECF0;
         position: sticky;
         top: 0;
@@ -1647,26 +1646,52 @@
         z-index: 1;
     }
 
-    .rtm-heading {
+    /* The title takes the free space, so the flag and the close control sit at the far
+       edge and are found in the same place whether or not the trip carries a flag. */
+    .rtm-title {
+        font-size: 1.08rem;
+        font-weight: 700;
+        color: #1a2a4a;
+        margin: 0 auto 0 0;
         min-width: 0;
     }
 
-    .rtm-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #1a2a4a;
-        margin: 0;
-    }
-
-    /* Which trip this is: its ID and day. */
+    /* Which trip this is: its ID and day. Leads the row below the title and carries the
+       weight there, because it names the thing every other value on that row describes. */
     .rtm-subtitle {
-        margin: 3px 0 0;
-        font-size: 0.84rem;
-        color: #5F6F85;
+        margin: 0;
+        font-weight: 600;
+        color: #2D3748;
         font-variant-numeric: tabular-nums;
     }
 
-        .rtm-subtitle:empty {
+    /* Which trip, and when it runs: the facts that identify it, on a row of their own
+       between the title and the first choice. Tighter than a section and without a
+       heading, because it states rather than asks, and nothing in it is editable. Each
+       value collapses while empty, so a missing one leaves no gap. */
+    .rtm-meta {
+        margin: 0;
+        padding: 9px 22px;
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 2px 14px;
+        font-size: 0.82rem;
+        border-bottom: 1px solid #E8ECF0;
+    }
+
+    .rtm-meta-shift,
+    .rtm-meta-time {
+        color: #5F6F85;
+    }
+
+    .rtm-meta-time {
+        font-variant-numeric: tabular-nums;
+    }
+
+        .rtm-subtitle:empty,
+        .rtm-meta-shift:empty,
+        .rtm-meta-time:empty {
             display: none;
         }
 
@@ -1698,17 +1723,17 @@
         color: #9AA5B4;
     }
 
-    /* Section labels. */
+    /* Names the side of the trip being chosen. A quiet heading inside the section it
+       opens, not a banded strip across the dialog: a full-bleed band gave a two-word
+       label the same presence as the ranked list under it, and four of them in a column
+       left nothing leading. The hairline between sections carries the separation. */
     .rtm-section-label {
-        font-size: 0.8rem;
+        margin: 0;
+        font-size: 0.72rem;
         font-weight: 700;
         color: #9AA5B4;
         text-transform: uppercase;
         letter-spacing: .06em;
-        padding: 12px 28px;
-        background: #F8F9FA;
-        border-top: 1px solid #E8ECF0;
-        border-bottom: 1px solid #E8ECF0;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -1745,12 +1770,11 @@
         flex-shrink: 0;
     }
 
-    /* Info rows (Trip Information). */
     .rtm-section {
-        padding: 16px 28px;
+        padding: 13px 22px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 9px;
         border-bottom: 1px solid #E8ECF0;
     }
 
@@ -1758,28 +1782,17 @@
         border-bottom: none;
     }
 
-    .rtm-info-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.9rem;
-    }
-
-    .rtm-info-label {
-        font-weight: 600;
-        color: #2D3748;
-        min-width: 90px;
-    }
-
-    .rtm-info-value {
-        color: #2D3748;
-    }
-
-    /* Form fields. */
+    /* Label beside its control rather than above it. One line instead of two, and the
+       hint below spans both columns so a warning is never squeezed into half the width. */
     .rtm-field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 6px 12px;
+    }
+
+    .rtm-field .rtm-hint {
+        grid-column: 1 / -1;
     }
 
     .rtm-label {
@@ -1925,8 +1938,8 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 12px;
-        padding: 18px 28px;
+        gap: 10px;
+        padding: 14px 22px;
         border-top: 1px solid #E8ECF0;
         background: #fff;
         border-radius: 0 0 20px 20px;
