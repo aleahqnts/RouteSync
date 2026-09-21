@@ -12,7 +12,9 @@
 
         var DEFAULT_CENTER = [14.5508, 121.0509];
         var DEFAULT_ZOOM = 13;
-        var POLL_INTERVAL_MS = 5000;
+        // Matches the full map: often enough that a boarding shows within seconds of the
+        // doorway, affordable because the server reuses its reference lists between reads.
+        var POLL_INTERVAL_MS = 2000;
 
         // Same deterministic route palette as the full map (Route 1 = blue, Route 2 = orange, …).
         var PALETTE = ['#2563EB', '#F97316', '#16A34A', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#CA8A04'];

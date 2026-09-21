@@ -3,8 +3,9 @@ using System.Text.Json.Serialization;
 namespace FleetWise.Models.ViewModels;
 
 /// <summary>
-/// The contract the Fleet Map consumes: one live bus, with occupancy % and estimated revenue
-/// computed server-side so every consumer (markers, tooltip, side panel) shows identical numbers.
+/// The contract the Fleet Map consumes: one live bus, with its passenger count and estimated
+/// revenue computed server-side so every consumer (markers, tooltip, side panel) shows
+/// identical numbers.
 /// </summary>
 public class BusPositionDto
 {
@@ -48,14 +49,14 @@ public class BusPositionDto
     [JsonPropertyName("speed")]
     public double Speed { get; set; }
 
+    // Everyone who has boarded this trip. Nobody is counted off again, so this only ever
+    // climbs. Taken from the trip's own figure where the counter phone has already raised
+    // it, since telemetry carries the driver app's copy of the same number and trails it.
     [JsonPropertyName("passengers")]
     public int Passengers { get; set; }
 
     [JsonPropertyName("capacity")]
     public int Capacity { get; set; }
-
-    [JsonPropertyName("occupancyPct")]
-    public int OccupancyPct { get; set; }
 
     [JsonPropertyName("estimatedRevenue")]
     public decimal EstimatedRevenue { get; set; }

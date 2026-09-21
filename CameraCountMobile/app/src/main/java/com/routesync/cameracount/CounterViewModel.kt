@@ -3,7 +3,10 @@ package com.routesync.cameracount
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.routesync.cameracount.camera.CrossDirection
+import com.routesync.cameracount.data.EventDb
 import com.routesync.cameracount.data.Prefs
+import com.routesync.cameracount.data.QueuedEvent
 import com.routesync.cameracount.data.SupabaseApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +25,7 @@ import kotlinx.coroutines.launch
  * - Flush, every 5s: one PATCH carrying `total_boarded` and `count_heartbeat`. Heartbeat
  *   freshness is how RouteSync decides whether to show the driver's manual counter.
  * - Config follower, on the same 4s tick: reconcile `device_config` in both directions.
+ * - Event drain, on the same 4s tick: deliver held crossings to `boarding_events`.
  *
  * The count is monotonic. It seeds from the database when a trip is acquired and only
  * ever rises, so restarts, manual handovers and reconnects reconcile without double
@@ -52,6 +56,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private val prefs = Prefs(app)
+    private val events = EventDb.get(app).events()
     private val _state = MutableStateFlow<UiState>(UiState.NeedsSetup)
     val state: StateFlow<UiState> = _state
 
@@ -99,6 +104,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        private const val TAG = "CounterViewModel"
+
         /** Fleet convention: V + 3 digits (V001..V012 today, room to grow). */
         val VEHICLE_ID_RE = Regex("^V\\d{3}$")
         const val MIN_PASSCODE = 4
@@ -111,6 +118,22 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
          * numbers in two files would hold that order only by coincidence.
          */
         const val STALL_AFTER_MS = 12_000L
+
+        /**
+         * How many held crossings go up in one request.
+         *
+         * Large enough that a shift's worth of backlog clears in a handful of passes,
+         * small enough that a dropped connection part-way through costs one round trip
+         * rather than the whole queue.
+         */
+        private const val EVENT_BATCH = 200
+
+        /** Refusals of one event before it is given up on. Counts only outright
+         *  refusals: being offline is not the row's fault and never reaches this. */
+        private const val MAX_EVENT_ATTEMPTS = 5
+
+        /** How long a crossing is held before it is dropped, matching the held counts. */
+        private const val EVENT_MAX_AGE_MS = 14L * 24 * 60 * 60 * 1000
     }
 
     /**
@@ -215,9 +238,35 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Called by the camera pipeline on each inward line-cross. */
-    fun increment() {
+    /**
+     * Called by the camera pipeline for each crossing of the counting line.
+     *
+     * Every crossing is recorded, in both directions. Only an inward one moves the
+     * count: an exit is evidence about what the camera saw, not a passenger, and the
+     * reported total never falls.
+     *
+     * The record is written to the device's own queue first and sent later. A crossing
+     * that exists only in memory does not survive a dead zone followed by a process
+     * kill, and the crossings are the whole evidence base an accuracy run rests on.
+     */
+    fun onCrossing(direction: CrossDirection) {
         val t = tripId ?: return
+        val event = QueuedEvent(
+            // The device identifier is already unique across the fleet, so pairing it
+            // with a random one makes the key unique without a central allocator, which
+            // a phone with no signal has no way to reach.
+            eventId = "$deviceId-" + java.util.UUID.randomUUID(),
+            tripId = t,
+            deviceId = deviceId,
+            direction = direction.wire,
+            deviceTimestamp = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            runCatching { events.enqueue(event) }
+                .onFailure { android.util.Log.w(TAG, "crossing not queued: ${it.message}") }
+        }
+
+        if (direction != CrossDirection.IN) return
         count++
         persistPending(t)
         // Carry the sync state forward. A boarding says nothing about whether the last
@@ -241,28 +290,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 try {
                     val active = SupabaseApi.findActiveTrip(vehicleId)
                     when {
-                        active != null && tripId == null -> {
-                            // Claim first: only one camera phone may count a trip. Losing
-                            // the claim drops this device to Standby, which retries every
-                            // poll. The claim's stale-heartbeat rule allows a takeover once
-                            // the owner has been silent for 30s.
-                            if (!SupabaseApi.claimTrip(active.tripId, deviceId)) {
-                                _state.value = UiState.Standby(vehicleId, active.tripId)
-                            } else {
-                                // Lock on and seed the monotonic count. If the app died
-                                // mid-trip and this is still that trip, the persisted count
-                                // is resumed too, so counts made in a dead zone survive a
-                                // restart and flush on reconnect.
-                                tripId = active.tripId
-                                val saved = prefs.pendingCount(active.tripId)?.count ?: 0
-                                count = maxOf(count, active.totalBoarded, saved)
-                                persistPending(active.tripId)
-                                lastFrameAt = android.os.SystemClock.elapsedRealtime() // camera warm-up grace
-                                CountingService.start(getApplication(), vehicleId)
-                                startFlushing()
-                                publishCounting(lastFlushOk = true)
-                            }
-                        }
+                        active == null && tripId != null -> release()
+                        active != null && tripId == null -> acquire(active)
                         active != null && tripId == active.tripId -> {
                             // The manual counter may have run while this device was down.
                             // Absorb its total, never lower the local one.
@@ -271,18 +300,19 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                                 lastFlushOk = (state.value as? UiState.Counting)?.lastFlushOk ?: true
                             )
                         }
-                        active == null && tripId != null -> {
-                            // Trip ended. Finalizing owns status and times, but total_boarded
-                            // gets one raise-only reconcile: a count made in a dead zone can
-                            // exceed what the driver's manual fallback wrote, and must still
-                            // land after the trip closes. The raise-only filter makes the
-                            // normal online case a no-op that matches no rows.
-                            val endedTrip = tripId!!
-                            val finalCount = count
-                            lastSummary = "$finalCount boarded"
-                            prefs.savePendingCount(endedTrip, finalCount)
-                            stopCounting()
-                            _state.value = waiting()
+                        active != null -> {
+                            // A different trip is now active on this bus, which is what a
+                            // shift handover looks like from here: the incoming driver's
+                            // start closed the outgoing trip and opened theirs between two
+                            // polls, so this device never saw the gap. Without this branch
+                            // the phone keeps counting the new shift into the trip that
+                            // ended, and since that trip has closed the writes are refused
+                            // and the new one is never claimed at all.
+                            android.util.Log.i(
+                                TAG, "trip changed under us: $tripId -> ${active.tripId}"
+                            )
+                            release()
+                            acquire(active)
                         }
                     }
                     if (tripId == null && active == null) _state.value = waiting()
@@ -300,6 +330,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 // tried tomorrow. Wrapped so a failure cannot break the trip poll.
                 runCatching { drainPending(tripId) }
 
+                // Crossings go up on the same schedule and are equally isolated: an
+                // event queue that cannot be delivered must not stop the count that can.
+                runCatching { drainEvents() }
+                    .onFailure { android.util.Log.w(TAG, "event drain failed: ${it.message}") }
+
                 // The config follower runs regardless of trip state, so a parked bus still
                 // obeys a remote calibration. Wrapped separately so a configuration failure
                 // cannot break the trip poll.
@@ -308,6 +343,102 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /**
+     * Locks on to a trip and starts counting it.
+     *
+     * The claim comes first: only one camera phone may count a trip, and losing the
+     * claim drops this device to Standby, which retries on every poll. The claim's
+     * stale-heartbeat rule allows a takeover once the owner has been silent for 30s.
+     *
+     * The count is seeded rather than reset. If the app died mid-trip and this is still
+     * that trip, the persisted count is resumed too, so counts made in a dead zone
+     * survive a restart and flush on reconnect.
+     */
+    private suspend fun acquire(active: SupabaseApi.ActiveTrip) {
+        if (!SupabaseApi.claimTrip(active.tripId, deviceId)) {
+            _state.value = UiState.Standby(vehicleId, active.tripId)
+            return
+        }
+        tripId = active.tripId
+        val saved = prefs.pendingCount(active.tripId)?.count ?: 0
+        count = maxOf(count, active.totalBoarded, saved)
+        persistPending(active.tripId)
+        lastFrameAt = android.os.SystemClock.elapsedRealtime() // camera warm-up grace
+        CountingService.start(getApplication(), vehicleId)
+        startFlushing()
+        publishCounting(lastFlushOk = true)
+    }
+
+    /**
+     * Lets go of the trip being counted, whether it ended or was replaced.
+     *
+     * Finalizing owns the trip status and times, but total_boarded gets one raise-only
+     * reconcile: a count made in a dead zone can exceed what the driver manual fallback
+     * wrote, and must still land after the trip closes. That is why the count is handed
+     * to the held-count queue here rather than discarded. The raise-only filter makes
+     * the normal online case a no-op that matches no rows.
+     */
+    private suspend fun release() {
+        val endedTrip = tripId ?: return
+        val finalCount = count
+        lastSummary = "$finalCount boarded"
+        prefs.savePendingCount(endedTrip, finalCount)
+        stopCounting()
+        _state.value = waiting()
+    }
+
+    /**
+     * Delivers held crossings, oldest first.
+     *
+     * Unlike a held count, an event is complete the moment it is detected, so the trip
+     * being counted right now is drained along with the rest instead of waiting for it
+     * to end.
+     *
+     * Nothing is forgotten until the database has accepted it. A batch that is merely
+     * unreachable is left exactly as it was and offered again on the next pass, because
+     * being offline is the ordinary condition on this route rather than a fault.
+     */
+    private var purgeTick = 0
+    private suspend fun drainEvents() {
+        // Giving up is housekeeping against a queue that is empty almost always, so it
+        // runs about once a minute rather than on every pass. A delete opens a write
+        // transaction whether or not it matches anything, and this loop runs for the
+        // whole time the phone is powered.
+        if (++purgeTick % 15 == 0) {
+            val gaveUp = events.purge(
+                MAX_EVENT_ATTEMPTS, System.currentTimeMillis() - EVENT_MAX_AGE_MS
+            )
+            if (gaveUp > 0) android.util.Log.w(TAG, "$gaveUp crossing(s) given up on")
+        }
+
+        val batch = events.oldest(EVENT_BATCH)
+        if (batch.isEmpty()) return
+        when (SupabaseApi.postBoardingEvents(batch.map { it.toApi() })) {
+            SupabaseApi.SendResult.Ok -> events.forget(batch.map { it.eventId })
+            SupabaseApi.SendResult.Retry -> return
+            SupabaseApi.SendResult.Refused -> {
+                // One unacceptable row refuses the whole batch, so the batch goes again
+                // one at a time to find it. The rest land; the offender attempt count
+                // rises until the purge above stops holding it.
+                android.util.Log.w(TAG, "batch of ${batch.size} refused, retrying singly")
+                for (held in batch) {
+                    when (SupabaseApi.postBoardingEvents(listOf(held.toApi()))) {
+                        SupabaseApi.SendResult.Ok -> events.forget(listOf(held.eventId))
+                        SupabaseApi.SendResult.Refused -> events.noteRefused(listOf(held.eventId))
+                        // The connection went away part-way through. The remainder keeps
+                        // its place in the queue and is offered again next pass.
+                        SupabaseApi.SendResult.Retry -> return
+                    }
+                }
+            }
+        }
+    }
+
+    private fun QueuedEvent.toApi() = SupabaseApi.BoardingEvent(
+        eventId, tripId, deviceId, direction,
+        java.time.Instant.ofEpochMilli(deviceTimestamp)
+    )
 
     /**
      * Reconciles this device against the `device_config` row, which is authoritative.

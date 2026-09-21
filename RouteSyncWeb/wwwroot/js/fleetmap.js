@@ -2,7 +2,11 @@
     // BGC, Taguig — default center used until route bounds are available
     var DEFAULT_CENTER = [14.5508, 121.0509];
     var DEFAULT_ZOOM = 16;
-    var POLL_INTERVAL_MS = 5000;
+    // The counter phone sends its figure every five seconds, so a poll on the same period
+    // would add most of another one to the wait before a boarding shows here. The server
+    // reuses the fleet, route and staff lists between reads, which is what keeps a poll
+    // this frequent cheaper than the slower one it replaces.
+    var POLL_INTERVAL_MS = 2000;
 
 
     // Distinct route colors, assigned deterministically by routeId so a route always

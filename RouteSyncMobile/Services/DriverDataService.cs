@@ -276,6 +276,46 @@ public class DriverDataService
         return r.Models.OrderByDescending(c => c.SubmittedAt).FirstOrDefault();
     }
 
+    /// <summary>What the bus is doing before a shift on it can be started.</summary>
+    /// <remarks>
+    /// Whether the bus still carries an open trip, when that trip was rostered to end, and
+    /// whether it has been inspected in this operational day. All three are facts about
+    /// somebody else's work, which a driver key cannot read: trips are scoped to their own
+    /// driver and inspections to the trips they belong to.
+    ///
+    /// Asked of a function rather than of the tables, so neither policy has to be widened
+    /// to serve a screen that needs a yes or a no. The function answers only for a trip
+    /// this driver is on, and names nobody.
+    ///
+    /// Null when the answer cannot be had. Both features it feeds then stay hidden, which
+    /// holds the driver to the ordinary start window and the full inspection.
+    /// </remarks>
+    public Task<ShiftStartContext?> GetShiftStartContextAsync(string tripId)
+        => RpcReadAsync<ShiftStartContext>("shift_start_context", new { p_trip_id = tripId });
+
+    /// <summary>Records that a trip stood on the inspection its bus already cleared today.</summary>
+    /// <remarks>
+    /// A row rather than nothing at all, because every trip has to carry an inspection of
+    /// its own for the dashboard to read and for the shift to be startable. The status is
+    /// what says nobody walked around the bus a second time, and there are no item
+    /// results because none were taken.
+    ///
+    /// Written straight to the table rather than through the inspection function, whose
+    /// work is judging item results and grounding a bus on a critical fault. A skip
+    /// judges nothing, so there is nothing for it to decide.
+    /// </remarks>
+    public async Task SkipChecklistAsync(string tripId, string vehicleId, int driverId)
+    {
+        await PostAsync("bus_checklist", new
+        {
+            trip_id = tripId,
+            vehicle_id = vehicleId,
+            driver_id = driverId,
+            submitted_at = PhTime.Now,
+            checklist_status = "Skipped",
+        });
+    }
+
     public async Task<Trip?> GetLastCompletedTripAsync(int userId)
     {
         var r = await _supabase.From<Trip>()
@@ -548,6 +588,29 @@ public class DriverDataService
 
         var res = await _http.SendAsync(req);
         await ThrowIfRefusedAsync(res);
+    }
+
+    /// <summary>Calls a function that answers with rows, and takes the first.</summary>
+    /// <remarks>
+    /// A function that returns a table answers as an array, the same shape a table read
+    /// does, and an empty array is the answer when the caller may not be told. Null here
+    /// therefore means no answer rather than a failure, and every caller treats it that
+    /// way.
+    /// </remarks>
+    private static async Task<T?> RpcReadAsync<T>(string function, object args)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post,
+            $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/rpc/{function}");
+        req.Headers.TryAddWithoutValidation("apikey", FleetWiseMobile.SupabaseConfig.Key);
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {FleetWiseMobile.SupabaseConfig.Bearer}");
+        req.Content = new StringContent(JsonSerializer.Serialize(args), Encoding.UTF8, "application/json");
+
+        var res = await _http.SendAsync(req);
+        await ThrowIfRefusedAsync(res);
+
+        var json = await res.Content.ReadAsStringAsync();
+        var list = JsonSerializer.Deserialize<List<T>>(json);
+        return list is { Count: > 0 } ? list[0] : default;
     }
 
     /// <summary>

@@ -63,6 +63,16 @@ public class MaintenanceIssueDetails
     [JsonProperty("critical_issues")]
     public List<string> CriticalIssues { get; set; } = new();
 
+    // The checklist items the labels above came from, in the same order. Empty on every
+    // incident raised before they were recorded, so a reader that needs to match faults
+    // across orders has to fall back to the label for those. A label is what a person
+    // reads and is kept as it read on the day; an id is what survives it being reworded.
+    [JsonProperty("item_ids")]
+    public List<int> ItemIds { get; set; } = new();
+
+    [JsonProperty("critical_item_ids")]
+    public List<int> CriticalItemIds { get; set; } = new();
+
     /// <summary>Whether this fault is one that grounds the bus.</summary>
     public bool IsCritical =>
         string.Equals(Severity, "Critical", StringComparison.OrdinalIgnoreCase);

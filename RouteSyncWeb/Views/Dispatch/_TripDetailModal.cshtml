@@ -227,10 +227,14 @@
     }
 
     function applyInspectionBadge(el, status) {
+        // Skipped is not Pending. The bus was inspected earlier in the day and this shift
+        // stood on that, so reading it as an inspection nobody has done yet would send a
+        // dispatcher chasing one that already exists.
         const map = {
             'Passed':              ['tdm-badge--passed',  'Passed'],
             'Passed with Defects': ['tdm-badge--defects', 'Passed with defects'],
             'Failed':              ['tdm-badge--failed',  'Failed'],
+            'Skipped':             ['tdm-badge--passed',  'Carried over'],
             'Pending':             ['tdm-badge--pending', 'Pending'],
         };
         const [cls, label] = map[status] ?? ['tdm-badge--pending', 'Pending'];

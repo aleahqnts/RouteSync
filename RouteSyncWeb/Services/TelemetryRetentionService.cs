@@ -1,4 +1,4 @@
-using FleetWise.Models;
+﻿using FleetWise.Models;
 
 namespace FleetWise.Services;
 
@@ -8,6 +8,10 @@ namespace FleetWise.Services;
 /// hourly passenger chart needs one operational day. Anything past the retention window is
 /// deleted. Window is tunable via <c>Telemetry:RetentionMinutes</c> in configuration
 /// (default 1440 = 1 day; set to 0 or below to disable the sweep).
+///
+/// The configured window is far longer than any screen needs, because accuracy testing
+/// reads position and passenger history back long after the trip it describes, and a
+/// sweep is the one thing that cannot be undone once the run is over.
 /// </summary>
 public class TelemetryRetentionService : BackgroundService
 {

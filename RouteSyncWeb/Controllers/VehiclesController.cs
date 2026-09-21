@@ -1297,6 +1297,10 @@ namespace FleetWise.Controllers
             // a look. Both read as flagged here, since both open an incident.
             if (s.Equals("Failed", OIC)) return "Flagged";
             if (s.Equals("Passed with Defects", OIC)) return "Defects";
+            // A later shift standing on the inspection the bus already cleared today. The
+            // stored word on its own reads as an inspection nobody did, when what happened
+            // is that one was done earlier and still holds.
+            if (s.Equals("Skipped", OIC)) return "Carried over";
             return string.IsNullOrEmpty(s) ? "Pending" : s;
         }
 

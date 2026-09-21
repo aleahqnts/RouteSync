@@ -130,7 +130,32 @@ else
         <button class="btn-teal" @onclick="Next" disabled="@busy">
             @(IsLast ? "Submit Bus Checklist" : "Next")
         </button>
+
+        @* An inspection covers the bus for the service day, so the second and later
+           shifts on a bus already cleared today are offered a way past it rather than a
+           second walk around the same bus. *@
+        @if (canSkip)
+        {
+            <button class="btn-plain" @onclick="@(() => showSkipConfirm = true)" disabled="@busy">
+                Skip Inspection
+            </button>
+        }
     </div>
+
+    @if (showSkipConfirm)
+    {
+        <div class="overlay">
+            <div class="ua-modal">
+                <h2>This bus was already inspected today.</h2>
+                <p class="ua-sub">Skip the inspection for this trip?</p>
+
+                <div class="ua-actions">
+                    <button class="btn-cancel" @onclick="@(() => showSkipConfirm = false)" disabled="@busy">Cancel</button>
+                    <button class="btn-confirm" @onclick="Skip" disabled="@busy">Skip</button>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -149,6 +174,10 @@ else
     private string busLabel = "";
     private Trip? trip;
 
+    /// <summary>Whether this trip may stand on an inspection the bus already has.</summary>
+    private bool canSkip;
+    private bool showSkipConfirm;
+
     private Section CurrentSection => sections[currentSection];
     private bool IsLast => currentSection == sections.Count - 1;
 
@@ -166,10 +195,45 @@ else
             {
                 var v = await Data.GetVehicleAsync(trip.VehicleId);
                 busLabel = v is not null ? $"{v.VehicleId} ({v.PlateNumber})" : trip.VehicleId;
+                await LoadSkipOfferAsync(v);
             }
             await LoadItemsAsync();
         }
         finally { loading = false; }
+    }
+
+    /// <summary>Decides whether the inspection can be skipped for this trip.</summary>
+    /// <remarks>
+    /// The rule is one inspection per bus per service day, so the first shift of a bus in
+    /// a day inspects it and the shifts after that may stand on what it found. The
+    /// service day is what a night shift and the small hours after it share, and the next
+    /// morning is a new day that asks for a fresh inspection.
+    ///
+    /// A grounded bus is never skippable. Being out of service, and the failed inspection
+    /// that usually puts a bus there, are a separate gate on driving it at all, and an
+    /// offer to skip past the paperwork must not look like a way around them.
+    ///
+    /// The offer is withheld when the question cannot be answered. Asking for an
+    /// inspection that has already been done costs a driver some minutes, while skipping
+    /// one on a guess costs a bus nobody has looked at.
+    /// </remarks>
+    private async Task LoadSkipOfferAsync(Vehicle? vehicle)
+    {
+        if (trip is null || vehicle?.OutOfService == true) return;
+
+        try
+        {
+            // The bus, not this trip. An inspection belongs to whichever trip recorded it,
+            // which for a later shift is somebody else's, so the answer comes from the
+            // function that may look rather than from a read this key would be refused.
+            var context = await Data.GetShiftStartContextAsync(trip.TripId);
+
+            canSkip = context?.BusInspectedToday == true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Checklist.SkipOffer] {ex}");
+        }
     }
 
     /// <summary>
@@ -232,6 +296,13 @@ else
 
     private bool HandleHardwareBack()
     {
+        // A dialog on screen is what back closes, before the form underneath it.
+        if (showSkipConfirm)
+        {
+            InvokeAsync(() => { showSkipConfirm = false; StateHasChanged(); });
+            return true;
+        }
+
         if (currentSection <= 0) return false; // let the route map take it to /home
         InvokeAsync(() => { currentSection--; StateHasChanged(); });
         return true;
@@ -295,6 +366,33 @@ else
         {
             message = "Submit failed. Check your connection and try again.";
             System.Diagnostics.Debug.WriteLine($"[Checklist] {ex}");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    /// <summary>Records the skip and hands the driver back to their shift.</summary>
+    /// <remarks>
+    /// No confirmation screen of its own. There is nothing to report back from an
+    /// inspection that was not carried out, and what the driver came here to do is start
+    /// the shift waiting on the home screen.
+    /// </remarks>
+    private async Task Skip()
+    {
+        busy = true;
+        message = null;
+        try
+        {
+            await Data.SkipChecklistAsync(TripId, trip!.VehicleId, Session.CurrentUser!.UserId);
+            Nav.NavigateTo("/home");
+        }
+        catch (Exception ex)
+        {
+            showSkipConfirm = false;
+            message = "Couldn't skip the inspection. Check your connection and try again.";
+            System.Diagnostics.Debug.WriteLine($"[Checklist.Skip] {ex}");
         }
         finally
         {
