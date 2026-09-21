@@ -7,13 +7,19 @@
      aria-labelledby="rtm-title" aria-describedby="rtm-subtitle" style="display:none;">
     <div class="rtm-dialog">
 
-        @* Header. Names the trip being changed, so a dispatcher working through several
-           problem trips can see which one this is without going back to the board. *@
+        @* Header. Carries everything about the trip that cannot be changed here: which
+           trip it is, when it runs, and whether it is flagged. A dispatcher working
+           through several problem trips reads this once to confirm they are on the right
+           one, so it sits above the work rather than taking a section of its own.
+
+           Each value is left empty until the fetch fills it, because an empty span
+           collapses and a placeholder would reserve a line for nothing. *@
         <div class="rtm-header">
-            <div class="rtm-heading">
-                <h2 class="rtm-title" id="rtm-title">Reassign Trip</h2>
-                <p class="rtm-subtitle" id="rtm-subtitle"></p>
-            </div>
+            <h2 class="rtm-title" id="rtm-title">Reassign Trip</h2>
+            <span id="rtm-status-badge" class="rtm-status-badge rtm-badge--issue" style="display:none;">
+                <span class="rtm-badge-dot"></span>
+                <span id="rtm-status-text">Assignment Issue</span>
+            </span>
             <button class="rtm-close" onclick="closeReassignModal()" aria-label="Close">&times;</button>
         </div>
 
@@ -29,29 +35,22 @@
         @* Body (hidden until loaded) *@
         <div id="rtm-body" class="rtm-body" style="display:none;">
 
-            @* Trip Information *@
-            <div class="rtm-section-label">
-                Trip Information
-                <span id="rtm-status-badge" class="rtm-status-badge rtm-badge--issue" style="display:none;">
-                    <span class="rtm-badge-dot"></span>
-                    <span id="rtm-status-text">Assignment Issue</span>
-                </span>
-            </div>
-            <div class="rtm-section">
-                <div class="rtm-info-row">
-                    <span class="rtm-info-label">Shift Type:</span>
-                    <span class="rtm-info-value" id="rtm-shift-type">—</span>
-                </div>
-                <div class="rtm-info-row">
-                    <span class="rtm-info-label">Shift Time:</span>
-                    <span class="rtm-info-value" id="rtm-shift-time">—</span>
-                </div>
-            </div>
+            @* Which trip this is and when it runs, on one row. None of it can be changed
+               here, so it identifies the trip rather than asking anything of the
+               dispatcher, and it sits inside the body so an empty strip is never drawn
+               under the header while the fetch is still running. *@
+            <p class="rtm-meta">
+                <span class="rtm-subtitle" id="rtm-subtitle"></span>
+                <span class="rtm-meta-shift" id="rtm-shift-type"></span>
+                <span class="rtm-meta-time" id="rtm-shift-time"></span>
+            </p>
 
             @* Where the bus runs. Demand moves through a day and a route can need another
                bus on it more than the one it is on now, so this is the dispatcher's to
-               change while the shift is running. The driver is told when it does. *@
-            <div class="rtm-section-label">Route</div>
+               change while the shift is running. The driver is told when it does.
+
+               One labelled row rather than a titled section: it is a single choice, and a
+               heading above a lone field repeats the field's own label. *@
             <div class="rtm-section">
                 <div class="rtm-field">
                     <label class="rtm-label" for="rtm-route-sel">Route</label>
@@ -66,8 +65,8 @@
 
             @* Bus, then driver. The side with the problem opens on its ranked list; the other
                says what it keeps, with Change to open its list. *@
-            <div class="rtm-section-label">Bus</div>
             <div class="rtm-section">
+                <h3 class="rtm-section-label">Bus</h3>
                 <div class="rtm-keep" id="rtm-vehicle-keep" hidden>
                     <div class="rtm-keep-main" id="rtm-vehicle-keep-main">
                         <span class="rtm-keep-label">Current</span>
@@ -81,8 +80,8 @@
                 <div id="rtm-vehicle-list" hidden></div>
             </div>
 
-            <div class="rtm-section-label">Driver</div>
             <div class="rtm-section rtm-section--last">
+                <h3 class="rtm-section-label">Driver</h3>
                 <div class="rtm-keep" id="rtm-driver-keep" hidden>
                     <div class="rtm-keep-main" id="rtm-driver-keep-main">
                         <span class="rtm-keep-label">Current</span>
@@ -232,9 +231,13 @@
 
                 // Populate trip info
                 const info = _rtmOptions.tripInfo;
-                shiftTypeEl.textContent = info.shiftType ? info.shiftType + ' shift' : '—';
+                // Left blank rather than dashed when a value is missing. These sit on one
+                // line in the header, where a placeholder reads as a value.
+                shiftTypeEl.textContent = info.shiftType ? info.shiftType + ' shift' : '';
                 subtitleEl.textContent = [info.tripId, info.date].filter(Boolean).join(' on ');
-                shiftTimeEl.textContent = `${info.shiftStart} – ${info.shiftEnd}`;
+                shiftTimeEl.textContent = info.shiftStart && info.shiftEnd
+                    ? `${info.shiftStart} to ${info.shiftEnd}`
+                    : '';
                 rtmFillSelect(routeSel, 'Select a route…',
                     (_rtmOptions.routes || []).map(function (r) {
                         return { value: r.routeId, label: r.routeName };
