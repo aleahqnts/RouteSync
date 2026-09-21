@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -47,6 +48,14 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // On-device queue of detected crossings. DataStore holds the count, which is one
+    // integer rewritten in place; crossings are thousands of rows that have to be
+    // inserted, read oldest first and deleted in batches, which is a database.
+    val room = "2.6.1"
+    implementation("androidx.room:room-runtime:$room")
+    implementation("androidx.room:room-ktx:$room")
+    ksp("androidx.room:room-compiler:$room")
 
     // REST to Supabase (plain PostgREST, no SDK needed)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

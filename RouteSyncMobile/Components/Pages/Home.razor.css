@@ -212,6 +212,9 @@
 .btn-teal { background: #2e9e8f; }
 .btn-green { background: #3aaf5d; }
 
+/* A button held shut by the clock is left on screen, so it has to read as shut. */
+.btn-teal:disabled, .btn-green:disabled { opacity: 0.55; cursor: default; }
+
 .link-btn {
     border: none;
     background: #eaf0fb;

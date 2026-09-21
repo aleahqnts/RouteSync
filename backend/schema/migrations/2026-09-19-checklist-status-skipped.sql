@@ -1,0 +1,80 @@
+-- Adds a Skipped label to checklist_status_enum, for a bus that an earlier driver has
+-- already inspected today.
+--
+-- Background
+--
+-- A bus is inspected once per operational day. The first driver to take it out does the
+-- full walkaround and submits the result, which lands in bus_checklist as Passed, Passed
+-- with Defects or Failed. A later driver taking the same bus on the same day is not asked
+-- to repeat an inspection that has already been done and acted on.
+--
+-- There was no label for that second case, which left only two ways to record it: write
+-- nothing, or write something untrue. Both are worse than they look.
+--
+-- Why a skip still writes a row
+--
+-- Writing nothing is not available, because three things read the checklist and all three
+-- need something to read.
+--
+-- The start gate is the first. A trip cannot begin until the driver app has found a
+-- checklist row for the bus and judged it. With no row at all the gate has nothing to
+-- judge and the second driver of the day is stuck, which is the exact case this exists to
+-- unblock.
+--
+-- The maintenance trail is the second. A bus with no checklist row for a day reads as a
+-- gap, and a gap is ambiguous: it looks the same whether nobody drove the bus, the
+-- inspection was skipped deliberately, or the record was lost. A row saying Skipped is
+-- the only way the trail can state that no inspection happened and be believed.
+--
+-- The field record is the third. An inspection that found nothing wrong and an inspection
+-- that never took place are different facts about the bus, and anything reviewing the day
+-- afterwards has to tell them apart. Reusing Passed for a skip would erase that
+-- difference permanently, since nothing else in the row says whether the walkaround was
+-- actually carried out.
+--
+-- What a skip is not
+--
+-- A skip is not a pass. It asserts nothing about the condition of the bus. It states only
+-- that this driver did not inspect it, because someone else already had. A gate that
+-- treats Passed and Passed with Defects as cleared has to decide about Skipped
+-- deliberately rather than inherit an answer, and a report that counts inspections has to
+-- leave skips out of the count.
+--
+-- A skip never returns a grounded bus to service. Grounding lives in
+-- vehicles.out_of_service, which the failing inspection sets and the maintenance work
+-- clears, and writing a Skipped checklist row does not touch it. A bus grounded in the
+-- morning stays grounded for every driver after, whatever their own checklist row says.
+--
+-- No transaction
+--
+-- This migration has no begin and commit around it, and that is the one place the house
+-- convention is deliberately set aside.
+--
+-- Postgres will not let a new enum label be used by the same transaction that adds it.
+-- Since version 12 the alter type statement may run inside a transaction block, but the
+-- label stays unusable until that transaction commits. Setting it as a column default,
+-- naming it in a check constraint, or backfilling rows with it would each fail on the
+-- statement after the alter rather than on the alter itself, which is a confusing place
+-- for the failure to surface. Letting the statement stand alone commits it immediately
+-- and puts that failure out of reach.
+--
+-- For the same reason, nothing below the alter statement mentions the label as a value.
+-- The comments are plain text and do not count. A client that wraps a whole script in its
+-- own transaction, as a SQL editor commonly does, would otherwise run into the same rule
+-- even though the file itself opens no transaction.
+--
+-- Re-running
+--
+-- Safe to run again. add value accepts if not exists, so a second run over a database
+-- that already carries the label does nothing and reports success rather than erroring on
+-- the duplicate. That matters more than usual here: with no transaction to roll back, a
+-- migration that failed partway would otherwise have to be picked apart by hand.
+
+-- Appended rather than positioned. The labels are already in no meaningful order, with
+-- Passed with Defects sitting after Pending, so nothing reads this type's sort order and
+-- there is no place the new label belongs.
+alter type public.checklist_status_enum add value if not exists 'Skipped';
+
+comment on type public.checklist_status_enum is 'Outcome of a bus inspection. Passed and Passed with Defects mean the bus was inspected and may be driven, Failed means it was inspected and grounded, Pending means the row exists but no outcome has been recorded yet, and Skipped means no inspection was carried out because an earlier driver had already inspected the bus that operational day.';
+
+comment on column public.bus_checklist.checklist_status is 'The inspection outcome for this trip. Skipped records that no inspection took place, which is what lets a day with no inspection be told apart from a day with no record. It is never a pass and it never clears vehicles.out_of_service.';

@@ -77,11 +77,13 @@ else
 }
 
 @code {
-    // Three outcomes: a clean pass, defects that still allowed the trip, and a
-    // critical failure that did not.
+    // Four outcomes: a clean pass, the inspection this bus already cleared earlier in the
+    // day, defects that still allowed the trip, and a critical failure that did not. Only
+    // the last is a problem, so only the last is read as one.
     private static string StatusClass(string? status) => status switch
     {
         "Passed" => "ok",
+        "Skipped" => "ok",
         "Passed with Defects" => "warn",
         _ => "bad"
     };

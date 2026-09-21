@@ -128,9 +128,9 @@ else
                 {
                     <div class="grounded-note">@GroundedMessage</div>
                 }
-                else if (!CanStart)
+                else if (!ChecklistOpen)
                 {
-                    <div class="upcoming-note">@LockLabel</div>
+                    <div class="upcoming-note">@ChecklistLockLabel</div>
                 }
                 @* A shift already running is resumable whatever the paperwork says. The
                    inspection gates starting a shift, and a driver mid route who has been
@@ -160,6 +160,14 @@ else
                     else if (assignment.TripStatus == "Active")
                     {
                         <button class="btn-green" @onclick="@(() => Nav.NavigateTo($"/trip-active/{assignment.TripId}"))">Resume Shift</button>
+                    }
+                    @* The inspection is behind them and only the clock is left, so the
+                       reason stands with the button it is holding rather than replacing
+                       it: the driver can see what they are waiting for. *@
+                    else if (!CanStart)
+                    {
+                        <div class="upcoming-note">@StartLockLabel</div>
+                        <button class="btn-green" disabled>Start Shift</button>
                     }
                     else
                     {
@@ -270,6 +278,27 @@ else
         </div>
     }
 
+    @* Starting on a bus somebody is still driving ends their trip, which is not something
+       a driver should discover after the tap. *@
+    @if (showTakeoverModal && HasOpenTrip)
+    {
+        <div class="overlay">
+            <div class="ua-modal">
+                <h2>Bus @BusLabel has an open trip</h2>
+                <p class="ua-sub">
+                    @shiftContext!.OpenTripId has not been ended. Scheduled to end at
+                    @OpenTripEndLabel. Starting your trip will close it and record the
+                    handover.
+                </p>
+
+                <div class="ua-actions">
+                    <button class="btn-cancel" @onclick="@(() => showTakeoverModal = false)">Cancel</button>
+                    <button class="btn-confirm" @onclick="ConfirmTakeover">Close it and start</button>
+                </div>
+            </div>
+        </div>
+    }
+
     @if (toggling)
     {
         <div class="busy-overlay"><span class="spinner"></span></div>
@@ -293,6 +322,21 @@ else
     private RosterSlot? monthSlot;
     private string? monthSlotRoute;
     private DateTime monthSlotReadAt = DateTime.MinValue;
+
+    /// <summary>What the assigned bus is doing, beyond what this driver may read directly.</summary>
+    /// <remarks>
+    /// A shift handed over on the road rather than in the yard tightens the start window
+    /// and turns starting into a takeover, so it is read on every load rather than only
+    /// when the driver reaches for the button.
+    ///
+    /// Null when the answer could not be had. Everything it feeds then behaves as though
+    /// the bus were free, which is the stricter reading: the ordinary start window applies
+    /// and no takeover is offered.
+    /// </remarks>
+    private ShiftStartContext? shiftContext;
+    private bool showTakeoverModal;
+
+    private bool HasOpenTrip => shiftContext?.OpenTripId is not null;
 
     private bool showUnavailModal;
     private string? reasonChoice;
@@ -347,11 +391,18 @@ else
     ///
     /// Pending is not a pass either. Defects that are not critical are, which is the
     /// same call the inspection itself makes when it decides whether to ground.
+    ///
+    /// A skip clears the gate for the same reason a pass does. An inspection covers the
+    /// bus for the service day, and skipping is only offered once that bus has cleared
+    /// one in the day being worked, so the bus behind a skip has been looked at. A
+    /// failure is the opposite case: it grounds the bus, and what the trip is waiting for
+    /// is a reassignment rather than another tap.
     /// </remarks>
     private bool ChecklistCleared =>
         checklist is not null
         && (string.Equals(checklist.ChecklistStatus, "Passed", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(checklist.ChecklistStatus, "Passed with Defects", StringComparison.OrdinalIgnoreCase));
+            || string.Equals(checklist.ChecklistStatus, "Passed with Defects", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(checklist.ChecklistStatus, "Skipped", StringComparison.OrdinalIgnoreCase));
 
     // A driver who has just failed a critical item on their own inspection knows why
     // the bus is grounded and needs to be told what happens next, not to phone in.
@@ -396,24 +447,81 @@ else
     /// </remarks>
     private bool endPending;
 
-    private const int LeadHours = 2; // checklist/start opens this many hours before shift
+    // The inspection opens first and stays the widest of the three. It is a walk around
+    // the bus with a form to fill in, and a fault found on it is only useful to the
+    // dispatcher while there is still time to swap the bus.
+    private const int ChecklistLeadHours = 2;
+
+    // Starting is held back to the last hour. An open trip runs the phone's location
+    // service and claims the bus's counter for as long as it is open, and a trip that is
+    // not on the road yet spends both on nothing.
+    private const int StartLeadHours = 1;
+
+    // Tighter again when the bus is out on somebody else's trip, because starting then is
+    // not merely early: it ends a shift that is still being driven.
+    private const int TakeoverLeadMinutes = 15;
 
     private DateTime ShiftStart => assignment is null
         ? DateTime.MinValue
         : assignment.Date.Date + assignment.ShiftStartTime;
 
-    // The trip unlocks LeadHours before the shift starts.
-    private bool CanStart => assignment is not null && PhTime.Now >= ShiftStart - TimeSpan.FromHours(LeadHours);
+    private DateTime ChecklistOpensAt => ShiftStart - TimeSpan.FromHours(ChecklistLeadHours);
 
-    private string LockLabel
+    private DateTime StartOpensAt => ShiftStart - (HasOpenTrip
+        ? TimeSpan.FromMinutes(TakeoverLeadMinutes)
+        : TimeSpan.FromHours(StartLeadHours));
+
+    private bool ChecklistOpen => assignment is not null && PhTime.Now >= ChecklistOpensAt;
+
+    /// <summary>Whether the shift can be started now.</summary>
+    /// <remarks>
+    /// The clock and the inspection together. The start window exists to put a checked
+    /// bus on the road at the right time, and an open window on a bus nobody has looked
+    /// at starts nothing.
+    /// </remarks>
+    private bool CanStart => assignment is not null && ChecklistCleared && PhTime.Now >= StartOpensAt;
+
+    /// <summary>The bus as the driver knows it, once the vehicle row has loaded.</summary>
+    private string BusLabel => vehicle?.VehicleId ?? assignment?.VehicleId ?? "";
+
+    /// <summary>When the trip still running on the bus is rostered to end.</summary>
+    /// <remarks>
+    /// Already a Philippine wall-clock reading, and already carries the extra day an
+    /// overnight shift ends on, so it is formatted rather than reassembled here.
+    /// </remarks>
+    private string OpenTripEndLabel => shiftContext?.OpenTripEndsAt is DateTime ends
+        ? ends.ToString("h:mm tt")
+        : "";
+
+    private string ChecklistLockLabel
     {
         get
         {
             if (assignment is null) return "";
-            var unlock = ShiftStart - TimeSpan.FromHours(LeadHours);
+            var unlock = ChecklistOpensAt;
             if (unlock.Date == DateTime.Today) return $"Checklist opens at {unlock:h:mm tt}";
             if (unlock.Date == DateTime.Today.AddDays(1)) return $"Checklist opens tomorrow, {unlock:h:mm tt}";
             return $"Checklist opens {unlock:MMM d, h:mm tt}";
+        }
+    }
+
+    /// <summary>Why a bus that has been inspected still cannot be taken out.</summary>
+    private string StartLockLabel
+    {
+        get
+        {
+            if (assignment is null) return "";
+
+            // With the bus still out, what the driver is waiting on is the other shift's
+            // end, not a clock time of their own.
+            if (HasOpenTrip)
+                return $"Bus {BusLabel} is scheduled to run until {OpenTripEndLabel}. You can start "
+                     + "your trip once that shift ends. Contact dispatch if you need to start sooner.";
+
+            var unlock = StartOpensAt;
+            if (unlock.Date == DateTime.Today) return $"You can start this shift at {unlock:h:mm tt}";
+            if (unlock.Date == DateTime.Today.AddDays(1)) return $"You can start this shift tomorrow, {unlock:h:mm tt}";
+            return $"You can start this shift {unlock:MMM d, h:mm tt}";
         }
     }
 
@@ -442,7 +550,7 @@ else
             while (await timer.WaitForNextTickAsync(pollCts.Token))
             {
                 // Never replace state mid-interaction, with a modal open or a toggle in flight.
-                if (toggling || showUnavailModal || loading) continue;
+                if (toggling || showUnavailModal || showTakeoverModal || loading) continue;
 
                 // Queued work goes out before the page is re-read, because this loop is
                 // what notices the connection coming back. Flushing only in
@@ -502,16 +610,22 @@ else
                 var checklistTask = isUpcoming
                     ? Task.FromResult<BusChecklist?>(null)
                     : Data.GetChecklistAsync(assignment.TripId, assignment.VehicleId);
+                // Not asked for a shift on a later day, where a bus in use now says
+                // nothing about whether it will still be in use then.
+                var contextTask = isUpcoming || string.IsNullOrEmpty(assignment.VehicleId)
+                    ? Task.FromResult<ShiftStartContext?>(null)
+                    : Data.GetShiftStartContextAsync(assignment.TripId);
 
-                await Task.WhenAll(routeTask, vehicleTask, checklistTask);
+                await Task.WhenAll(routeTask, vehicleTask, checklistTask, contextTask);
 
                 route = routeTask.Result;
                 vehicle = vehicleTask.Result;
                 checklist = checklistTask.Result;
+                shiftContext = contextTask.Result;
             }
             else
             {
-                route = null; vehicle = null; checklist = null;
+                route = null; vehicle = null; checklist = null; shiftContext = null;
             }
 
             // A roster changes once a month, not between two polls, so the poll reads it
@@ -624,7 +738,30 @@ else
     }
 
     private void StartChecklist() => Nav.NavigateTo($"/checklist/{assignment!.TripId}");
-    private void StartTrip() => Nav.NavigateTo($"/trip-details/{assignment!.TripId}");
+
+    /// <summary>Takes the driver to the shift they are about to start.</summary>
+    /// <remarks>
+    /// A bus still carrying an open trip is a handover, and the driver is told which trip
+    /// it is and what starting will do to it before they go any further.
+    /// </remarks>
+    private void StartTrip()
+    {
+        if (HasOpenTrip)
+        {
+            showTakeoverModal = true;
+            return;
+        }
+
+        GoToShift();
+    }
+
+    private void ConfirmTakeover()
+    {
+        showTakeoverModal = false;
+        GoToShift();
+    }
+
+    private void GoToShift() => Nav.NavigateTo($"/trip-details/{assignment!.TripId}");
 
     private DotNetObjectReference<Home>? _ptrRef;
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -6,6 +6,7 @@ using FleetWise.Models.ViewModels;
 using FleetWise.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace FleetWise.Controllers
 {
@@ -14,6 +15,19 @@ namespace FleetWise.Controllers
     {
         private readonly Supabase.Client _supabase;
         private readonly FareCalculator _fareCalculator;
+        private readonly IMemoryCache _cache;
+
+        /// <summary>
+        /// How long the fleet, route and staff lists are reused between position reads.
+        /// </summary>
+        /// <remarks>
+        /// Only the trips and their positions change while a bus is running. Registering a
+        /// vehicle, renaming a route or adding a driver is an operator action, and a minute
+        /// of staleness on those is invisible on a map. Reusing them turns every poll from
+        /// six reads of the database into two, which is what makes polling often enough to
+        /// look live affordable at all.
+        /// </remarks>
+        private static readonly TimeSpan ReferenceLifetime = TimeSpan.FromSeconds(60);
 
         /// <summary>
         /// How recent a telemetry reading must be to count as live.
@@ -41,10 +55,23 @@ namespace FleetWise.Controllers
         private static (double Lat, double Lng, string Name) TerminalFor(int? routeId) =>
             routeId is int r && Terminals.TryGetValue(r, out var t) ? t : Terminals[1];
 
-        public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator)
+        public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache)
         {
             _supabase = supabase;
             _fareCalculator = fareCalculator;
+            _cache = cache;
+        }
+
+        /// <summary>Reads a reference list, reusing the last one for <see cref="ReferenceLifetime"/>.</summary>
+        private async Task<List<T>> ReferenceAsync<T>(string key, Func<Task<List<T>>> read)
+            where T : Postgrest.Models.BaseModel, new()
+        {
+            if (_cache.TryGetValue(key, out List<T>? cached) && cached is not null)
+                return cached;
+
+            var fresh = await read();
+            _cache.Set(key, fresh, ReferenceLifetime);
+            return fresh;
         }
 
         // Only the full map page requires the routes permission. The read-only endpoints
@@ -176,14 +203,31 @@ namespace FleetWise.Controllers
 
             var activeTripIds = activeTrips.Select(t => t.TripId).ToHashSet();
 
-            var vehiclesResponse = await _supabase.From<Vehicle>().Get();
-            var routesResponse = await _supabase.From<BusRoute>().Get();
-            var usersResponse = await _supabase.From<UserModel>().Get();
-            var maintenanceResponse = await _supabase.From<MaintenanceLog>().Get();
+            // Each list names the columns the map actually reads. Nothing else travels,
+            // which matters most for the staff list, whose password hashes have no business
+            // leaving the database to draw a driver's name, and for the maintenance log,
+            // whose fault details are the largest column in the read and are never shown here.
+            var vehicles = await ReferenceAsync("fleetmap:vehicles", async () =>
+                (await _supabase.From<Vehicle>()
+                    .Select("vehicle_id,plate_number,capacity,route_id,vehicle_status,out_of_service,retired_at")
+                    .Get()).Models);
+
+            var routes = await ReferenceAsync("fleetmap:routes", async () =>
+                (await _supabase.From<BusRoute>().Get()).Models);
+
+            var users = await ReferenceAsync("fleetmap:users", async () =>
+                (await _supabase.From<UserModel>()
+                    .Select("user_id,first_name,last_name")
+                    .Get()).Models);
+
+            var openLogs = await ReferenceAsync("fleetmap:openlogs", async () =>
+                (await _supabase.From<MaintenanceLog>()
+                    .Select("log_id,vehicle_id,resolved_at")
+                    .Get()).Models);
 
             // Flagged means an open incident, the same definition the dashboard, dispatch
             // board and vehicle registry use.
-            var flaggedVehicleIds = maintenanceResponse.Models
+            var flaggedVehicleIds = openLogs
                 .Where(l => l.ResolvedAt == null && l.VehicleId != null)
                 .Select(l => l.VehicleId)
                 .ToHashSet();
@@ -213,11 +257,11 @@ namespace FleetWise.Controllers
                     .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
             }
 
-            var vehiclesById = vehiclesResponse.Models
+            var vehiclesById = vehicles
                 .ToDictionary(v => v.VehicleId, v => v);
-            var routesById = routesResponse.Models
+            var routesById = routes
                 .ToDictionary(r => r.RouteId, r => r);
-            var usersById = usersResponse.Models
+            var usersById = users
                 .ToDictionary(u => u.UserId, u => u);
 
             // One fare lookup per poll, shared across every bus below.
@@ -247,15 +291,14 @@ namespace FleetWise.Controllers
                 usersById.TryGetValue(trip.DriverId, out var driver);
 
                 var capacity = vehicle?.Capacity ?? 0;
-                var passengers = telemetry.TotalPassengers;
-                var occupancyPct = capacity > 0
-                    ? (int)Math.Round(passengers * 100.0 / capacity)
-                    : 0;
 
-                // Revenue comes from everyone who boarded and paid, so it follows the
-                // trip's cumulative total rather than current occupancy, which falls as
-                // passengers leave.
-                var boardedForRevenue = Math.Max(trip.TotalBoarded, passengers);
+                // Two copies of one number. The counter phone writes the trip's figure
+                // every few seconds; the driver app carries its own copy into telemetry and
+                // learns the new figure only on its next refresh, so it trails. Nobody is
+                // ever counted off a bus, so neither can fall and the higher is the newer.
+                // Taking it here is what keeps the map within seconds of the doorway rather
+                // than within a driver app refresh of it.
+                var passengers = Math.Max(trip.TotalBoarded, telemetry.TotalPassengers);
 
                 movingByVehicle[trip.VehicleId] = new BusPositionDto
                 {
@@ -273,8 +316,7 @@ namespace FleetWise.Controllers
                     Speed = (double)(telemetry.Speed ?? 0),
                     Passengers = passengers,
                     Capacity = capacity,
-                    OccupancyPct = occupancyPct,
-                    EstimatedRevenue = _fareCalculator.Estimate(boardedForRevenue, fareRate),
+                    EstimatedRevenue = _fareCalculator.Estimate(passengers, fareRate),
                     Timestamp = telemetry.Timestamp,
                     OnBreakUntil = BreakSlots.IsOnBreak(trip, PhClock.Now) && BreakSlots.WindowOf(trip) is { } breakWindow
                         ? BreakSlots.Clock(breakWindow.End.TimeOfDay)
@@ -287,7 +329,7 @@ namespace FleetWise.Controllers
                 movingVehicleIds.Add(id);
 
             // Parked buses: every vehicle not on a trip, shown stationary at its terminal.
-            foreach (var vehicle in vehiclesResponse.Models)
+            foreach (var vehicle in vehicles)
             {
                 // A retired bus is out of the fleet. The registry leaves it out of its
                 // counts, and a map showing one more bus than the registry has is read as
@@ -325,7 +367,6 @@ namespace FleetWise.Controllers
                     Speed = 0,
                     Passengers = 0,
                     Capacity = vehicle.Capacity,
-                    OccupancyPct = 0,
                     EstimatedRevenue = 0,
                     Timestamp = PhClock.Now
                 });

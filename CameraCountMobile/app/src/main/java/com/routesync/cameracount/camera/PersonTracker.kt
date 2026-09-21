@@ -26,6 +26,13 @@ class PersonTracker {
         var misses = 0
         /** Set once this track has crossed inward, so a person counts exactly once. */
         var counted = false
+        /**
+         * Set once this track has crossed outward, so a person records at most one exit.
+         *
+         * Independent of [counted]. Someone who boards and then steps back off sets
+         * both, which is the pair of events that shows the boarding was withdrawn.
+         */
+        var exited = false
         /** Side of the counting line on the previous frame. 0 means undecided. */
         var prevSide = 0
         /**
@@ -56,8 +63,9 @@ class PersonTracker {
      * frame.
      *
      * Called when the counting line moves or after a gap in frames, since the stored
-     * sides describe geometry or a scene that no longer applies. [Track.counted] is
-     * deliberately preserved: a person already counted must not be counted again.
+     * sides describe geometry or a scene that no longer applies. [Track.counted] and
+     * [Track.exited] are deliberately preserved: a person already recorded must not be
+     * recorded again.
      */
     fun resetCrossingState() {
         for (t in tracks) {
@@ -128,13 +136,20 @@ class PersonTracker {
     }
 }
 
+/** Which way a track went through the counting line. The wire value is what the
+ *  database stores, and only [IN] is ever counted. */
+enum class CrossDirection(val wire: String) { IN("in"), OUT("out") }
+
+/** One track passing through the line, once, in one direction. */
+data class Crossing(val trackId: Int, val direction: CrossDirection)
+
 /**
- * Counts inward crossings of a counting line.
+ * Detects crossings of a counting line.
  *
  * The line is a segment between endpoints A and B in frame-normalized coordinates, so it
  * can sit at any angle. Real doorways are rarely perfectly vertical.
  *
- * A crossing is counted only when all three hold:
+ * An inward crossing is reported only when all three hold:
  *
  * - The track was born on the outward side. Anyone first seen inward, whether already
  *   aboard, the driver, or a track that appeared mid-frame, can never be counted, even
@@ -142,7 +157,17 @@ class PersonTracker {
  * - The track centre clears the dead band of [BAND] perpendicular distance before a side
  *   is treated as entered. A hand hovering over the line jitters inside the band and
  *   never registers.
- * - The track has not been counted before.
+ * - The track has not already crossed inward.
+ *
+ * An outward crossing is reported on the same terms in the other direction, and is never
+ * counted. It exists to be recorded, because a camera that saw thirty people leave and a
+ * camera that saw nothing at all both report zero boardings, and only the exits tell them
+ * apart. A track that crosses in and then back out reports both, which is how a boarding
+ * that was withdrawn shows up in evidence while the reported total, which never falls,
+ * does not move.
+ *
+ * Each track reports at most one crossing in each direction, so someone loitering in the
+ * doorway produces one pair rather than a stream.
  *
  * @param inwardSign selects which side of A to B counts as boarding. Sides are stored
  *   relative to it: 1 is inward, -1 is outward.
@@ -166,9 +191,9 @@ class LineCrossCounter(
         return cross / len * inwardSign
     }
 
-    /** Returns the number of new inward crossings in this frame. */
-    fun process(tracks: List<PersonTracker.Track>): Int {
-        var crossings = 0
+    /** Returns every crossing detected in this frame, inward and outward. */
+    fun process(tracks: List<PersonTracker.Track>): List<Crossing> {
+        val crossings = ArrayList<Crossing>(0)
         for (t in tracks) {
             val d = inwardDist(t.cx, t.cy)
             val zone = when {
@@ -183,9 +208,17 @@ class LineCrossCounter(
                 continue
             }
             if (zone != t.prevSide) {
+                // Reaching the outward side at all means the track was inward a moment
+                // ago, since a side is only left by crossing. No origin test is needed
+                // on this branch, and none would be right: the two tracks that leave are
+                // someone who was already aboard and someone who just boarded, and both
+                // of those went out.
                 if (zone == 1 && t.originSide == -1 && !t.counted) {
                     t.counted = true
-                    crossings++
+                    crossings += Crossing(t.id, CrossDirection.IN)
+                } else if (zone == -1 && !t.exited) {
+                    t.exited = true
+                    crossings += Crossing(t.id, CrossDirection.OUT)
                 }
                 t.prevSide = zone
             }
