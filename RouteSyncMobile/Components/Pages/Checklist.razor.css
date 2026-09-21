@@ -275,3 +275,71 @@
     padding: 10px;
     cursor: pointer;
 }
+
+.btn-plain:disabled { opacity: 0.6; }
+
+/* Skip confirm modal. Component styles reach only the markup their own component
+   wrote, so the shared modal shape is repeated here as it is on the other pages
+   that raise one. */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 28, 50, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 60;
+}
+
+.ua-modal {
+    width: 100%;
+    max-width: 340px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 22px;
+}
+
+.ua-modal h2 {
+    margin: 0 0 6px;
+    font-size: 19px;
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+.ua-sub {
+    margin: 0 0 18px;
+    color: #8a93a2;
+    font-size: 13px;
+}
+
+.ua-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-cancel {
+    flex: 1;
+    border: 1px solid #d9dee6;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    font-weight: 700;
+    color: #1b2a56;
+    cursor: pointer;
+}
+
+/* Teal rather than the red the reporting dialogs use: skipping an inspection the bus
+   already has is an ordinary step in the shift, not a warning. */
+.btn-confirm {
+    flex: 1;
+    border: none;
+    background: #2e9e8f;
+    color: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-cancel:disabled, .btn-confirm:disabled { opacity: 0.55; }

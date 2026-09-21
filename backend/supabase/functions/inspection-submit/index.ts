@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
 
   const { data: configured } = await service
     .from("checklist_items")
-    .select("label, is_critical, section_key")
+    .select("item_id, label, is_critical, section_key")
     .eq("active", true);
   if (!configured || configured.length === 0) return json(400, { error: "No inspection is configured." });
 
@@ -129,10 +129,18 @@ Deno.serve(async (req) => {
           checklist_id: checklistId,
           vehicle_id: vehicleId,
           trip_id: tripId,
+          // Labels are what a person reads, and they are kept as they read on the day
+          // this was raised, because an order describes faults somebody actually saw. The
+          // ids are carried alongside so the same fault can still be recognised after its
+          // label is reworded, which a label on its own cannot survive. Parallel arrays,
+          // same order, rather than a different shape, so every existing reader of issues
+          // and critical_issues keeps working untouched.
           issue_details: {
             issues: failed.map((f) => f.label),
+            item_ids: failed.map((f) => f.item_id),
             severity: blocked ? "Critical" : "Minor",
             critical_issues: critical.map((f) => f.label),
+            critical_item_ids: critical.map((f) => f.item_id),
           },
           maintenance_status: "Needs Attention",
           created_at: new Date().toISOString(),
