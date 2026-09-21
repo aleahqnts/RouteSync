@@ -61,7 +61,6 @@
     display: block;
 }
 
-.prompt-card,
 /* Tucked up under the card above it, which it describes the month of. */
 .month-line {
     margin: -6px 4px 14px;
@@ -71,6 +70,10 @@
     line-height: 1.4;
 }
 
+/* A prompt reads as one line: what is being asked on the left, the control on the
+   right. Without the row the control wraps underneath and stops looking like an
+   answer to the question above it. */
+.prompt-card,
 .info-card.row {
     display: flex;
     align-items: center;
