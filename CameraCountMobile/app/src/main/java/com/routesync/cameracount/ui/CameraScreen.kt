@@ -119,7 +119,7 @@ private suspend fun nextConfigVersion(prefs: Prefs): Int {
 /**
  * Camera surface, in one of three modes.
  *
- * - [vm] not null: counting. Tracking and line crossings feed `vm.increment()` against
+ * - [vm] not null: counting. Tracking and line crossings feed `vm.onCrossing()` against
  *   the saved per-device line. When the trip ends the caller stops passing a view model
  *   and this surface is torn down.
  * - [calibrate] true: calibration. Live preview with boxes, both line endpoints
@@ -482,7 +482,9 @@ private fun DetectionSurface(
                                         // line has loaded and while it is being dragged.
                                         val tracks = tracker.update(dets)
                                         val crossings = lineCounter.process(tracks)
-                                        if (lineLoaded && !adjusting) repeat(crossings) { vm!!.increment() }
+                                        if (lineLoaded && !adjusting) {
+                                            crossings.forEach { vm!!.onCrossing(it.direction) }
+                                        }
                                         tracks.map {
                                             OverlayBox(it.box.left, it.box.top, it.box.right, it.box.bottom, it.counted)
                                         }

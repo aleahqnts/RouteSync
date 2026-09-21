@@ -84,10 +84,18 @@ object SupabaseApi {
 
     data class ActiveTrip(val tripId: String, val totalBoarded: Int)
 
-    /** Returns the Active trip for the bound vehicle, or null. Polled every few seconds. */
+    /**
+     * Returns the Active trip for the bound vehicle, or null. Polled every few seconds.
+     *
+     * One bus should never have two Active trips, and a takeover at a shift change now
+     * closes the one it replaces. Should a second one exist anyway, the newest wins:
+     * without an order PostgREST answers in whatever order the rows come back, so the
+     * phone could lock on to the stale trip and count a whole shift into it.
+     */
     suspend fun findActiveTrip(vehicleId: String): ActiveTrip? = withContext(Dispatchers.IO) {
         val url = "$BASE/trips?vehicle_id=eq.$vehicleId&trip_status=eq.Active" +
-                "&select=trip_id,total_boarded"
+                "&select=trip_id,total_boarded" +
+                "&order=actual_start_time.desc.nullslast&limit=1"
         val req = Request.Builder().url(url).supabaseHeaders().get().build()
         http.newCall(req).execute().use { res ->
             if (!res.isSuccessful) throw IllegalStateException("GET trips ${res.code}")
@@ -219,6 +227,83 @@ object SupabaseApi {
                 if (!res.isSuccessful) throw IllegalStateException("PATCH reconcile ${res.code}")
                 val arr = JSONArray(res.body?.string() ?: "[]")
                 if (arr.length() == 0) null else arr.getJSONObject(0).optInt("total_boarded", 0)
+            }
+        }
+
+    // Crossing evidence. trips.total_boarded stays the reported figure; these rows are
+    // what it is checked against, and the difference between the two is what a person
+    // added by hand.
+
+    /** One crossing, as the database stores it. */
+    data class BoardingEvent(
+        val eventId: String,
+        val tripId: String,
+        val deviceId: String,
+        /** `in` or `out`. Only `in` is ever counted. */
+        val direction: String,
+        val deviceTimestamp: Instant
+    )
+
+    /** What became of a delivery, and therefore whether offering it again is any use. */
+    sealed interface SendResult {
+        /** Stored, or already stored. Either way the device can let go of it. */
+        data object Ok : SendResult
+        /** Nothing reached the database, or the database was unwell. Keep and retry. */
+        data object Retry : SendResult
+        /** The request itself is unacceptable and will be just as unacceptable tomorrow. */
+        data object Refused : SendResult
+    }
+
+    /**
+     * Delivers a batch of crossings.
+     *
+     * The device made every identifier, so it cannot know whether an earlier attempt
+     * landed before the connection dropped. `resolution=ignore-duplicates` makes the
+     * collision a no-op instead of an error, which is what allows a queue to be offered
+     * again without bookkeeping. Merging instead of ignoring would need update rights on
+     * a table that deliberately grants none: an event is a record of something that
+     * happened, not a piece of state.
+     *
+     * `synced_at` is stamped here, as the batch leaves, so the gap to `received_at`
+     * measures the network and the gap to `device_timestamp` measures the wait for one.
+     *
+     * Authorization and availability failures are [SendResult.Retry], not refusals: an
+     * expired device token is repaired by a rebind and the events are still good. Only a
+     * malformed row, a trip that does not exist, or a value the table rejects is a
+     * refusal, and one of those in a batch refuses all of it, so the caller retries the
+     * batch singly to find it.
+     */
+    suspend fun postBoardingEvents(events: List<BoardingEvent>): SendResult =
+        withContext(Dispatchers.IO) {
+            if (events.isEmpty()) return@withContext SendResult.Ok
+            val syncedAt = Instant.now().toString()
+            val rows = JSONArray()
+            events.forEach {
+                rows.put(
+                    JSONObject()
+                        .put("event_id", it.eventId)
+                        .put("trip_id", it.tripId)
+                        .put("counter_device_id", it.deviceId)
+                        .put("direction", it.direction)
+                        .put("device_timestamp", it.deviceTimestamp.toString())
+                        .put("synced_at", syncedAt)
+                )
+            }
+            val req = Request.Builder().url("$BASE/boarding_events").supabaseHeaders()
+                .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                .post(rows.toString().toRequestBody(JSON))
+                .build()
+            try {
+                http.newCall(req).execute().use { res ->
+                    when {
+                        res.isSuccessful -> SendResult.Ok
+                        // 400 malformed, 409 no such trip, 422 a value the table refuses.
+                        res.code == 400 || res.code == 409 || res.code == 422 -> SendResult.Refused
+                        else -> SendResult.Retry
+                    }
+                }
+            } catch (_: Exception) {
+                SendResult.Retry
             }
         }
 
