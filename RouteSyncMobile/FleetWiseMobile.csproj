@@ -47,6 +47,24 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
+    <!--
+      Windows desktop builds ask the runtime for IPv4 only.
+
+      A network that answers name lookups with NAT64 addresses it cannot actually route
+      puts those ahead of the working ones, and .NET tries addresses in the order it is
+      given while HttpClient.Timeout covers all of them together. Every call then spends
+      its whole budget on addresses that lead nowhere and fails as though the machine
+      were offline.
+
+      This reaches every client in the process, including the ones inside the Supabase
+      library that nothing here can configure. Android is deliberately left alone: a
+      mobile carrier can be IPv6 only, where the same setting would take the app off the
+      network entirely.
+    -->
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+        <RuntimeHostConfigurationOption Include="System.Net.DisableIPv6" Value="true" Trim="false" />
+    </ItemGroup>
+
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
