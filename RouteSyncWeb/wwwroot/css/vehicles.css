@@ -232,6 +232,28 @@
         margin-top: 2px;
     }
 
+    /* A value the form cannot change, with the reason inside the box at the far edge
+       rather than on a line of its own underneath. The field keeps its full width, and
+       the note cannot be mistaken for something that needs answering. */
+    .vh-fixed-wrap {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+
+        .vh-fixed-wrap .vh-form-input {
+            padding-right: 132px;
+        }
+
+        .vh-fixed-wrap .vh-field-note {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            margin: 0;
+            pointer-events: none;
+        }
+
     .vh-btn--sm {
         padding: 5px 10px;
         font-size: 0.78rem;

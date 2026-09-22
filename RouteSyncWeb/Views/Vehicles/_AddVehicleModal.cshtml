@@ -1,4 +1,4 @@
-@model AddVehicleViewModel
+﻿@model AddVehicleViewModel
 @*
     Add vehicle modal, covering the profile only. Posts to VehiclesController.Create
     (PRG + TempData); re-opens with errors preserved on a failed POST.
@@ -15,12 +15,16 @@
                     <div class="vh-section-header">Vehicle Profile</div>
                     <div class="vh-section-body">
                         @* Shown so the number is known before saving, but assigned by
-                           the server at submit: the form cannot reserve one. *@
+                           the server at submit: the form cannot reserve one. The note sits
+                           inside the box, where it reads as a property of the field it
+                           explains rather than as another line of the form. *@
                         <div class="vh-form-row">
                             <label>Vehicle ID:</label>
-                            <input class="vh-form-input vh-form-input--fixed" value="@ViewBag.NextVehicleId"
-                                   readonly tabindex="-1" aria-readonly="true" />
-                            <span class="vh-field-note">Assigned automatically.</span>
+                            <div class="vh-fixed-wrap">
+                                <input class="vh-form-input vh-form-input--fixed" value="@ViewBag.NextVehicleId"
+                                       readonly tabindex="-1" aria-readonly="true" />
+                                <span class="vh-field-note">Assigned automatically</span>
+                            </div>
                         </div>
                         <div class="vh-form-row">
                             <label asp-for="PlateNumber">Plate Number:</label>
@@ -39,6 +43,11 @@
                                 </span>
                             </div>
                             <span asp-validation-for="RouteId" class="vh-field-error"></span>
+                        </div>
+                        <div class="vh-form-row">
+                            <label asp-for="Capacity">Seat Capacity:</label>
+                            <input asp-for="Capacity" class="vh-form-input" type="number" min="1" max="120" />
+                            <span asp-validation-for="Capacity" class="vh-field-error"></span>
                         </div>
                     </div>
                 </div>
