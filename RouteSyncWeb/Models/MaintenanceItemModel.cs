@@ -1,4 +1,4 @@
-#nullable disable
+﻿#nullable disable
 using Postgrest.Attributes;
 using Postgrest.Models;
 
@@ -25,6 +25,13 @@ public class MaintenanceItem : BaseModel
 
     [Column("label")]
     public string Label { get; set; }
+
+    // The inspection item this line was raised by, when one was. Null for a line typed by
+    // hand and for every line raised before it was recorded, both of which are recognised
+    // by their label instead. The label stays authoritative for what the line says: it is
+    // what somebody read on the day. This is what survives the wording changing.
+    [Column("checklist_item_id")]
+    public long? ChecklistItemId { get; set; }
 
     [Column("is_critical")]
     public bool IsCritical { get; set; }
