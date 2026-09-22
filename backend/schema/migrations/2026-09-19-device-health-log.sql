@@ -68,6 +68,7 @@ create table if not exists public.device_health_log (
   trip_id       character varying(20),
   event_type    text        not null,
   battery_level integer,
+  is_charging   boolean,
   occurred_at   timestamptz not null default now(),
 
   constraint pk_device_health_log primary key (log_id),
@@ -88,6 +89,8 @@ comment on column public.device_health_log.trip_id is 'The run this happened dur
 comment on column public.device_health_log.event_type is 'restart when the application started, battery_reading for a charge level. A crash is read as a restart with no clean shutdown behind it, and a freeze as a gap in device_status.last_seen.';
 
 comment on column public.device_health_log.battery_level is 'Charge percentage at the moment of the reading. Null on a restart row, which reports an event rather than a level.';
+
+comment on column public.device_health_log.is_charging is 'Whether the phone was plugged in when the level was read. A bus with a socket in it turns a drain measurement into nothing at all, and readings taken while charging averaged in with the rest flatten the figure without saying so. Null on a restart row.';
 
 comment on column public.device_health_log.occurred_at is 'When the event happened. Stored as a real instant, read in Philippine time through device_health_log_ph.';
 
