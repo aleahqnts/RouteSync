@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.routesync.cameracount.camera.CrossDirection
+import com.routesync.cameracount.data.DeviceHealth
 import com.routesync.cameracount.data.EventDb
 import com.routesync.cameracount.data.Prefs
 import com.routesync.cameracount.data.QueuedEvent
@@ -126,6 +127,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
          * small enough that a dropped connection part-way through costs one round trip
          * rather than the whole queue.
          */
+        /** Poll passes between charge readings: four seconds apart, so five minutes. */
+        private const val HEALTH_EVERY = 75
+
         private const val EVENT_BATCH = 200
 
         /** Refusals of one event before it is given up on. Counts only outright
@@ -339,6 +343,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 // obeys a remote calibration. Wrapped separately so a configuration failure
                 // cannot break the trip poll.
                 runCatching { followDeviceConfig() }
+
+                // What the phone can say about itself. Isolated like the rest: a health
+                // record is worth having and worth nothing next to the counting.
+                runCatching { reportHealth() }
                 delay(4_000)
             }
         }
@@ -455,6 +463,48 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /**
+     * Reports a restart once, then a charge level every few minutes.
+     *
+     * Five minutes because that is the resolution of the thing being measured. Android
+     * reports whole percentages, so a phone losing around a seventh of its charge an hour
+     * moves the figure about once every four minutes, and asking more often would write
+     * the same number down repeatedly.
+     *
+     * The restart is retried until it lands, because how often a phone restarts during a
+     * shift is the reliability figure itself and a lost one understates it. A charge
+     * reading is not: the next one is along shortly and a rate survives a missing point.
+     *
+     * Charge is recorded only while a trip is being counted. Drain is a figure about a
+     * phone doing the work, and a phone bound to a parked bus is not doing it: readings
+     * taken from a drawer cost nothing to write and quietly drag the average toward zero.
+     * A restart is recorded whichever it is, because a phone that cannot stay running
+     * between trips is as much a reliability problem as one that fails during them.
+     */
+    private var healthTick = 0
+    private var restartLogged = false
+
+    private suspend fun reportHealth() {
+        if (deviceId.isBlank()) return
+
+        // Once on the first pass after starting, so a shift opens with a reading, then on
+        // the interval.
+        val due = healthTick % HEALTH_EVERY == 0
+        healthTick++
+        if (!due) return
+
+        if (!restartLogged) {
+            restartLogged = SupabaseApi.postHealthEvent(deviceId, null, "restart")
+        }
+
+        val trip = tripId ?: return
+
+        val battery = DeviceHealth.read(getApplication())
+        SupabaseApi.postHealthEvent(
+            deviceId, trip, "battery_reading", battery.level, battery.charging
+        )
     }
 
     private fun QueuedEvent.toApi() = SupabaseApi.BoardingEvent(

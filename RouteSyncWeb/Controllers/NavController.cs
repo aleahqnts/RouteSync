@@ -1,4 +1,4 @@
-using FleetWise.Services;
+﻿using FleetWise.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +21,7 @@ namespace FleetWise.Controllers
         public NavController(NavCounts counts) => _counts = counts;
 
         [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Badges()
         {
             var b = await _counts.ReadAsync();

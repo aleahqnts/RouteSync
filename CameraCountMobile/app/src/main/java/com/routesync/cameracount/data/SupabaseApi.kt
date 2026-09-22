@@ -313,6 +313,50 @@ object SupabaseApi {
             }
         }
 
+    /**
+     * Records something the phone noticed about its own running.
+     *
+     * A plain insert, with no resolution asking the database to ignore a row it already
+     * holds: the identifier is the database's to allocate here, so there is nothing to
+     * collide with, and asking for one would oblige the device to be able to read the
+     * table back.
+     *
+     * Failure is reported and not retried by the caller beyond its next turn. A missing
+     * charge reading costs a rate estimate almost nothing, and holding a queue open for
+     * one would be more machinery than the measurement is worth.
+     */
+    suspend fun postHealthEvent(
+        deviceId: String,
+        tripId: String?,
+        eventType: String,
+        batteryLevel: Int? = null,
+        isCharging: Boolean? = null,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val row = JSONObject()
+            .put("device_id", deviceId)
+            .put("event_type", eventType)
+            .put("occurred_at", Instant.now().toString())
+        if (tripId != null) row.put("trip_id", tripId)
+        if (batteryLevel != null) row.put("battery_level", batteryLevel)
+        if (isCharging != null) row.put("is_charging", isCharging)
+
+        val req = Request.Builder().url("$BASE/device_health_log").supabaseHeaders()
+            .header("Prefer", "return=minimal")
+            .post(JSONArray().put(row).toString().toRequestBody(JSON))
+            .build()
+        try {
+            http.newCall(req).execute().use { res ->
+                if (!res.isSuccessful) {
+                    android.util.Log.w("SupabaseApi", "health $eventType refused: HTTP ${res.code}")
+                }
+                res.isSuccessful
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SupabaseApi", "health $eventType failed: ${e.javaClass.simpleName}")
+            false
+        }
+    }
+
     data class FleetVehicle(val vehicleId: String, val plate: String)
 
     /** The whole fleet, for the setup dropdown, so an installer picks instead of typing. */

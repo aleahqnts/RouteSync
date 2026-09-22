@@ -48,6 +48,44 @@ namespace FleetWise.Controllers
             r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null
             && string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase);
 
+        /// <summary>A short summary of everything the queue would show differently.</summary>
+        /// <remarks>
+        /// Rebuilding the page re-renders every row and the counts above them, which is
+        /// more than a queue that changes a handful of times a day needs on a timer. This
+        /// reads the requests alone, without the names and trips the rows are dressed
+        /// with, and returns a fingerprint, so the page can be watched closely and rebuilt
+        /// only when it would actually differ.
+        ///
+        /// Every field a row shows or a decision writes is included, so filing, deciding,
+        /// withdrawing and revoking all move it. The status tab is not: it selects which
+        /// requests are on screen, and a request leaving the current tab is a change to
+        /// the fingerprint anyway.
+        /// </remarks>
+        [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Pulse()
+        {
+            var requests = await _supabase.From<LeaveRequest>()
+                .Select("request_id,user_id,status,leave_type,start_date,end_date," +
+                        "revoked_at,revoked_dates,withdraw_requested_at")
+                .Get();
+
+            // Ordered before it is joined: PostgREST makes no promise about the order rows
+            // come back in, and an unordered fingerprint would change on its own.
+            var parts = requests.Models
+                .OrderBy(r => r.RequestId)
+                .Select(r => string.Join("|",
+                    r.RequestId, r.UserId, r.Status, r.LeaveType,
+                    r.StartDate.ToString("yyyy-MM-dd"), r.EndDate.ToString("yyyy-MM-dd"),
+                    r.RevokedAt?.Ticks ?? 0,
+                    string.Join(",", r.RevokedDates ?? new()),
+                    r.WithdrawRequestedAt?.Ticks ?? 0));
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));
+            return Json(new { pulse = Convert.ToHexString(hash) });
+        }
+
         public async Task<IActionResult> Index(string? status)
         {
             // Pending first by default, because the queue is what this page is opened for.

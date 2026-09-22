@@ -13,7 +13,47 @@ namespace FleetWise.Controllers
 
         public DashboardController(Supabase.Client supabase) => _supabase = supabase;
 
-        public async Task<IActionResult> Index(int? routeId)
+        public async Task<IActionResult> Index(int? routeId) => View(await BuildAsync(routeId));
+
+        /// <summary>
+        /// The figures the dashboard is watching, without the page around them.
+        /// </summary>
+        /// <remarks>
+        /// The page refreshes itself often enough that re-rendering the whole of it each
+        /// time was the most expensive thing the dashboard did: every poll ran the view,
+        /// sent the markup for cards and a map that never change, and threw all but the
+        /// numbers away. Only the figures travel here, so the refresh can be frequent
+        /// enough to be worth having.
+        /// </remarks>
+        [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Stats(int? routeId)
+        {
+            var vm = await BuildAsync(routeId);
+            return Json(new
+            {
+                activeTrips = vm.ActiveTrips,
+                flaggedVehicles = vm.FlaggedVehicles,
+                totalPassengers = vm.TotalPassengers,
+                passengerDelta = vm.PassengerDelta,
+                totalRevenue = vm.TotalRevenue,
+                revenueDelta = vm.RevenueDelta,
+                chartData = vm.ChartData,
+                breakdown = vm.ActiveTripBreakdown
+                    .Where(r => r.Passengers > 0)
+                    .Select(r => new
+                    {
+                        tripId = r.TripId,
+                        routeName = r.RouteName,
+                        vehicleId = r.VehicleId,
+                        shiftType = r.ShiftType,
+                        status = r.Status,
+                        passengers = r.Passengers,
+                    }),
+            });
+        }
+
+        private async Task<DashboardViewModel> BuildAsync(int? routeId)
         {
             // The service day is the current operational cycle, 06:00 to 05:59 the next
             // morning, rather than the calendar day. A trip is dated by the day it starts,
@@ -216,7 +256,7 @@ namespace FleetWise.Controllers
                 ActiveTripBreakdown = tripBreakdown,
             };
 
-            return View(vm);
+            return vm;
         }
     }
 }

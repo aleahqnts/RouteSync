@@ -1,4 +1,4 @@
-using FleetWise.Models;
+﻿using FleetWise.Models;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Caching.Memory;
@@ -95,11 +95,16 @@ namespace FleetWise.Services
         /// How long a count stands before it is worked out again.
         /// </summary>
         /// <remarks>
-        /// Shorter than the rail's own poll, so a badge is never older than a poll and a
-        /// tick, and long enough that a room of dispatchers costs the database the same as
-        /// one of them.
+        /// Matched to the rail's own poll, so a badge is never older than a poll and a
+        /// tick. A room of dispatchers still costs the database the same as one of them,
+        /// because the count is worked out once and served to all of them: what sets the
+        /// cost is how often it expires, not how many people ask.
+        ///
+        /// This is the only thing watching for work filed somewhere the dashboard cannot
+        /// see. A driver's leave request arrives without any page here being told, so the
+        /// rail is what notices, whichever page its reader happens to be on.
         /// </remarks>
-        private static readonly TimeSpan Freshness = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan Freshness = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// How close a shift has to be before a request against it is urgent.
@@ -160,14 +165,25 @@ namespace FleetWise.Services
             // Today and tomorrow. A shift more than a day out cannot be inside the urgent
             // window, and the board itself only ever covers one operational day.
             var tripsTask = _supabase.From<Trip>()
+                .Select("trip_id,date,vehicle_id,driver_id,trip_status,shift_start_time,shift_end_time")
                 .Filter("date", Operator.GreaterThanOrEqual, today.ToString("yyyy-MM-dd"))
                 .Filter("date", Operator.LessThanOrEqual, today.AddDays(1).ToString("yyyy-MM-dd"))
                 .Get();
 
             // Both of these are one row per bus and one per driver, so the whole of each is
             // the size of the fleet and the roster.
-            var vehiclesTask = _supabase.From<Vehicle>().Get();
-            var availabilityTask = _supabase.From<DriverAvailability>().Get();
+            //
+            // Every query here names its columns. Counting reads a handful of fields and
+            // throws the rest of each row away, and the rail is drawn on every page and
+            // read again every few seconds, so whatever travels does so all day. Naming
+            // them also keeps things off the wire that have no business on it: the whole
+            // of a user row carries a password hash nothing here has any use for.
+            var vehiclesTask = _supabase.From<Vehicle>()
+                .Select("vehicle_id,out_of_service,retired_at")
+                .Get();
+            var availabilityTask = _supabase.From<DriverAvailability>()
+                .Select("user_id,availability_status")
+                .Get();
 
             // The two tables below are not like that. They keep every incident ever raised
             // and every request ever filed, so they grow with the age of the fleet, and
@@ -176,12 +192,14 @@ namespace FleetWise.Services
 
             // A resolved incident is a record rather than a job.
             var maintTask = _supabase.From<MaintenanceLog>()
+                .Select("log_id,vehicle_id")
                 .Filter<object>("resolved_at", Operator.Is, null)
                 .Get();
 
             // Requests still waiting on an answer. Not bounded by date: one needs answering
             // whatever days it names, and how many are waiting is the badge.
             var leaveOpenTask = _supabase.From<LeaveRequest>()
+                .Select("request_id,user_id,status,leave_type,start_date,end_date,revoked_dates")
                 .Filter("status", Operator.In, LeaveEntitlement.OpenStatuses.Cast<object>().ToList())
                 .Get();
 
@@ -190,6 +208,7 @@ namespace FleetWise.Services
             // is the asking, and no filter on the status would find it. Leave revoked outright
             // is left out: nothing is left to cancel, so its asking needs no answer.
             var leaveAskedTask = _supabase.From<LeaveRequest>()
+                .Select("request_id")
                 .Filter<object>("withdraw_requested_at", Operator.Not, null)
                 .Filter<object>("withdraw_answered_at", Operator.Is, null)
                 .Filter("status", Operator.Equals, "Approved")
@@ -198,6 +217,7 @@ namespace FleetWise.Services
             // Leave that takes a driver off today, which is what makes one of today's trips
             // unrunnable. A day either side is not wanted: the board is one operational day.
             var leaveTodayTask = _supabase.From<LeaveRequest>()
+                .Select("request_id,user_id,status,start_date,end_date,revoked_dates")
                 .Filter("status", Operator.Equals, "Approved")
                 .Filter("start_date", Operator.LessThanOrEqual, today.ToString("yyyy-MM-dd"))
                 .Filter("end_date", Operator.GreaterThanOrEqual, today.ToString("yyyy-MM-dd"))
@@ -323,15 +343,19 @@ namespace FleetWise.Services
                 var from = today.AddDays(1).ToString("yyyy-MM-dd");
 
                 var monthsTask = _supabase.From<RosterMonth>()
+                    .Select("month,status")
                     .Filter("month", Operator.In, new List<object> { thisMonth.ToString("yyyy-MM-dd"), nextMonth.ToString("yyyy-MM-dd") })
                     .Get();
                 var gapsTask = _supabase.From<RosterGap>()
+                    .Select("date,vehicle_id,shift")
                     .Filter("date", Operator.GreaterThanOrEqual, from)
                     .Get();
                 var skipsTask = _supabase.From<RosterSkip>()
+                    .Select("date,vehicle_id,shift")
                     .Filter("date", Operator.GreaterThanOrEqual, from)
                     .Get();
                 var slotsTask = _supabase.From<RosterSlot>()
+                    .Select("month,driver_id,vehicle_id,route_id,shift,suggested")
                     .Filter("month", Operator.In, new List<object> { thisMonth.ToString("yyyy-MM-dd"), nextMonth.ToString("yyyy-MM-dd") })
                     .Get();
 
@@ -342,6 +366,7 @@ namespace FleetWise.Services
                 if (gaps.Count > 0)
                 {
                     var taken = (await _supabase.From<Trip>()
+                        .Select("date,vehicle_id,shift_type")
                         .Filter("date", Operator.In, gaps.Select(g => (object)g.Date.ToString("yyyy-MM-dd")).Distinct().ToList())
                         .Get()).Models
                         .Select(t => (t.Date.Date, t.VehicleId.ToUpperInvariant(), t.ShiftType))
@@ -397,10 +422,14 @@ namespace FleetWise.Services
 
             var driversTask = driverIds.Count == 0
                 ? Task.FromResult(new List<UserModel>())
-                : _supabase.From<UserModel>().Filter("user_id", Operator.In, driverIds).Get().ContinueWith(t => t.Result.Models);
+                : _supabase.From<UserModel>()
+                    .Select("user_id,account_status")
+                    .Filter("user_id", Operator.In, driverIds).Get().ContinueWith(t => t.Result.Models);
             var busesTask = busIds.Count == 0
                 ? Task.FromResult(new List<Vehicle>())
-                : _supabase.From<Vehicle>().Filter("vehicle_id", Operator.In, busIds).Get().ContinueWith(t => t.Result.Models);
+                : _supabase.From<Vehicle>()
+                    .Select("vehicle_id,retired_at,route_id")
+                    .Filter("vehicle_id", Operator.In, busIds).Get().ContinueWith(t => t.Result.Models);
 
             await Task.WhenAll(driversTask, busesTask);
 

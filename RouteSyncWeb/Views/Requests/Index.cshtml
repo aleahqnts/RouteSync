@@ -57,7 +57,7 @@
                     <span class="rq-waiting">@Model.PendingCount Pending</span>
                 }
             </span>
-            <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 30 seconds"></span>
+            <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 5 seconds"></span>
             <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
                     onclick="rqRefresh(true)" title="Load newly filed requests without losing your filters">
                 <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -668,16 +668,53 @@
             }
         };
 
-        // Not while a dialog is open. Replacing the rows underneath a decision being
-        // written would pull the request out from under it.
+        // Watched every five seconds, rebuilt only when something moved.
+        //
+        // Rebuilding re-renders every row and the counts above them, which is more than a
+        // queue that changes a handful of times a day needs on a timer. The fingerprint
+        // costs one narrow read of the requests alone, so the queue can be watched closely
+        // and still cost less than the half-minute rebuild it replaces.
+        let rqPulse = null;
+
+        async function rqCheck() {
+            try {
+                const res = await fetch('@Url.Action("Pulse", "Requests")', {
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'fetch' },
+                });
+                if (!res.ok) { console.warn('requests pulse', res.status); return; }
+                const { pulse } = await res.json();
+
+                // The first answer is what the page was rendered from, so it is recorded
+                // rather than acted on. Without that the queue would rebuild once on load.
+                if (rqPulse === null) { rqPulse = pulse; return; }
+                if (pulse === rqPulse) return;
+
+                rqPulse = pulse;
+                await rqRefresh(false);
+            } catch (e) {
+                // Left for the next check: what is on screen is still the queue as of the
+                // last successful rebuild, which beats an error. Said out loud even so,
+                // because a check that cannot run looks exactly like a quiet queue.
+                console.warn('requests pulse failed', e);
+            }
+        }
+
+        // A decision being written keeps the rows still. Replacing them underneath it
+        // would pull the request out from under the person deciding.
         setInterval(function () {
             if (document.hidden) return;
             if (modal.style.display === 'flex') return;
             if (histModal.style.display === 'flex') return;
             if (revModal.style.display === 'flex') return;
             if (askModal.style.display === 'flex') return;
-            rqRefresh(false);
-        }, 30000);
+            rqCheck();
+        }, 5000);
+
+        // Coming back to the tab asks straight away rather than waiting out the interval.
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) rqCheck();
+        });
 
         rqStamp();
 

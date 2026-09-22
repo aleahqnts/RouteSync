@@ -26,6 +26,55 @@ namespace FleetWise.Controllers
             _assignments = assignments;
         }
 
+        /// <summary>A short summary of everything the board would show differently.</summary>
+        /// <remarks>
+        /// Rebuilding the board is expensive: it reads eight tables and renders the whole
+        /// page, and on a quiet afternoon almost every rebuild produces exactly what was
+        /// already on screen. This reads the three things a change would have to show up
+        /// in and returns a fingerprint of them, so the board can be watched closely and
+        /// rebuilt only when it would actually differ.
+        ///
+        /// Trips carry the assignments and their progress. Vehicles carry grounding, which
+        /// turns an assignment into a problem without the trip itself changing. Driver
+        /// availability does the same from the other side. Anything that moves one of
+        /// those moves this fingerprint.
+        /// </remarks>
+        [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Pulse(string date)
+        {
+            var selected = DateTime.TryParse(date, out var d) ? d.Date : PhClock.OperationalDay;
+
+            var tripsTask = _supabase.From<Trip>()
+                .Select("trip_id,trip_status,driver_id,vehicle_id,route_id,total_boarded")
+                .Filter("date", Operator.Equals, selected.ToString("yyyy-MM-dd"))
+                .Get();
+            var vehiclesTask = _supabase.From<Vehicle>()
+                .Select("vehicle_id,vehicle_status,out_of_service")
+                .Get();
+            var availabilityTask = _supabase.From<DriverAvailability>()
+                .Select("user_id,availability_status")
+                .Get();
+
+            await Task.WhenAll(tripsTask, vehiclesTask, availabilityTask);
+
+            // Ordered before it is joined, because PostgREST makes no promise about the
+            // order rows come back in and an unordered fingerprint would change on its own.
+            var parts = tripsTask.Result.Models
+                .OrderBy(t => t.TripId, StringComparer.Ordinal)
+                .Select(t => $"{t.TripId}|{t.TripStatus}|{t.DriverId}|{t.VehicleId}|{t.RouteId}|{t.TotalBoarded}")
+                .Concat(vehiclesTask.Result.Models
+                    .OrderBy(v => v.VehicleId, StringComparer.Ordinal)
+                    .Select(v => $"{v.VehicleId}|{v.VehicleStatus}|{v.OutOfService}"))
+                .Concat(availabilityTask.Result.Models
+                    .OrderBy(a => a.UserId)
+                    .Select(a => $"{a.UserId}|{a.AvailabilityStatus}"));
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));
+            return Json(new { pulse = Convert.ToHexString(hash) });
+        }
+
         public async Task<IActionResult> Index(string date)
         {
             // The board covers one operational day, 06:00 to 05:59 the next morning.
