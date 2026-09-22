@@ -19,7 +19,7 @@
                 <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
             </svg></span> Refresh
         </button>
-        <span class="db-updated" id="dbUpdated" title="Auto-refreshes every 30 seconds"></span>
+        <span class="db-updated" id="dbUpdated" title="Auto-refreshes every 5 seconds"></span>
     </div>
 </div>
 
@@ -45,7 +45,7 @@
             </span>
             <span class="db-stat-label">Active Trips</span>
         </div>
-        <div class="db-stat-value">@Model.ActiveTrips</div>
+        <div class="db-stat-value" id="dbActiveTrips">@Model.ActiveTrips</div>
     </div>
 
     <a href="/Vehicles?status=Flagged" class="db-stat-card db-stat-card--click" style="text-decoration:none;color:inherit;" title="View flagged vehicles">
@@ -59,7 +59,7 @@
             </span>
             <span class="db-stat-label">Flagged Vehicles</span>
         </div>
-        <div class="db-stat-value">@Model.FlaggedVehicles</div>
+        <div class="db-stat-value" id="dbFlagged">@Model.FlaggedVehicles</div>
     </a>
 
     <div class="db-stat-card db-stat-card--click" onclick="dbToggleBreakdown()" title="Click for per-trip breakdown">
@@ -73,14 +73,17 @@
             <span class="db-stat-label">Total Boarded</span>
             <span class="db-stat-chevron" id="dbPaxChevron">&#9656;</span>
         </div>
-        <div class="db-stat-value">@Model.TotalPassengers</div>
-        @if (Model.PassengerDelta != 0)
-        {
-            var deltaClass = Model.PassengerDelta >= 0 ? "db-stat-delta--up" : "db-stat-delta--down";
-            var deltaArrow = Model.PassengerDelta >= 0 ? "&#x2B06;" : "&#x2B07;";
-            var deltaSign = Model.PassengerDelta >= 0 ? "+" : "";
-            <div class="db-stat-delta @deltaClass">@Html.Raw(deltaArrow) @deltaSign@Model.PassengerDelta vs yesterday</div>
+        <div class="db-stat-value" id="dbBoarded">@Model.TotalPassengers</div>
+        @{
+            // Rendered whatever the figure, and hidden while it is zero, so a refresh has
+            // somewhere to write the new one. Created on demand it would have to be built
+            // in two places that could drift apart.
+            var paxUp = Model.PassengerDelta >= 0;
         }
+        <div class="db-stat-delta @(paxUp ? "db-stat-delta--up" : "db-stat-delta--down")"
+             id="dbBoardedDelta" style="@(Model.PassengerDelta == 0 ? "display:none;" : "")">
+            @Html.Raw(paxUp ? "&#x2B06;" : "&#x2B07;") @(paxUp ? "+" : "")@Model.PassengerDelta vs yesterday
+        </div>
     </div>
 
     <div class="db-stat-card">
@@ -94,14 +97,14 @@
             </span>
             <span class="db-stat-label">Total Revenue</span>
         </div>
-        <div class="db-stat-value">&#8369;@Model.TotalRevenue.ToString("N0")</div>
-        @if (Model.RevenueDelta != 0)
-        {
-            var deltaClass = Model.RevenueDelta >= 0 ? "db-stat-delta--up" : "db-stat-delta--down";
-            var deltaArrow = Model.RevenueDelta >= 0 ? "&#x2B06;" : "&#x2B07;";
-            var deltaSign = Model.RevenueDelta >= 0 ? "+" : "";
-            <div class="db-stat-delta @deltaClass">@Html.Raw(deltaArrow) &#8369;@deltaSign@Model.RevenueDelta.ToString("N0") vs yesterday</div>
+        <div class="db-stat-value" id="dbRevenue">&#8369;@Model.TotalRevenue.ToString("N0")</div>
+        @{
+            var revUp = Model.RevenueDelta >= 0;
         }
+        <div class="db-stat-delta @(revUp ? "db-stat-delta--up" : "db-stat-delta--down")"
+             id="dbRevenueDelta" style="@(Model.RevenueDelta == 0 ? "display:none;" : "")">
+            @Html.Raw(revUp ? "&#x2B06;" : "&#x2B07;") &#8369;@(revUp ? "+" : "")@Model.RevenueDelta.ToString("N0") vs yesterday
+        </div>
     </div>
 
 </div>
@@ -116,11 +119,11 @@
         <div class="db-modal-head">
             <div>
                 <div class="db-modal-title">Total Boarded Breakdown</div>
-                <div class="db-modal-sub">Trips with boarding (@boardedRows.Count) &bull; @Model.TotalPassengers boarded</div>
+                <div class="db-modal-sub" id="dbBreakdownSub">Trips with boarding (@boardedRows.Count) &bull; @Model.TotalPassengers boarded</div>
             </div>
             <button class="db-modal-close" onclick="dbCloseModal()" aria-label="Close">&times;</button>
         </div>
-        <div class="db-modal-body">
+        <div class="db-modal-body" id="dbBreakdownBody">
             @if (boardedRows.Count == 0)
             {
                 <div class="db-breakdown-empty">No boarded trips this service day yet.</div>
@@ -337,36 +340,104 @@
         // A phone has no room for a line that only carries a time, so the button
         // that refreshes the page says how old it is instead.
         const btn = document.getElementById('dbRefreshBtn');
-        if (btn) btn.title = 'Updated ' + at + '. Auto-refreshes every 30 seconds.';
+        if (btn) btn.title = 'Updated ' + at + '. Auto-refreshes every 5 seconds.';
         }
+        // Only the figures are fetched. Replacing the whole block meant re-rendering the
+        // page, sending the markup for cards, a chart frame and a map that never change,
+        // and rebuilding a DOM the browser had already drawn. Writing the values in place
+        // also leaves the modal, its scroll position and any open state alone, which the
+        // old refresh had to put back afterwards.
+        const dbPeso = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 0 });
+
+        function dbSet(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+
+        // Hidden rather than removed while a figure matches yesterday's, so the element
+        // is still there to write to when it stops matching.
+        function dbDelta(id, value, peso) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (!value) { el.style.display = 'none'; return; }
+            const up = value >= 0;
+            el.style.display = '';
+            el.className = 'db-stat-delta ' + (up ? 'db-stat-delta--up' : 'db-stat-delta--down');
+            el.textContent = (up ? '⬆ ' : '⬇ ') + (peso ? '₱' : '') +
+                (up ? '+' : '') + dbPeso.format(value) + ' vs yesterday';
+        }
+
+        function dbBreakdown(rows, boarded) {
+            dbSet('dbBreakdownSub',
+                'Trips with boarding (' + rows.length + ') • ' + boarded + ' boarded');
+            const body = document.getElementById('dbBreakdownBody');
+            if (!body) return;
+            if (!rows.length) {
+                body.innerHTML = '<div class="db-breakdown-empty">No boarded trips this service day yet.</div>';
+                return;
+            }
+            const cells = r => [r.tripId, r.routeName, r.vehicleId, r.shiftType, r.status]
+                .map(v => '<td>' + dbEscape(v) + '</td>').join('') +
+                '<td class="db-num"><strong>' + r.passengers + '</strong></td>';
+            body.innerHTML =
+                '<table class="db-breakdown-table rs-cards"><thead><tr>' +
+                '<th>Trip</th><th>Route</th><th>Vehicle</th><th>Shift</th><th>Status</th>' +
+                '<th class="db-num">Boarded</th></tr></thead><tbody>' +
+                rows.map(r => '<tr>' + cells(r) + '</tr>').join('') +
+                '</tbody></table>';
+        }
+
+        // The figures are names and identifiers out of the database, so they are written
+        // as text rather than trusted as markup.
+        function dbEscape(v) {
+            const d = document.createElement('span');
+            d.textContent = v == null ? '' : v;
+            return d.innerHTML;
+        }
+
         async function dbRefresh(manual) {
-        if (dbBusy) return;
-        dbBusy = true;
-        const btn = document.getElementById('dbRefreshBtn');
-        if (manual && btn) btn.classList.add('spinning');
-        // keep the modal open across refreshes
-        const wasOpen = document.getElementById('dbBreakdown')?.style.display === 'flex';
-        try {
-        const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } });
-        const html = await res.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const fresh = doc.getElementById('dbStats');
-        const cur = document.getElementById('dbStats');
-        if (fresh && cur) cur.innerHTML = fresh.innerHTML;
-        if (wasOpen) { const p = document.getElementById('dbBreakdown'); if (p) p.style.display = 'flex'; }
-        dbUpdateChart();
-        dbStamp();
-        } catch (e) {
-        console.warn('dashboard refresh failed', e);
-        } finally {
-        dbBusy = false;
-        if (btn) btn.classList.remove('spinning');
+            if (dbBusy) return;
+            dbBusy = true;
+            const btn = document.getElementById('dbRefreshBtn');
+            if (manual && btn) btn.classList.add('spinning');
+            try {
+                const url = new URL('@Url.Action("Stats", "Dashboard")', window.location.origin);
+                const route = new URLSearchParams(window.location.search).get('routeId');
+                if (route) url.searchParams.set('routeId', route);
+
+                const res = await fetch(url, {
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'fetch' },
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+
+                dbSet('dbActiveTrips', d.activeTrips);
+                dbSet('dbFlagged', d.flaggedVehicles);
+                dbSet('dbBoarded', d.totalPassengers);
+                dbSet('dbRevenue', '₱' + dbPeso.format(d.totalRevenue));
+                dbDelta('dbBoardedDelta', d.passengerDelta, false);
+                dbDelta('dbRevenueDelta', d.revenueDelta, true);
+                dbBreakdown(d.breakdown || [], d.totalPassengers);
+
+                const chart = document.getElementById('dbChartData');
+                if (chart) chart.textContent = JSON.stringify(d.chartData || []);
+                dbUpdateChart();
+                dbStamp();
+            } catch (e) {
+                console.warn('dashboard refresh failed', e);
+            } finally {
+                dbBusy = false;
+                if (btn) btn.classList.remove('spinning');
+            }
         }
-        }
+
+        // Five seconds, matching the map beside it and the rate the counter phones write
+        // at. Nothing here changes faster than that, so asking more often would only cost.
         setInterval(() => {
-        if (document.hidden) return;
-        dbRefresh(false);
-        }, 30000);
+            if (document.hidden) return;
+            dbRefresh(false);
+        }, 5000);
         dbStamp();
 
         // Filter form helper.
