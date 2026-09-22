@@ -368,14 +368,31 @@ namespace FleetWise.Controllers
                 .GroupBy(c => c.Label, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-            var present = (await _supabase.From<MaintenanceItem>()
+            var lines = (await _supabase.From<MaintenanceItem>()
                     .Filter("log_id", Postgrest.Constants.Operator.Equals, logId.ToString())
-                    .Get()).Models
-                .ToDictionary(i => i.Label ?? "", i => i, StringComparer.OrdinalIgnoreCase);
+                    .Get()).Models;
+
+            // A fault raised again is recognised by the inspection item behind it, which
+            // survives that item being reworded. Lines with no item, whether typed by hand
+            // or raised before this was recorded, are still found by their label: it is all
+            // they have ever had, and it holds until somebody edits the wording.
+            var byItem = lines
+                .Where(i => i.ChecklistItemId is not null)
+                .GroupBy(i => i.ChecklistItemId!.Value)
+                .ToDictionary(g => g.Key, g => g.First());
+            var present = lines
+                .GroupBy(i => i.Label ?? "", StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
             foreach (var label in wanted)
             {
-                if (present.TryGetValue(label, out var already))
+                catalogue.TryGetValue(label, out var configured);
+
+                var already = configured is not null && byItem.TryGetValue(configured.ItemId, out var byId)
+                    ? byId
+                    : present.TryGetValue(label, out var byName) ? byName : null;
+
+                if (already is not null)
                 {
                     // Raised again is open again, whatever it was closed as.
                     if (!string.Equals(already.State, "open", OIC))
@@ -389,11 +406,11 @@ namespace FleetWise.Controllers
                     continue;
                 }
 
-                catalogue.TryGetValue(label, out var configured);
                 await _supabase.From<MaintenanceItem>().Insert(new MaintenanceItem
                 {
                     LogId = logId,
                     Label = label,
+                    ChecklistItemId = configured?.ItemId,
                     IsCritical = configured?.IsCritical ?? false,
                     Source = configured is null ? "manual" : "checklist",
                     State = "open",
