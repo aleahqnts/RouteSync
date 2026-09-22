@@ -248,8 +248,14 @@ object SupabaseApi {
     sealed interface SendResult {
         /** Stored, or already stored. Either way the device can let go of it. */
         data object Ok : SendResult
-        /** Nothing reached the database, or the database was unwell. Keep and retry. */
-        data object Retry : SendResult
+        /**
+         * Nothing reached the database, or the database was unwell. Keep and retry.
+         *
+         * Carries why, because a refusal the server is never going to change its mind
+         * about looks identical to a tunnel from here: the queue simply stops draining.
+         * [code] is the HTTP status, or null when the request never got an answer.
+         */
+        data class Retry(val code: Int?, val detail: String) : SendResult
         /** The request itself is unacceptable and will be just as unacceptable tomorrow. */
         data object Refused : SendResult
     }
@@ -299,11 +305,11 @@ object SupabaseApi {
                         res.isSuccessful -> SendResult.Ok
                         // 400 malformed, 409 no such trip, 422 a value the table refuses.
                         res.code == 400 || res.code == 409 || res.code == 422 -> SendResult.Refused
-                        else -> SendResult.Retry
+                        else -> SendResult.Retry(res.code, res.message.ifBlank { "no message" })
                     }
                 }
-            } catch (_: Exception) {
-                SendResult.Retry
+            } catch (e: Exception) {
+                SendResult.Retry(null, e.javaClass.simpleName)
             }
         }
 

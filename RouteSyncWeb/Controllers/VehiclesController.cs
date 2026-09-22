@@ -97,7 +97,7 @@ namespace FleetWise.Controllers
                 VehicleId = vehicleId,
                 PlateNumber = model.PlateNumber.Trim(),
                 RouteId = model.RouteId,
-                Capacity = 50,                         // default; the form does not capture capacity
+                Capacity = model.Capacity,
                 VehicleStatus = "Ready to Deploy",     // new units start deployable (vehicle_status_enum label)
                 CreatedAt = PhClock.Now,
             };
