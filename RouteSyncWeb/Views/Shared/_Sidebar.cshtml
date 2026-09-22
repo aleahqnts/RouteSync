@@ -395,7 +395,10 @@
         }
 
         async function read() {
-            var res = await fetch('/Nav/Badges', { headers: { 'X-Requested-With': 'fetch' } });
+            var res = await fetch('/Nav/Badges', {
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'fetch' },
+            });
             if (!res.ok) return;
             var data = await res.json();
 
@@ -432,7 +435,7 @@
         setInterval(function () {
             if (document.hidden) return;
             refresh();
-        }, 15000);
+        }, 5000);
 
         // Coming back to a tab that was left is arriving at it. Nothing was counted while
         // it was away, so the numbers on it are as old as the moment it was put down, and

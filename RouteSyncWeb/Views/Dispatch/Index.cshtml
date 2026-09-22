@@ -142,7 +142,7 @@
     <button class="dp-btn-refresh" id="dpRefreshBtn" onclick="dpRefresh(true)" title="Refresh this page only">
         <i class="ti ti-refresh"></i> Refresh
     </button>
-    <span class="dp-updated" id="dpUpdated" title="Auto-refreshes every 30 seconds"></span>
+    <span class="dp-updated" id="dpUpdated" title="Checks for changes every 5 seconds"></span>
 
     @* Phone only: the three buttons above are planning tools, not things done at a
        terminal, so they fold behind this rather than filling the screen. *@
@@ -721,7 +721,7 @@
         // A phone has no room for a line that only carries a time, so the button
         // that refreshes the board says how old it is instead.
         const btn = document.getElementById('dpRefreshBtn');
-        if (btn) btn.title = 'Updated ' + at + '. Auto-refreshes every 30 seconds.';
+        if (btn) btn.title = 'Updated ' + at + '. Checks for changes every 5 seconds.';
     }
 
     async function dpRefresh(manual) {
@@ -764,13 +764,54 @@
         }
     }
 
+    // Watched every five seconds, rebuilt only when something moved.
+    //
+    // Rebuilding reads eight tables and re-renders the board, which is far too much to do
+    // this often on a board that spends most of the day unchanged. The fingerprint below
+    // costs three narrow reads, so the board can be watched at the same rate as the fleet
+    // map and still cost less than the half-minute rebuild it replaces.
+    let dpPulse = null;
+
+    async function dpCheck() {
+        try {
+            const url = new URL('@Url.Action("Pulse", "Dispatch")', window.location.origin);
+            const date = new URLSearchParams(window.location.search).get('date');
+            if (date) url.searchParams.set('date', date);
+
+            const res = await fetch(url, {
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'fetch' },
+            });
+            if (!res.ok) { console.warn('dispatch pulse', res.status); return; }
+            const { pulse } = await res.json();
+
+            // The first answer is what the page was rendered from, so it is recorded
+            // rather than acted on. Without that the board would rebuild once on load.
+            if (dpPulse === null) { dpPulse = pulse; return; }
+            if (pulse === dpPulse) return;
+
+            dpPulse = pulse;
+            await dpRefresh(false);
+        } catch (e) {
+            // Left for the next check: the board on screen is still the board as of the
+            // last successful rebuild, which beats an error. Said out loud even so, because
+            // a check that cannot run looks exactly like a board where nothing is happening.
+            console.warn('dispatch pulse failed', e);
+        }
+    }
+
     setInterval(() => {
         if (document.hidden) return;
         if (dpAnyModalOpen()) return;
         const s = document.getElementById('searchInput');
         if (s && s.value) return;
-        dpRefresh(false);
-    }, 30000);
+        dpCheck();
+    }, 5000);
+
+    // Coming back to the tab asks straight away rather than waiting out the interval.
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) dpCheck();
+    });
 
     dpStamp();
 </script>
