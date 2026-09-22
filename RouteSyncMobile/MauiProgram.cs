@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace FleetWiseMobile;
 
@@ -6,6 +6,10 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+		// Before anything opens a connection: the runtime reads this choice once, and
+		// the Supabase client below reaches the network while it is still being built.
+		NetworkPreference.Apply();
+
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()

@@ -45,6 +45,18 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+
+        <!--
+          Android sends its requests through the runtime's own socket stack rather than
+          the Java one it would use by default.
+
+          The Java client offers no say in which of a name's addresses it tries, and on a
+          network whose IPv6 addresses are synthetic and unroutable that is the difference
+          between a working app and one that times out on every call. The runtime's stack
+          takes the instruction in NetworkPreference. TLS still verifies against the
+          device's own trust store, through the Android crypto shim the app already ships.
+        -->
+        <UseNativeHttpHandler Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">false</UseNativeHttpHandler>
     </PropertyGroup>
 
     <!--
@@ -57,9 +69,14 @@
       were offline.
 
       This reaches every client in the process, including the ones inside the Supabase
-      library that nothing here can configure. Android is deliberately left alone: a
-      mobile carrier can be IPv6 only, where the same setting would take the app off the
-      network entirely.
+      library that nothing here can configure. It is set here rather than in code because
+      the host applies it before any managed code runs, so nothing can reach the network
+      ahead of it.
+
+      Android makes the same choice at startup instead, in NetworkPreference, where it can
+      be made conditional on the device holding an IPv4 address at all. A mobile carrier
+      can hand out IPv6 alone, and there this setting would take the app off the network
+      entirely.
     -->
     <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
         <RuntimeHostConfigurationOption Include="System.Net.DisableIPv6" Value="true" Trim="false" />
