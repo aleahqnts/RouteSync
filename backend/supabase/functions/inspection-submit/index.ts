@@ -153,14 +153,29 @@ Deno.serve(async (req) => {
 
     if (orderId !== null) {
       const { data: existing } = await service
-        .from("maintenance_items").select("item_id, label, state").eq("log_id", orderId);
+        .from("maintenance_items")
+        .select("item_id, label, state, checklist_item_id")
+        .eq("log_id", orderId);
 
+      // A fault coming back is recognised by the inspection item that raised it, which
+      // survives the item being reworded. Lines raised before that was recorded, and
+      // lines an admin typed by hand, carry no item and are still found by their label:
+      // it is all they have ever had, and it holds as long as nobody edits the wording.
+      //
+      // Note the two meanings of item_id here. On a maintenance line it is the line's own
+      // identifier; on a fault it is the checklist item's. They are never the same number.
+      const byChecklistItem = new Map(
+        (existing ?? [])
+          .filter((i) => i.checklist_item_id !== null)
+          .map((i) => [i.checklist_item_id, i]),
+      );
       const byLabel = new Map(
         (existing ?? []).map((i) => [String(i.label).toLowerCase(), i]),
       );
 
       for (const fault of failed) {
-        const already = byLabel.get(fault.label.toLowerCase());
+        const already = byChecklistItem.get(fault.item_id)
+          ?? byLabel.get(fault.label.toLowerCase());
         if (already) {
           // A fault reported again is open again, whatever it was closed as.
           if (already.state !== "open") {
@@ -172,6 +187,7 @@ Deno.serve(async (req) => {
           await service.from("maintenance_items").insert({
             log_id: orderId,
             label: fault.label,
+            checklist_item_id: fault.item_id,
             is_critical: fault.is_critical,
             source: "checklist",
             state: "open",
