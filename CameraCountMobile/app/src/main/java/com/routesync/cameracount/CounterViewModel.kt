@@ -400,6 +400,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
      * being offline is the ordinary condition on this route rather than a fault.
      */
     private var purgeTick = 0
+
+    /** Why the queue last refused to drain, so the same reason is logged once. */
+    private var lastRetry: String? = null
+
     private suspend fun drainEvents() {
         // Giving up is housekeeping against a queue that is empty almost always, so it
         // runs about once a minute rather than on every pass. A delete opens a write
@@ -414,9 +418,27 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
 
         val batch = events.oldest(EVENT_BATCH)
         if (batch.isEmpty()) return
-        when (SupabaseApi.postBoardingEvents(batch.map { it.toApi() })) {
-            SupabaseApi.SendResult.Ok -> events.forget(batch.map { it.eventId })
-            SupabaseApi.SendResult.Retry -> return
+        when (val sent = SupabaseApi.postBoardingEvents(batch.map { it.toApi() })) {
+            SupabaseApi.SendResult.Ok -> {
+                if (lastRetry != null) {
+                    android.util.Log.i(TAG, "crossings flowing again after $lastRetry")
+                    lastRetry = null
+                }
+                events.forget(batch.map { it.eventId })
+            }
+            is SupabaseApi.SendResult.Retry -> {
+                // Said once per distinct reason rather than every pass. A queue that
+                // cannot drain says the same thing every four seconds for as long as it
+                // lasts, and a log that repeats is a log nobody reads. A refusal the
+                // server will never change its mind about is indistinguishable from a
+                // tunnel without this line: in both cases the queue simply stops.
+                val reason = sent.code?.let { "HTTP $it ${sent.detail}" } ?: sent.detail
+                if (reason != lastRetry) {
+                    android.util.Log.w(TAG, "${batch.size} crossing(s) held: $reason")
+                    lastRetry = reason
+                }
+                return
+            }
             SupabaseApi.SendResult.Refused -> {
                 // One unacceptable row refuses the whole batch, so the batch goes again
                 // one at a time to find it. The rest land; the offender attempt count
@@ -428,7 +450,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                         SupabaseApi.SendResult.Refused -> events.noteRefused(listOf(held.eventId))
                         // The connection went away part-way through. The remainder keeps
                         // its place in the queue and is offered again next pass.
-                        SupabaseApi.SendResult.Retry -> return
+                        is SupabaseApi.SendResult.Retry -> return
                     }
                 }
             }

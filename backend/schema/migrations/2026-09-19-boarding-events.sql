@@ -121,7 +121,14 @@ alter table public.boarding_events enable row level security;
 -- The counter phone writes; nothing else does. No update and no delete for any device
 -- role: an event is a record of something that happened, not a piece of state. The
 -- service key is unaffected and remains the way an admin corrects anything.
-grant insert on public.boarding_events to app_camera;
+--
+-- Select is granted alongside insert and is not a way in. The device sends its crossings
+-- with a resolution that asks the database to ignore one it already holds, which names a
+-- conflict target, and naming one requires select on the table whether or not anything is
+-- ever read back. Without it every send is refused for want of a privilege the request
+-- never appears to use. No select policy exists for this role, so the grant reads nothing:
+-- row level security answers an empty set.
+grant insert, select on public.boarding_events to app_camera;
 
 -- A device may only write events under its own identity. The trip is left to the foreign
 -- key, which refuses an event naming a trip that does not exist.
@@ -134,6 +141,19 @@ drop policy if exists p_boarding_insert_own_device on public.boarding_events;
 create policy p_boarding_insert_own_device on public.boarding_events
   for insert to app_camera
   with check (
+    counter_device_id = nullif(current_setting('request.jwt.claims', true), '')::json->>'device_id'
+  );
+
+-- Reading is granted on the same terms as writing, and exists for the sake of the write.
+-- A device asks the database to ignore a crossing it already holds, which means the
+-- insert must first decide whether a row with that identifier is there. Under row level
+-- security a row nothing can see does not exist, so without this the decision cannot be
+-- made and every send is refused as though the row itself were disallowed. A phone sees
+-- what it wrote and nothing else, which is no wider than the insert above already permits.
+drop policy if exists p_boarding_select_own_device on public.boarding_events;
+create policy p_boarding_select_own_device on public.boarding_events
+  for select to app_camera
+  using (
     counter_device_id = nullif(current_setting('request.jwt.claims', true), '')::json->>'device_id'
   );
 
