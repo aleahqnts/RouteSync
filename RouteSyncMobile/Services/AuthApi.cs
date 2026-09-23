@@ -178,6 +178,22 @@ public class AuthApi
         List<string> Failed, List<string> Critical, string? Message);
 
     /// <summary>
+    /// A photograph already in storage, named for the item it documents.
+    /// </summary>
+    /// <remarks>
+    /// The object is uploaded when it is taken, so what travels with the inspection is its
+    /// name rather than its bytes. The server confirms the object is there before
+    /// recording it, since a name the phone believed in is not evidence that anything
+    /// arrived.
+    /// </remarks>
+    /// <remarks>
+    /// TakenAt is null for a photograph attached before the app was interrupted and
+    /// resumed, since the draft holds the reference and not the moment. The server records
+    /// arrival time in its place.
+    /// </remarks>
+    public record PhotoRef(int ItemId, string ObjectKey, DateTimeOffset? TakenAt);
+
+    /// <summary>
     /// Sends a completed inspection for recording.
     /// </summary>
     /// <remarks>
@@ -186,14 +202,27 @@ public class AuthApi
     /// could drive away from a failed brake.
     /// </remarks>
     public async Task<InspectionResult> SubmitInspectionAsync(
-        string tripId, Dictionary<string, string> results, string? notes)
+        string tripId, Dictionary<string, string> results, string? notes,
+        List<PhotoRef>? photos = null)
     {
         if (SupabaseConfig.Jwt is null)
             return new(Outcome.Unreachable, null, false, new(), new(), null);
         try
         {
             var res = await PostAsync("inspection-submit",
-                new { trip_id = tripId, results, notes }, SupabaseConfig.Jwt);
+                new
+                {
+                    trip_id = tripId,
+                    results,
+                    notes,
+                    photos = (photos ?? new()).Select(p => new
+                    {
+                        item_id = p.ItemId,
+                        object_key = p.ObjectKey,
+                        taken_at = p.TakenAt?.ToString("o"),
+                    }),
+                },
+                SupabaseConfig.Jwt);
             var body = await res.Content.ReadAsStringAsync();
 
             if (res.IsSuccessStatusCode)

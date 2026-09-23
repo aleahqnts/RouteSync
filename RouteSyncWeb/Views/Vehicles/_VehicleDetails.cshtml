@@ -23,6 +23,17 @@
         "Under Repair" => "vh-badge--repair",
         _ => "vh-badge--default"
     };
+
+    // Photographs still holding, and how many there ever were. The two differ once the
+    // retention sweep has run, and the difference is what lets the panel say a fault was
+    // photographed and the picture has since aged out, rather than showing nothing and
+    // letting it read as a fault nobody photographed.
+    (List<InspectionPhotoLineViewModel> Live, int Total) Shots(
+        IReadOnlyList<InspectionPhotoLineViewModel>? photos)
+    {
+        var all = photos ?? (IReadOnlyList<InspectionPhotoLineViewModel>)Array.Empty<InspectionPhotoLineViewModel>();
+        return (all.Where(p => !p.Swept).ToList(), all.Count);
+    }
 }
 
 <div class="modal-header">
@@ -267,6 +278,22 @@
                                     {
                                         <span class="vh-item-outcome">@item.Outcome</span>
                                     }
+                                    @{ var shots = Shots(item.Photos); }
+                                    @if (shots.Live.Count > 0)
+                                    {
+                                        <button type="button" class="vh-item-photo"
+                                                data-label="@item.Label"
+                                                data-photos="@string.Join(",", shots.Live.Select(p => p.PhotoId))"
+                                                data-taken="@string.Join("|", shots.Live.Select(p => p.TakenAt))"
+                                                title="Photographed by the driver during the inspection"
+                                                onclick="vhOpenPhotos(this)">
+                                            <span class="vh-item-photo-mark" aria-hidden="true">▣</span>@shots.Live.Count
+                                        </button>
+                                    }
+                                    else if (shots.Total > 0)
+                                    {
+                                        <span class="vh-item-gone" title="Photographs are kept for thirty days after the order closes">Photo expired</span>
+                                    }
                                 </li>
                                 @if (!item.IsOpen && !string.IsNullOrWhiteSpace(item.Note))
                                 {
@@ -383,6 +410,22 @@
                                                         <span class="vh-item-crit" title="Grounded the bus until it was fixed">Critical</span>
                                                     }
                                                     <span class="vh-item-outcome">@item.Outcome</span>
+                                                    @{ var pastShots = Shots(item.Photos); }
+                                                    @if (pastShots.Live.Count > 0)
+                                                    {
+                                                        <button type="button" class="vh-item-photo"
+                                                                data-label="@item.Label"
+                                                                data-photos="@string.Join(",", pastShots.Live.Select(p => p.PhotoId))"
+                                                                data-taken="@string.Join("|", pastShots.Live.Select(p => p.TakenAt))"
+                                                                title="Photographed by the driver during the inspection"
+                                                                onclick="vhOpenPhotos(this)">
+                                                            <span class="vh-item-photo-mark" aria-hidden="true">▣</span>@pastShots.Live.Count
+                                                        </button>
+                                                    }
+                                                    else if (pastShots.Total > 0)
+                                                    {
+                                                        <span class="vh-item-gone" title="Photographs are kept for thirty days after the order closes">Photo expired</span>
+                                                    }
                                                 </li>
                                                 @if (!string.IsNullOrWhiteSpace(item.Note))
                                                 {

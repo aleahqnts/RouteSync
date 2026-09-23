@@ -205,6 +205,23 @@
     </div>
 </div>
 
+@* What a driver photographed at a fault. Read only, and behind a button rather than in
+   the panel: a work order is read for what is outstanding, and a wall of photographs
+   would bury that. Sits beside the checklist dialog rather than inside the details modal,
+   for the same reason it does. *@
+<div class="modal fade vh-modal" id="vhPhotoModal" tabindex="-1"
+     aria-labelledby="vhPhotoLabel" aria-hidden="true">
+    <div class="modal-dialog vh-modal-sm modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title vh-modal-title" id="vhPhotoLabel">Inspection Photo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body vh-modal-body" id="vhPhotoBody"></div>
+        </div>
+    </div>
+</div>
+
 @* Antiforgery token for the View-modal fetch POSTs (add note / resolve / out-of-service). *@
 @Html.AntiForgeryToken()
 
@@ -404,6 +421,54 @@
         if (!source || !body || !dialog) return;
 
         body.replaceChildren(source.content.cloneNode(true));
+
+        bootstrap.Modal.getOrCreateInstance(dialog).show();
+    }
+
+    // Opens the photographs behind one fault, newest first.
+    //
+    // The button carries the row identifiers rather than the stored paths, and the server
+    // resolves each one. A path in the page would be a path anyone signed in could ask
+    // for, and the service key behind the proxy would fetch whatever it was given.
+    //
+    // Images are built as elements rather than as markup, so a label typed by an admin is
+    // text wherever it lands.
+    function vhOpenPhotos(button) {
+        const body = document.getElementById('vhPhotoBody');
+        const dialog = document.getElementById('vhPhotoModal');
+        const title = document.getElementById('vhPhotoLabel');
+        if (!body || !dialog) return;
+
+        const ids = (button.dataset.photos || '').split(',').filter(Boolean);
+        const taken = (button.dataset.taken || '').split('|');
+        if (title) title.textContent = button.dataset.label || 'Inspection Photo';
+
+        body.replaceChildren();
+        ids.forEach(function (id, i) {
+            const figure = document.createElement('figure');
+            figure.className = 'vh-photo';
+
+            const img = document.createElement('img');
+            img.src = '@Url.Action("InspectionPhoto", "Vehicles")?photoId=' + encodeURIComponent(id);
+            img.alt = 'Photograph taken during the inspection';
+            img.loading = 'lazy';
+
+            // A photograph swept between the panel rendering and this click is the one
+            // case the button cannot know about, so the gap is named rather than left as
+            // a broken image.
+            img.onerror = function () {
+                const gone = document.createElement('p');
+                gone.className = 'vh-photo-gone';
+                gone.textContent = 'This photo is no longer stored.';
+                figure.replaceChildren(gone);
+            };
+
+            const caption = document.createElement('figcaption');
+            caption.textContent = taken[i] || '';
+
+            figure.append(img, caption);
+            body.appendChild(figure);
+        });
 
         bootstrap.Modal.getOrCreateInstance(dialog).show();
     }
