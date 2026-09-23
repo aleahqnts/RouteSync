@@ -19,6 +19,60 @@ const service = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+/** A photograph the phone says it has already uploaded, named for the item it documents. */
+type PhotoRef = { item_id?: unknown; object_key?: unknown; taken_at?: unknown };
+
+const PHOTO_BUCKET = "inspection-photos";
+
+/**
+ * The photographs actually present in one driver's folder.
+ *
+ * The phone uploads when the photograph is taken and sends only the name, so a name
+ * arriving here is a claim rather than evidence. Recording one without checking would
+ * produce a row pointing at nothing, which no reader can tell apart from a photograph that
+ * was later swept, and the dashboard would offer a button that opens onto an error.
+ *
+ * Listed once for the whole folder rather than asked about one object at a time, so the
+ * check costs the same whether an inspection carries one photograph or six.
+ *
+ * Returns null when the bucket could not be read at all, which is different from a folder
+ * that is empty: nothing is recorded either way, but only one of them is a fault worth
+ * finding in the logs.
+ */
+async function storedNames(driverId: number): Promise<Set<string> | null> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const res = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/list/${PHOTO_BUCKET}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          apikey: key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prefix: `${driverId}/`, limit: 200 }),
+      },
+    );
+    if (!res.ok) {
+      console.error(`inspection-submit: photo listing refused ${res.status}`);
+      return null;
+    }
+
+    // Names come back relative to the prefix that was asked for.
+    const listed = await res.json() as Array<{ name?: unknown }>;
+    return new Set(
+      listed
+        .map((o) => String(o.name ?? ""))
+        .filter((n) => n !== "")
+        .map((n) => `${driverId}/${n}`),
+    );
+  } catch (e) {
+    console.error(`inspection-submit: photo listing failed ${e}`);
+    return null;
+  }
+}
+
 /** The column each configured section is stored in. */
 const SECTION_COLUMNS = [
   "exterior_inspection",
@@ -43,11 +97,14 @@ Deno.serve(async (req) => {
   const driverId = claims.user_id as number;
 
   let tripId: string, results: Record<string, string>, notes: string | null;
+  let photos: PhotoRef[];
   try {
     const body = await req.json();
     tripId = String(body.trip_id ?? "").trim();
     results = (body.results ?? {}) as Record<string, string>;
     notes = body.notes ? String(body.notes).trim() : null;
+    // Absent for builds predating photographs, which submit exactly as they always did.
+    photos = Array.isArray(body.photos) ? (body.photos as PhotoRef[]) : [];
   } catch {
     return json(400, { error: "Invalid JSON body" });
   }
@@ -193,6 +250,62 @@ Deno.serve(async (req) => {
             state: "open",
           });
         }
+      }
+    }
+  }
+
+  // Photographs of what failed. Optional throughout: an inspection with none is complete,
+  // and one whose photographs cannot be confirmed is still recorded without them. Nothing
+  // here changes the outcome, which was decided above from the configured items alone.
+  const present = photos.length > 0 && checklistId !== null
+    ? await storedNames(driverId)
+    : null;
+
+  if (present !== null && checklistId !== null) {
+    const failedIds = new Set(failed.map((f) => f.item_id));
+
+    for (const photo of photos) {
+      const itemId = Number(photo.item_id);
+      const key = String(photo.object_key ?? "").trim();
+      if (!Number.isInteger(itemId) || key === "") continue;
+
+      // A photograph of an item that passed documents a fault nobody reported, and would
+      // have no maintenance line to hang from. The phone already filters these out; this
+      // is the side that decides.
+      if (!failedIds.has(itemId)) continue;
+
+      // The folder is the driver's own identifier, which is what the storage policy
+      // allowed them to write under. A key naming somebody else's folder could only come
+      // from a build that had been altered, since an unaltered one cannot produce it and
+      // could not have uploaded there in any case.
+      if (!key.startsWith(`${driverId}/`)) continue;
+
+      if (!present.has(key)) {
+        console.error(`inspection-submit: photo ${key} was named but is not stored`);
+        continue;
+      }
+
+      // Taken by the device clock, which is what the walk-around ran on. Falling back to
+      // arrival keeps the column honest about being an approximation rather than leaving
+      // it empty.
+      const takenAt = typeof photo.taken_at === "string" && photo.taken_at
+        ? photo.taken_at
+        : new Date().toISOString();
+
+      const { error: photoErr } = await service.from("inspection_photos").insert({
+        checklist_id: checklistId,
+        checklist_item_id: itemId,
+        log_id: orderId,
+        object_key: key,
+        taken_at: takenAt,
+      });
+
+      // Not fatal. The inspection is recorded and the bus is grounded or not on its own
+      // terms, and a photograph that failed to attach must not undo either. It is said
+      // out loud because the object is sitting in the bucket with nothing pointing at it,
+      // which is otherwise indistinguishable from a driver who took no photograph.
+      if (photoErr) {
+        console.error(`inspection-submit: photo ${key} not recorded: ${photoErr.message}`);
       }
     }
   }

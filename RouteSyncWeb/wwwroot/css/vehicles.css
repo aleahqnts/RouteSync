@@ -323,6 +323,60 @@
         flex: none;
     }
 
+    /* Sits with the fault it belongs to rather than above the list, because a work order
+       is read for what is outstanding and photographs are the detail behind one line. */
+    .vh-item-photo {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 1px 8px;
+        border: 1px solid #D6DCE7;
+        border-radius: 999px;
+        background: #fff;
+        color: #4A5568;
+        font-size: 0.68rem;
+        font-weight: 600;
+        flex: none;
+    }
+
+        .vh-item-photo:hover { border-color: #9AA3B2; }
+
+    .vh-item-photo-mark { font-size: 0.8rem; line-height: 1; }
+
+    /* A fault that was photographed and whose photograph has aged out. Said rather than
+       left blank, since a blank reads as a fault nobody photographed. */
+    .vh-item-gone {
+        font-size: 0.68rem;
+        color: #B6BDC9;
+        font-style: italic;
+        flex: none;
+    }
+
+    .vh-photo {
+        margin: 0 0 14px;
+    }
+
+        .vh-photo img {
+            width: 100%;
+            border-radius: 8px;
+            background: #F2F4F8;
+            display: block;
+        }
+
+        .vh-photo figcaption {
+            margin-top: 5px;
+            font-size: 0.72rem;
+            color: #9AA3B2;
+        }
+
+    .vh-photo-gone {
+        margin: 0;
+        padding: 18px 0;
+        text-align: center;
+        font-size: 0.78rem;
+        color: #9AA3B2;
+    }
+
     .vh-item-note {
         padding: 0 0 7px 25px !important;
         font-size: 0.76rem;

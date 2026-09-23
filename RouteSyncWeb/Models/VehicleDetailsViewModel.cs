@@ -124,6 +124,10 @@ namespace FleetWise.Models
     public sealed record InspectionResultViewModel(string Item, bool Passed, bool IsCritical);
 
     /// <summary>One fault on the open order, as it reads in the panel.</summary>
+    /// <remarks>
+    /// Photographs default to none so a line built anywhere that does not gather them
+    /// reads as a fault nobody photographed, which is what it is.
+    /// </remarks>
     public sealed record MaintenanceItemLineViewModel(
         long ItemId,
         string Label,
@@ -131,7 +135,20 @@ namespace FleetWise.Models
         bool IsOpen,
         string Outcome,
         string ClosedBy,
-        string Note);
+        string Note,
+        IReadOnlyList<InspectionPhotoLineViewModel>? Photos = null);
+
+    /// <summary>
+    /// One photograph behind a fault, as the viewer offers it.
+    /// </summary>
+    /// <remarks>
+    /// The identifier is the row's, not the object's. The dashboard asks for a photograph
+    /// by the row it can already see, so the only images reachable are ones the database
+    /// ties to a vehicle. Handing the storage path to the browser would let anyone signed
+    /// in fetch any object in the bucket, because the key on the server would go and get
+    /// whatever it was asked for.
+    /// </remarks>
+    public sealed record InspectionPhotoLineViewModel(long PhotoId, string TakenAt, bool Swept);
 
     /// <summary>One thing that happened to a bus, as recorded in the audit trail.</summary>
     public sealed record VehicleHistoryEntryViewModel(string When, string Who, string What, bool Refused);

@@ -441,22 +441,60 @@ namespace FleetWise.Controllers
             var ids = logIds.Distinct().ToList();
             if (ids.Count == 0) return new();
 
-            var response = await _supabase.From<MaintenanceItem>()
+            var itemsTask = _supabase.From<MaintenanceItem>()
                 .Filter("log_id", Postgrest.Constants.Operator.In, ids.Cast<object>().ToList())
                 .Get();
 
-            return response.Models
+            var photosTask = _supabase.From<InspectionPhoto>()
+                .Select("photo_id,log_id,checklist_item_id,taken_at,object_key,swept_at")
+                .Filter("log_id", Postgrest.Constants.Operator.In, ids.Cast<object>().ToList())
+                .Get();
+
+            await Task.WhenAll(itemsTask, photosTask);
+
+            // Matched on the order and the inspection item together. A line typed by hand
+            // carries no inspection item and therefore gathers nothing, which is right:
+            // photographs are taken during a walk-around, and nobody walked around for a
+            // line an admin raised at a desk.
+            // A photograph whose order has been deleted keeps its row and loses the link,
+            // so there is no line for it to sit under and it is not gathered here.
+            var photos = photosTask.Result.Models
+                .Where(p => p.LogId.HasValue)
+                .GroupBy(p => (p.LogId!.Value, p.ChecklistItemId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => (IReadOnlyList<InspectionPhotoLineViewModel>)g
+                        .OrderByDescending(p => p.TakenAt)
+                        .Select(p => new InspectionPhotoLineViewModel(
+                            p.PhotoId,
+                            PhClock.ToPh(new DateTimeOffset(
+                                DateTime.SpecifyKind(p.TakenAt, DateTimeKind.Utc)))
+                                .ToString("MM/dd/yy h:mm tt"),
+                            p.ObjectKey is null))
+                        .ToList());
+
+            return itemsTask.Result.Models
                 .GroupBy(i => i.LogId)
                 .ToDictionary(g => g.Key, g => g
-                    .Select(FormatOrderItem)
+                    .Select(i => FormatOrderItem(i, PhotosFor(photos, i)))
                     .OrderByDescending(i => i.IsOpen)
                     .ThenByDescending(i => i.IsCritical)
                     .ThenBy(i => i.Label, StringComparer.OrdinalIgnoreCase)
                     .ToList());
         }
 
+        /// <summary>The photographs behind one fault, newest first.</summary>
+        private static IReadOnlyList<InspectionPhotoLineViewModel>? PhotosFor(
+            Dictionary<(int, long), IReadOnlyList<InspectionPhotoLineViewModel>> photos,
+            MaintenanceItem item) =>
+            item.ChecklistItemId is long checklistItemId
+            && photos.TryGetValue((item.LogId, checklistItemId), out var found)
+                ? found
+                : null;
+
         /// <summary>One fault as it reads in the panel, with its outcome in words.</summary>
-        private static MaintenanceItemLineViewModel FormatOrderItem(MaintenanceItem item)
+        private static MaintenanceItemLineViewModel FormatOrderItem(
+            MaintenanceItem item, IReadOnlyList<InspectionPhotoLineViewModel>? photos)
         {
             var open = string.Equals(item.State, "open", OIC);
             return new MaintenanceItemLineViewModel(
@@ -466,7 +504,8 @@ namespace FleetWise.Controllers
                 open,
                 open ? "" : string.Equals(item.State, "fixed", OIC) ? "Fixed" : "Not an issue",
                 item.ClosedBy ?? "",
-                item.Note ?? "");
+                item.Note ?? "",
+                photos);
         }
 
         /// <summary>Everything recorded against one bus, newest first.</summary>
@@ -1569,6 +1608,45 @@ namespace FleetWise.Controllers
             if (!res.IsSuccessStatusCode) return NotFound();
             var bytes = await res.Content.ReadAsByteArrayAsync();
             Response.Headers.CacheControl = "no-store";
+            return File(bytes, "image/jpeg");
+        }
+
+        /// <summary>
+        /// Serves an inspection photograph to the browser.
+        /// </summary>
+        /// <remarks>
+        /// Asked for by the row rather than by the stored path. The dashboard can already
+        /// see which photographs belong to a fault, so naming one costs it nothing, while
+        /// accepting a path would let anyone signed in fetch any object in the bucket:
+        /// the key here is the service key, and it would go and get whatever it was asked
+        /// for.
+        ///
+        /// Cached hard, unlike the camera snapshot next to it. A snapshot is overwritten
+        /// in place on every wake, so a cached copy would show an earlier doorway. A
+        /// photograph is written once under a name nothing reuses, so a second look at the
+        /// same one need not travel again.
+        /// </remarks>
+        [HttpGet]
+        public async Task<IActionResult> InspectionPhoto(long photoId)
+        {
+            var row = (await _supabase.From<Models.InspectionPhoto>()
+                .Select("photo_id,object_key")
+                .Filter("photo_id", Postgrest.Constants.Operator.Equals, photoId)
+                .Limit(1)
+                .Get()).Models.FirstOrDefault();
+
+            // A swept photograph keeps its row and loses its object, which is the point of
+            // keeping the row. The panel already knows not to offer it; this is the answer
+            // if it is asked for anyway.
+            if (row?.ObjectKey is null) return NotFound();
+
+            var req = CamReq(HttpMethod.Get,
+                $"storage/v1/object/authenticated/inspection-photos/{row.ObjectKey}");
+            var res = await _camHttp.SendAsync(req);
+            if (!res.IsSuccessStatusCode) return NotFound();
+
+            var bytes = await res.Content.ReadAsByteArrayAsync();
+            Response.Headers.CacheControl = "private, max-age=31536000, immutable";
             return File(bytes, "image/jpeg");
         }
 
