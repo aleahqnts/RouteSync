@@ -101,15 +101,66 @@
     margin-bottom: 16px;
 }
 
+/* The separator moved out to the group so a failed item and its photograph read as one
+   entry rather than two. */
+.item-row { border-bottom: 1px solid #eef0f4; }
+
+.item-row:last-child { border-bottom: none; }
+
 .item {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 11px 14px;
-    border-bottom: 1px solid #eef0f4;
 }
 
-.item:last-child { border-bottom: none; }
+/* Only present under a failed item, so it never affects the ordinary row height. */
+.item-photo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px 11px 36px;
+}
+
+.ph-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid #e6e8ee;
+}
+
+.ph-btn {
+    border: 1px solid #cfd6e4;
+    background: #fff;
+    color: #1b2a56;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+}
+
+.ph-btn:disabled { opacity: .5; }
+
+.ph-add { border-style: dashed; color: #5a6a86; }
+
+.ph-drop { color: #d0494b; border-color: #f0cfd0; }
+
+.ph-note, .ph-fail { font-size: 12px; }
+
+.ph-note { color: #8a93a2; }
+
+.ph-fail { color: #d0494b; }
+
+.ph-modal { max-width: 320px; }
+
+.ph-preview {
+    width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+    border-radius: 10px;
+    margin: 10px 0 4px;
+    background: #f2f4f8;
+}
 
 .num {
     color: #8a93a2;

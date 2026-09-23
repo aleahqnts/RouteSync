@@ -5,6 +5,9 @@
 @inject DriverDataService Data
 @inject AuthApi Api
 @inject NavigationManager Nav
+@inject IPhotoCapture Camera
+@inject InspectionPhotos Photos
+@inject ChecklistDraft Draft
 
 @if (loading)
 {
@@ -101,23 +104,60 @@ else
             {
                 var idx = i;
                 var item = CurrentSection.Items[idx];
-                <div class="item">
-                    <span class="num">@(idx + 1).</span>
-                    <span class="label">
-                        @item.Label
-                        @if (item.IsCritical)
-                        {
-                            <span class="crit" title="Blocks the trip if it fails">Critical</span>
-                        }
-                    </span>
-                    <div class="marks">
-                        <button class="mark check @(item.Status == "Pass" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Pass"))">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12.5l4 4 10-11" /></svg>
-                        </button>
-                        <button class="mark minus @(item.Status == "Fail" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Fail"))">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 12h12" /></svg>
-                        </button>
+                <div class="item-row">
+                    <div class="item">
+                        <span class="num">@(idx + 1).</span>
+                        <span class="label">
+                            @item.Label
+                            @if (item.IsCritical)
+                            {
+                                <span class="crit" title="Blocks the trip if it fails">Critical</span>
+                            }
+                        </span>
+                        <div class="marks">
+                            <button class="mark check @(item.Status == "Pass" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Pass"))">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12.5l4 4 10-11" /></svg>
+                            </button>
+                            <button class="mark minus @(item.Status == "Fail" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Fail"))">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 12h12" /></svg>
+                            </button>
+                        </div>
                     </div>
+
+                    @* Offered only where there is something to document, and never opened
+                       on its own. A fuel level below the mark needs no picture, and a
+                       camera that appeared at every fault is a prompt drivers learn to
+                       dismiss. *@
+                    @if (item.Status == "Fail")
+                    {
+                        <div class="item-photo">
+                            @if (thumbs.TryGetValue(item.ItemId, out var thumb))
+                            {
+                                <img class="ph-thumb" src="@thumb" alt="Photo of @item.Label" />
+                            }
+                            else if (photos.ContainsKey(item.ItemId))
+                            {
+                                @* The reference survived an interruption; the picture did
+                                   not. It is still attached and still submitted. *@
+                                <span class="ph-note">Photo attached</span>
+                            }
+
+                            @if (photos.ContainsKey(item.ItemId))
+                            {
+                                <button class="ph-btn" @onclick="@(() => TakePhoto(item))" disabled="@cameraBusy">Retake</button>
+                                <button class="ph-btn ph-drop" @onclick="@(() => DropPhotoAsync(item))" disabled="@cameraBusy">Remove</button>
+                            }
+                            else if (uploadFailed.Contains(item.ItemId))
+                            {
+                                <span class="ph-fail">Photo not sent</span>
+                                <button class="ph-btn" @onclick="@(() => TakePhoto(item))" disabled="@cameraBusy">Try Again</button>
+                            }
+                            else
+                            {
+                                <button class="ph-btn ph-add" @onclick="@(() => TakePhoto(item))" disabled="@cameraBusy">Add photo</button>
+                            }
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -141,6 +181,25 @@ else
             </button>
         }
     </div>
+
+    @* What the driver took, before anything is sent. A photograph of a thumb over the
+       lens is worse than none, and they are still standing where they can take another. *@
+    @if (pendingPreview is not null)
+    {
+        <div class="overlay">
+            <div class="ua-modal ph-modal">
+                <h2>Use this photo?</h2>
+                <p class="ua-sub">@pendingItem?.Label</p>
+                <img class="ph-preview" src="@pendingPreview" alt="Preview of the photo just taken" />
+
+                <div class="ua-actions">
+                    <button class="btn-cancel" @onclick="@(() => TakePhoto(pendingItem!))" disabled="@cameraBusy">Retake</button>
+                    <button class="btn-confirm" @onclick="ConfirmPhoto" disabled="@cameraBusy">Use Photo</button>
+                </div>
+                <button class="btn-plain" @onclick="ClearPending" disabled="@cameraBusy">Cancel</button>
+            </div>
+        </div>
+    }
 
     @if (showSkipConfirm)
     {
@@ -178,6 +237,28 @@ else
     private bool canSkip;
     private bool showSkipConfirm;
 
+    // Photographs already stored, by the item they belong to. The name is generated once
+    // and kept, so retaking replaces the object rather than leaving the first behind.
+    private readonly Dictionary<int, Guid> photos = new();
+
+    // Thumbnails for the rows, held only in memory. They are not written to the draft:
+    // an image is far too large for it, and losing the picture while keeping the
+    // reference costs a thumbnail rather than a photograph.
+    private readonly Dictionary<int, string> thumbs = new();
+
+    // When each photograph was taken, by this device's clock. Not held in the draft: an
+    // inspection resumed after an interruption falls back to the arrival time, which is
+    // the same approximation by a different route.
+    private readonly Dictionary<int, DateTimeOffset> takenAt = new();
+
+    // The shot waiting to be confirmed, and the item it is for.
+    private byte[]? pendingShot;
+    private string? pendingPreview;
+    private CItem? pendingItem;
+    private DateTimeOffset pendingTakenAt;
+    private bool cameraBusy;
+    private readonly HashSet<int> uploadFailed = new();
+
     private Section CurrentSection => sections[currentSection];
     private bool IsLast => currentSection == sections.Count - 1;
 
@@ -198,6 +279,9 @@ else
                 await LoadSkipOfferAsync(v);
             }
             await LoadItemsAsync();
+
+            // After the items, because the draft is matched against them.
+            RestoreDraft();
         }
         finally { loading = false; }
     }
@@ -275,15 +359,148 @@ else
         loading = false;
     }
 
-    private void SetStatus(int idx, string status)
+    private async Task SetStatus(int idx, string status)
     {
-        CurrentSection.Items[idx].Status = status;
+        var item = CurrentSection.Items[idx];
+        item.Status = status;
         message = null;
+
+        // An item marked Pass again has nothing to document, so the photograph taken for
+        // it is removed at the moment the driver changes their mind. That is the only
+        // cleanup that happens when it is needed: an inspection abandoned outright leaves
+        // an object behind for the sweep.
+        if (status == "Pass") await DropPhotoAsync(item);
+
+        SaveDraft();
+    }
+
+    /// <summary>
+    /// Opens the camera for a failed item and holds the result for confirmation.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is sent yet. The driver sees what they took and decides, because a
+    /// photograph of a thumb over the lens is worse than none and they are still standing
+    /// where they can take another.
+    /// </remarks>
+    private async Task TakePhoto(CItem item)
+    {
+        if (cameraBusy) return;
+        cameraBusy = true;
+        try
+        {
+            var jpeg = await Camera.CaptureAsync();
+            if (jpeg is null) return;
+
+            pendingShot = jpeg;
+            pendingPreview = $"data:image/jpeg;base64,{Convert.ToBase64String(jpeg)}";
+            pendingItem = item;
+            pendingTakenAt = DateTimeOffset.UtcNow;
+        }
+        finally { cameraBusy = false; }
+    }
+
+    /// <summary>Sends the held photograph and attaches it to its item.</summary>
+    /// <remarks>
+    /// The upload happens here rather than at submit, while the driver is still standing
+    /// at the fault and can take another. A failure is shown on the row: the inspection
+    /// carries on without the photograph, because a reference to an object that is not
+    /// there is worse than no reference.
+    /// </remarks>
+    private async Task ConfirmPhoto()
+    {
+        if (pendingShot is null || pendingItem is null) return;
+
+        var item = pendingItem;
+        var jpeg = pendingShot;
+        var shotAt = pendingTakenAt;
+        var driverId = Session.CurrentUser?.UserId ?? 0;
+
+        ClearPending();
+        cameraBusy = true;
+        try
+        {
+            // An existing name is reused so a retake replaces the object it is replacing
+            // on screen. A new one is minted only for the first photograph of an item.
+            if (!photos.TryGetValue(item.ItemId, out var objectId))
+                objectId = Guid.NewGuid();
+
+            if (await Photos.UploadAsync(driverId, objectId, jpeg))
+            {
+                photos[item.ItemId] = objectId;
+                takenAt[item.ItemId] = shotAt;
+                thumbs[item.ItemId] = $"data:image/jpeg;base64,{Convert.ToBase64String(jpeg)}";
+                uploadFailed.Remove(item.ItemId);
+                SaveDraft();
+            }
+            else
+            {
+                uploadFailed.Add(item.ItemId);
+            }
+        }
+        finally { cameraBusy = false; }
+    }
+
+    /// <summary>Takes back a photograph, removing the stored object with it.</summary>
+    private async Task DropPhotoAsync(CItem item)
+    {
+        uploadFailed.Remove(item.ItemId);
+        thumbs.Remove(item.ItemId);
+
+        if (!photos.Remove(item.ItemId, out var objectId)) return;
+
+        await Photos.DeleteAsync(Session.CurrentUser?.UserId ?? 0, objectId);
+        SaveDraft();
+    }
+
+    private void ClearPending()
+    {
+        pendingShot = null;
+        pendingPreview = null;
+        pendingItem = null;
+    }
+
+    /// <summary>Writes the walk-around down so an interruption cannot erase it.</summary>
+    private void SaveDraft()
+    {
+        var statuses = sections
+            .SelectMany(s => s.Items)
+            .Where(i => i.Status is not null)
+            .ToDictionary(i => i.ItemId, i => i.Status!);
+
+        Draft.Save(TripId, currentSection, statuses, photos);
+    }
+
+    /// <summary>
+    /// Puts back a walk-around the operating system interrupted.
+    /// </summary>
+    /// <remarks>
+    /// Statuses are matched by the configured item rather than by its wording, so an item
+    /// reworded while the driver was in the camera still finds its answer. An item that
+    /// has since been removed from the inspection is simply not found, which is the right
+    /// outcome: it is no longer part of what is being asked.
+    ///
+    /// Thumbnails do not come back. The reference does, so the photograph is still
+    /// attached and will still be submitted; the row says so without showing it.
+    /// </remarks>
+    private void RestoreDraft()
+    {
+        var saved = Draft.Load(TripId);
+        if (saved is null) return;
+
+        var byId = sections.SelectMany(s => s.Items).ToDictionary(i => i.ItemId);
+        foreach (var (itemId, status) in saved.Statuses)
+            if (byId.TryGetValue(itemId, out var item)) item.Status = status;
+
+        foreach (var (itemId, objectId) in ChecklistDraft.PhotosOf(saved))
+            if (byId.ContainsKey(itemId)) photos[itemId] = objectId;
+
+        if (saved.Section >= 0 && saved.Section < sections.Count)
+            currentSection = saved.Section;
     }
 
     private void Back()
     {
-        if (currentSection > 0) currentSection--;
+        if (currentSection > 0) { currentSection--; SaveDraft(); }
         else Nav.NavigateTo("/home");
     }
 
@@ -296,7 +513,15 @@ else
 
     private bool HandleHardwareBack()
     {
-        // A dialog on screen is what back closes, before the form underneath it.
+        // A dialog on screen is what back closes, before the form underneath it. The
+        // preview is discarded rather than kept, matching what backing out of a camera
+        // means everywhere else.
+        if (pendingShot is not null)
+        {
+            InvokeAsync(() => { ClearPending(); StateHasChanged(); });
+            return true;
+        }
+
         if (showSkipConfirm)
         {
             InvokeAsync(() => { showSkipConfirm = false; StateHasChanged(); });
@@ -320,6 +545,7 @@ else
         {
             currentSection++;
             message = null;
+            SaveDraft();
             return;
         }
 
@@ -338,7 +564,24 @@ else
                 .SelectMany(s => s.Items)
                 .ToDictionary(i => i.Label, i => i.Status ?? "Fail");
 
-            var r = await Api.SubmitInspectionAsync(TripId, results, null);
+            // Only photographs of items still marked Fail are offered. One taken for an
+            // item the driver then passed has already been deleted, and naming it here
+            // would ask the server to record evidence of a fault nobody is reporting.
+            var stillFailing = sections
+                .SelectMany(s => s.Items)
+                .Where(i => i.Status != "Pass")
+                .Select(i => i.ItemId)
+                .ToHashSet();
+
+            var attached = photos
+                .Where(p => stillFailing.Contains(p.Key))
+                .Select(p => new AuthApi.PhotoRef(
+                    p.Key,
+                    InspectionPhotos.KeyFor(Session.CurrentUser?.UserId ?? 0, p.Value),
+                    takenAt.TryGetValue(p.Key, out var when) ? when : null))
+                .ToList();
+
+            var r = await Api.SubmitInspectionAsync(TripId, results, null, attached);
 
             if (r.Outcome == AuthApi.Outcome.Unreachable)
             {
@@ -359,6 +602,11 @@ else
             blocked = r.Blocked;
             hasDefects = !blocked && r.Failed.Count > 0;
             reportedIssues = r.Failed;
+
+            // The draft has served its purpose. The photograph names go with it: they
+            // existed to match an uploaded object to its item, and the server has just
+            // recorded that.
+            Draft.Clear();
 
             submitted = true;
         }
@@ -386,6 +634,14 @@ else
         try
         {
             await Data.SkipChecklistAsync(TripId, trip!.VehicleId, Session.CurrentUser!.UserId);
+
+            // A skipped inspection reports nothing, so anything photographed before the
+            // driver chose to skip is evidence for a report that will not be made. The
+            // objects are removed with the draft rather than left for the sweep.
+            foreach (var (_, objectId) in photos)
+                await Photos.DeleteAsync(Session.CurrentUser!.UserId, objectId);
+            Draft.Clear();
+
             Nav.NavigateTo("/home");
         }
         catch (Exception ex)
@@ -410,18 +666,22 @@ else
         {
             Title = title;
             Key = key;
-            Items = items.Select(i => new CItem(i.Label, i.IsCritical)).ToList();
+            Items = items.Select(i => new CItem(i.ItemId, i.Label, i.IsCritical)).ToList();
         }
     }
 
     public class CItem
     {
+        // Carried from the configured item so a photograph can name what it is of, and so
+        // the draft can key on something that survives the wording being changed.
+        public int ItemId { get; }
         public string Label { get; }
         public bool IsCritical { get; }
         public string? Status { get; set; }
 
-        public CItem(string label, bool isCritical)
+        public CItem(int itemId, string label, bool isCritical)
         {
+            ItemId = itemId;
             Label = label;
             IsCritical = isCritical;
         }

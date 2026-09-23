@@ -43,16 +43,23 @@ public static class MauiProgram
 		builder.Services.AddSingleton<Services.AuthService>();
 		builder.Services.AddSingleton<Services.DriverDataService>();
 
+		// Inspection photographs: the walk-around held across an interruption, and the
+		// objects themselves.
+		builder.Services.AddSingleton<Services.ChecklistDraft>();
+		builder.Services.AddSingleton<Services.InspectionPhotos>();
+
 		// GPS telemetry: the on-device buffer and the background tracker.
 		builder.Services.AddSingleton<Services.TelemetryQueue>();
 #if ANDROID
 		builder.Services.AddSingleton<Services.ITripTracker, Platforms.Android.AndroidTripTracker>();
 		builder.Services.AddSingleton<Services.ILocalNotifier, Platforms.Android.AndroidLocalNotifier>();
 		builder.Services.AddSingleton<Services.ILocationGuard, Platforms.Android.AndroidLocationGuard>();
+		builder.Services.AddSingleton<Services.IPhotoCapture, Platforms.Android.AndroidPhotoCapture>();
 #else
 		builder.Services.AddSingleton<Services.ITripTracker, Services.NoopTripTracker>();
 		builder.Services.AddSingleton<Services.ILocalNotifier, Services.NoopLocalNotifier>();
 		builder.Services.AddSingleton<Services.ILocationGuard, Services.NoopLocationGuard>();
+		builder.Services.AddSingleton<Services.IPhotoCapture, Services.MauiPhotoCapture>();
 #endif
 
 		// Message poller, which drives the badge, the popup and the system notification.
