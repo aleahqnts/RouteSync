@@ -101,8 +101,15 @@ namespace FleetWise.Services
         ///
         /// Never pass the password, whether it was correct or not.
         /// </remarks>
+        /// <param name="attemptedAccount">
+        /// On a failure, the account the typed email belongs to. Recorded as the target and
+        /// never as the actor: whoever typed it has not shown they own it. It is what lets
+        /// repeated attempts on one account be recognised as one attack, which the address
+        /// alone cannot do when many people share it.
+        /// </param>
         public async Task WriteSignInAsync(
-            string action, string summary, int? userId, string outcome = "ok", string? role = null)
+            string action, string summary, int? userId, string outcome = "ok", string? role = null,
+            int? attemptedAccount = null)
         {
             await PostAsync(new Dictionary<string, object?>
             {
@@ -115,7 +122,7 @@ namespace FleetWise.Services
                 ["actor_role"] = role,
                 ["action"] = action,
                 ["target_table"] = "users",
-                ["target_id"] = userId?.ToString(),
+                ["target_id"] = (userId ?? attemptedAccount)?.ToString(),
                 ["outcome"] = outcome,
                 ["summary"] = summary,
             });

@@ -763,3 +763,170 @@
         min-width: 0;
     }
 }
+
+/* Audit/Incidents.cshtml and the tabs both audit pages share. */
+
+    /* The two views of the trail. An underline marks the current one, as tabs do
+       everywhere else, rather than anything heavier. */
+    .au-tabs {
+        display: flex;
+        gap: 4px;
+        margin: 4px 0 14px;
+        border-bottom: 1px solid var(--au-border);
+    }
+
+    .au-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 12px;
+        margin-bottom: -1px;
+        border-bottom: 2px solid transparent;
+        color: var(--au-muted);
+        font-size: 0.86rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .au-tab:hover { color: var(--au-text); }
+
+    .au-tab--active {
+        color: var(--au-teal);
+        border-bottom-color: var(--au-teal);
+    }
+
+    .au-tab-count {
+        min-width: 20px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: #EEF2F6;
+        color: #5A6B7F;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    /* Only for a sign-in that succeeded after failures, matching the rail. */
+    .au-tab-count--urgent { background: #FDECEC; color: #C0392B; }
+
+    .si-scan { display: inline; margin: 0; }
+
+    .si-flash {
+        margin: 0 0 12px;
+        padding: 9px 14px;
+        border-radius: 10px;
+        background: #EAF7F5;
+        color: #2C6E6A;
+        font-size: 0.84rem;
+    }
+
+    .si-row { cursor: pointer; }
+    .si-row:hover, .si-row:focus-visible { background: var(--au-bg); outline: none; }
+
+    .si-title { font-size: 0.88rem; color: var(--au-text); }
+    .si-row--new .si-title { font-weight: 700; }
+
+    .si-subject { font-size: 0.76rem; color: var(--au-muted); margin-top: 2px; }
+
+    .si-count { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .si-when { font-size: 0.8rem; color: var(--au-text); }
+
+    .si-sev {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+
+    .si-sev--high { background: #FDECEC; color: #C0392B; }
+    .si-sev--medium { background: #FEF3E2; color: #B7791F; }
+    .si-sev--low { background: #EEF2F6; color: #5A6B7F; }
+
+    .si-pill--waiting { background: #FEF3E2; color: #B7791F; }
+
+    .si-reviewed { font-size: 0.78rem; color: var(--au-muted); }
+
+    /* The panel. */
+    .si-loading { padding: 28px; text-align: center; color: var(--au-muted); }
+
+    .si-detail-subject { font-size: 0.82rem; color: var(--au-muted); margin-top: 2px; }
+
+    .si-facts {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0 0 12px;
+    }
+
+    .si-facts dt {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--au-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .si-facts dd { margin: 2px 0 0; font-size: 0.84rem; color: var(--au-text); }
+
+    .si-why {
+        margin: 0 0 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--au-bg);
+        font-size: 0.84rem;
+        color: var(--au-text);
+        line-height: 1.45;
+    }
+
+    .si-entries-wrap { overflow-x: auto; }
+
+    .si-entries td { font-size: 0.8rem; vertical-align: top; }
+
+    .si-ip { font-family: Consolas, 'Courier New', monospace; font-size: 0.78rem; }
+
+    .si-note { margin: 10px 0 0; font-size: 0.78rem; color: var(--au-muted); }
+
+    .si-review { display: block; }
+
+    .si-reviewed-note { margin: 0 0 8px; font-size: 0.82rem; color: var(--au-text); }
+
+    .si-review-quote { display: block; margin-top: 4px; color: var(--au-muted); }
+
+    .si-note-label { display: block; font-size: 0.76rem; font-weight: 600; color: var(--au-muted); margin-bottom: 4px; }
+
+    .si-note-input { width: 100%; resize: vertical; }
+
+    .si-review-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+@media (max-width: 599px) {
+
+    /* Each incident becomes a card: severity and count on top, what was found under
+       them, then when and where it stands. The column headings say nothing a card does
+       not already show. */
+    .si-table thead { display: none; }
+
+    .si-table tbody tr.si-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 8px;
+        row-gap: 4px;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--au-border);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .si-table tbody tr.si-row td { display: block; padding: 0; border: none; }
+
+    .si-table tbody tr.si-row td:nth-child(1) { grid-column: 1; grid-row: 1; }
+    .si-table tbody tr.si-row td:nth-child(3) { grid-column: 3; grid-row: 1; }
+    .si-table tbody tr.si-row td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+    .si-table tbody tr.si-row td:nth-child(4) { grid-column: 1 / -1; grid-row: 3; }
+    .si-table tbody tr.si-row td:nth-child(5) { grid-column: 1 / -1; grid-row: 4; }
+
+    .si-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

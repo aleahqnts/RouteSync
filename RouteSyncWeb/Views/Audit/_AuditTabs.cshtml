@@ -1,0 +1,28 @@
+@model string
+@inject FleetWise.Services.NavCounts NavCounts
+@*
+    The two views of the audit trail: every entry, and the entries gathered into
+    incidents. Model is the name of the tab being shown.
+
+    The incidents count is the rail's own, so it agrees with the rail and is kept current
+    by the same poll: the rail script updates anything carrying data-badge.
+*@
+@{
+    var badge = (await NavCounts.ReadAsync()).Audit;
+    var onIncidents = Model == "Incidents";
+}
+
+<nav class="au-tabs" aria-label="Audit views">
+    <a class="au-tab @(onIncidents ? "" : "au-tab--active")"
+       href="@Url.Action("Index", "Audit")"
+       aria-current="@(onIncidents ? null : "page")">All activity</a>
+
+    <a class="au-tab @(onIncidents ? "au-tab--active" : "")"
+       href="@Url.Action("Incidents", "Audit")"
+       aria-current="@(onIncidents ? "page" : null)">
+        Incidents
+        <span class="au-tab-count @(badge.Urgent ? "au-tab-count--urgent" : "")"
+              data-badge="audit" data-urgent-class="au-tab-count--urgent"
+              title="@badge.Note" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
+    </a>
+</nav>

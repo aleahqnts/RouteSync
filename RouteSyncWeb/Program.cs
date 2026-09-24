@@ -102,6 +102,10 @@ builder.Services.AddSingleton<LoginThrottle>();
 // database cannot tell from the shared service key, and to record the caller's address.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditLog>();
+
+// Security incidents: the table, and the detector that reads the audit trail into it.
+builder.Services.AddSingleton<SecurityIncidents>();
+builder.Services.AddScoped<SecurityDetector>();
 builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<NavCounts>();
 builder.Services.AddScoped<SchedulingData>();
@@ -143,6 +147,10 @@ builder.Services.AddHostedService<TripReaperService>();
 // checking on startup and every half hour because the host sleeps. Roster:AutoCycle turns
 // it off.
 builder.Services.AddHostedService<RosterCycleService>();
+
+// Groups unusual activity in the audit trail into incidents every two minutes. Detection
+// only: nothing here blocks anyone.
+builder.Services.AddHostedService<SecurityDetectorService>();
 
 var app = builder.Build();
 
