@@ -1,0 +1,195 @@
+@model SecurityIncidentsViewModel
+@using FleetWise.Services
+@{
+    ViewData["Title"] = "Security Incidents";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string When(DateTimeOffset t) => PhClock.ToPh(t).ToString("MMM d, h:mm tt");
+
+    // One burst reads as a span. The same day is written once, so the eye goes to the
+    // times, which are what say how fast it was.
+    string Span(DateTimeOffset first, DateTimeOffset last)
+    {
+        var a = PhClock.ToPh(first);
+        var b = PhClock.ToPh(last);
+        if (a == b) return a.ToString("MMM d, h:mm tt");
+        return a.Date == b.Date
+            ? $"{a:MMM d, h:mm tt} to {b:h:mm tt}"
+            : $"{a:MMM d, h:mm tt} to {b:MMM d, h:mm tt}";
+    }
+
+    string Ago(DateTimeOffset t)
+    {
+        var d = DateTimeOffset.UtcNow - t;
+        if (d < TimeSpan.FromMinutes(1)) return "just now";
+        if (d < TimeSpan.FromHours(1)) return $"{(int)d.TotalMinutes} min ago";
+        if (d < TimeSpan.FromDays(1)) return $"{(int)d.TotalHours} h ago";
+        return When(t);
+    }
+
+    (string Css, string Label) Severity(string s) => s switch
+    {
+        "high" => ("si-sev--high", "High"),
+        "low" => ("si-sev--low", "Low"),
+        _ => ("si-sev--medium", "Medium"),
+    };
+}
+
+<div class="au-head">
+    <div>
+        <h2 class="au-title">Audit Log</h2>
+        <p class="au-subtitle">Unusual activity, grouped. Detection only: nothing here blocks anyone.</p>
+    </div>
+    <div class="au-head-actions">
+        @if (Model.ScannedThrough is { } through)
+        {
+            <span class="au-updated" title="Checked automatically every two minutes">Checked @Ago(through)</span>
+        }
+        <form method="post" asp-action="ScanIncidents" class="si-scan">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="au-btn au-btn--outline" title="Check the audit log now rather than waiting for the next automatic check">
+                Scan now
+            </button>
+        </form>
+    </div>
+</div>
+
+<partial name="_AuditTabs" model="@("Incidents")" />
+
+@if (!string.IsNullOrEmpty(Model.ScanMessage))
+{
+    <p class="si-flash" role="status">@Model.ScanMessage</p>
+}
+
+<div class="au-card">
+    <div class="au-card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+        </svg>
+        <span>Incidents</span>
+        @if (Model.Rows is not null && Model.NeedsReview > 0)
+        {
+            <span class="au-count">@Model.NeedsReview need@(Model.NeedsReview == 1 ? "s" : "") review</span>
+        }
+    </div>
+
+    <div class="au-table-wrap">
+        <table class="au-table si-table">
+            <thead>
+                <tr>
+                    <th style="width:90px">Severity</th>
+                    <th>What was found</th>
+                    <th style="width:90px">Entries</th>
+                    <th style="width:220px">When</th>
+                    <th style="width:170px">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows is null)
+                {
+                    <tr>
+                        <td colspan="5" class="au-empty">
+                            Could not load the incidents. The audit log itself is safe; this page
+                            just could not reach it. Try again in a moment.
+                        </td>
+                    </tr>
+                }
+                else if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="au-empty">
+                            Nothing unusual found. The audit log is checked every two minutes.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var row in Model.Rows)
+                    {
+                        var i = row.Incident;
+                        var sev = Severity(i.Severity);
+                        var grewSinceReview = i.NeedsReview && i.ReviewedAt is not null;
+
+                        <tr class="si-row @(i.NeedsReview ? "si-row--new" : "")"
+                            data-incident="@i.IncidentId" tabindex="0"
+                            aria-label="@row.Title, @row.Subject. Open details.">
+                            <td><span class="si-sev @sev.Css">@sev.Label</span></td>
+                            <td>
+                                <div class="si-title">@row.Title</div>
+                                <div class="si-subject">@row.Subject</div>
+                            </td>
+                            <td class="si-count">@i.EventCount</td>
+                            <td class="si-when">@Span(i.FirstSeenAt, i.LastSeenAt)</td>
+                            <td>
+                                @if (grewSinceReview)
+                                {
+                                    <span class="au-pill au-pill--denied">New activity</span>
+                                }
+                                else if (i.NeedsReview)
+                                {
+                                    <span class="au-pill si-pill--waiting">Needs review</span>
+                                }
+                                else
+                                {
+                                    <span class="si-reviewed">Reviewed by @i.ReviewedBy</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@* The entries behind one incident, fetched when it is opened rather than sent with the
+   list: most incidents are never opened, and the list is read far more often. *@
+<div class="modal fade" id="siModal" tabindex="-1" aria-labelledby="siModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" id="siModalContent">
+            <div class="modal-body si-loading">Loading...</div>
+        </div>
+    </div>
+</div>
+
+@* In the scripts section because the layout loads Bootstrap after the page body, and the
+   panel is a Bootstrap dialog. *@
+@section Scripts {
+<script>
+    (function () {
+        var modalEl = document.getElementById('siModal');
+        var content = document.getElementById('siModalContent');
+        if (!modalEl || !content) return;
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        async function open(id) {
+            content.innerHTML = '<div class="modal-body si-loading">Loading...</div>';
+            modal.show();
+            try {
+                var res = await fetch('@Url.Action("Incident", "Audit")?id=' + encodeURIComponent(id),
+                    { cache: 'no-store', headers: { 'X-Requested-With': 'fetch' } });
+                if (!res.ok) throw new Error(res.status);
+                // Server-rendered, so every value in it is already encoded.
+                content.innerHTML = await res.text();
+            } catch (e) {
+                console.warn('Incident', id, 'could not be loaded:', e);
+                content.innerHTML = '<div class="modal-body si-loading">This incident could not be loaded. Try again.</div>';
+            }
+        }
+
+        document.querySelectorAll('[data-incident]').forEach(function (row) {
+            row.addEventListener('click', function () { open(row.dataset.incident); });
+            row.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(row.dataset.incident); }
+            });
+        });
+    })();
+</script>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/audit.css" asp-append-version="true" />
+}
