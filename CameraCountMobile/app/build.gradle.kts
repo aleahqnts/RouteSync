@@ -35,6 +35,10 @@ android {
     androidResources {
         noCompress += "tflite"
     }
+    testOptions {
+        // Robolectric reads the merged manifest and resources the build produces.
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -73,4 +77,10 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-gpu-api:2.16.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // JVM unit tests (`./gradlew test`). The counting code works in android.graphics
+    // types, which the stub android.jar leaves unimplemented, so tests run under
+    // Robolectric to get the real framework classes.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
 }
