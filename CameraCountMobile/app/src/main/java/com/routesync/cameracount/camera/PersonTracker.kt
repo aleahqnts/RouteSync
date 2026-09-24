@@ -113,11 +113,15 @@ class PersonTracker {
             }
             val t = bestT ?: return
             val d = bestD ?: return
-            // Smoothed velocity from the centre delta. The box was already predicted forward.
+            // Smoothed velocity from the centre delta. The box was already predicted forward
+            // by the current velocity, so that is taken back off to measure the step from
+            // where the track actually was. Measured from the prediction instead, the
+            // estimate settles at half the true speed, and a walker hidden for a few frames
+            // falls out of the IoU gate and is lost mid-crossing.
             val ncx = d.box.centerX()
             val ncy = d.box.centerY()
-            t.vx = 0.6f * (ncx - t.cx) + 0.4f * t.vx
-            t.vy = 0.6f * (ncy - t.cy) + 0.4f * t.vy
+            t.vx = 0.6f * (ncx - (t.cx - t.vx)) + 0.4f * t.vx
+            t.vy = 0.6f * (ncy - (t.cy - t.vy)) + 0.4f * t.vy
             t.box = RectF(d.box)
             t.score = d.score
             t.hits++
