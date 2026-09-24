@@ -252,31 +252,39 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
      * The record is written to the device's own queue first and sent later. A crossing
      * that exists only in memory does not survive a dead zone followed by a process
      * kill, and the crossings are the whole evidence base an accuracy run rests on.
+     *
+     * Called on the camera's analyzer thread. Everything else that touches the count and
+     * the trip runs on the main thread, and the poll loop's `count = maxOf(...)` would
+     * overwrite an increment landing between its read and its write, so the crossing is
+     * handed to the main thread whole. Only the moment it happened is taken here.
      */
     fun onCrossing(direction: CrossDirection) {
-        val t = tripId ?: return
-        val event = QueuedEvent(
-            // The device identifier is already unique across the fleet, so pairing it
-            // with a random one makes the key unique without a central allocator, which
-            // a phone with no signal has no way to reach.
-            eventId = "$deviceId-" + java.util.UUID.randomUUID(),
-            tripId = t,
-            deviceId = deviceId,
-            direction = direction.wire,
-            deviceTimestamp = System.currentTimeMillis()
-        )
+        val at = System.currentTimeMillis()
         viewModelScope.launch {
-            runCatching { events.enqueue(event) }
-                .onFailure { android.util.Log.w(TAG, "crossing not queued: ${it.message}") }
-        }
+            val t = tripId ?: return@launch
+            val event = QueuedEvent(
+                // The device identifier is already unique across the fleet, so pairing it
+                // with a random one makes the key unique without a central allocator, which
+                // a phone with no signal has no way to reach.
+                eventId = "$deviceId-" + java.util.UUID.randomUUID(),
+                tripId = t,
+                deviceId = deviceId,
+                direction = direction.wire,
+                deviceTimestamp = at
+            )
+            launch {
+                runCatching { events.enqueue(event) }
+                    .onFailure { android.util.Log.w(TAG, "crossing not queued: ${it.message}") }
+            }
 
-        if (direction != CrossDirection.IN) return
-        count++
-        persistPending(t)
-        // Carry the sync state forward. A boarding says nothing about whether the last
-        // flush reached the server, so reporting success here would show "synced" on
-        // every passenger while the bus is in a dead zone.
-        publishCounting(lastFlushOk = (state.value as? UiState.Counting)?.lastFlushOk ?: true)
+            if (direction != CrossDirection.IN) return@launch
+            count++
+            persistPending(t)
+            // Carry the sync state forward. A boarding says nothing about whether the last
+            // flush reached the server, so reporting success here would show "synced" on
+            // every passenger while the bus is in a dead zone.
+            publishCounting(lastFlushOk = (state.value as? UiState.Counting)?.lastFlushOk ?: true)
+        }
     }
 
     /** Write-behind to DataStore, one small commit per change. Cheap at boarding rates. */
