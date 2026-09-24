@@ -13,7 +13,22 @@ namespace FleetWise.Services
 
         public AuthService(Supabase.Client supabase) => _supabase = supabase;
 
-        public async Task<AuthenticatedUser?> ValidateAsync(string email, string password)
+        /// <summary>
+        /// Checks a dashboard sign-in, and says which account it was for and why it was
+        /// refused.
+        /// </summary>
+        /// <remarks>
+        /// None of this reaches the browser, which is told the same thing whatever the
+        /// reason. It goes to the audit trail, where an attempt on a real account has to be
+        /// told apart from one on an address that belongs to nobody: only the first can be
+        /// broken into, and only the first can be grouped by the account it was aimed at.
+        ///
+        /// The password is checked before the driver role is. A driver typing their own
+        /// correct password here is somebody in the wrong app. A driver's account with the
+        /// wrong password is somebody guessing, and checking the role first would record
+        /// the two identically.
+        /// </remarks>
+        public async Task<SignInCheck> CheckSignInAsync(string email, string password)
         {
             // Sign-in is the first call after an idle spell, so it is the one that meets
             // a connection the far end has already closed.
@@ -23,17 +38,21 @@ namespace FleetWise.Services
                 .Get());
 
             var user = usersResponse.Models.FirstOrDefault();
-            if (user is null || user.PasswordHash is null || user.AccountStatus != "Activated")
-                return null;
-
-            // The dashboard is for operators only. Drivers use the mobile app.
-            if (user.RoleId == DriverRoleId)
-                return null;
+            if (user is null)
+                return SignInCheck.Refused(null, SignInRefusal.NoSuchAccount);
+            if (user.PasswordHash is null)
+                return SignInCheck.Refused(user.UserId, SignInRefusal.NoPassword);
+            if (user.AccountStatus != "Activated")
+                return SignInCheck.Refused(user.UserId, SignInRefusal.Inactive);
 
             var hasher = new PasswordHasher<UserModel>();
             var result = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
             if (result == PasswordVerificationResult.Failed)
-                return null;
+                return SignInCheck.Refused(user.UserId, SignInRefusal.WrongPassword);
+
+            // The dashboard is for operators only. Drivers use the mobile app.
+            if (user.RoleId == DriverRoleId)
+                return SignInCheck.Refused(user.UserId, SignInRefusal.WrongApp);
 
             var rolesResponse = await _supabase
                 .From<Role>()
@@ -46,12 +65,12 @@ namespace FleetWise.Services
             var permissions = role?.WebPermissions?
                 .Where(kv => kv.Value).Select(kv => kv.Key).ToList() ?? new List<string>();
 
-            return new AuthenticatedUser(
+            return new SignInCheck(new AuthenticatedUser(
                 user.UserId,
                 FormatDisplayName(user.FirstName, user.MiddleName, user.LastName),
                 user.EmailAddress ?? "",
                 roleName,
-                permissions);
+                permissions), user.UserId, null);
         }
 
         /// <summary>Hashes and stores a new password, used by the forced first-sign-in
@@ -80,4 +99,42 @@ namespace FleetWise.Services
     }
 
     public record AuthenticatedUser(int UserId, string FullName, string Email, string RoleName, List<string> Permissions);
+
+    /// <summary>Why a dashboard sign-in was refused.</summary>
+    public enum SignInRefusal
+    {
+        NoSuchAccount,
+        NoPassword,
+        Inactive,
+        WrongPassword,
+
+        /// <summary>
+        /// A driver, with their correct password. Somebody in the wrong app rather than an
+        /// attempt on an account, and kept out of every security rule.
+        /// </summary>
+        WrongApp,
+    }
+
+    /// <summary>The outcome of a dashboard sign-in check.</summary>
+    /// <param name="User">Set only when the sign-in succeeded.</param>
+    /// <param name="AccountId">
+    /// The account the email belongs to, whether or not the sign-in succeeded. Null only
+    /// when no account has that email. Recorded against a failure so repeated attempts on
+    /// one account can be recognised as such.
+    /// </param>
+    public record SignInCheck(AuthenticatedUser? User, int? AccountId, SignInRefusal? Refusal)
+    {
+        public static SignInCheck Refused(int? accountId, SignInRefusal why) => new(null, accountId, why);
+
+        /// <summary>The reason as the audit trail words it, matching the driver app's sign-in.</summary>
+        public string? Reason => Refusal switch
+        {
+            SignInRefusal.NoSuchAccount => "no such account",
+            SignInRefusal.NoPassword => "no password set",
+            SignInRefusal.Inactive => "account not active",
+            SignInRefusal.WrongPassword => "wrong password",
+            SignInRefusal.WrongApp => "driver account",
+            _ => null,
+        };
+    }
 }
