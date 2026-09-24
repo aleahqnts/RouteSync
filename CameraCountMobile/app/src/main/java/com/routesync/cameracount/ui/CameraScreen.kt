@@ -321,15 +321,22 @@ private fun DetectionSurface(
         } else onDispose { }
     }
 
+    // The tracker and the line are driven frame by frame on the analyzer's thread and
+    // changed from this one, by a line edit, a remote calibration or a camera rebind.
+    // Every access holds the tracker's lock. Unguarded, a reset walking the track list
+    // while a frame adds to it throws, and a frame caught half-way through a line change
+    // judges old sides against the new line and posts a crossing nobody made.
     val tracker = remember { PersonTracker() }
     val lineCounter = remember { LineCrossCounter() }
     LaunchedEffect(ax, ay, bx, by, inwardSign) {
-        lineCounter.ax = ax; lineCounter.ay = ay
-        lineCounter.bx = bx; lineCounter.by = by
-        lineCounter.inwardSign = inwardSign
-        // Any line change, dragged or applied remotely, invalidates side and origin
-        // history. Stale geometry counts or misses people against the previous line.
-        tracker.resetCrossingState()
+        synchronized(tracker) {
+            lineCounter.ax = ax; lineCounter.ay = ay
+            lineCounter.bx = bx; lineCounter.by = by
+            lineCounter.inwardSign = inwardSign
+            // Any line change, dragged or applied remotely, invalidates side and origin
+            // history. Stale geometry counts or misses people against the previous line.
+            tracker.resetCrossingState()
+        }
     }
 
     // Watchdog loop. Declared after the tracker because a rebind has to reset it.
@@ -366,7 +373,7 @@ private fun DetectionSurface(
                 // last seen before the gap and their side history describes a scene that
                 // has moved on. Re-associating them on the first frame back would post
                 // crossings that nobody made.
-                tracker.resetCrossingState()
+                synchronized(tracker) { tracker.resetCrossingState() }
                 // Grace period: the camera needs time to open before the next tick judges it.
                 lastFrameMs = now
                 lastRebindAt = now
@@ -478,12 +485,20 @@ private fun DetectionSurface(
                                     }
                                     boxes = if (counting) {
                                         // Counting path: track identities, then line crossings,
-                                        // then the count. Crossings are ignored until the saved
-                                        // line has loaded and while it is being dragged.
-                                        val tracks = tracker.update(dets)
-                                        val crossings = lineCounter.process(tracks)
-                                        if (lineLoaded && !adjusting) {
-                                            crossings.forEach { vm!!.onCrossing(it.direction) }
+                                        // then the count. The line is not consulted at all
+                                        // until the saved one has loaded or while it is being
+                                        // dragged. Judging a track against it marks the track
+                                        // as counted, so a line dragged across someone waiting
+                                        // to board would otherwise use up their boarding
+                                        // without recording it. The reset that follows every
+                                        // line change re-establishes their side afterwards.
+                                        val tracks = synchronized(tracker) {
+                                            tracker.update(dets).also { live ->
+                                                if (lineLoaded && !adjusting) {
+                                                    lineCounter.process(live)
+                                                        .forEach { vm!!.onCrossing(it.direction) }
+                                                }
+                                            }
                                         }
                                         tracks.map {
                                             OverlayBox(it.box.left, it.box.top, it.box.right, it.box.bottom, it.counted)
@@ -642,7 +657,7 @@ private fun DetectionSurface(
                             prefs.saveLine(ax, ay, bx, by, inwardSign)
                             // Side and origin history describes the previous line, so
                             // clear it before anyone is counted against stale geometry.
-                            tracker.resetCrossingState()
+                            synchronized(tracker) { tracker.resetCrossingState() }
                             // A calibration made on the phone authors a new version and
                             // pushes it up, keeping the database row authoritative.
                             // Offline the push fails and the follower reconciles on a
