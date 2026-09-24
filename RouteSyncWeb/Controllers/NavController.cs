@@ -39,6 +39,11 @@ namespace FleetWise.Controllers
             if (User.HasClaim("perm", "roster"))
                 mine["roster"] = new { count = b.Roster.Count, urgent = b.Roster.Urgent, note = b.Roster.Note };
 
+            // Security incidents go only to those who can read the trail they come from.
+            // Anyone else learns nothing, not even that a count exists.
+            if (User.HasClaim("perm", "audit"))
+                mine["audit"] = new { count = b.Audit.Count, urgent = b.Audit.Urgent, note = b.Audit.Note };
+
             return Json(mine);
         }
     }

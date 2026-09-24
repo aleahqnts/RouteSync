@@ -14,8 +14,15 @@
             ("login", "Signed in"),
             ("login_failed", "Sign in failed"),
             ("login_throttled", "Sign in paused"),
+            // A driver signing into the dashboard with their correct password. Somebody in
+            // the wrong app, not an attempt on an account, and no security rule reads it.
+            ("login_wrong_app", "Driver tried the dashboard"),
             ("logout", "Signed out"),
             ("access_denied", "Blocked from a page"),
+        }),
+        ("Security", new[]
+        {
+            ("incident_reviewed", "Security incident reviewed"),
         }),
         ("Accounts", new[]
         {
@@ -169,6 +176,8 @@
         </button>
     </div>
 </div>
+
+<partial name="_AuditTabs" model="@("Index")" />
 
 @* FILTERS *@
 @* Six fields and two buttons are most of a phone screen before a single entry is

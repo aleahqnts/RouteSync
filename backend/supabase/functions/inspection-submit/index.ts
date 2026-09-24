@@ -234,10 +234,32 @@ Deno.serve(async (req) => {
         const already = byChecklistItem.get(fault.item_id)
           ?? byLabel.get(fault.label.toLowerCase());
         if (already) {
+          const patch: Record<string, unknown> = {};
+
           // A fault reported again is open again, whatever it was closed as.
           if (already.state !== "open") {
+            patch.state = "open";
+            patch.closed_at = null;
+            patch.closed_by = null;
+            patch.note = null;
+          }
+
+          // A line found by its wording alone is one raised before the inspection item
+          // was recorded against it, or one typed by hand in words that happen to match.
+          // The fault has just named the item it came from, so the line is given it and
+          // stops depending on wording nobody has promised to leave alone.
+          //
+          // Deliberately outside the reopening above. A line that is already open is the
+          // most likely one to still be carrying a null, and leaving it to be picked up
+          // only when it next closes and returns would leave it on wording for as long as
+          // the work stayed outstanding.
+          if (already.checklist_item_id === null) {
+            patch.checklist_item_id = fault.item_id;
+          }
+
+          if (Object.keys(patch).length > 0) {
             await service.from("maintenance_items")
-              .update({ state: "open", closed_at: null, closed_by: null, note: null })
+              .update(patch)
               .eq("item_id", already.item_id);
           }
         } else {

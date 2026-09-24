@@ -75,7 +75,8 @@ namespace FleetWise.Controllers
                 return View(model);
             }
 
-            var user = await _authService.ValidateAsync(model.Email, model.Password);
+            var check = await _authService.CheckSignInAsync(model.Email, model.Password);
+            var user = check.User;
             if (user is null)
             {
                 _throttle.RecordFailure(model.Email);
@@ -83,9 +84,23 @@ namespace FleetWise.Controllers
                 // The edge functions never see dashboard sign-ins, so this is the only
                 // place a failed attempt at it can be recorded. The typed email is kept,
                 // which is the point of the entry, but length-capped. The password never is.
-                await _audit.WriteSignInAsync("login_failed",
-                    $"Failed dashboard sign-in for {Attempted(model.Email)}",
-                    null, "denied");
+                //
+                // The account and the reason are recorded, as the driver app's sign-in
+                // already does. The browser is told the same thing either way.
+                if (check.Refusal == SignInRefusal.WrongApp)
+                {
+                    // Right password, wrong app. Recorded under its own name so no security
+                    // rule counts a driver who opened the dashboard by mistake.
+                    await _audit.WriteSignInAsync("login_wrong_app",
+                        $"Driver {Attempted(model.Email)} tried to sign in to the dashboard",
+                        null, "denied", attemptedAccount: check.AccountId);
+                }
+                else
+                {
+                    await _audit.WriteSignInAsync("login_failed",
+                        $"Failed dashboard sign-in for {Attempted(model.Email)} ({check.Reason})",
+                        null, "denied", attemptedAccount: check.AccountId);
+                }
 
                 ModelState.AddModelError("", "Invalid email or password.");
                 return View(model);

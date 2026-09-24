@@ -23,10 +23,11 @@ namespace FleetWise.Services
     }
 
     /// <summary>Every badge the sidebar can draw.</summary>
-    public sealed record NavBadges(NavBadge Dispatch, NavBadge Requests, NavBadge Vehicles, NavBadge Roster)
+    public sealed record NavBadges(
+        NavBadge Dispatch, NavBadge Requests, NavBadge Vehicles, NavBadge Roster, NavBadge Audit)
     {
         public static readonly NavBadges Empty =
-            new(NavBadge.None, NavBadge.None, NavBadge.None, NavBadge.None);
+            new(NavBadge.None, NavBadge.None, NavBadge.None, NavBadge.None, NavBadge.None);
     }
 
     /// <summary>
@@ -88,6 +89,7 @@ namespace FleetWise.Services
         private readonly Supabase.Client _supabase;
         private readonly IMemoryCache _cache;
         private readonly IConfiguration _config;
+        private readonly SecurityIncidents _incidents;
 
         private const string Key = "nav_badges";
 
@@ -116,11 +118,13 @@ namespace FleetWise.Services
         /// </remarks>
         public static readonly TimeSpan UrgentWithin = TimeSpan.FromHours(4);
 
-        public NavCounts(Supabase.Client supabase, IMemoryCache cache, IConfiguration config)
+        public NavCounts(
+            Supabase.Client supabase, IMemoryCache cache, IConfiguration config, SecurityIncidents incidents)
         {
             _supabase = supabase;
             _cache = cache;
             _config = config;
+            _incidents = incidents;
         }
 
         /// <summary>Drops the standing count, so the next reading is worked out again.</summary>
@@ -314,7 +318,28 @@ namespace FleetWise.Services
                 new NavBadge(dispatch, dispatch > 0),
                 new NavBadge(openCount, urgent),
                 new NavBadge(flagged.Count, false),
-                await CountRosterAsync(today));
+                await CountRosterAsync(today),
+                await CountAuditAsync());
+        }
+
+        /// <summary>Security incidents waiting for somebody to look at them.</summary>
+        /// <remarks>
+        /// Urgent only for a sign-in that succeeded after failed attempts: the one incident
+        /// that says somebody may already be in rather than that somebody tried. Every
+        /// other rule is a grey number, because a rail that shouts about every failed
+        /// password soon stops being listened to.
+        ///
+        /// Counted on its own and failing on its own, like the roster, so a table that
+        /// cannot be read takes this badge down and leaves the rest of the rail standing.
+        /// </remarks>
+        private async Task<NavBadge> CountAuditAsync()
+        {
+            var waiting = await _incidents.NeedsReviewAsync();
+            if (waiting is null) return NavBadge.None;
+
+            var (count, urgent) = waiting.Value;
+            return new NavBadge(count, urgent,
+                urgent ? "A sign-in succeeded after failed attempts" : null);
         }
 
         /// <summary>
