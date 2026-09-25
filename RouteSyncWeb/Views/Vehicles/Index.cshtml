@@ -211,13 +211,13 @@
    for the same reason it does. *@
 <div class="modal fade vh-modal" id="vhPhotoModal" tabindex="-1"
      aria-labelledby="vhPhotoLabel" aria-hidden="true">
-    <div class="modal-dialog vh-modal-sm modal-dialog-scrollable">
+    <div class="modal-dialog vh-modal-photo modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title vh-modal-title" id="vhPhotoLabel">Inspection Photo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body vh-modal-body" id="vhPhotoBody"></div>
+            <div class="modal-body vh-photo-body" id="vhPhotoBody"></div>
         </div>
     </div>
 </div>
@@ -451,7 +451,6 @@
             const img = document.createElement('img');
             img.src = '@Url.Action("InspectionPhoto", "Vehicles")?photoId=' + encodeURIComponent(id);
             img.alt = 'Photograph taken during the inspection';
-            img.loading = 'lazy';
 
             // Shown in place of a broken image. Worded without a cause, because an image
             // that fails to load cannot say whether it was swept after the panel rendered
@@ -471,7 +470,22 @@
             body.appendChild(figure);
         });
 
-        bootstrap.Modal.getOrCreateInstance(dialog).show();
+        // The dialog takes its width from the photograph, so it opens once the first one
+        // has arrived rather than appearing narrow and jumping wider. The wait is short
+        // and capped: a slow connection gets the dialog promptly and the jump with it,
+        // which is better than a click that seems to do nothing.
+        vhOnceDecoded(body.querySelector('img'), 400).then(function () {
+            bootstrap.Modal.getOrCreateInstance(dialog).show();
+        });
+    }
+
+    /** Resolves when the image is ready to paint, or after the wait, whichever is first. */
+    function vhOnceDecoded(img, wait) {
+        if (!img) return Promise.resolve();
+        return Promise.race([
+            img.decode().catch(function () { }),
+            new Promise(function (resolve) { setTimeout(resolve, wait); })
+        ]);
     }
 </script>
 
