@@ -87,11 +87,15 @@ namespace FleetWise.Services
             // The board disables the button on the same two cases, and this is what makes
             // it true. The button is markup, and a page left open since the shift ended
             // still reaches this.
+            //
+            // Missed rather than closed: a trip still running after its window ends is
+            // late, not over, and refusing it here turned the board's enabled button into
+            // an error the dispatcher could not explain.
             if (string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                 return new(ReassignOutcome.Refused, "That trip has finished and can no longer be reassigned.");
 
-            if (TripStatus.Closed(trip, PhClock.Now))
-                return new(ReassignOutcome.Refused, "That shift has finished, so the trip can no longer be reassigned.");
+            if (TripStatus.Missed(trip, PhClock.Now))
+                return new(ReassignOutcome.Refused, "That shift ended without the trip starting, so it can no longer be reassigned.");
 
             // Captured before the update, because a reassignment is only meaningful
             // alongside what it moved away from.
