@@ -796,177 +796,185 @@
     padding-bottom: 18px;
     }
 
-    /* A single trip, laid out as the driver app's own trip report: a header card
-       naming it, three figures, then when it ran, who ran it, and its checklist. */
-    .tm {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 18px 24px 22px;
+    /* A single trip, read on a desk: which trip and how it ended, its figures across
+       one line, then the plan against what happened beside who ran it. */
+    .tr-modal.tr-modal--trip { max-width: 780px; }
+
+    .trd {
     font-family: 'Segoe UI', sans-serif;
-    color: #1A2B4A;
+    color: var(--rp-text);
     }
 
-    .tm-hero {
-    background: #EEF2F9;
-    border: 1px solid #DCE3F0;
-    border-radius: 14px;
-    padding: 16px 18px;
+    .trd-head {
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid var(--rp-border);
     }
 
-    .tm-hero-top {
+    .trd-head-main {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
     }
 
-    .tm-date {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--rp-muted);
-    }
-
-    .tm-route {
-    margin-top: 8px;
-    font-size: 1.25rem;
-    font-weight: 800;
-    line-height: 1.25;
-    }
-
-    .tm-sub {
-    margin-top: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--rp-muted);
-    }
-
-    /* Status, for the trip and for its checklist alike. */
-    .tm-status {
-    display: inline-block;
-    padding: 3px 11px;
-    border-radius: 999px;
-    font-size: 0.72rem;
+    .trd-id {
+    font-size: 1.15rem;
     font-weight: 700;
+    color: #1A2B4A;
+    letter-spacing: .01em;
+    }
+
+    .trd-head-sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin-top: 6px;
+    font-size: 0.86rem;
+    color: #5A6778;
+    }
+
+    .trd-sep { color: #C5CDD8; }
+
+    /* Status, for the trip and its checklist alike. */
+    .trd-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
     white-space: nowrap;
     }
 
-    .tm-status--ok { background: #E8F8EE; color: #1E9E57; }
-    .tm-status--warn { background: #FFF6E0; color: #B7791F; }
-    .tm-status--bad { background: #FDECEC; color: #C2413B; }
-    .tm-status--idle { background: #F1F3F6; color: #6B7280; }
-    .tm-status[hidden] { display: none; }
+    .trd-badge[hidden] { display: none; }
+    .trd-badge--ok { background: #E8F8EE; color: #27AE60; }
+    .trd-badge--warn { background: #FFF8E1; color: #D48806; }
+    .trd-badge--bad { background: #FDECEC; color: #D14343; }
+    .trd-badge--idle { background: #F1F3F6; color: #6B7280; }
 
-    .tm-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    .trd-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--rp-muted);
     }
 
-    .tm-stat {
+    .trd-figures {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    background: #F8FAFB;
+    border-bottom: 1px solid var(--rp-border);
+    }
+
+    .trd-fig {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: 14px 8px;
-    border: 1px solid var(--rp-border);
-    border-radius: 12px;
-    text-align: center;
+    gap: 6px;
+    padding: 14px 24px;
+    min-width: 0;
     }
 
-    .tm-stat .ti {
-    font-size: 1.1rem;
-    color: var(--rp-teal);
-    margin-bottom: 2px;
-    }
+    .trd-fig + .trd-fig { border-left: 1px solid var(--rp-border); }
 
-    .tm-stat-n {
-    font-size: 1.15rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    }
-
-    .tm-stat-l {
-    font-size: 0.72rem;
-    color: var(--rp-muted);
-    }
-
-    .tm-card {
-    border: 1px solid var(--rp-border);
-    border-radius: 12px;
-    padding: 14px 18px;
-    }
-
-    .tm-card-title {
-    font-size: 0.88rem;
-    font-weight: 800;
-    margin-bottom: 6px;
-    }
-
-    /* A time on each line, marked by a dot, divided by a faint rule. */
-    .tm-line {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px dashed #EDF0F4;
-    font-size: 0.88rem;
-    }
-
-    .tm-line:last-child { border-bottom: none; padding-bottom: 2px; }
-
-    .tm-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    }
-
-    .tm-dot--plan { background: #B8C0CC; }
-    .tm-dot--start { background: var(--rp-teal); }
-    .tm-dot--end { background: #1A2B4A; }
-
-    .tm-k {
-    color: var(--rp-muted);
-    font-weight: 600;
-    }
-
-    .tm-line .tm-k { flex: 1; }
-
-    .tm-v {
+    .trd-fig-n {
+    font-size: 1.3rem;
     font-weight: 700;
+    color: #1A2B4A;
     font-variant-numeric: tabular-nums;
-    text-align: right;
+    line-height: 1.2;
     }
 
-    .tm-pair {
+    .trd-fig-check {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    min-height: 1.56rem;
+    }
+
+    .trd-fig-sub {
+    font-size: 0.78rem;
+    color: var(--rp-muted);
+    }
+
+    .trd-cols {
     display: grid;
-    grid-template-columns: 130px minmax(0, 1fr);
-    gap: 12px;
-    padding: 6px 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .trd-panel {
+    padding: 18px 24px 22px;
+    min-width: 0;
+    }
+
+    .trd-panel + .trd-panel { border-left: 1px solid var(--rp-border); }
+
+    .trd-panel-title {
+    margin: 0 0 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--rp-muted);
+    }
+
+    .trd-times {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+    }
+
+    .trd-times th,
+    .trd-times td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #EEF1F4;
+    }
+
+    .trd-times thead th {
+    padding-top: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--rp-muted);
+    }
+
+    .trd-times tbody th {
+    padding-left: 0;
+    font-weight: 600;
+    color: #5A6778;
+    width: 34%;
+    }
+
+    .trd-times tbody tr:last-child th,
+    .trd-times tbody tr:last-child td { border-bottom: none; }
+
+    .trd-times-actual td {
+    font-weight: 700;
+    color: #1A2B4A;
+    }
+
+    .trd-dl {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 10px 20px;
+    margin: 0;
     font-size: 0.88rem;
     }
 
-    .tm-pair .tm-v { text-align: left; }
-
-    .tm-id {
+    .trd-dl dt {
     font-weight: 600;
-    color: var(--rp-muted);
-    font-size: 0.8rem;
+    color: #5A6778;
     }
 
-    .tm-card--check {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    }
-
-    .tm-card--check .tm-card-title { margin-bottom: 2px; }
-
-    .tm-check-sub {
-    font-size: 0.8rem;
-    color: var(--rp-muted);
+    .trd-dl dd {
+    margin: 0;
+    font-weight: 600;
+    color: #1A2B4A;
+    min-width: 0;
+    overflow-wrap: anywhere;
     }
 
     /* Loading spinner */
@@ -1997,20 +2005,23 @@
             border-radius: 16px 16px 0 0;
         }
 
-        /* A trip on a phone: the same cards, closer together, the three figures
-           still side by side since each is a short number. */
-        .tm {
-            gap: 10px;
-            padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
-        }
+        /* A trip on a phone: the four figures two by two, the plan and the
+           assignment one above the other. */
+        .trd-head { padding: 12px 16px; }
+        .trd-id { font-size: 1.02rem; }
+        .trd-head-sub { font-size: 0.8rem; }
 
-        .tm-hero { padding: 13px 14px; }
-        .tm-route { font-size: 1.08rem; }
-        .tm-stats { gap: 8px; }
-        .tm-stat { padding: 11px 4px; }
-        .tm-stat-n { font-size: 1rem; }
-        .tm-card { padding: 12px 14px; }
-        .tm-pair { grid-template-columns: 104px minmax(0, 1fr); }
+        .trd-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .trd-fig { padding: 10px 16px; gap: 4px; }
+        .trd-fig + .trd-fig { border-left: none; }
+        .trd-fig:nth-child(even) { border-left: 1px solid var(--rp-border); }
+        .trd-fig:nth-child(n+3) { border-top: 1px solid var(--rp-border); }
+        .trd-fig-n { font-size: 1.1rem; }
+
+        .trd-cols { grid-template-columns: minmax(0, 1fr); }
+        .trd-panel { padding: 14px 16px; }
+        .trd-panel + .trd-panel { border-left: none; border-top: 1px solid var(--rp-border); }
+        .trd-panel:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 
         .tr-section {
             padding: 10px 16px;
