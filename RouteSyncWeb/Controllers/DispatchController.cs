@@ -787,8 +787,9 @@ namespace FleetWise.Controllers
             if (string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                 return BadRequest("That trip has finished and can no longer be reassigned.");
 
-            if (TripStatus.Closed(trip, PhClock.Now))
-                return BadRequest("That shift has finished, so the trip can no longer be reassigned.");
+            // A trip still running past its window stays reassignable, as on the write.
+            if (TripStatus.Missed(trip, PhClock.Now))
+                return BadRequest("That shift ended without the trip starting, so it can no longer be reassigned.");
 
             // Ranked against the trip's own day. Every route is listed, not only the one this
             // trip is on, because a bus can be moved to another one from here.

@@ -166,6 +166,10 @@
         // DOM refs.
         const overlay     = document.getElementById('reassignModal');
         const loadingEl   = document.getElementById('rtm-loading');
+        // Kept so a failed load can be undone. The failure is written into this element,
+        // and without the original to put back every later open showed the old failure
+        // in place of the spinner while it loaded.
+        const loadingHtml = loadingEl.innerHTML;
         const bodyEl      = document.getElementById('rtm-body');
         const statusBadge = document.getElementById('rtm-status-badge');
         const statusText  = document.getElementById('rtm-status-text');
@@ -218,6 +222,7 @@
             _rtmOpener  = document.activeElement;
 
             // Reset UI
+            loadingEl.innerHTML     = loadingHtml;
             loadingEl.style.display = 'flex';
             bodyEl.style.display    = 'none';
             statusBadge.style.display = 'none';
@@ -226,7 +231,9 @@
 
             try {
                 const res  = await fetch(`/Dispatch/GetReassignOptions?tripId=${encodeURIComponent(tripId)}`);
-                if (!res.ok) throw new Error();
+                // The server says why it refused, and that is what the dispatcher needs to
+                // read. A plain failure is kept for when there is no reason to give.
+                if (!res.ok) throw new Error(res.status < 500 ? (await res.text()).trim() : '');
                 _rtmOptions = await res.json();
 
                 // Populate trip info
@@ -272,8 +279,11 @@
                 if (open && open.list) open.list.focus();
                 else sides.vehicle.change.focus();
 
-            } catch {
-                loadingEl.innerHTML = '<span style="color:#E74C3C;">Failed to load trip details. Please try again.</span>';
+            } catch (e) {
+                const msg = document.createElement('span');
+                msg.style.color = '#E74C3C';
+                msg.textContent = (e && e.message) || 'Failed to load trip details. Please try again.';
+                loadingEl.replaceChildren(msg);
             }
         };
 
