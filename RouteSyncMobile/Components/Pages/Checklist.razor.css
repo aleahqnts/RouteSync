@@ -329,6 +329,23 @@
 
 .btn-plain:disabled { opacity: 0.6; }
 
+/* Skip, below Next. A real button rather than a line of grey text, since it is a choice
+   the driver is being offered, but outlined so Next stays the one that stands out. */
+.btn-skip {
+    width: 100%;
+    margin-top: 10px;
+    border: 1.5px solid #2e9e8f;
+    border-radius: 10px;
+    padding: 13px;
+    background: #fff;
+    color: #2e9e8f;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-skip:disabled { opacity: 0.6; }
+
 /* Skip confirm modal. Component styles reach only the markup their own component
    wrote, so the shared modal shape is repeated here as it is on the other pages
    that raise one. */

@@ -176,7 +176,7 @@ else
            second walk around the same bus. *@
         @if (canSkip)
         {
-            <button class="btn-plain" @onclick="@(() => showSkipConfirm = true)" disabled="@busy">
+            <button class="btn-skip" @onclick="@(() => showSkipConfirm = true)" disabled="@busy">
                 Skip Inspection
             </button>
         }
@@ -643,6 +643,14 @@ else
             Draft.Clear();
 
             Nav.NavigateTo("/home");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is not null)
+        {
+            // The server answered and said no. Blaming the connection would send the
+            // driver hunting for a signal they already have.
+            showSkipConfirm = false;
+            message = "The server wouldn't record the skip. Complete the checklist instead, and tell your operator.";
+            System.Diagnostics.Debug.WriteLine($"[Checklist.Skip] refused: {ex.Message}");
         }
         catch (Exception ex)
         {
