@@ -747,6 +747,11 @@
     }
 </script>
 
+@section Scripts {
+    @* This page's dialogs are Bootstrap's, which the layout no longer loads for every page. *@
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+}
+
 @section TopbarContent {
     <button type="button" class="rs-filter-toggle" data-filter-toggle="vhFilters"
             aria-expanded="false" aria-controls="vhFilters">

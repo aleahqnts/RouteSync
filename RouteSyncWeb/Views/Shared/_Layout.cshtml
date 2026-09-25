@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@fontsource/poppins@@5.0.14/800.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/FleetWise.styles.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+    <link rel="stylesheet" href="~/css/icons.css" asp-append-version="true" />
     @* The sidebar is on every page, so its styles are loaded with the layout that draws it. *@
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
     @* Each page links its own stylesheet here, ahead of the markup that needs it. *@
@@ -52,8 +52,9 @@
 
     </div>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @* No jQuery: nothing on the site uses it. Bootstrap's script is loaded only by the
+       pages whose dialogs need it, in their own Scripts section, so every other page
+       is spared parsing it on a phone. *@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/dialog-stack.js" asp-append-version="true"></script>
     <script src="~/js/mobile-nav.js" asp-append-version="true"></script>

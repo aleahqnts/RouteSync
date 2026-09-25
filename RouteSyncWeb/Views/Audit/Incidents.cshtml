@@ -155,9 +155,10 @@
     </div>
 </div>
 
-@* In the scripts section because the layout loads Bootstrap after the page body, and the
-   panel is a Bootstrap dialog. *@
+@* The panel is a Bootstrap dialog, and the layout does not load Bootstrap's script for
+   every page, so this page loads it here, ahead of the code that opens the panel. *@
 @section Scripts {
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
         var modalEl = document.getElementById('siModal');

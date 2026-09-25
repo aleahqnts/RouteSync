@@ -432,8 +432,9 @@
             }
         }
 
-        // Five seconds, matching the map beside it and the rate the counter phones write
-        // at. Nothing here changes faster than that, so asking more often would only cost.
+        // Five seconds, the rate the counter phones write at. Nothing here changes faster
+        // than that, so asking more often would only cost. The map beside it moves on its
+        // own two-second clock, set in dashboard-fleetmap.js.
         setInterval(() => {
             if (document.hidden) return;
             dbRefresh(false);
