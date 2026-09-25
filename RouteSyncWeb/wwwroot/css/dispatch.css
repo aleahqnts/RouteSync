@@ -1342,7 +1342,15 @@
     /* Above the trip dialog, so it closes first and leaves the trip open underneath. */
     .tdm-photo-overlay { z-index: 1010; }
 
-    .tdm-photo-dialog { max-width: 520px; }
+    /* Wraps the photograph instead of setting its width. A portrait photograph gets a
+       narrow dialog and a landscape one a wide dialog, and neither scrolls, because the
+       image is limited by the height the screen has rather than stretched to a fixed
+       width. The minimum keeps the header readable while the image is still arriving. */
+    .tdm-photo-dialog {
+        width: fit-content;
+        min-width: min(360px, 100%);
+        max-width: min(960px, 100%);
+    }
 
     .tdm-photo-title {
         margin: 0;
@@ -1357,9 +1365,16 @@
 
         .tdm-photo:last-child { margin-bottom: 0; }
 
+        /* The height left once the dialog's own header, padding and caption are taken
+           from its limit of 88 percent of the screen. */
         .tdm-photo img {
             display: block;
-            width: 100%;
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: calc(88vh - 140px);
+            max-height: calc(88dvh - 140px);
+            margin: 0 auto;
             border-radius: 8px;
             background: #F2F4F8;
         }
