@@ -78,10 +78,17 @@
                         var marker = busMarkers[bus.vehicleId];
                         if (marker) {
                             marker.setLatLng(pos);
-                            marker.setIcon(busIcon(bus.vehicleId, color));
+                            // setIcon throws the pill away and builds a new one, so it is
+                            // only called when the pill would look different. A bus keeps
+                            // its label, and changes colour only when it changes route.
+                            if (marker._iconKey !== color) {
+                                marker.setIcon(busIcon(bus.vehicleId, color));
+                                marker._iconKey = color;
+                            }
                         } else {
                             marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color), interactive: false })
                                 .addTo(busLayer);
+                            marker._iconKey = color;
                             busMarkers[bus.vehicleId] = marker;
                         }
                     });
@@ -138,16 +145,29 @@
 
                 refresh();
                 fetchPositions();
+
+                // Only while someone can see the map. A hidden tab is nobody looking, and
+                // neither is a map scrolled out of view, which on a phone is most of the
+                // time: the card sits below the figures and the chart. Either way the
+                // positions are asked for again the moment the map is back in sight, so
+                // skipping costs no staleness anyone can see.
+                var inView = true;
+                function watched() { return inView && !document.hidden; }
+
+                if ('IntersectionObserver' in window) {
+                    new IntersectionObserver(function (entries) {
+                        var was = inView;
+                        inView = entries[entries.length - 1].isIntersecting;
+                        if (inView && !was && !document.hidden) fetchPositions();
+                    }).observe(el);
+                }
+
                 setInterval(function () {
-                // A hidden tab is nobody looking. Skipping the request costs a
-                // few seconds of staleness on return, which the visibility
-                // handler below closes immediately.
-                if (document.hidden) return;
-                fetchPositions();
-            }, POLL_INTERVAL_MS);
-            document.addEventListener('visibilitychange', function () {
-                if (!document.hidden) fetchPositions();
-            });
+                    if (watched()) fetchPositions();
+                }, POLL_INTERVAL_MS);
+                document.addEventListener('visibilitychange', function () {
+                    if (watched()) fetchPositions();
+                });
 
                 // Safety nets: re-assert size after layout/paint settles and on full load.
                 setTimeout(refresh, 300);
