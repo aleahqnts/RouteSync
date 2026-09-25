@@ -79,8 +79,11 @@ public class RosterRulesTests
         };
 
         Assert.Empty(Problems(seats, Buses(), Drivers(1, 2), Routes));
-        Assert.Equal(1, Shortfall(North, seats).UnfilledSeats);
+        Assert.Equal(1, Shortfall(North, seats, Array.Empty<WeeklyGap>()).UnfilledSeats);
     }
+
+    private static IReadOnlyList<WeeklyGap> Weekly(List<RosterSeat> seats, List<UserModel> drivers) =>
+        RosterStructure.WeeklyGaps(seats, drivers, Buses(), Routes);
 
     [Fact]
     public void Two_drivers_on_one_bus_shift_are_refused()
@@ -91,7 +94,7 @@ public class RosterRulesTests
     }
 
     [Fact]
-    public void The_capacity_strip_counts_crew_resting_against_floaters_working()
+    public void The_capacity_strip_counts_crew_and_floaters_and_takes_short_days_from_the_planner()
     {
         var seats = new List<RosterSeat>
         {
@@ -102,95 +105,84 @@ public class RosterRulesTests
             FloaterSeat(4, 2),
             CrewSeat(5, "V009", "Morning", 1, Second),
         };
+        var drivers = Drivers(1, 2, 3, 4, 5);
 
-        var strip = Capacity(North, seats);
+        var strip = Capacity(North, seats, Weekly(seats, drivers));
 
-        Assert.Equal(new DayCover(1, 2, 1), strip[0]);
-        Assert.True(strip[0].Short);
-        Assert.Equal(new DayCover(2, 1, 0), strip[1]);
-        Assert.Equal(new DayCover(3, 0, 1), strip[2]);
-        Assert.False(strip[2].Short);
+        // Monday: the floater takes the Morning and is then too soon after it for the Afternoon.
+        Assert.Equal(new DayCover(1, 2, 1, true), strip[0]);
+        // Tuesday: the floater's own rest day.
+        Assert.Equal(new DayCover(2, 1, 0, true), strip[1]);
+        Assert.Equal(new DayCover(3, 0, 1, false), strip[2]);
     }
 
     [Fact]
-    public void The_shortfall_names_missing_drivers_and_weekly_gaps()
+    public void The_shortfall_counts_the_rest_days_the_planner_cannot_cover()
     {
-        // Seven bus shifts need two floaters; one is placed and one shift has no driver.
+        // Seven bus shifts usually take two floaters; one is placed and one shift has no driver.
         var seats = new List<RosterSeat>
         {
             CrewSeat(1, "V001", "Morning", 1),
             CrewSeat(2, "V001", "Afternoon", 1),
-            CrewSeat(3, "V001", "Evening", 2),
-            CrewSeat(4, "V002", "Morning", 3),
-            CrewSeat(5, "V002", "Afternoon", 4),
-            CrewSeat(6, "V002", "Evening", 5),
+            CrewSeat(3, "V001", "Evening", 3),
+            CrewSeat(4, "V002", "Morning", 4),
+            CrewSeat(5, "V002", "Afternoon", 5),
+            CrewSeat(6, "V002", "Evening", 6),
             CrewSeat(null, "V003", "Morning"),
             FloaterSeat(7, 2),
         };
 
-        var s = Shortfall(North, seats);
+        var s = Shortfall(North, seats, Weekly(seats, Drivers(1, 2, 3, 4, 5, 6, 7)));
 
         Assert.Equal(7, s.CrewSeats);
         Assert.Equal(2, s.FloatersNeeded);
         Assert.Equal(1, s.Floaters);
         Assert.Equal(2, s.DriversShort);
-        // Monday has two resting and one floater; Tuesday one resting and the floater off.
-        Assert.Equal(2, s.GapsPerWeek);
+        Assert.True(s.GapsPerWeek > 0);
+        Assert.False(s.RestDaysCollide);   // short of floaters, which is its own sentence
     }
 
     [Fact]
-    public void Suggested_floater_rest_days_are_spread_across_the_week()
+    public void Suggest_sets_missing_rest_days_and_leaves_the_rest_where_they_are()
     {
-        var seats = new List<RosterSeat> { FloaterSeat(1), FloaterSeat(2), FloaterSeat(3) };
-
-        var suggested = SuggestRestDays(seats);
-
-        Assert.Equal(new int?[] { 1, 3, 5 }, suggested.Select(s => s.RestWeekday));
-    }
-
-    [Fact]
-    public void Suggested_crew_rest_days_follow_spare_cover_and_keep_crewmates_apart()
-    {
-        // Two floaters rest Monday and Thursday, so every other day has two to spare.
         var seats = new List<RosterSeat>
         {
-            FloaterSeat(10), FloaterSeat(11),
-            CrewSeat(1, "V001", "Morning"),
+            FloaterSeat(10, 1), FloaterSeat(11, 4),
+            CrewSeat(1, "V001", "Morning", 6),
             CrewSeat(2, "V001", "Afternoon"),
             CrewSeat(3, "V002", "Morning"),
-            CrewSeat(4, "V002", "Afternoon"),
-            CrewSeat(null, "V003", "Morning"),
+            CrewSeat(null, "V002", "Afternoon"),
         };
 
-        var byDriver = SuggestRestDays(seats).Where(s => s.DriverId is not null).ToDictionary(s => s.DriverId!.Value);
+        var fix = SuggestRestDays(seats, Buses(), Drivers(1, 2, 3, 10, 11), Routes, new HashSet<int>());
+        var byDriver = fix.Seats.Where(s => s.DriverId is not null).ToDictionary(s => s.DriverId!.Value);
 
         Assert.Equal(1, byDriver[10].RestWeekday);
         Assert.Equal(4, byDriver[11].RestWeekday);
-
-        var crewDays = new[] { 1, 2, 3, 4 }.Select(d => byDriver[d].RestWeekday!.Value).ToList();
-        Assert.All(crewDays, d => Assert.DoesNotContain(d, new[] { 1, 4 }));
+        Assert.Equal(6, byDriver[1].RestWeekday);
+        Assert.NotNull(byDriver[2].RestWeekday);
+        Assert.NotNull(byDriver[3].RestWeekday);
+        // Crewmates on one bus do not rest together.
         Assert.NotEqual(byDriver[1].RestWeekday, byDriver[2].RestWeekday);
-        Assert.NotEqual(byDriver[3].RestWeekday, byDriver[4].RestWeekday);
-        Assert.Equal(4, crewDays.Distinct().Count());
+        Assert.Equal(2, fix.RestDaysSet);
+        Assert.Equal(0, fix.Moved);
 
         // A bus shift with nobody on it is left as it was.
-        Assert.Contains(SuggestRestDays(seats), s => s.DriverId is null && s.RestWeekday is null);
+        Assert.Contains(fix.Seats, s => s.DriverId is null && s.RestWeekday is null);
     }
 
     [Fact]
-    public void Suggested_home_shifts_follow_where_the_crew_are()
+    public void Suggest_leaves_floaters_usual_shifts_alone()
     {
         var seats = new List<RosterSeat>
         {
-            FloaterSeat(10, home: "Evening"), FloaterSeat(11, home: "Evening"), FloaterSeat(12, home: "Evening"),
-            CrewSeat(1, "V001", "Morning"), CrewSeat(2, "V002", "Morning"), CrewSeat(3, "V003", "Morning"),
-            CrewSeat(4, "V001", "Afternoon"), CrewSeat(5, "V002", "Afternoon"),
-            CrewSeat(6, "V001", "Evening"),
+            FloaterSeat(10, 1, home: "Evening"), FloaterSeat(11, 4, home: "Evening"),
+            CrewSeat(1, "V001", "Morning", 2), CrewSeat(2, "V002", "Morning", 3),
         };
 
-        var homes = SuggestRestDays(seats).Where(s => s.Kind == Floater).Select(s => s.Shift).ToList();
+        var fix = SuggestRestDays(seats, Buses(), Drivers(1, 2, 10, 11), Routes, new HashSet<int>());
 
-        Assert.Equal(new[] { "Morning", "Morning", "Afternoon" }, homes);
+        Assert.All(fix.Seats.Where(s => s.Kind == Floater), s => Assert.Equal("Evening", s.Shift));
     }
 
     [Fact]

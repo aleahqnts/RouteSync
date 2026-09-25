@@ -86,8 +86,12 @@ namespace FleetWise.Services
         /// every day and a missing floater only on rest days.</item>
         /// <item>Rest days where missing: a floater on the weekday fewest of the route's floaters
         /// rest, a crew driver on the weekday with the most floater cover to spare, avoiding a
-        /// crewmate's day. A new floater's usual shift goes where the route is shortest of them.</item>
+        /// crewmate's day. A new floater's usual shift goes where the route is shortest of them.
+        /// Those new rest days are then settled against the planner, and moved where that
+        /// uncovers less. A rest day a driver already had is never moved.</item>
         /// </list>
+        /// <para>A driver held back is never placed. They stay available for one-off cover, and
+        /// a person may still place them by hand.</para>
         /// <para>Every place it changes carries a sentence saying why, for the page to show.</para>
         /// </remarks>
         public static AutoFillResult AutoFill(
@@ -95,8 +99,10 @@ namespace FleetWise.Services
             IReadOnlyList<Vehicle> vehicles,
             IReadOnlyList<UserModel> drivers,
             IReadOnlyDictionary<int, string> routeNames,
-            RosterHistory history)
+            RosterHistory history,
+            IReadOnlySet<int>? held = null)
         {
+            held ??= new HashSet<int>();
             var busById = new Dictionary<string, Vehicle>(Ci);
             foreach (var v in vehicles) busById.TryAdd(v.VehicleId, v);
             var driverById = new Dictionary<int, UserModel>();
@@ -223,7 +229,7 @@ namespace FleetWise.Services
                     + (m.Released.Count > 0 ? $" and {Joined(m.Released)} {(m.Released.Count == 1 ? "was" : "were")} released." : "."));
 
             var free = drivers
-                .Where(d => IsActiveDriver(d) && !placed.Contains(d.UserId))
+                .Where(d => IsActiveDriver(d) && !placed.Contains(d.UserId) && !held.Contains(d.UserId))
                 .OrderBy(NameOf, Ci)
                 .ThenBy(d => d.UserId)
                 .ToList();
@@ -335,6 +341,8 @@ namespace FleetWise.Services
 
             // ---- 4. Rest days and usual shifts, where missing ----------------------------------
 
+            var justSet = new HashSet<Place>();
+
             foreach (var routeId in routesOnRoster)
             {
                 var floaters = places.Where(p => p.Seat.Kind == Floater && p.Seat.RouteId == routeId && p.Seat.DriverId is not null).ToList();
@@ -357,6 +365,7 @@ namespace FleetWise.Services
                     f.Seat = f.Seat with { RestWeekday = day };
                     f.Said.Add($"{RestDayMark}{DayName(day)}, the day fewest {Route(routeId)} floaters rest.");
                     floatersResting[day]++;
+                    justSet.Add(f);
                     restSet++;
                 }
 
@@ -378,6 +387,7 @@ namespace FleetWise.Services
                     c.Seat = c.Seat with { RestWeekday = day };
                     c.Said.Add($"{RestDayMark}{DayName(day)}, the day with the most floater cover to spare.");
                     crewResting[day]++;
+                    justSet.Add(c);
                     restSet++;
                 }
 
@@ -402,6 +412,29 @@ namespace FleetWise.Services
                         f.Said.Add($"Usually covers the {shift} shift, where the route is shortest of floaters.");
                         current[shift]++;
                     }
+                }
+            }
+
+            // ---- 5. New rest days settled against the planner ---------------------------------
+            //
+            // Chosen above by counting floaters, which cannot see that a floater covering an
+            // evening is not free the next morning. Only the rest days set just now may move:
+            // they are nobody's yet, while a rest day a driver already has is theirs.
+
+            foreach (var routeId in routesOnRoster.Where(id => justSet.Any(p => p.Seat.RouteId == id)))
+            {
+                var onRoute = places.Where(p => p.Seat.RouteId == routeId).ToList();
+                var movable = Enumerable.Range(0, onRoute.Count).Where(k => justSet.Contains(onRoute[k])).ToHashSet();
+
+                var settled = SettleNewRestDays(onRoute.Select(p => p.Seat).ToList(), movable, vehicles, drivers, routeNames);
+                foreach (var (k, day) in settled)
+                {
+                    var p = onRoute[k];
+                    p.Seat = p.Seat with { RestWeekday = day };
+                    var at = p.Said.FindIndex(s => s.StartsWith(RestDayMark, StringComparison.Ordinal));
+                    var said = $"{RestDayMark}{DayName(day)}, a day the {Route(routeId)} floaters can cover.";
+                    if (at >= 0) p.Said[at] = said;
+                    else p.Said.Add(said);
                 }
             }
 

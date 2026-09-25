@@ -79,3 +79,23 @@ public class RosterSlot : BaseModel
     [Column("suggested")]
     public string Suggested { get; set; }
 }
+
+/// <summary>
+/// A driver held back from a month's roster automation: auto-fill does not place them and the
+/// suggestions do not offer them. They stay available for one-off cover.
+/// </summary>
+/// <remarks>
+/// Saved with the month's roster and carried into the next with it, so a driver kept in
+/// reserve stays in reserve without anyone holding them back again each month.
+/// </remarks>
+[Table("roster_holds")]
+public class RosterHold : BaseModel
+{
+    private DateTime _month;
+
+    [Column("month")]
+    public DateTime Month { get => _month; set => _month = UnzonedColumn.Day(value); }
+
+    [Column("driver_id")]
+    public int DriverId { get; set; }
+}
