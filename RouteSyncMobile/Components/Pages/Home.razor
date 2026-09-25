@@ -278,9 +278,8 @@ else
             <div class="ua-modal">
                 <h2>Bus @BusLabel has an open trip</h2>
                 <p class="ua-sub">
-                    Trip @shiftContext!.OpenTripId was due to end at @OpenTripEndLabel and
-                    has not been ended. Starting your shift closes it and records the
-                    handover.
+                    @shiftContext!.OpenTripId was scheduled to end at @OpenTripEndLabel.
+                    Starting your shift will close it.
                 </p>
 
                 @* Stacked, so each label keeps to one line on a narrow phone. *@
@@ -507,8 +506,7 @@ else
             // With the bus still out, what the driver is waiting on is the other shift's
             // end, not a clock time of their own.
             if (HasOpenTrip)
-                return $"Bus {BusLabel} is scheduled to run until {OpenTripEndLabel}. You can start "
-                     + "your trip once that shift ends. Contact dispatch if you need to start sooner.";
+                return $"Bus {BusLabel} is in service until {OpenTripEndLabel}. Contact dispatch to start earlier.";
 
             var unlock = StartOpensAt;
             if (unlock.Date == DateTime.Today) return $"You can start this shift at {unlock:h:mm tt}";
