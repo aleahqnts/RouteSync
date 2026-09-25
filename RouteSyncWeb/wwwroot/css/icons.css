@@ -1,0 +1,36 @@
+/*
+ * The icons this site draws, and only those.
+ *
+ * Each is a Tabler icon (MIT, tabler.io/icons, v3.48.0) painted as a mask in the text
+ * colour, so the markup is unchanged from the icon font it replaces: an element with
+ * `ti ti-<name>` shows the icon at 1em, and font-size and color style it as before.
+ *
+ * The font carried several thousand icons to draw these fourteen, from a stylesheet
+ * that held up the whole page while it loaded. Using a new icon means adding its line
+ * below, from the same set, with the SVG's markup URL-encoded.
+ */
+.ti {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.125em;
+    background-color: currentColor;
+    -webkit-mask: var(--ti) no-repeat center / contain;
+    mask: var(--ti) no-repeat center / contain;
+}
+
+.ti-alert-circle { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0%22/%3E%3Cpath d=%22M12 8v4%22/%3E%3Cpath d=%22M12 16h.01%22/%3E%3C/svg%3E"); }
+.ti-alert-triangle { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 9v4%22/%3E%3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0%22/%3E%3Cpath d=%22M12 16h.01%22/%3E%3C/svg%3E"); }
+.ti-bus { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22/%3E%3Cpath d=%22M16 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22/%3E%3Cpath d=%22M4 17h-2v-11a1 1 0 0 1 1 -1h14a5 7 0 0 1 5 7v5h-2m-4 0h-8%22/%3E%3Cpath d=%22M16 5l1.5 7l4.5 0%22/%3E%3Cpath d=%22M2 10l15 0%22/%3E%3Cpath d=%22M7 5l0 5%22/%3E%3Cpath d=%22M12 5l0 5%22/%3E%3C/svg%3E"); }
+.ti-calendar-event { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12%22/%3E%3Cpath d=%22M16 3l0 4%22/%3E%3Cpath d=%22M8 3l0 4%22/%3E%3Cpath d=%22M4 11l16 0%22/%3E%3Cpath d=%22M8 15h2v2h-2l0 -2%22/%3E%3C/svg%3E"); }
+.ti-calendar-week { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22/%3E%3Cpath d=%22M16 3v4%22/%3E%3Cpath d=%22M8 3v4%22/%3E%3Cpath d=%22M4 11h16%22/%3E%3Cpath d=%22M7 14h.013%22/%3E%3Cpath d=%22M10.01 14h.005%22/%3E%3Cpath d=%22M13.01 14h.005%22/%3E%3Cpath d=%22M16.015 14h.005%22/%3E%3Cpath d=%22M13.015 17h.005%22/%3E%3Cpath d=%22M7.01 17h.005%22/%3E%3Cpath d=%22M10.01 17h.005%22/%3E%3C/svg%3E"); }
+.ti-chevron-left { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M15 6l-6 6l6 6%22/%3E%3C/svg%3E"); }
+.ti-chevron-right { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 6l6 6l-6 6%22/%3E%3C/svg%3E"); }
+.ti-message { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M8 9h8%22/%3E%3Cpath d=%22M8 13h6%22/%3E%3Cpath d=%22M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12%22/%3E%3C/svg%3E"); }
+.ti-message-2 { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M8 9h8%22/%3E%3Cpath d=%22M8 13h6%22/%3E%3Cpath d=%22M9 18h-3a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-3l-3 3l-3 -3%22/%3E%3C/svg%3E"); }
+.ti-plus { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22/%3E%3Cpath d=%22M5 12l14 0%22/%3E%3C/svg%3E"); }
+.ti-refresh { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22/%3E%3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22/%3E%3C/svg%3E"); }
+.ti-search { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0%22/%3E%3Cpath d=%22M21 21l-6 -6%22/%3E%3C/svg%3E"); }
+.ti-speakerphone { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M18 8a3 3 0 0 1 0 6%22/%3E%3Cpath d=%22M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5%22/%3E%3Cpath d=%22M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8%22/%3E%3C/svg%3E"); }
+.ti-flag-filled { --ti: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22currentColor%22 %3E%3Cpath d=%22M4 5a1 1 0 0 1 .3 -.714a6 6 0 0 1 8.213 -.176l.351 .328a4 4 0 0 0 5.272 0l.249 -.227c.61 -.483 1.527 -.097 1.61 .676l.005 .113v9a1 1 0 0 1 -.3 .714a6 6 0 0 1 -8.213 .176l-.351 -.328a4 4 0 0 0 -5.136 -.114v6.552a1 1 0 0 1 -1.993 .117l-.007 -.117v-16z%22/%3E%3C/svg%3E"); }
