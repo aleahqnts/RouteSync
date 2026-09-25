@@ -139,6 +139,15 @@ else
             // this confirmation page, which no longer applies once the trip has started.
             Nav.NavigateTo($"/trip-active/{TripId}", new NavigationOptions { ReplaceHistoryEntry = true });
         }
+        // The bus is still on the previous shift's trip and it is inside its hours. The
+        // database says which trip and until when, which is what the driver needs, and
+        // not a problem with their connection.
+        catch (HttpRequestException ex)
+            when (ex.Data[DriverDataService.RefusalCode] as string == DriverDataService.BusStillOnTrip)
+        {
+            msg = ex.Message;
+            busy = false;
+        }
         catch (Exception ex)
         {
             msg = "Couldn't start trip. Check your connection.";

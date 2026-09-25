@@ -452,3 +452,50 @@
 }
 
 .cam-btn.calib:active { background: #e2efec; }
+
+/* Trip closed without this phone. Laid out like the end-of-shift confirmation, since it
+   reports the same figures, but as the page itself: there is no counter left behind it. */
+.ta-closed {
+    box-sizing: border-box;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 52px 22px calc(24px + env(safe-area-inset-bottom));
+    text-align: center;
+}
+
+.ta-closed h1 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+.ta-closed .c-sub { line-height: 1.45; }
+
+.btn-home {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    background: #2e9e8f;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-report {
+    width: 100%;
+    margin-top: 10px;
+    border: 1.5px solid #2e9e8f;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+    color: #2e9e8f;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
