@@ -35,4 +35,8 @@ public class DeviceStatusDto
     // Counts the camera has made but cannot get the database to accept. Zero in
     // normal running, since a count is confirmed within seconds of a trip ending.
     [JsonPropertyName("unreconciled_counts")] public int UnreconciledCounts { get; set; }
+    // The phone's charge, sent while it counts a trip and only when it changes. Null
+    // until the phone has reported one, or on a database without the columns.
+    [JsonPropertyName("battery_level")] public int? BatteryLevel { get; set; }
+    [JsonPropertyName("battery_charging")] public bool? BatteryCharging { get; set; }
 }
