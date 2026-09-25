@@ -516,46 +516,73 @@
             </div>
 
             @* Content (hidden until loaded) *@
-            <div id="tripModalContent" style="display:none;">
+            <div id="tripModalContent" class="tm" style="display:none;">
 
-                @* The trip and how it ended, together, since one is read in light of the other. *@
-                <div class="tr-head">
-                    <span id="mdTripId" class="tr-trip-id-badge"></span>
-                    <span id="mdStatus" class="rp-shift"></span>
+                @* Laid out as the driver's own trip report on the phone is, so the office and
+                   the driver read the same trip the same way: what it was, what it came to,
+                   when it ran, who ran it, and whether the bus was checked first. *@
+                <div class="tm-hero">
+                    <div class="tm-hero-top">
+                        <span id="mdDate" class="tm-date"></span>
+                        <span id="mdStatus" class="tm-status"></span>
+                    </div>
+                    <div id="mdRoute" class="tm-route"></div>
+                    <div class="tm-sub"><span id="mdTripId"></span> &middot; <span id="mdShiftType"></span> Shift</div>
                 </div>
 
-                @* Two facts to a line. Each is short, and the pairing is what keeps the
-                   whole trip on screen without scrolling. *@
-                <div class="tr-section">
-                    <div class="tr-grid">
-                        <div class="tr-info-row tr-info-row--wide"><span class="tr-info-label">Route</span><span id="mdRoute"></span></div>
-                        <div class="tr-info-row"><span class="tr-info-label">Date</span><span id="mdDate"></span></div>
-                        <div class="tr-info-row"><span class="tr-info-label">Shift</span><span id="mdShiftType"></span></div>
-                        <div class="tr-info-row tr-info-row--wide"><span class="tr-info-label">Shift Time</span><span id="mdShiftTime"></span></div>
+                <div class="tm-stats">
+                    <div class="tm-stat">
+                        <i class="ti ti-users" aria-hidden="true"></i>
+                        <span id="mdPassengers" class="tm-stat-n"></span>
+                        <span class="tm-stat-l">Passengers</span>
+                    </div>
+                    <div class="tm-stat">
+                        <i class="ti ti-currency-peso" aria-hidden="true"></i>
+                        <span id="mdRevenue" class="tm-stat-n"></span>
+                        <span class="tm-stat-l">Est. Revenue</span>
+                    </div>
+                    <div class="tm-stat">
+                        <i class="ti ti-clock" aria-hidden="true"></i>
+                        <span id="mdDuration" class="tm-stat-n"></span>
+                        <span class="tm-stat-l">Duration</span>
                     </div>
                 </div>
 
-                <div class="tr-section">
-                    <div class="tr-grid tr-grid--split">
-                        <div>
-                            <div class="tr-section-title">Vehicle</div>
-                            <div class="tr-info-row"><span class="tr-info-label">Bus ID</span><span id="mdVehicleId"></span></div>
-                            <div class="tr-info-row"><span class="tr-info-label">Plate Number</span><span id="mdPlate"></span></div>
-                        </div>
-                        <div>
-                            <div class="tr-section-title">Driver</div>
-                            <div class="tr-info-row"><span class="tr-info-label">Name</span><span id="mdDriverName"></span></div>
-                            <div class="tr-info-row"><span class="tr-info-label">Driver ID</span><span id="mdDriverId"></span></div>
-                        </div>
+                <div class="tm-card">
+                    <div class="tm-card-title">Time</div>
+                    <div class="tm-line">
+                        <span class="tm-dot tm-dot--plan"></span>
+                        <span class="tm-k">Scheduled shift</span>
+                        <span id="mdShiftTime" class="tm-v"></span>
+                    </div>
+                    <div class="tm-line">
+                        <span class="tm-dot tm-dot--start"></span>
+                        <span class="tm-k">Trip started</span>
+                        <span id="mdActualStart" class="tm-v"></span>
+                    </div>
+                    <div class="tm-line">
+                        <span class="tm-dot tm-dot--end"></span>
+                        <span class="tm-k">Trip ended</span>
+                        <span id="mdActualEnd" class="tm-v"></span>
                     </div>
                 </div>
 
-                <div class="tr-section tr-section--last">
-                    <div class="tr-section-title">Result</div>
-                    <div class="tr-grid">
-                        <div class="tr-info-row"><span class="tr-info-label">Passengers</span><span id="mdPassengers"></span></div>
-                        <div class="tr-info-row"><span class="tr-info-label">Revenue</span><span id="mdRevenue"></span></div>
+                <div class="tm-card">
+                    <div class="tm-card-title">Assignment</div>
+                    <div class="tm-pair"><span class="tm-k">Bus</span><span id="mdVehicleId" class="tm-v"></span></div>
+                    <div class="tm-pair"><span class="tm-k">Plate Number</span><span id="mdPlate" class="tm-v"></span></div>
+                    <div class="tm-pair">
+                        <span class="tm-k">Driver</span>
+                        <span class="tm-v"><span id="mdDriverName"></span> <span class="tm-id">#<span id="mdDriverId"></span></span></span>
                     </div>
+                </div>
+
+                <div class="tm-card tm-card--check">
+                    <div>
+                        <div class="tm-card-title">Pre-Trip Checklist</div>
+                        <div id="mdChecklistSub" class="tm-check-sub"></div>
+                    </div>
+                    <span id="mdChecklist" class="tm-status"></span>
                 </div>
 
             </div>
@@ -1498,13 +1525,15 @@
     modalError.style.display   = 'block';
     }
 
-    function getStatusClass(status) {
-    if (!status) return '';
-    const s = status.toLowerCase();
-    if (s.includes('active'))    return 'rp-shift--morning';
-    if (s.includes('completed')) return 'rp-shift--afternoon';
-    if (s.includes('pending'))   return 'rp-shift--evening';
-    return 'rp-shift--morning';
+    // One colour per meaning, shared by the trip's status and its checklist's: green for
+    // done and passed, amber for a pass with defects or a trip under way, red for failed,
+    // missed or skipped, grey for anything still waiting.
+    function tmTone(status) {
+        const s = (status || '').toLowerCase();
+        if (s === 'completed' || s === 'passed') return 'ok';
+        if (s === 'active' || s.includes('defects')) return 'warn';
+        if (s === 'failed' || s === 'missed' || s === 'skipped') return 'bad';
+        return 'idle';
     }
 
     async function loadTripDetail(tripId) {
@@ -1518,7 +1547,10 @@
 
     document.getElementById('mdTripId').textContent      = d.tripId;
     document.getElementById('mdShiftType').textContent   = d.shiftType;
-    document.getElementById('mdShiftTime').textContent   = `${d.shiftStart} - ${d.shiftEnd}`;
+    document.getElementById('mdShiftTime').textContent   = `${d.shiftStart} – ${d.shiftEnd}`;
+    document.getElementById('mdActualStart').textContent = d.actualStart;
+    document.getElementById('mdActualEnd').textContent   = d.actualEnd;
+    document.getElementById('mdDuration').textContent    = d.duration;
     document.getElementById('mdRoute').textContent       = d.routeName;
     document.getElementById('mdVehicleId').textContent   = d.vehicleId;
     document.getElementById('mdPlate').textContent       = d.plateNumber;
@@ -1530,7 +1562,20 @@
 
     const statusEl = document.getElementById('mdStatus');
     statusEl.textContent  = d.tripStatus;
-    statusEl.className    = 'rp-shift ' + getStatusClass(d.tripStatus);
+    statusEl.className    = 'tm-status tm-status--' + tmTone(d.tripStatus);
+
+    // The checklist the driver filed before setting off, or the lack of one.
+    const checkEl = document.getElementById('mdChecklist');
+    const checkSub = document.getElementById('mdChecklistSub');
+    if (d.checklistStatus) {
+        checkEl.textContent = d.checklistStatus;
+        checkEl.className = 'tm-status tm-status--' + tmTone(d.checklistStatus);
+        checkEl.hidden = false;
+        checkSub.textContent = `Submitted ${d.checklistSubmitted}`;
+    } else {
+        checkEl.hidden = true;
+        checkSub.textContent = 'No checklist submitted for this trip.';
+    }
 
     showContent();
     } catch (e) {

@@ -796,75 +796,177 @@
     padding-bottom: 18px;
     }
 
-    .tr-section--id {
-    background: #F8F9FA;
-    border-radius: 0;
-    }
-
-    .tr-trip-id-badge {
-    display: inline-block;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #1A2B4A;
-    font-family: 'Segoe UI', sans-serif;
-    margin-bottom: 10px;
-    }
-
-    .tr-section-title {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--rp-muted);
-    font-family: 'Segoe UI', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    margin-bottom: 10px;
-    }
-
-    .tr-info-row {
-    font-size: 0.9rem;
-    font-family: 'Segoe UI', sans-serif;
-    color: var(--rp-text);
+    /* A single trip, laid out as the driver app's own trip report: a header card
+       naming it, three figures, then when it ran, who ran it, and its checklist. */
+    .tm {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+    gap: 12px;
+    padding: 18px 24px 22px;
+    font-family: 'Segoe UI', sans-serif;
+    color: #1A2B4A;
     }
 
-    .tr-info-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
+    .tm-hero {
+    background: #EEF2F9;
+    border: 1px solid #DCE3F0;
+    border-radius: 14px;
+    padding: 16px 18px;
+    }
+
+    .tm-hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    }
+
+    .tm-date {
+    font-size: 0.8rem;
+    font-weight: 600;
     color: var(--rp-muted);
     }
 
-    /* The trip and how it ended, before any of the detail. */
-    .tr-head {
+    .tm-route {
+    margin-top: 8px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.25;
+    }
+
+    .tm-sub {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--rp-muted);
+    }
+
+    /* Status, for the trip and for its checklist alike. */
+    .tm-status {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    }
+
+    .tm-status--ok { background: #E8F8EE; color: #1E9E57; }
+    .tm-status--warn { background: #FFF6E0; color: #B7791F; }
+    .tm-status--bad { background: #FDECEC; color: #C2413B; }
+    .tm-status--idle { background: #F1F3F6; color: #6B7280; }
+    .tm-status[hidden] { display: none; }
+
+    .tm-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    }
+
+    .tm-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 14px 8px;
+    border: 1px solid var(--rp-border);
+    border-radius: 12px;
+    text-align: center;
+    }
+
+    .tm-stat .ti {
+    font-size: 1.1rem;
+    color: var(--rp-teal);
+    margin-bottom: 2px;
+    }
+
+    .tm-stat-n {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    }
+
+    .tm-stat-l {
+    font-size: 0.72rem;
+    color: var(--rp-muted);
+    }
+
+    .tm-card {
+    border: 1px solid var(--rp-border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    }
+
+    .tm-card-title {
+    font-size: 0.88rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    }
+
+    /* A time on each line, marked by a dot, divided by a faint rule. */
+    .tm-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #EDF0F4;
+    font-size: 0.88rem;
+    }
+
+    .tm-line:last-child { border-bottom: none; padding-bottom: 2px; }
+
+    .tm-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    }
+
+    .tm-dot--plan { background: #B8C0CC; }
+    .tm-dot--start { background: var(--rp-teal); }
+    .tm-dot--end { background: #1A2B4A; }
+
+    .tm-k {
+    color: var(--rp-muted);
+    font-weight: 600;
+    }
+
+    .tm-line .tm-k { flex: 1; }
+
+    .tm-v {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    }
+
+    .tm-pair {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 0.88rem;
+    }
+
+    .tm-pair .tm-v { text-align: left; }
+
+    .tm-id {
+    font-weight: 600;
+    color: var(--rp-muted);
+    font-size: 0.8rem;
+    }
+
+    .tm-card--check {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    flex-wrap: wrap;
-    padding: 14px 24px;
-    border-bottom: 1px solid var(--rp-border);
     }
 
-    /* Two facts to a line, folding to one where there is no width to share. */
-    .tr-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 24px;
-    }
+    .tm-card--check .tm-card-title { margin-bottom: 2px; }
 
-    /* Vehicle and driver side by side, each keeping its own heading. */
-    .tr-grid--split > div {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    }
-
-    @media (max-width: 640px) {
-        .tr-grid { grid-template-columns: minmax(0, 1fr); }
+    .tm-check-sub {
+    font-size: 0.8rem;
+    color: var(--rp-muted);
     }
 
     /* Loading spinner */
@@ -1895,51 +1997,22 @@
             border-radius: 16px 16px 0 0;
         }
 
-        /* A trip is a dozen short facts. A line each is a dialog that scrolls for
-           something that fits on one screen, so they keep the two columns they have
-           on a desk and only the long ones take a line to themselves. Everything
-           comes down a step with them. */
-        .tr-grid {
-            /* Said again, because the rule that folds this to one column below 640
-               covers a phone too and is written earlier. */
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 9px 14px;
+        /* A trip on a phone: the same cards, closer together, the three figures
+           still side by side since each is a short number. */
+        .tm {
+            gap: 10px;
+            padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
         }
 
-        .tr-info-row--wide {
-            grid-column: 1 / -1;
-        }
-
-        .tr-info-row {
-            gap: 1px;
-        }
-
-            .tr-info-label {
-                font-size: .62rem;
-            }
-
-            .tr-info-row > :last-child {
-                min-width: 0;
-                font-size: .82rem;
-                line-height: 1.3;
-            }
-
-        /* Vehicle and driver keep their headings and stay beside each other: the
-           four values under them are a bus number and a name, not sentences. */
-        .tr-grid--split > div {
-            gap: 9px;
-        }
+        .tm-hero { padding: 13px 14px; }
+        .tm-route { font-size: 1.08rem; }
+        .tm-stats { gap: 8px; }
+        .tm-stat { padding: 11px 4px; }
+        .tm-stat-n { font-size: 1rem; }
+        .tm-card { padding: 12px 14px; }
+        .tm-pair { grid-template-columns: 104px minmax(0, 1fr); }
 
         .tr-section {
-            padding: 10px 16px;
-        }
-
-        .tr-section-title {
-            font-size: .68rem;
-            margin-bottom: 6px;
-        }
-
-        .tr-head {
             padding: 10px 16px;
         }
 
