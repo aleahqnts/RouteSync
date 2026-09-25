@@ -90,8 +90,27 @@ namespace FleetWise.Services
         private readonly IMemoryCache _cache;
         private readonly IConfiguration _config;
         private readonly SecurityIncidents _incidents;
+        private readonly RosterPublisher _roster;
 
         private const string Key = "nav_badges";
+
+        private const string ProjectedKey = "nav_roster_projected";
+
+        /// <summary>
+        /// How long the upcoming roster's projected gaps stand before the plan is run again.
+        /// </summary>
+        /// <remarks>
+        /// Running a month's plan reads six weeks of trips, far more than a badge should cost
+        /// every five seconds. It is only run between the draft day and the upcoming month
+        /// being published, held this long, and dropped with the rest of the counts whenever
+        /// something is written here, so a person who fixes the roster sees the badge follow
+        /// at once. What changes elsewhere, a draft made on schedule or leave filed from a
+        /// phone, waits at most this long, against a window of days.
+        /// </remarks>
+        private static readonly TimeSpan ProjectedFreshness = TimeSpan.FromMinutes(30);
+
+        /// <summary>Slots a publish of the month as saved would leave empty.</summary>
+        private sealed record Projected(DateTime Month, int Gaps);
 
         /// <summary>
         /// How long a count stands before it is worked out again.
@@ -119,12 +138,14 @@ namespace FleetWise.Services
         public static readonly TimeSpan UrgentWithin = TimeSpan.FromHours(4);
 
         public NavCounts(
-            Supabase.Client supabase, IMemoryCache cache, IConfiguration config, SecurityIncidents incidents)
+            Supabase.Client supabase, IMemoryCache cache, IConfiguration config, SecurityIncidents incidents,
+            RosterPublisher roster)
         {
             _supabase = supabase;
             _cache = cache;
             _config = config;
             _incidents = incidents;
+            _roster = roster;
         }
 
         /// <summary>Drops the standing count, so the next reading is worked out again.</summary>
@@ -138,7 +159,11 @@ namespace FleetWise.Services
         /// one, and a write that changes nothing anybody is looking at should not pay for a
         /// round of queries.
         /// </remarks>
-        public void Invalidate() => _cache.Remove(Key);
+        public void Invalidate()
+        {
+            _cache.Remove(Key);
+            _cache.Remove(ProjectedKey);
+        }
 
         public async Task<NavBadges> ReadAsync()
         {
@@ -418,22 +443,56 @@ namespace FleetWise.Services
 
                 var next = monthsTask.Result.Models.FirstOrDefault(m => m.Month.Date == nextMonth);
                 var waiting = today.Day >= RosterCycleService.DraftDay(_config) && next?.Status != "Published";
+                var projected = 0;
                 if (waiting)
                 {
+                    // A draft that would publish with slots nobody can cover says so, and says
+                    // it while there is still time to move a rest day, rather than "ready for
+                    // review" about a roster that will leave buses unstaffed on the day.
+                    projected = next is null ? 0 : await ProjectedGapsAsync(nextMonth);
+
                     var marked = slots.Count(s => s.Month.Date == nextMonth && !string.IsNullOrWhiteSpace(s.Suggested));
                     notes.Add(next is null ? $"Build the {nextMonth:MMMM} roster"
+                        : projected > 0 ? $"{nextMonth:MMMM} roster: {(projected == 1 ? "1 slot" : $"{projected} slots")} no floater can cover"
                         : marked > 0 ? $"{nextMonth:MMMM} roster ready for review: {(marked == 1 ? "1 place" : $"{marked} places")} auto-filled"
                         : $"{nextMonth:MMMM} roster ready for review");
                 }
 
                 return new NavBadge(
                     open.Count + broken + (waiting ? 1 : 0),
-                    open.Any(g => g.Date.Date <= today.AddDays(2)),
+                    open.Any(g => g.Date.Date <= today.AddDays(2)) || projected > 0,
                     notes.Count == 0 ? null : string.Join(". ", notes));
             }
             catch
             {
                 return NavBadge.None;
+            }
+        }
+
+        /// <summary>
+        /// Slots publishing the upcoming month as saved would leave empty, worked out by the
+        /// same plan the publish runs.
+        /// </summary>
+        /// <remarks>
+        /// A plan that cannot be run leaves the badge on its ordinary review note rather than
+        /// inventing a number, and the failure is not held, so the next reading tries again.
+        /// </remarks>
+        private async Task<int> ProjectedGapsAsync(DateTime month)
+        {
+            if (_cache.TryGetValue<Projected>(ProjectedKey, out var held) && held is not null && held.Month == month)
+                return held.Gaps;
+
+            try
+            {
+                var plan = await _roster.PlanSavedAsync(month);
+                if (plan is null) return 0;
+
+                _cache.Set(ProjectedKey, new Projected(month, plan.Gaps.Count), ProjectedFreshness);
+                return plan.Gaps.Count;
+            }
+            catch
+            {
+                return 0;
             }
         }
 

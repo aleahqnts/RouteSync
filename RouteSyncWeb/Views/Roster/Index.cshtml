@@ -22,7 +22,8 @@
 
 <div class="ro-wrap" id="roPage"
      data-month="@Model.MonthKey" data-version="@Model.Version" data-status="@Model.Status"
-     data-readonly="@(Model.ReadOnly ? "true" : "false")">
+     data-readonly="@(Model.ReadOnly ? "true" : "false")"
+     data-held="@string.Join(",", Model.Held)">
 
     @* Held at the top the way every board holds its controls. *@
     <div class="ro-sticky" data-sticky-head>
@@ -93,6 +94,14 @@
     <div class="ro-problems" id="roProblems" hidden>
         <p class="ro-problems-t">Fix these before saving</p>
         <ul id="roProblemList"></ul>
+    </div>
+
+    @* What publishing the roster as it stands would leave empty, worked out by the same plan
+       a publish runs, leave and all, and asked again after every edit. A save is not blocked
+       by it: a roster with known gaps is still better than none. *@
+    <div class="ro-wouldleave" id="roWouldLeave" hidden>
+        <p class="ro-wouldleave-t">If published as it stands, these would be left unfilled</p>
+        <ul id="roWouldLeaveList"></ul>
     </div>
 
     @* What the last publish left for a person: slots nobody was free for, and slots kept
@@ -288,7 +297,9 @@
     <section class="ro-card">
         <h2 class="ro-card-title">Unplaced drivers</h2>
         @* The shortfall against the people there are to fill it. More drivers short than
-           unplaced means the roster cannot be completed from the drivers on the books. *@
+           unplaced means the roster cannot be completed from the drivers on the books.
+           Pressing a name holds that driver back: auto-fill and the suggestions pass them
+           over, while one-off cover and placing them by hand still can. *@
         <p class="ro-short" id="roHeadcount" hidden></p>
         <p class="ro-empty" id="roUnplacedNone" hidden>Every active driver has a place.</p>
         <ul class="ro-unplaced" id="roUnplaced"></ul>
@@ -322,11 +333,12 @@
     </div>
 </template>
 
-@* What auto-fill changed: a line for each marked place, which stays marked until the roster is
-   published, then what no place is left to mark, which the page keeps only until it reloads. *@
+@* What auto-fill and Suggest rest days changed: a line for each marked place, which stays
+   marked until the roster is published, then what no place is left to mark, which the page
+   keeps only until it reloads. *@
 <div class="ro-overlay" id="roChangesBox" hidden role="dialog" aria-modal="true" aria-labelledby="roChangesTitle">
     <div class="ro-box ro-box--wide">
-        <h3 class="ro-box-title" id="roChangesTitle">What auto-fill changed</h3>
+        <h3 class="ro-box-title" id="roChangesTitle">Suggested changes</h3>
         <p class="ro-box-desc">Marked places stay marked until the roster is published. Nothing is saved until you save the roster.</p>
         <div class="ro-changes-scroll" id="roChangesScroll">
             <ul class="ro-changes" id="roChangesList"></ul>
@@ -397,6 +409,13 @@
         let checkTimer = null;
         let checkSeq = 0;
 
+        // Drivers held back from auto-fill and the suggestions, saved with the roster.
+        const held = new Set((page.dataset.held || '').split(',').filter(Boolean).map(Number));
+
+        function heldList() {
+            return Array.from(held);
+        }
+
         // ---- The roster as it stands on the page ------------------------------------
 
         function numberOrNull(value) {
@@ -463,7 +482,8 @@
                     chip.className = 'ro-day' + (d.short ? ' ro-day--short' : '');
                     chip.textContent = d.day + ' ' + d.resting + '/' + d.covering;
                     chip.title = d.dayName + ': ' + d.resting + (d.resting === 1 ? ' crew driver rests, ' : ' crew drivers rest, ')
-                        + d.covering + (d.covering === 1 ? ' floater is working' : ' floaters are working');
+                        + d.covering + (d.covering === 1 ? ' floater is working' : ' floaters are working')
+                        + (d.short ? '. A rest day goes uncovered every week.' : '');
                     strip.appendChild(chip);
                 });
             }
@@ -474,28 +494,98 @@
                 if (r.unfilledSeats > 0)
                     parts.push(r.unfilledSeats === 1 ? '1 bus shift has no driver.'
                         : r.unfilledSeats + ' bus shifts have no driver.');
+                // A guide for staffing the route, not a promise the rest days are covered.
                 if (r.floatersMissing > 0)
-                    parts.push('Needs ' + r.floatersMissing + ' more ' + (r.floatersMissing === 1 ? 'floater' : 'floaters')
-                        + ': ' + r.crewSeats + ' bus ' + (r.crewSeats === 1 ? 'shift takes ' : 'shifts take ')
-                        + r.floatersNeeded + ' to cover rest days.');
-                if (r.gapsPerWeek > 0)
-                    parts.push(r.gapsPerWeek === 1 ? '1 rest day a week has nobody to cover it.'
-                        : r.gapsPerWeek + ' rest days a week have nobody to cover them.');
+                    parts.push(r.crewSeats + ' bus ' + (r.crewSeats === 1 ? 'shift usually takes ' : 'shifts usually take ')
+                        + r.floatersNeeded + ' ' + (r.floatersNeeded === 1 ? 'floater' : 'floaters')
+                        + ', and this route has ' + r.floaters + '.');
+                // Enough floaters, badly arranged: the case a count of floaters cannot see.
+                if (r.restDaysCollide)
+                    parts.push('Enough floaters, but the rest days leave ' + uncoveredText(r.uncovered)
+                        + ' uncovered every week. Try Suggest rest days.');
+                else if (r.gapsPerWeek > 0)
+                    parts.push('Every week nobody can cover ' + uncoveredText(r.uncovered) + '.');
                 note.textContent = parts.join(' ');
                 note.hidden = parts.length === 0;
             }
         }
 
+        // "V001 Morning on Wednesday", for up to three; past that, a count.
+        function uncoveredText(list) {
+            const items = (list || []).map(function (u) { return u.vehicleId + ' ' + u.shift + ' on ' + u.dayName; });
+            if (items.length === 0) return 'a rest day';
+            if (items.length > 3) return items.length + ' rest days';
+            if (items.length === 1) return items[0];
+            return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+        }
+
+        // "Oct 7, 14, 21, 28" rather than the month on every date.
+        function dateRun(dates) {
+            let month = null;
+            return (dates || []).map(function (d) {
+                const parts = d.split(' ');
+                if (parts[0] === month) return parts[1];
+                month = parts[0];
+                return d;
+            }).join(', ');
+        }
+
+        function showWouldLeave(lines) {
+            const box = document.getElementById('roWouldLeave');
+            const list = document.getElementById('roWouldLeaveList');
+            list.replaceChildren();
+            (lines || []).forEach(function (g) {
+                const li = document.createElement('li');
+                li.textContent = g.vehicleId + ' ' + g.shift + (g.routeName ? ', ' + g.routeName : '')
+                    + ', ' + dateRun(g.dates) + ': ' + g.reason + '.';
+                list.appendChild(li);
+            });
+            box.hidden = readOnly || (lines || []).length === 0;
+        }
+
+        // A held-back driver is crossed out where they stand. Said in words as well, since a
+        // line through a name is not read out.
+        function paintHeld(chip) {
+            const isHeld = held.has(Number(chip.dataset.driver));
+            chip.setAttribute('aria-pressed', isHeld ? 'true' : 'false');
+            chip.setAttribute('aria-label', chip.dataset.name + (isHeld ? ', held back from auto-fill' : ''));
+            chip.title = isHeld
+                ? 'Held back: auto-fill and the suggestions pass them over. Press to release.'
+                : 'Press to hold back from auto-fill and the suggestions.';
+        }
+
         function showUnplaced(drivers) {
             const list = document.getElementById('roUnplaced');
             list.replaceChildren();
+
+            // A hold on a driver since placed on the roster no longer means anything.
+            const unplaced = new Set(drivers.map(function (d) { return d.driverId; }));
+            Array.from(held).forEach(function (id) { if (!unplaced.has(id)) held.delete(id); });
+
             drivers.forEach(function (d) {
                 const li = document.createElement('li');
-                li.textContent = d.name + ' (' + d.driverId + ')';
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'ro-unplaced-chip';
+                chip.dataset.driver = String(d.driverId);
+                chip.dataset.name = d.name;
+                chip.textContent = d.name + ' (' + d.driverId + ')';
+                chip.disabled = readOnly;
+                paintHeld(chip);
+                li.appendChild(chip);
                 list.appendChild(li);
             });
             document.getElementById('roUnplacedNone').hidden = drivers.length > 0;
         }
+
+        document.getElementById('roUnplaced').addEventListener('click', function (e) {
+            const chip = e.target.closest('.ro-unplaced-chip');
+            if (!chip || readOnly) return;
+            const id = Number(chip.dataset.driver);
+            if (held.has(id)) held.delete(id); else held.add(id);
+            paintHeld(chip);
+            changed();
+        });
 
         async function check() {
             const seq = ++checkSeq;
@@ -503,7 +593,7 @@
                 const res = await fetch('/Roster/Check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seats: readSeats() })
+                    body: JSON.stringify({ month: page.dataset.month, seats: readSeats(), held: heldList() })
                 });
                 if (!res.ok || res.redirected) return;
                 const said = await res.json();
@@ -511,13 +601,17 @@
                 if (seq !== checkSeq) return;
                 showProblems(said.problems || []);
                 (said.routes || []).forEach(showRoute);
+                showWouldLeave(said.wouldLeave || []);
                 showUnplaced(said.unplaced || []);
 
                 const short = (said.routes || []).reduce(function (n, r) { return n + r.driversShort; }, 0);
-                const free = (said.unplaced || []).length;
+                const unplaced = said.unplaced || [];
+                const free = unplaced.filter(function (d) { return !held.has(d.driverId); }).length;
+                const back = unplaced.length - free;
                 const headcount = document.getElementById('roHeadcount');
                 headcount.textContent = 'The routes need ' + short + ' more ' + (short === 1 ? 'driver' : 'drivers')
-                    + ' and ' + (free === 0 ? 'none are' : free === 1 ? 'only 1 is' : 'only ' + free + ' are') + ' unplaced.';
+                    + ' and ' + (free === 0 ? 'none are' : free === 1 ? 'only 1 is' : 'only ' + free + ' are') + ' unplaced'
+                    + (back > 0 ? ' and not held back.' : '.');
                 headcount.hidden = short <= free;
             } catch (e) {
                 console.warn('roster check failed', e);
@@ -602,14 +696,14 @@
                 chip = document.createElement('button');
                 chip.type = 'button';
                 chip.className = 'ro-why';
-                chip.textContent = 'Auto-fill';
+                chip.textContent = 'Suggested';
                 const head = place.querySelector('.ro-seat-head');
                 if (head) head.appendChild(chip);
                 else place.insertBefore(chip, place.querySelector('.ro-remove'));
             }
             chip.title = text;
             chip.setAttribute('aria-haspopup', 'dialog');
-            chip.setAttribute('aria-label', 'Auto-fill: ' + text);
+            chip.setAttribute('aria-label', 'Suggested: ' + text);
         }
 
         // Sets a list to a value, borrowing the option from a bus's list when this one lacks it:
@@ -820,7 +914,7 @@
                     const res = await fetch('/Roster/AutoFill', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ seats: before })
+                        body: JSON.stringify({ seats: before, held: heldList() })
                     });
                     if (!res.ok || res.redirected) throw new Error();
                     const result = await res.json();
@@ -872,34 +966,44 @@
 
         // ---- Suggest rest days --------------------------------------------------------------
 
+        // Least disruption first: a spare driver as a floater, then the fewest rest days moved,
+        // and only then that the route needs another floater. Each change carries a mark, so
+        // See changes lists who moved and why.
         async function suggest() {
             try {
+                const before = readSeats();
                 const res = await fetch('/Roster/Suggest', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seats: readSeats() })
+                    body: JSON.stringify({ seats: before, held: heldList() })
                 });
                 if (!res.ok || res.redirected) throw new Error();
-                const seats = (await res.json()).seats || [];
+                const result = await res.json();
+                const unmarked = result.unmarked || [];
 
-                // Written back in the order the seats were read, which is the order of the page.
-                let i = 0;
-                page.querySelectorAll('.ro-card[data-route]').forEach(function (card) {
-                    card.querySelectorAll('.ro-bus .ro-seat').forEach(function (seat) {
-                        if (!seat.querySelector('.ro-runs-box').checked) return;
-                        const s = seats[i++];
-                        if (s && s.restWeekday != null) seat.querySelector('.ro-rest').value = String(s.restWeekday);
-                    });
-                    card.querySelectorAll('.ro-floater').forEach(function (row) {
-                        const s = seats[i++];
-                        if (!s) return;
-                        if (s.restWeekday != null) row.querySelector('.ro-rest').value = String(s.restWeekday);
-                        row.querySelector('.ro-home').value = s.shift;
-                    });
-                });
+                // Kept beside what auto-fill left, once each, rather than in its place.
+                if (unmarked.length)
+                    keepUnmarked(Array.from(new Set(unmarkedNotes.concat(unmarked))));
+
+                if (!result.changed) {
+                    toast(unmarked[0] || (result.notes || [])[0] || 'Nothing to change.');
+                    return;
+                }
+
+                if (!applySeats(result.seats || [])) {
+                    applySeats(before);
+                    toast('The suggestion moved a place this page cannot show. Reload the page and try again.');
+                    return;
+                }
 
                 changed();
-                toast('Rest days suggested. Look them over, then save.');
+
+                const parts = [];
+                if (result.added) parts.push(result.added === 1 ? 'added 1 spare driver as a floater' : 'added ' + result.added + ' spare drivers as floaters');
+                if (result.moved) parts.push(result.moved === 1 ? 'moved 1 rest day' : 'moved ' + result.moved + ' rest days');
+                toast((parts.length ? 'Suggested: ' + parts.join(' and ') + '. ' : 'Rest days set where they were missing. ')
+                    + (result.gapsLeft ? 'Some rest days still cannot be covered; See changes says where.'
+                                       : 'Marked places show what changed. Look them over, then save.'));
             } catch (e) {
                 toast('Rest days could not be suggested. Try again.');
             }
@@ -1291,7 +1395,7 @@
                             'RequestVerificationToken':
                                 document.querySelector('input[name="__RequestVerificationToken"]').value
                         },
-                        body: JSON.stringify({ month: page.dataset.month, version: version, seats: readSeats() })
+                        body: JSON.stringify({ month: page.dataset.month, version: version, seats: readSeats(), held: heldList() })
                     });
 
                     if (res.status === 409) {

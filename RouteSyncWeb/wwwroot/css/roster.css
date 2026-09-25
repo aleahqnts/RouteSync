@@ -182,6 +182,20 @@
     .ro-problems-t { margin: 0 0 4px; font-weight: 700; }
     .ro-problems ul { margin: 0; padding-left: 18px; }
 
+    /* What a publish would leave empty. Amber, not red: it never blocks a save. */
+    .ro-wouldleave {
+        margin: 0 0 14px;
+        padding: 10px 14px;
+        border: 1px solid #E6D6A8;
+        border-radius: 10px;
+        background: #FEF9E7;
+        color: #7A6412;
+        font-size: .84rem;
+    }
+
+    .ro-wouldleave-t { margin: 0 0 4px; font-weight: 700; }
+    .ro-wouldleave ul { margin: 0; padding-left: 18px; }
+
     /* --- Route cards --------------------------------------------------------------- */
 
     .ro-card {
@@ -409,12 +423,29 @@
         list-style: none;
     }
 
-        .ro-unplaced li {
+        /* Each name is a toggle: pressed, the driver is held back from auto-fill and the
+           suggestions, and is crossed out where they stand. */
+        .ro-unplaced-chip {
             padding: 3px 10px;
+            border: 1px solid transparent;
             border-radius: 999px;
             background: #EEF1F5;
+            color: var(--ro-text);
+            font: inherit;
             font-size: .8rem;
+            cursor: pointer;
         }
+
+            .ro-unplaced-chip:hover:not(:disabled) { border-color: #C9D1DE; }
+            .ro-unplaced-chip:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 2px; }
+            .ro-unplaced-chip:disabled { cursor: default; }
+
+            .ro-unplaced-chip[aria-pressed="true"] {
+                background: transparent;
+                border-color: var(--ro-border);
+                color: var(--ro-muted);
+                text-decoration: line-through;
+            }
 
     /* --- What the last publish left ------------------------------------------------------ */
 
