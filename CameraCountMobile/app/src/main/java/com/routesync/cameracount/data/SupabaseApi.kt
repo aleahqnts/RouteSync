@@ -505,6 +505,41 @@ object SupabaseApi {
         }
     }
 
+    /**
+     * Records this device's charge on its status row, where the driver app reads it.
+     *
+     * A request of its own rather than part of [upsertDeviceStatus]. That is the
+     * heartbeat, and a database without these columns refuses a body naming them whole,
+     * which the driver app would read as a dead camera. Apart, the worst a missing
+     * column costs is the battery figure. A PATCH, because the heartbeat has already made
+     * the row. Returns whether it was stored.
+     */
+    suspend fun patchDeviceBattery(deviceId: String, level: Int, charging: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            val body = JSONObject()
+                .put("battery_level", level)
+                .put("battery_charging", charging)
+                .put("battery_read_at", Instant.now().toString())
+                .toString().toRequestBody(JSON)
+            val req = Request.Builder()
+                .url("$BASE/device_status?device_id=eq.$deviceId")
+                .supabaseHeaders()
+                .header("Prefer", "return=minimal")
+                .patch(body)
+                .build()
+            try {
+                http.newCall(req).execute().use { res ->
+                    if (!res.isSuccessful) {
+                        android.util.Log.w("SupabaseApi", "battery refused: HTTP ${res.code}")
+                    }
+                    res.isSuccessful
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("SupabaseApi", "battery failed: ${e.javaClass.simpleName}")
+                false
+            }
+        }
+
     // Snapshot transport. A private storage bucket holds at most one transient object
     // per device, named {device_id}.jpg, deleted as soon as it has served its purpose.
 
