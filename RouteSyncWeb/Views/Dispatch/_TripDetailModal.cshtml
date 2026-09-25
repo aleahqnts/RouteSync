@@ -1,5 +1,19 @@
 ﻿@* Views/Dispatch/_TripDetailModal.cshtml *@
 
+@* What a driver photographed at a fault, opened from the fault's row. A sibling of the
+   trip dialog rather than a child, and above it, so Escape and a click outside close the
+   photograph first and leave the trip open underneath. *@
+<div id="tdmPhotoOverlay" data-dialog-close="closeTripPhoto" class="tdm-overlay tdm-photo-overlay"
+     role="dialog" aria-modal="true" aria-labelledby="tdm-photo-title" style="display:none;">
+    <div class="tdm-dialog tdm-photo-dialog">
+        <div class="tdm-header">
+            <h2 class="tdm-photo-title" id="tdm-photo-title">Inspection Photo</h2>
+            <button class="tdm-close" onclick="closeTripPhoto()" aria-label="Close">&times;</button>
+        </div>
+        <div class="tdm-photo-body" id="tdm-photo-body"></div>
+    </div>
+</div>
+
 <div id="tripDetailModal" data-dialog-close="closeTripModal" class="tdm-overlay" role="dialog" aria-modal="true" style="display:none;">
     <div class="tdm-dialog">
 
@@ -125,9 +139,11 @@
                                     <span class="tdm-insp-row-label">Time of Report:</span>
                                     <span id="tdm-insp-time">—</span>
                                 </div>
-                                <div class="tdm-insp-row" id="tdm-insp-issue-row" style="display:none;">
-                                    <span class="tdm-insp-row-label">Issue:</span>
-                                    <span id="tdm-insp-issue">—</span>
+                                @* One row per failed item, so a photograph can sit beside
+                                   the item it shows rather than trailing a joined list. *@
+                                <div class="tdm-insp-issues-wrap" id="tdm-insp-issue-row" style="display:none;">
+                                    <div class="tdm-insp-row-label">Issues:</div>
+                                    <ul class="tdm-insp-issues" id="tdm-insp-issues"></ul>
                                 </div>
                                 <div id="tdm-insp-remarks-wrap" style="display:none;">
                                     <div class="tdm-insp-row-label" style="margin-bottom:6px;">Remarks:</div>
@@ -177,11 +193,62 @@
     }
 
     function closeTripModal() {
+        closeTripPhoto();
         document.getElementById('tripDetailModal').style.display = 'none';
         document.body.style.overflow = '';
         document.getElementById('tdm-inspection-body').style.display = 'none';
         document.getElementById('tdm-chevron').classList.remove('open');
     }
+
+    // Opens the photographs of one failed item, newest first.
+    //
+    // Asked for by row identifier. The stored path never reaches the page, because the
+    // key behind the image endpoint would fetch any path it was handed. Built as elements
+    // rather than markup, so a label typed by an admin stays text.
+    function openTripPhoto(label, photos) {
+        const body = document.getElementById('tdm-photo-body');
+        document.getElementById('tdm-photo-title').textContent = label || 'Inspection Photo';
+
+        body.replaceChildren();
+        photos.forEach(function (p) {
+            const figure = document.createElement('figure');
+            figure.className = 'tdm-photo';
+
+            const img = document.createElement('img');
+            img.src = '@Url.Action("InspectionPhoto", "Dispatch")?photoId=' + encodeURIComponent(p.photoId);
+            img.alt = 'Photograph taken during the inspection';
+            img.loading = 'lazy';
+
+            // Worded without a cause. A failed image cannot say whether the photograph
+            // aged out after the trip was opened or the server could not fetch it, and
+            // naming the wrong one sends whoever reads it looking in the wrong place.
+            img.onerror = function () {
+                const gone = document.createElement('p');
+                gone.className = 'tdm-photo-gone';
+                gone.textContent = 'This photo could not be loaded.';
+                figure.replaceChildren(gone);
+            };
+
+            const caption = document.createElement('figcaption');
+            caption.textContent = p.takenAt || '';
+
+            figure.append(img, caption);
+            body.appendChild(figure);
+        });
+
+        document.getElementById('tdmPhotoOverlay').style.display = 'flex';
+    }
+
+    function closeTripPhoto() {
+        const overlay = document.getElementById('tdmPhotoOverlay');
+        if (!overlay || overlay.style.display === 'none') return;
+        overlay.style.display = 'none';
+        document.getElementById('tdm-photo-body').replaceChildren();
+    }
+
+    document.getElementById('tdmPhotoOverlay').addEventListener('click', function (e) {
+        if (e.target === this) closeTripPhoto();
+    });
 
     document.getElementById('tripDetailModal').addEventListener('click', function (e) {
         if (e.target === this) closeTripModal();
@@ -383,7 +450,7 @@
             const inspReporter = document.getElementById('tdm-insp-reporter');
             const inspTime    = document.getElementById('tdm-insp-time');
             const inspIssueRow = document.getElementById('tdm-insp-issue-row');
-            const inspIssue   = document.getElementById('tdm-insp-issue');
+            const inspIssues  = document.getElementById('tdm-insp-issues');
             const inspRemarksWrap = document.getElementById('tdm-insp-remarks-wrap');
             const inspRemarks = document.getElementById('tdm-insp-remarks');
 
@@ -411,24 +478,48 @@
                 const remarks = [];
                 if (d.checklist.notes) remarks.push(d.checklist.notes);
 
-                if (!passed && d.maintenanceLogs?.length > 0) {
-                    // Issues = union of issue names across maintenance log entries. The
-                    // ones that ground the bus are named first and marked, so a
-                    // dispatcher can see at a glance whether this needs a reassignment.
-                    const critical = [...new Set(d.maintenanceLogs.flatMap(l => l.criticalIssues ?? []))];
-                    const others = [...new Set(d.maintenanceLogs.flatMap(l => l.issueDetails ?? []))]
-                        .filter(i => !critical.includes(i));
+                // One row per failed item, read from the inspection itself. What grounds
+                // the bus arrives first from the server, which is where a dispatcher
+                // deciding on a reassignment looks. A photograph sits at the right of the
+                // item it shows.
+                const issues = passed ? [] : (d.inspectionIssues ?? []);
+                inspIssues.replaceChildren();
+                issues.forEach(function (issue) {
+                    const row = document.createElement('li');
+                    row.className = 'tdm-insp-issue';
 
-                    const rendered = [
-                        ...critical.map(i => formatIssueKey(i) + ' (critical)'),
-                        ...others.map(formatIssueKey)
-                    ];
-                    if (rendered.length > 0) {
-                        inspIssue.textContent = rendered.join(', ');
-                        inspIssueRow.style.display = 'flex';
+                    const name = document.createElement('span');
+                    name.className = 'tdm-insp-issue-label';
+                    name.textContent = formatIssueKey(issue.label ?? '');
+                    row.appendChild(name);
+
+                    const photos = issue.photos ?? [];
+                    if (photos.length > 0) {
+                        const chip = document.createElement('button');
+                        chip.type = 'button';
+                        chip.className = 'tdm-photo-chip';
+                        chip.title = 'Photographed by the driver during the inspection';
+                        chip.setAttribute('aria-label',
+                            photos.length === 1 ? 'View photo' : 'View ' + photos.length + ' photos');
+                        chip.innerHTML = '<span class="tdm-photo-chip-mark" aria-hidden="true">▣</span>';
+                        chip.append(String(photos.length));
+                        chip.addEventListener('click', function () {
+                            openTripPhoto(name.textContent, photos);
+                        });
+                        row.appendChild(chip);
+                    } else if (issue.photoExpired) {
+                        const gone = document.createElement('span');
+                        gone.className = 'tdm-photo-expired';
+                        gone.title = 'Photographs are kept for thirty days after the order closes';
+                        gone.textContent = 'Photo expired';
+                        row.appendChild(gone);
                     }
-                    d.maintenanceLogs.forEach(l => { if (l.remarks) remarks.push(l.remarks); });
-                }
+
+                    inspIssues.appendChild(row);
+                });
+                if (issues.length > 0) inspIssueRow.style.display = 'block';
+
+                if (!passed) d.maintenanceLogs?.forEach(l => { if (l.remarks) remarks.push(l.remarks); });
 
                 if (remarks.length > 0) {
                     inspRemarks.textContent = remarks.join(' ');
