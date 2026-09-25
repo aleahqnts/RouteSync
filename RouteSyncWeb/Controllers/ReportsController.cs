@@ -456,12 +456,33 @@ namespace FleetWise.Controllers
             var liveBoarded = latestTelemetry?.TotalPassengers ?? 0;
             if (liveBoarded <= 0) liveBoarded = tripResponse.TotalBoarded;
 
+            // The pre-trip checklist, as the driver's own trip report shows it. The latest
+            // row, should a trip carry more than one.
+            BusChecklist? checklist = null;
+            try
+            {
+                checklist = (await _supabase
+                    .From<BusChecklist>()
+                    .Filter("trip_id", Operator.Equals, tripId)
+                    .Order("submitted_at", Ordering.Descending)
+                    .Limit(1)
+                    .Get()).Models.FirstOrDefault();
+            }
+            catch { /* shown as none submitted */ }
+
             var result = new
             {
                 tripId = tripResponse.TripId,
                 shiftType = tripResponse.ShiftType,
                 shiftStart = ShiftStartAt(tripResponse).ToString("hh:mm tt"),
                 shiftEnd = ShiftEndLabel(tripResponse),
+                // When the driver actually started and ended it, beside the scheduled
+                // window, as the driver app's trip report shows them.
+                actualStart = FmtActual(tripResponse.ActualStartTime),
+                actualEnd = FmtActual(tripResponse.ActualEndTime),
+                duration = TripDuration(tripResponse),
+                checklistStatus = checklist?.ChecklistStatus,
+                checklistSubmitted = checklist is null ? null : FmtActual(checklist.SubmittedAt),
                 routeName = routeResponse?.RouteName ?? "N/A",
                 vehicleType = "Bus", // the vehicle_type column was dropped; every unit is a bus
                 vehicleId = vehicleResponse?.VehicleId ?? "N/A",
@@ -656,7 +677,7 @@ namespace FleetWise.Controllers
                 .Select(g => new
                 {
                     groupName = g.Key,
-                    columns = new[] { "Trip ID", "Date", "Driver", "Bus ID", "Shift", "Shift Time", "Status", "Passengers", "Revenue" },
+                    columns = new[] { "Trip ID", "Date", "Driver", "Bus ID", "Shift", "Actual Start", "Actual End", "Status", "Passengers", "Revenue" },
                     rows = g.Select(t => new[]
                     {
                         t.TripId,
@@ -664,7 +685,8 @@ namespace FleetWise.Controllers
                         userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
                         vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId,
                         t.ShiftType ?? "",
-                        ShiftRange(t),
+                        FmtActual(t.ActualStartTime),
+                        FmtActual(t.ActualEndTime),
                         DeriveStatus(t),
                         passengers(t).ToString(),
                         Money(t)
@@ -686,14 +708,15 @@ namespace FleetWise.Controllers
                 .Select(g => new
                 {
                     groupName = g.Key,
-                    columns = new[] { "Trip ID", "Date", "Driver", "Shift", "Shift Time", "Status", "Passengers" },
+                    columns = new[] { "Trip ID", "Date", "Driver", "Shift", "Actual Start", "Actual End", "Status", "Passengers" },
                     rows = g.Select(t => new[]
                     {
                         t.TripId,
                         t.Date.ToString("MMM dd, yyyy"),
                         userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
                         t.ShiftType ?? "",
-                        ShiftRange(t),
+                        FmtActual(t.ActualStartTime),
+                        FmtActual(t.ActualEndTime),
                         DeriveStatus(t),
                         passengers(t).ToString()
                     }).ToList()
@@ -777,7 +800,7 @@ namespace FleetWise.Controllers
 
             string[] columns = reportType switch
             {
-                "Passenger" => new[] { "Trip ID", "Date", "Driver", "Route", "Shift", "Shift Time", "Status", "Passengers" },
+                "Passenger" => new[] { "Trip ID", "Date", "Driver", "Route", "Shift", "Actual Start", "Actual End", "Status", "Passengers" },
                 "Revenue" => new[] { "Trip ID", "Date", "Driver", "Bus ID", "Route", "Shift", "Status", "Revenue" },
                 _ => new[] { "Trip ID", "Date", "Driver", "Bus ID", "Route", "Shift", "Actual Start", "Actual End", "Status", "Passengers", "Revenue" }
             };
@@ -791,7 +814,8 @@ namespace FleetWise.Controllers
                     userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
                     routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A",
                     t.ShiftType ?? "",
-                    ShiftRange(t),
+                    FmtActual(t.ActualStartTime),
+                    FmtActual(t.ActualEndTime),
                     DeriveStatus(t),
                     Passengers(t).ToString()
                 },
@@ -1026,7 +1050,7 @@ namespace FleetWise.Controllers
             {
                 case "Passenger":
                     fileName = $"PassengerReport_{PeriodStamp(from, to)}.csv";
-                    sb.AppendLine("Trip ID,Date,Driver,Route,Shift,Shift Time,Status,Passengers");
+                    sb.AppendLine("Trip ID,Date,Driver,Route,Shift,Actual Start,Actual End,Status,Passengers");
                     foreach (var t in filtered)
                         sb.AppendLine(string.Join(",",
                             CsvEscape(t.TripId),
@@ -1034,7 +1058,8 @@ namespace FleetWise.Controllers
                             CsvEscape(userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A"),
                             CsvEscape(routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A"),
                             CsvEscape(t.ShiftType ?? ""),
-                            CsvEscape(ShiftRange(t, "-")),
+                            CsvEscape(FmtActual(t.ActualStartTime)),
+                            CsvEscape(FmtActual(t.ActualEndTime)),
                             CsvEscape(DeriveStatus(t)),
                             Passengers(t).ToString()));
                     break;
@@ -1056,7 +1081,7 @@ namespace FleetWise.Controllers
 
                 default:
                     fileName = $"DailyTripReport_{PeriodStamp(from, to)}.csv";
-                    sb.AppendLine("Trip ID,Date,Driver,Bus ID,Route,Shift,Shift Time,Actual Start,Actual End,Status,Passengers,Revenue");
+                    sb.AppendLine("Trip ID,Date,Driver,Bus ID,Route,Shift,Actual Start,Actual End,Status,Passengers,Revenue");
                     foreach (var t in filtered)
                         sb.AppendLine(string.Join(",",
                             CsvEscape(t.TripId),
@@ -1065,7 +1090,6 @@ namespace FleetWise.Controllers
                             CsvEscape(vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId),
                             CsvEscape(routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A"),
                             CsvEscape(t.ShiftType ?? ""),
-                            CsvEscape(ShiftRange(t, "-")),
                             CsvEscape(FmtActual(t.ActualStartTime)),
                             CsvEscape(FmtActual(t.ActualEndTime)),
                             CsvEscape(DeriveStatus(t)),
@@ -1133,6 +1157,16 @@ namespace FleetWise.Controllers
         /// ahead, so it is normalized back to recover the digits as written.</remarks>
         private static string FmtActual(DateTime? dt) =>
             dt.HasValue ? dt.Value.ToUniversalTime().ToString("hh:mm tt") : "—";
+
+        /// <summary>How long the trip ran, start to end, or a placeholder until it has both.</summary>
+        /// <remarks>Both ends are stored the same way, so the difference needs no correction.</remarks>
+        private static string TripDuration(Trip t)
+        {
+            if (t.ActualStartTime is not DateTime start || t.ActualEndTime is not DateTime end) return "—";
+            var span = end - start;
+            if (span < TimeSpan.Zero) return "—";
+            return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:D2}m" : $"{span.Minutes}m";
+        }
 
         /// <summary>The operational-day banner, naming both ends of the service window.</summary>
         private static string OpDayLabel(DateTime anchor) =>
