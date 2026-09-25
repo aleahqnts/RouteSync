@@ -306,6 +306,11 @@ public class DriverDataService
     /// </remarks>
     public async Task SkipChecklistAsync(string tripId, string vehicleId, int driverId)
     {
+        // The five sections are required columns, and a skip has nothing to put in them.
+        // Left out, the database refused every skip on the missing values. An empty
+        // section is the truth of an inspection that was not carried out, and it reads
+        // back as a section with no items everywhere a checklist is shown.
+        var none = new Dictionary<string, string>();
         await PostAsync("bus_checklist", new
         {
             trip_id = tripId,
@@ -313,6 +318,11 @@ public class DriverDataService
             driver_id = driverId,
             submitted_at = PhTime.Now,
             checklist_status = "Skipped",
+            exterior_inspection = none,
+            engine_compartment = none,
+            interior_inspection = none,
+            brake_safety = none,
+            passenger_systems = none,
         });
     }
 
