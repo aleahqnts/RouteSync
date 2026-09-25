@@ -291,10 +291,17 @@ namespace FleetWise.Services
             // every driver has been told.
             try
             {
-                if (wasPublished)
-                    await TellChangedDriversAsync(plan, built.Trips!, by ?? 0);
+                if (await NoticeSenderAsync(by, built.Roster!) is not int from)
+                {
+                    await _audit.WriteAsync("roster_notice_failed",
+                        $"published the {month:MMMM yyyy} roster but told no drivers: no one has ever "
+                            + "saved a roster, so there was no one to send the notice from",
+                        "roster_months", month.ToString("yyyy-MM-dd"), outcome: "failed");
+                }
+                else if (wasPublished)
+                    await TellChangedDriversAsync(plan, built.Trips!, from);
                 else
-                    await TellEveryDriverAsync(month, built.Seats!, built.Routes!, by ?? 0);
+                    await TellEveryDriverAsync(month, built.Seats!, built.Routes!, from);
             }
             catch (Exception ex)
             {
@@ -304,6 +311,35 @@ namespace FleetWise.Services
             }
 
             return new(RosterStep.Done, result.Version, lines);
+        }
+
+        /// <summary>Who a roster's notices to drivers are sent from.</summary>
+        /// <remarks>
+        /// A message has to name a real user as its sender, and the monthly cycle is not one.
+        /// Defaulting to 0 named a user who does not exist, and the database refused every
+        /// notice of every scheduled publish.
+        ///
+        /// The person publishing, when there is one. Otherwise whoever saved this roster,
+        /// the person a driver would ask about it. A roster the cycle drafted and published
+        /// on its own has neither, so it falls to whoever saved a roster most recently, the
+        /// person running the rosters. Drivers are not shown the sender, so this decides
+        /// only whose name the record carries. Null only when no roster was ever saved by
+        /// anyone.
+        /// </remarks>
+        private async Task<int?> NoticeSenderAsync(int? by, RosterMonth roster)
+        {
+            if (by is int person) return person;
+            if (roster.SavedBy is int saver) return saver;
+
+            // Greater than zero rather than not null: a comparison with null is never true,
+            // so the rows the cycle saved on its own are left out.
+            var last = (await _supabase.From<RosterMonth>()
+                .Filter("saved_by", Operator.GreaterThan, "0")
+                .Order("saved_at", Ordering.Descending)
+                .Limit(1)
+                .Get()).Models.FirstOrDefault();
+
+            return last?.SavedBy;
         }
 
         private sealed class PublishResult
