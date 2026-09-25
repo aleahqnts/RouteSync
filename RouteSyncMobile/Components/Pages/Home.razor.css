@@ -379,3 +379,17 @@
 }
 
 .btn-cancel:disabled, .btn-confirm:disabled { opacity: 0.55; }
+
+/* A two-button row that would wrap its labels on a narrow phone. The buttons stack, the
+   action first, each the full width of the dialog. */
+.ua-actions.stack {
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ua-actions.stack > button {
+    flex: none;
+    width: 100%;
+    padding: 13px;
+    font-size: 15px;
+}

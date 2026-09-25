@@ -83,6 +83,12 @@ public class DriverDataService
         await ThrowIfRefusedAsync(res);
     }
 
+    /// <summary>Where a refusal carries its postgrest code, on the exception's Data.</summary>
+    public const string RefusalCode = "postgrest_code";
+
+    /// <summary>The code a start is refused with while the bus is still on another shift's trip.</summary>
+    public const string BusStillOnTrip = "RS409";
+
     /// <summary>Fails with what the server said, rather than with a status code.</summary>
     /// <remarks>
     /// EnsureSuccessStatusCode throws away the body, which is where postgrest puts the
@@ -100,18 +106,25 @@ public class DriverDataService
         // postgrest answers with { code, message, details, hint }. The message is the
         // readable part; the rest is for a log, not a phone.
         var reason = body;
+        string? code = null;
         try
         {
             using var doc = JsonDocument.Parse(body);
             if (doc.RootElement.TryGetProperty("message", out var m))
                 reason = m.GetString() ?? body;
+            if (doc.RootElement.TryGetProperty("code", out var c))
+                code = c.GetString();
         }
         catch { }
 
         if (string.IsNullOrWhiteSpace(reason))
             reason = $"The server refused it ({(int)res.StatusCode}).";
 
-        throw new HttpRequestException(reason, null, res.StatusCode);
+        // The code travels with the exception so a screen can tell one of this system's own
+        // refusals, which are written to be read, from a database error, which is not.
+        var ex = new HttpRequestException(reason, null, res.StatusCode);
+        if (code is not null) ex.Data[RefusalCode] = code;
+        throw ex;
     }
 
     /// <summary>Reads the first row from the REST endpoint, or null when there is none.</summary>
@@ -485,10 +498,13 @@ public class DriverDataService
     /// cannot replace a count the counter phone made in a dead zone. While no camera is
     /// counting the driver owns the figure and this sets it, which is what makes the
     /// manual minus button work.
+    ///
+    /// Only an active trip takes it. A trip closed without this phone, by the next shift
+    /// starting on the bus, is left with the count it closed on.
     /// </remarks>
     public async Task UpdateTripProgressAsync(string tripId, int totalBoarded, decimal revenue)
     {
-        await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}",
+        await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}&trip_status=eq.Active",
             new { total_boarded = totalBoarded, estimated_revenue = revenue });
     }
 
@@ -496,7 +512,7 @@ public class DriverDataService
     {
         var t = await GetTripAsync(tripId);
 
-        await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}",
+        await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}&trip_status=eq.Active",
             new
             {
                 trip_status = "Completed",
