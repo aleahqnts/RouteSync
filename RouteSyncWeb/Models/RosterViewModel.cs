@@ -26,6 +26,9 @@ namespace FleetWise.ViewModels
         public List<RosterDriverOption> Drivers { get; set; } = new();
         public List<RosterSeatInput> Seats { get; set; } = new();
 
+        /// <summary>Drivers held back from this month's roster automation.</summary>
+        public List<int> Held { get; set; } = new();
+
         /// <summary>Active buses with no home route, which no route's crew can be put on.</summary>
         public List<string> UnroutedBuses { get; set; } = new();
 
@@ -109,7 +112,17 @@ namespace FleetWise.ViewModels
 
     public class RosterCheckInput
     {
+        /// <summary>
+        /// The month on the page, so the check can say what publishing it now would leave
+        /// empty. Without it only the pattern is judged.
+        /// </summary>
+        [RegularExpression(@"^\d{4}-(0[1-9]|1[0-2])$", ErrorMessage = "That is not a month.")]
+        public string? Month { get; set; }
+
         public List<RosterSeatInput> Seats { get; set; } = new();
+
+        /// <summary>Drivers held back: auto-fill and the suggestions pass them over.</summary>
+        public List<int> Held { get; set; } = new();
     }
 
     public class RosterSaveInput
@@ -121,6 +134,9 @@ namespace FleetWise.ViewModels
         public int Version { get; set; }
 
         public List<RosterSeatInput> Seats { get; set; } = new();
+
+        /// <summary>Drivers held back, saved with the roster. A driver placed on it is no longer held.</summary>
+        public List<int> Held { get; set; } = new();
     }
 }
 
