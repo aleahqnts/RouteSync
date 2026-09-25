@@ -110,59 +110,57 @@ else
         </div>
 
         @* Camera card. Calibration itself happens on the photo editor, so this is the way
-           in to it plus a liveness indicator. *@
-        @if (!string.IsNullOrEmpty(CamDeviceId))
-        {
-            <div class="cam-card">
-                <div class="cam-head-row">
-                    <span class="cam-title">Camera</span>
-                    <span class="cam-head-end">
-                        @if (CamBattery is int level)
-                        {
-                            <span class="cam-batt @CamBatteryClass"
-                                  title="@(CamCharging ? $"Camera phone battery {level}%, charging" : $"Camera phone battery {level}%")">
-                                <svg class="cam-batt-ico" viewBox="0 0 26 14" aria-hidden="true">
-                                    <rect x="1" y="1" width="21" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6" />
-                                    <rect x="3" y="3" width="@CamBatteryFill" height="8" rx="1" fill="currentColor" />
-                                    <path d="M24 5v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+           in to it plus a liveness indicator. Shown on every trip: a bus with no counter
+           phone paired reads as Offline, which tells the driver to count by hand. *@
+        <div class="cam-card">
+            <div class="cam-head-row">
+                <span class="cam-title">Camera</span>
+                <span class="cam-head-end">
+                    @if (CamBattery is int level)
+                    {
+                        <span class="cam-batt @CamBatteryClass"
+                              title="@(CamCharging ? $"Camera phone battery {level}%, charging" : $"Camera phone battery {level}%")">
+                            <svg class="cam-batt-ico" viewBox="0 0 26 14" aria-hidden="true">
+                                <rect x="1" y="1" width="21" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+                                <rect x="3" y="3" width="@CamBatteryFill" height="8" rx="1" fill="currentColor" />
+                                <path d="M24 5v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            </svg>
+                            @if (CamCharging)
+                            {
+                                <svg class="cam-batt-bolt" viewBox="0 0 10 14" aria-hidden="true">
+                                    <path d="M6 1L1.5 8H5l-1 5 4.5-7H5z" fill="currentColor" />
                                 </svg>
-                                @if (CamCharging)
-                                {
-                                    <svg class="cam-batt-bolt" viewBox="0 0 10 14" aria-hidden="true">
-                                        <path d="M6 1L1.5 8H5l-1 5 4.5-7H5z" fill="currentColor" />
-                                    </svg>
-                                }
-                                <span>@level%</span>
-                            </span>
-                        }
-                        <span class="cam-chip @CamChipClass">@CamChipLabel</span>
-                    </span>
-                </div>
-                @* Counts the camera cannot deliver. Shown to the driver rather than only
-                   to the office, because the driver is the one sitting next to the phone
-                   and the fix is usually somewhere with a signal. *@
-                @if (camStatus?.UnreconciledCounts > 0)
-                {
-                    <p class="cam-held">
-                        @(camStatus.UnreconciledCounts == 1
-                            ? "The camera is holding 1 trip count it has not been able to send."
-                            : $"The camera is holding {camStatus.UnreconciledCounts} trip counts it has not been able to send.")
-                    </p>
-                }
-                @* Said in words as well as colour when the phone is running low, since the
-                   driver is the one who can reach it with a charger before it stops
-                   counting. *@
-                @if (CamBattery is int low && low <= CamBatteryLow && !CamCharging)
-                {
-                    <p class="cam-held">
-                        The camera phone is at @low% battery. Plug it in to keep it counting.
-                    </p>
-                }
-                <button class="cam-btn calib" @onclick="@(() => Nav.NavigateTo($"/camera-calibrate/{TripId}"))">
-                    Calibrate Camera
-                </button>
+                            }
+                            <span>@level%</span>
+                        </span>
+                    }
+                    <span class="cam-chip @CamChipClass">@CamChipLabel</span>
+                </span>
             </div>
-        }
+            @* Counts the camera cannot deliver. Shown to the driver rather than only
+               to the office, because the driver is the one sitting next to the phone
+               and the fix is usually somewhere with a signal. *@
+            @if (camStatus?.UnreconciledCounts > 0)
+            {
+                <p class="cam-held">
+                    @(camStatus.UnreconciledCounts == 1
+                        ? "The camera is holding 1 trip count it has not been able to send."
+                        : $"The camera is holding {camStatus.UnreconciledCounts} trip counts it has not been able to send.")
+                </p>
+            }
+            @* Said in words as well as colour when the phone is running low, since the
+               driver is the one who can reach it with a charger before it stops
+               counting. *@
+            @if (CamBattery is int low && low <= CamBatteryLow && !CamCharging)
+            {
+                <p class="cam-held">
+                    The camera phone is at @low% battery. Plug it in to keep it counting.
+                </p>
+            }
+            <button class="cam-btn calib" @onclick="@(() => Nav.NavigateTo($"/camera-calibrate/{TripId}"))">
+                Calibrate Camera
+            </button>
+        </div>
 
         <div class="stat-row">
             <div class="stat-card">
@@ -518,7 +516,7 @@ else
     /// </remarks>
     private static readonly TimeSpan MovedNoteFor = TimeSpan.FromMinutes(5);
 
-    /// <summary>Reads back what the dispatcher owns, in case it has changed.</summary>
+    /// <summary>Reads back what the dispatcher owns, and the bus's counter phone, in case either has changed.</summary>
     /// <remarks>
     /// A trip can be moved to another route or another bus while it is running, and this
     /// screen is the driver's instruction for the next several hours. Loaded once it was a
@@ -554,6 +552,17 @@ else
             {
                 trip.VehicleId = fresh.VehicleId;
                 vehicle = await Data.GetVehicleAsync(fresh.VehicleId);
+                camStatus = null;
+                changed = true;
+            }
+            // The counter phone can be paired, moved or unpaired while the shift runs.
+            // Read once, a phone paired after this screen opened never showed its card
+            // until the driver left and came back.
+            else if (await Data.GetVehicleAsync(fresh.VehicleId) is Vehicle bus
+                     && (bus.CounterDeviceId ?? "") != (vehicle?.CounterDeviceId ?? ""))
+            {
+                vehicle = bus;
+                camStatus = null;
                 changed = true;
             }
 
@@ -570,6 +579,10 @@ else
             // Written through, so a restart or a dead zone does not put the old route back.
             await SaveCacheAsync();
             await InvokeAsync(StateHasChanged);
+
+            // A newly paired phone reports its liveness and battery now rather than on
+            // the next five second pass.
+            await RefreshCameraPanelAsync();
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TripActive.Assign] {ex}"); }
     }
@@ -771,10 +784,9 @@ else
         {
             var bus = vehicle?.VehicleId ?? trip?.VehicleId ?? "";
             var at = ClosedAtLabel is string t ? $" at {t}" : "";
-            var lead = closedByHandover
-                ? $"The next shift started on bus {bus}{at}, which closed this trip."
+            return closedByHandover
+                ? $"Closed{at} when the next shift started on bus {bus}."
                 : $"This trip was closed{at}.";
-            return $"{lead} Nothing counted on this phone after that was added to it.";
         }
     }
 
