@@ -87,6 +87,17 @@ namespace FleetWise.Services
         public static bool Closed(Trip trip, DateTime now) =>
             ShiftEndAt(trip) < now;
 
+        /// <summary>A trip whose window closed without it ever starting.</summary>
+        /// <remarks>
+        /// Narrower than <see cref="Closed(Trip, DateTime)"/>: a trip still running past its
+        /// window closed on the clock but is not over, and whatever is done to a running
+        /// trip, such as taking off a driver who has fallen ill, still has to be possible.
+        /// </remarks>
+        public static bool Missed(Trip trip, DateTime now) =>
+            !string.Equals(trip.TripStatus, "Active", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(trip.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+            && Closed(trip, now);
+
         /// <summary>How long past its start a trip is left alone before it counts late.</summary>
         /// <remarks>
         /// A board that turns red at one minute past the hour is a board nobody reads by
