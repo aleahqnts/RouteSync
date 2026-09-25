@@ -131,15 +131,25 @@ public class TelemetryQueue
                 estimated_revenue = f.Revenue,
                 actual_end_time = f.EndTime
             };
+            // Filtered to an active trip, and the changed rows read back. A trip closed
+            // while this phone still held it, by the next shift starting on the bus, keeps
+            // the end time and count it closed with, and that bus now belongs to the next
+            // driver, so it is not released either.
             var req = new HttpRequestMessage(HttpMethod.Patch,
-                $"{SupabaseConfig.Url}/rest/v1/trips?trip_id=eq.{Uri.EscapeDataString(f.TripId)}");
+                $"{SupabaseConfig.Url}/rest/v1/trips?trip_id=eq.{Uri.EscapeDataString(f.TripId)}&trip_status=eq.Active&select=trip_id");
             req.Headers.TryAddWithoutValidation("apikey", SupabaseConfig.Key);
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {SupabaseConfig.Bearer}");
-            req.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+            req.Headers.TryAddWithoutValidation("Prefer", "return=representation");
             req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
             var res = await _http.SendAsync(req);
             if (!res.IsSuccessStatusCode) return; // keep, retry later
+
+            if (!await ChangedAnyAsync(res))
+            {
+                await _db.DeleteAsync(f);
+                continue;
+            }
 
             // Release the bus. With the trip completed, vehicle_status has to leave "On
             // Trip" or the row stays stuck: the dashboard derives Ready as a fallback, but
@@ -165,5 +175,22 @@ public class TelemetryQueue
 
             await _db.DeleteAsync(f);
         }
+    }
+
+    /// <summary>Whether a PATCH asked to return its rows changed any.</summary>
+    /// <remarks>
+    /// A filter that matches nothing answers success with an empty list. An answer that
+    /// cannot be read counts as a change, so the bus is released as it always was rather
+    /// than left On Trip on a guess.
+    /// </remarks>
+    private static async Task<bool> ChangedAnyAsync(HttpResponseMessage res)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            return doc.RootElement.ValueKind != JsonValueKind.Array
+                || doc.RootElement.GetArrayLength() > 0;
+        }
+        catch { return true; }
     }
 }
