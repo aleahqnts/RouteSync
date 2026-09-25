@@ -355,6 +355,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 // What the phone can say about itself. Isolated like the rest: a health
                 // record is worth having and worth nothing next to the counting.
                 runCatching { reportHealth() }
+
+                // The charge the driver sees on their trip screen. Isolated for the same
+                // reason, and for one more: it is the only write here that depends on a
+                // migration, and a database without it must cost nothing but the figure.
+                runCatching { reportBattery() }
                 delay(4_000)
             }
         }
@@ -513,6 +518,25 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         SupabaseApi.postHealthEvent(
             deviceId, trip, "battery_reading", battery.level, battery.charging
         )
+    }
+
+    /**
+     * Puts the phone's charge where the driver's trip screen can show it.
+     *
+     * Read on every pass, which costs one system call, and sent only when the level or
+     * the charger changes, which is every few minutes. Only while a trip is being
+     * counted, because that is the only time the driver's screen shows it. The row keeps
+     * the last figure between trips, and the first pass of the next trip corrects it if
+     * the phone has drained since. A send that fails is tried again next pass.
+     */
+    private var batterySent: DeviceHealth.Reading? = null
+
+    private suspend fun reportBattery() {
+        if (deviceId.isBlank() || tripId == null) return
+        val now = DeviceHealth.read(getApplication())
+        val level = now.level ?: return
+        if (now == batterySent) return
+        if (SupabaseApi.patchDeviceBattery(deviceId, level, now.charging)) batterySent = now
     }
 
     private fun QueuedEvent.toApi() = SupabaseApi.BoardingEvent(
