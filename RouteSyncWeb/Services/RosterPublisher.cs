@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using FleetWise.Models;
+using Microsoft.Extensions.Caching.Memory;
 using static Postgrest.Constants;
 
 namespace FleetWise.Services
@@ -44,11 +45,25 @@ namespace FleetWise.Services
 
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
+        private readonly IMemoryCache _cache;
 
-        public RosterPublisher(Supabase.Client supabase, AuditLog audit)
+        /// <summary>
+        /// How long the month around a draft is held while somebody edits it.
+        /// </summary>
+        /// <remarks>
+        /// The Roster page asks what a publish would leave after every edit. The trips, leave
+        /// and skips around the month do not change because a rest day was moved on screen, so
+        /// they are read once and held briefly rather than read again on every keystroke. A
+        /// publish never uses this: it reads the month fresh, because what it writes has to be
+        /// exact.
+        /// </remarks>
+        private static readonly TimeSpan DraftWorldFreshness = TimeSpan.FromSeconds(30);
+
+        public RosterPublisher(Supabase.Client supabase, AuditLog audit, IMemoryCache cache)
         {
             _supabase = supabase;
             _audit = audit;
+            _cache = cache;
         }
 
         // ---- Reading ------------------------------------------------------------------------
@@ -62,6 +77,27 @@ namespace FleetWise.Services
             (await _supabase.From<RosterSlot>()
                 .Filter("month", Operator.Equals, month.ToString("yyyy-MM-dd"))
                 .Get()).Models;
+
+        /// <summary>Drivers held back from a month's roster automation.</summary>
+        public async Task<HashSet<int>> ReadHoldsAsync(DateTime month) =>
+            (await _supabase.From<RosterHold>()
+                .Select("driver_id")
+                .Filter("month", Operator.Equals, month.ToString("yyyy-MM-dd"))
+                .Get()).Models.Select(h => h.DriverId).ToHashSet();
+
+        /// <summary>
+        /// Holds that still mean something: a driver placed on the roster is no longer held back
+        /// from it.
+        /// </summary>
+        /// <remarks>
+        /// A person who puts a held-back driver in a seat has decided, and a hold kept behind
+        /// their back would reappear the day that driver is unplaced again.
+        /// </remarks>
+        public static HashSet<int> LiveHolds(IEnumerable<int> held, IReadOnlyList<RosterSeat> seats)
+        {
+            var placed = seats.Where(s => s.DriverId is not null).Select(s => s.DriverId!.Value).ToHashSet();
+            return held.Where(id => !placed.Contains(id)).ToHashSet();
+        }
 
         public async Task<(Dictionary<int, string> Routes, List<Vehicle> Vehicles, List<UserModel> Drivers)> ReadFleetAsync()
         {
@@ -93,14 +129,14 @@ namespace FleetWise.Services
 
         /// <summary>A roster cleared of drivers and buses that can no longer be on it, and its empty places filled by rule.</summary>
         /// <remarks>Nothing is saved. See <see cref="RosterRules.AutoFill"/>.</remarks>
-        public async Task<AutoFillResult> AutoFillAsync(IReadOnlyList<RosterSeat> seats)
+        public async Task<AutoFillResult> AutoFillAsync(IReadOnlyList<RosterSeat> seats, IReadOnlySet<int> held)
         {
             var fleetTask = ReadFleetAsync();
             var historyTask = ReadHistoryAsync();
             await Task.WhenAll(fleetTask, historyTask);
 
             var (routes, vehicles, drivers) = fleetTask.Result;
-            return RosterRules.AutoFill(seats, vehicles, drivers, routes, historyTask.Result);
+            return RosterRules.AutoFill(seats, vehicles, drivers, routes, historyTask.Result, held);
         }
 
         /// <summary>Gaps still to come that nothing has filled: no trip on the slot and no skip.</summary>
@@ -122,9 +158,14 @@ namespace FleetWise.Services
 
         // ---- Saving and generating ---------------------------------------------------------------
 
-        /// <summary>Saves a month's seats whole through save_roster_month.</summary>
+        /// <summary>Saves a month's seats and holds whole through save_roster_month.</summary>
+        /// <remarks>
+        /// Holds travel with the seats and are written under the same lock and the same
+        /// version, so a roster and who is held back from it can never be saved apart.
+        /// </remarks>
         public async Task<RosterStepResult> SaveAsync(
-            DateTime month, int baseVersion, IReadOnlyList<RosterSeat> seats, int? savedBy, string auditAction)
+            DateTime month, int baseVersion, IReadOnlyList<RosterSeat> seats, IEnumerable<int> held,
+            int? savedBy, string auditAction)
         {
             try
             {
@@ -143,6 +184,7 @@ namespace FleetWise.Services
                         ["suggested"] = s.Suggested,
                     }).ToList(),
                     ["p_saved_by"] = savedBy,
+                    ["p_held"] = LiveHolds(held, seats).OrderBy(id => id).ToList(),
                 });
 
                 return new(RosterStep.Done, int.Parse(response.Content?.Trim() ?? "", En));
@@ -179,15 +221,22 @@ namespace FleetWise.Services
                 return Refused($"The {month:MMMM} roster is already published. Change it on the Roster page and publish the changes instead.");
 
             var previous = month.AddMonths(-1);
-            var slots = await ReadSlotsAsync(previous);
+            var slotsTask = ReadSlotsAsync(previous);
+            var holdsTask = ReadHoldsAsync(previous);
+            await Task.WhenAll(slotsTask, holdsTask);
+
+            var slots = slotsTask.Result;
             if (slots.Count == 0)
                 return Refused($"{previous:MMMM} has no roster to carry forward.");
 
+            // Holds come forward before auto-fill runs. Carried after, auto-fill would already
+            // have put the driver in a seat in the moment before their hold arrived.
+            var held = holdsTask.Result;
             var rotated = RosterGenerator.Rotate(slots.Select(ToSeat).ToList());
-            var fill = await AutoFillAsync(rotated);
+            var fill = await AutoFillAsync(rotated, held);
             var seats = fill.Seats;
 
-            var saved = await SaveAsync(month, baseVersion, seats, by, "roster_generated");
+            var saved = await SaveAsync(month, baseVersion, seats, held, by, "roster_generated");
             if (saved.Step != RosterStep.Done) return saved;
 
             await _supabase.From<RosterMonth>()
@@ -384,6 +433,58 @@ namespace FleetWise.Services
             if (problems.Count > 0)
                 return No(new RosterStepResult(RosterStep.Refused, Problems: problems));
 
+            var around = await ReadMonthAroundAsync(month);
+            var world = WorldFor(month, seats, around, routes, vehicles, drivers);
+
+            var names = drivers.ToDictionary(d => d.UserId, d =>
+            {
+                var n = $"{d.FirstName} {d.LastName}".Trim();
+                return n.Length == 0 ? $"Driver {d.UserId}" : n;
+            });
+
+            return new(roster, RosterGenerator.Plan(world), names, seats, routes, around.Trips, null);
+        }
+
+        /// <summary>
+        /// What publishing the month would leave empty if the roster were as given, saved or not.
+        /// </summary>
+        /// <remarks>
+        /// The same planner and the same month a publish uses: trips a week either side,
+        /// approved leave, and slots kept empty on purpose. So the number the Roster page shows
+        /// while a roster is edited is the number a publish would leave, leave and all. The month
+        /// around it is held briefly between edits; see <see cref="DraftWorldFreshness"/>.
+        /// </remarks>
+        public async Task<PublishPlan> PlanDraftAsync(
+            DateTime month, IReadOnlyList<RosterSeat> seats,
+            IReadOnlyDictionary<int, string> routes, IReadOnlyList<Vehicle> vehicles, IReadOnlyList<UserModel> drivers)
+        {
+            var key = $"roster_draft_world:{month:yyyy-MM}";
+            if (!_cache.TryGetValue<MonthAround>(key, out var around) || around is null)
+            {
+                around = await ReadMonthAroundAsync(month);
+                _cache.Set(key, around, DraftWorldFreshness);
+            }
+
+            return RosterGenerator.Plan(WorldFor(month, seats, around, routes, vehicles, drivers));
+        }
+
+        /// <summary>
+        /// What publishing the month as saved would leave empty, or null when there is no saved
+        /// roster to plan, or it cannot be saved as it stands.
+        /// </summary>
+        public async Task<PublishPlan?> PlanSavedAsync(DateTime month)
+        {
+            var built = await BuildPlanAsync(month, version: null);
+            return built.Plan;
+        }
+
+        /// <summary>Everything a month's plan needs besides the roster itself.</summary>
+        private sealed record MonthAround(
+            IReadOnlyList<Trip> Trips, IReadOnlyList<TripRosterState> Marks,
+            IReadOnlyList<RosterSkip> Skips, IReadOnlyList<LeaveRequest> Leave);
+
+        private async Task<MonthAround> ReadMonthAroundAsync(DateTime month)
+        {
             var from = month.AddDays(-7).ToString("yyyy-MM-dd");
             var to = month.AddMonths(1).AddDays(6).ToString("yyyy-MM-dd");
 
@@ -409,29 +510,25 @@ namespace FleetWise.Services
 
             await Task.WhenAll(tripsTask, marksTask, skipsTask, leaveTask);
 
-            var world = new RosterWorld
-            {
-                Month = month,
-                OperationalDay = PhClock.OperationalDay,
-                Now = PhClock.Now,
-                Seats = seats,
-                Trips = tripsTask.Result,
-                Marks = marksTask.Result.ToDictionary(m => m.TripId, m => new TripRosterMark(m.RosterMonth, m.HandEdited)),
-                Drivers = drivers,
-                Vehicles = vehicles,
-                Leave = leaveTask.Result.Models,
-                Skips = skipsTask.Result.Select(s => (s.Date.Date, s.VehicleId, s.Shift)).ToHashSet(),
-                RouteNames = routes,
-            };
-
-            var names = drivers.ToDictionary(d => d.UserId, d =>
-            {
-                var n = $"{d.FirstName} {d.LastName}".Trim();
-                return n.Length == 0 ? $"Driver {d.UserId}" : n;
-            });
-
-            return new(roster, RosterGenerator.Plan(world), names, seats, routes, tripsTask.Result, null);
+            return new MonthAround(tripsTask.Result, marksTask.Result, skipsTask.Result, leaveTask.Result.Models);
         }
+
+        private static RosterWorld WorldFor(
+            DateTime month, IReadOnlyList<RosterSeat> seats, MonthAround around,
+            IReadOnlyDictionary<int, string> routes, IReadOnlyList<Vehicle> vehicles, IReadOnlyList<UserModel> drivers) => new()
+        {
+            Month = month,
+            OperationalDay = PhClock.OperationalDay,
+            Now = PhClock.Now,
+            Seats = seats,
+            Trips = around.Trips,
+            Marks = around.Marks.ToDictionary(m => m.TripId, m => new TripRosterMark(m.RosterMonth, m.HandEdited)),
+            Drivers = drivers,
+            Vehicles = vehicles,
+            Leave = around.Leave,
+            Skips = around.Skips.Select(s => (s.Date.Date, s.VehicleId, s.Shift)).ToHashSet(),
+            RouteNames = routes,
+        };
 
         /// <summary>The plan as publish_roster_month reads it.</summary>
         private static Dictionary<string, object?> PlanJson(PublishPlan plan) => new()

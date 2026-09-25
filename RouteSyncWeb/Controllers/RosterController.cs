@@ -68,8 +68,9 @@ namespace FleetWise.Controllers
             var routesTask = _supabase.From<BusRoute>().Get();
             var vehiclesTask = _supabase.From<Vehicle>().Get();
             var driversTask = _supabase.From<UserModel>().Filter("role_id", Operator.Equals, DriverRoleId.ToString()).Get();
+            var holdsTask = _publisher.ReadHoldsAsync(shown);
 
-            await Task.WhenAll(monthTask, slotsTask, routesTask, vehiclesTask, driversTask);
+            await Task.WhenAll(monthTask, slotsTask, routesTask, vehiclesTask, driversTask, holdsTask);
 
             var roster = monthTask.Result.Models.FirstOrDefault();
             var slots = slotsTask.Result.Models;
@@ -109,6 +110,7 @@ namespace FleetWise.Controllers
                 UnroutedBuses = vehicles
                     .Where(v => v.RetiredAt == null && v.RouteId is null)
                     .Select(v => v.VehicleId).OrderBy(v => v, StringComparer.Ordinal).ToList(),
+                Held = holdsTask.Result.OrderBy(id => id).ToList(),
             };
 
             foreach (var route in routes)
@@ -169,8 +171,15 @@ namespace FleetWise.Controllers
 
         /// <summary>
         /// What is wrong with the roster as it stands on the page, how each route's rest
-        /// days cover, and who has no place.
+        /// days cover, what publishing it now would leave empty, and who has no place.
         /// </summary>
+        /// <remarks>
+        /// Two questions, answered by the same planner a publish uses. Whether the pattern of
+        /// shifts and rest days works at all is asked of a clean month, so it names what moving
+        /// a rest day would fix and does not move when somebody files leave. What a publish
+        /// would actually leave is asked of the real month, leave and all, so the page never
+        /// says fine about a roster the publish then leaves short.
+        /// </remarks>
         [HttpPost]
         public async Task<IActionResult> Check([FromBody] RosterCheckInput req)
         {
@@ -178,17 +187,24 @@ namespace FleetWise.Controllers
 
             var (routes, vehicles, drivers) = await _publisher.ReadFleetAsync();
             var seats = ToSeats(req.Seats);
+            var held = RosterPublisher.LiveHolds(req.Held, seats);
+            var weekly = RosterStructure.WeeklyGaps(seats, drivers, vehicles, routes);
+
+            // A month already over is a record, and there is nothing left to publish into it.
+            IReadOnlyList<PlannedGap> wouldLeave = Array.Empty<PlannedGap>();
+            if (TryParseMonth(req.Month, out var month) && month >= FirstOf(PhClock.OperationalDay))
+                wouldLeave = (await _publisher.PlanDraftAsync(month, seats, routes, vehicles, drivers)).Gaps;
 
             return Json(new
             {
                 problems = RosterRules.Problems(seats, vehicles, drivers, routes),
                 routes = routes.Keys.OrderBy(id => id).Select(id =>
                 {
-                    var shortfall = RosterRules.Shortfall(id, seats);
+                    var shortfall = RosterRules.Shortfall(id, seats, weekly);
                     return new
                     {
                         routeId = id,
-                        strip = RosterRules.Capacity(id, seats).Select(d => new
+                        strip = RosterRules.Capacity(id, seats, weekly).Select(d => new
                         {
                             day = RosterRules.DayName(d.Weekday)[..3],
                             dayName = RosterRules.DayName(d.Weekday),
@@ -203,12 +219,34 @@ namespace FleetWise.Controllers
                         floatersMissing = shortfall.FloatersMissing,
                         driversShort = shortfall.DriversShort,
                         gapsPerWeek = shortfall.GapsPerWeek,
+                        restDaysCollide = shortfall.RestDaysCollide,
+                        uncovered = weekly.Where(g => g.RouteId == id && g.RestDay).Select(g => new
+                        {
+                            dayName = RosterRules.DayName(g.Weekday),
+                            vehicleId = g.VehicleId,
+                            shift = g.Shift,
+                        }),
                     };
                 }),
+                // One line per bus shift and reason, with the dates it falls on, so a rest day
+                // colliding every week reads apart from a run of leave.
+                wouldLeave = wouldLeave
+                    .GroupBy(g => (Bus: g.VehicleId.ToUpperInvariant(), g.Shift, g.Reason))
+                    .OrderBy(g => g.Min(x => x.Date))
+                    .ThenBy(g => g.Key.Bus, StringComparer.Ordinal)
+                    .Select(g => new
+                    {
+                        vehicleId = g.First().VehicleId,
+                        shift = g.Key.Shift,
+                        routeName = routes.GetValueOrDefault(g.First().RouteId) ?? "",
+                        reason = g.Key.Reason,
+                        dates = g.OrderBy(x => x.Date).Select(x => x.Date.ToString("MMM d", CultureInfo.InvariantCulture)),
+                    }),
                 unplaced = RosterRules.Unplaced(seats, drivers).Select(d => new
                 {
                     driverId = d.UserId,
                     name = $"{d.FirstName} {d.LastName}".Trim(),
+                    held = held.Contains(d.UserId),
                 }),
             });
         }
@@ -223,7 +261,8 @@ namespace FleetWise.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState.FirstError());
 
-            var fill = await _publisher.AutoFillAsync(ToSeats(req.Seats));
+            var seats = ToSeats(req.Seats);
+            var fill = await _publisher.AutoFillAsync(seats, RosterPublisher.LiveHolds(req.Held, seats));
 
             return Json(new
             {
@@ -244,15 +283,23 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>The roster with rest days and floaters' home shifts suggested. Nothing is saved.</summary>
+        /// <summary>
+        /// The roster with its rest days arranged so the floaters can cover them, disturbing as
+        /// few people as possible. Nothing is saved.
+        /// </summary>
+        /// <remarks>See <see cref="RosterRules.SuggestRestDays"/> for the order fixes are tried in.</remarks>
         [HttpPost]
-        public IActionResult Suggest([FromBody] RosterCheckInput req)
+        public async Task<IActionResult> Suggest([FromBody] RosterCheckInput req)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState.FirstError());
 
+            var (routes, vehicles, drivers) = await _publisher.ReadFleetAsync();
+            var seats = ToSeats(req.Seats);
+            var fix = RosterRules.SuggestRestDays(seats, vehicles, drivers, routes, RosterPublisher.LiveHolds(req.Held, seats));
+
             return Json(new
             {
-                seats = RosterRules.SuggestRestDays(ToSeats(req.Seats)).Select(s => new
+                seats = fix.Seats.Select(s => new
                 {
                     driverId = s.DriverId,
                     kind = s.Kind,
@@ -260,7 +307,15 @@ namespace FleetWise.Controllers
                     vehicleId = s.VehicleId,
                     shift = s.Shift,
                     restWeekday = s.RestWeekday,
+                    suggested = s.Suggested,
+                    aboutDriver = RosterRules.MarkIsAboutDriver(s.Suggested),
                 }),
+                notes = fix.Notes,
+                unmarked = fix.Unmarked,
+                changed = fix.Changed,
+                moved = fix.Moved,
+                added = fix.Added,
+                gapsLeft = fix.GapsLeft,
             });
         }
 
@@ -290,7 +345,8 @@ namespace FleetWise.Controllers
             if (problems.Count > 0) return BadRequest(new { problems });
 
             var savedBy = SenderId();
-            var saved = await _publisher.SaveAsync(month, req.Version, seats, savedBy, "roster_saved");
+            var held = RosterPublisher.LiveHolds(req.Held, seats);
+            var saved = await _publisher.SaveAsync(month, req.Version, seats, held, savedBy, "roster_saved");
             if (saved.Step != RosterStep.Done) return Answer(saved, _ => Ok());
             var version = saved.Version;
 
@@ -299,7 +355,8 @@ namespace FleetWise.Controllers
 
             await _audit.WriteAsync("roster_saved",
                 $"saved the {month:MMMM yyyy} roster: {crew} crew {(crew == 1 ? "seat" : "seats")}, "
-                    + $"{floaters} {(floaters == 1 ? "floater" : "floaters")}",
+                    + $"{floaters} {(floaters == 1 ? "floater" : "floaters")}"
+                    + (held.Count > 0 ? $", {held.Count} {(held.Count == 1 ? "driver" : "drivers")} held back" : ""),
                 "roster_months", month.ToString("yyyy-MM-dd"));
 
             return Ok(new
