@@ -479,11 +479,20 @@ namespace FleetWise.Controllers
 
             if (checklist != null)
             {
-                var logs = await _supabase.From<MaintenanceLog>()
+                var logsTask = _supabase.From<MaintenanceLog>()
+                    .Filter("checklist_id", Operator.Equals, checklist.ChecklistId.ToString())
+                    .Get();
+                var itemsTask = _supabase.From<ChecklistItem>()
+                    .Select("item_id,label,is_critical")
+                    .Get();
+                var photosTask = _supabase.From<InspectionPhoto>()
+                    .Select("photo_id,checklist_item_id,taken_at,object_key")
                     .Filter("checklist_id", Operator.Equals, checklist.ChecklistId.ToString())
                     .Get();
 
-                vm.MaintenanceLogs = logs.Models.Select(l => new TripMaintenanceLogViewModel
+                await Task.WhenAll(logsTask, itemsTask, photosTask);
+
+                vm.MaintenanceLogs = logsTask.Result.Models.Select(l => new TripMaintenanceLogViewModel
                 {
                     LogId = l.LogId,
                     IssueDetails = l.IssueDetails?.Issues ?? new(),
@@ -494,9 +503,123 @@ namespace FleetWise.Controllers
                     ResolvedAt = l.ResolvedAt,
                     Remarks = l.Remarks
                 }).ToList();
+
+                vm.InspectionIssues = BuildInspectionIssues(
+                    checklist, itemsTask.Result.Models, photosTask.Result.Models, vm.MaintenanceLogs);
             }
 
             return Json(vm);
+        }
+
+        /// <summary>
+        /// The failed items of one inspection, each with its photographs.
+        /// </summary>
+        /// <remarks>
+        /// The inspection records each item under the label it had on the day, and a
+        /// photograph records the item by its identifier. The two meet through the
+        /// configured items. An item reworded since the inspection no longer meets its
+        /// photograph that way, so any photograph left over is given a line of its own
+        /// under the item's current wording rather than being dropped: a photograph that
+        /// silently fails to appear is indistinguishable from one never taken.
+        ///
+        /// Criticality is read from the configured items, and from the order's own record
+        /// of what grounded the bus for inspections stored under older wording, so that
+        /// what stopped the bus still reads first.
+        /// </remarks>
+        private static List<TripInspectionIssueViewModel> BuildInspectionIssues(
+            BusChecklist checklist,
+            List<ChecklistItem> configured,
+            List<InspectionPhoto> photos,
+            List<TripMaintenanceLogViewModel> logs)
+        {
+            var byLabel = configured
+                .GroupBy(c => c.Label ?? "", StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var byId = configured.ToDictionary(c => (long)c.ItemId);
+
+            var criticalOnRecord = logs
+                .SelectMany(l => l.CriticalIssues)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Photographs still held, by the item they show. Swept ones are kept apart so
+            // a line can say its photograph aged out.
+            var live = photos.Where(p => p.ObjectKey is not null)
+                .GroupBy(p => p.ChecklistItemId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.TakenAt).ToList());
+            var swept = photos.Where(p => p.ObjectKey is null)
+                .Select(p => p.ChecklistItemId)
+                .ToHashSet();
+
+            TripInspectionPhotoViewModel Shown(InspectionPhoto p) => new()
+            {
+                PhotoId = p.PhotoId,
+                TakenAt = PhClock.ToPh(new DateTimeOffset(DateTime.SpecifyKind(p.TakenAt, DateTimeKind.Utc)))
+                    .ToString("MMM d, yyyy h:mm tt"),
+            };
+
+            var failedLabels = new[]
+                {
+                    checklist.ExteriorInspection, checklist.EngineCompartment,
+                    checklist.InteriorInspection, checklist.BrakeSafety, checklist.PassengerSystems,
+                }
+                .Where(section => section is not null)
+                .SelectMany(section => section!)
+                .Where(entry => !string.Equals(entry.Value, "Pass", StringComparison.OrdinalIgnoreCase))
+                .Select(entry => entry.Key)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            var issues = new List<TripInspectionIssueViewModel>();
+            foreach (var label in failedLabels)
+            {
+                byLabel.TryGetValue(label, out var item);
+                var line = new TripInspectionIssueViewModel
+                {
+                    Label = label,
+                    IsCritical = item?.IsCritical == true || criticalOnRecord.Contains(label),
+                };
+
+                if (item is not null)
+                {
+                    if (live.Remove(item.ItemId, out var shots))
+                        line.Photos = shots.Select(Shown).ToList();
+                    else
+                        line.PhotoExpired = swept.Contains(item.ItemId);
+                }
+
+                issues.Add(line);
+            }
+
+            foreach (var (itemId, shots) in live)
+            {
+                issues.Add(new TripInspectionIssueViewModel
+                {
+                    Label = byId.TryGetValue(itemId, out var item) ? item.Label : "Inspection item",
+                    IsCritical = item?.IsCritical == true,
+                    Photos = shots.Select(Shown).ToList(),
+                });
+            }
+
+            // Stable, so within each group the walk-around order survives.
+            return issues.OrderByDescending(i => i.IsCritical).ToList();
+        }
+
+        /// <summary>
+        /// Serves an inspection photograph shown on a trip, by its row.
+        /// </summary>
+        /// <remarks>
+        /// The vehicle pages serve the same photographs, but behind a different permission.
+        /// A dispatcher who cannot open those still has to see what grounded the bus on the
+        /// trip in front of them.
+        /// </remarks>
+        [HttpGet]
+        public async Task<IActionResult> InspectionPhoto(long photoId,
+            [FromServices] InspectionPhotoStore photos)
+        {
+            var bytes = await photos.ReadAsync(photoId);
+            if (bytes is null) return NotFound();
+
+            Response.Headers.CacheControl = InspectionPhotoStore.CacheControl;
+            return File(bytes, "image/jpeg");
         }
 
         // GET options for Add Trip modal.

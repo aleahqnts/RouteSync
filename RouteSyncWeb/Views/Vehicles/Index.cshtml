@@ -453,13 +453,14 @@
             img.alt = 'Photograph taken during the inspection';
             img.loading = 'lazy';
 
-            // A photograph swept between the panel rendering and this click is the one
-            // case the button cannot know about, so the gap is named rather than left as
-            // a broken image.
+            // Shown in place of a broken image. Worded without a cause, because an image
+            // that fails to load cannot say whether it was swept after the panel rendered
+            // or the server failed to fetch it, and naming the wrong one sends whoever
+            // reads it looking in the wrong place.
             img.onerror = function () {
                 const gone = document.createElement('p');
                 gone.className = 'vh-photo-gone';
-                gone.textContent = 'This photo is no longer stored.';
+                gone.textContent = 'This photo could not be loaded.';
                 figure.replaceChildren(gone);
             };
 
