@@ -554,12 +554,33 @@
         color: var(--ro-soft);
     }
 
+    /* A button, so a line is reached and pressed from the keyboard like any other, drawn
+       as the line of text it is. */
     .ro-change-main {
         display: flex;
         flex: 1;
         flex-direction: column;
         gap: 2px;
         min-width: 0;
+        margin: -4px -6px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+        .ro-change-main:hover { background: #F4F8FB; }
+        .ro-change-main:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 0; }
+
+    /* The place a line was pressed to find, lit where it stands on the roster for a moment. */
+    .ro-seat.ro-found,
+    .ro-floater.ro-found {
+        outline: 2px solid var(--ro-teal);
+        outline-offset: 3px;
+        border-radius: 8px;
     }
 
     .ro-change-place {
@@ -671,6 +692,50 @@
     .ro-box-title { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ro-text); }
     .ro-box-desc { margin: 8px 0 0; font-size: .85rem; color: var(--ro-soft); }
 
+    .ro-box-head { display: flex; align-items: center; gap: 10px; }
+
+    .ro-box-grab {
+        margin-left: auto;
+        color: #B6C2CF;
+        font-size: 1.1rem;
+        letter-spacing: -3px;
+        line-height: 1;
+    }
+
+    /* A list that does not take the page while it is up, and can be moved off whatever it is
+       about. It sits to the right, below the toolbar, and lets the page behind take every
+       press except those on the box itself. */
+    .ro-overlay--free {
+        background: none;
+        pointer-events: none;
+        align-items: flex-start;
+        justify-content: flex-end;
+        padding: 96px 24px 24px;
+    }
+
+        .ro-overlay--free .ro-box {
+            pointer-events: auto;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 120px);
+            max-height: calc(100dvh - 120px);
+            box-shadow: 0 10px 34px rgba(13, 28, 40, .30), 0 0 0 1px rgba(13, 28, 40, .06);
+            /* The whole box is the handle. The lines and the buttons put their own cursor back. */
+            cursor: move;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .ro-overlay--free .ro-changes-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: none;
+            overscroll-behavior: contain;
+        }
+
+        .ro-overlay--free .ro-btn { cursor: pointer; }
+
     .ro-box-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -736,9 +801,20 @@
             max-width: none;
             height: 100vh;
             height: 100dvh;
+            max-height: none;
             padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px));
             border-radius: 0;
         }
+
+        /* Nowhere to move it to on a phone, and the list must scroll under a finger. */
+        #roChangesBox .ro-box {
+            cursor: auto;
+            user-select: auto;
+            touch-action: auto;
+            transform: none !important;
+        }
+
+        #roChangesBox .ro-box-grab { display: none; }
 
         #roFillBox .ro-box > *,
         #roChangesBox .ro-box > * {
