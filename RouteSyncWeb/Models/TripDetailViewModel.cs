@@ -43,6 +43,43 @@ namespace FleetWise.ViewModels
         // Inspection Log
         public TripChecklistViewModel Checklist { get; set; }
         public List<TripMaintenanceLogViewModel> MaintenanceLogs { get; set; } = new();
+
+        /// <summary>What this inspection found wrong, one entry per failed item.</summary>
+        /// <remarks>
+        /// Read from the inspection itself rather than from the maintenance orders. An
+        /// order records the inspection that opened it, and a fault reported on a bus
+        /// already carrying an open order joins that order instead, so reading the faults
+        /// back through the orders finds nothing for exactly the buses that were already
+        /// in trouble.
+        /// </remarks>
+        public List<TripInspectionIssueViewModel> InspectionIssues { get; set; } = new();
+    }
+
+    /// <summary>One failed item from an inspection, with anything photographed of it.</summary>
+    public class TripInspectionIssueViewModel
+    {
+        public string Label { get; set; }
+
+        /// <summary>Orders the list, so what grounds the bus is read first.</summary>
+        public bool IsCritical { get; set; }
+
+        public List<TripInspectionPhotoViewModel> Photos { get; set; } = new();
+
+        /// <summary>
+        /// Photographed, and every photograph has since aged out. Said rather than left
+        /// blank, since a blank reads as a fault nobody photographed.
+        /// </summary>
+        public bool PhotoExpired { get; set; }
+    }
+
+    /// <summary>
+    /// One photograph, by its row. The stored path never reaches the browser, because the
+    /// service key behind the image endpoint would fetch any path it was handed.
+    /// </summary>
+    public class TripInspectionPhotoViewModel
+    {
+        public long PhotoId { get; set; }
+        public string TakenAt { get; set; }
     }
 
     /// <summary>One break slot a trip could take.</summary>
