@@ -108,6 +108,7 @@ builder.Services.AddSingleton<SecurityIncidents>();
 builder.Services.AddScoped<SecurityDetector>();
 builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<NavCounts>();
+builder.Services.AddScoped<InspectionPhotoStore>();
 builder.Services.AddScoped<SchedulingData>();
 builder.Services.AddScoped<TripAssignments>();
 builder.Services.AddScoped<RosterPublisher>();

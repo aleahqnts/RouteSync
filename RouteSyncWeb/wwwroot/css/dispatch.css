@@ -1281,6 +1281,103 @@
         color: #2D3748;
     }
 
+    /* Failed items, one per row, with a photograph at the right of the item it shows. */
+    .tdm-insp-issues-wrap {
+        margin-bottom: 8px;
+        font-size: 0.88rem;
+    }
+
+    .tdm-insp-issues {
+        list-style: none;
+        margin: 6px 0 0;
+        padding: 0;
+        border: 1px solid #E8ECF0;
+        border-radius: 8px;
+    }
+
+    .tdm-insp-issue {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 36px;
+        padding: 6px 12px;
+        color: #2D3748;
+    }
+
+        .tdm-insp-issue + .tdm-insp-issue { border-top: 1px solid #EEF1F5; }
+
+    .tdm-insp-issue-label { min-width: 0; }
+
+    .tdm-photo-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex: none;
+        padding: 2px 9px;
+        border: 1px solid #D6DCE7;
+        border-radius: 999px;
+        background: #fff;
+        color: #4A5568;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+        .tdm-photo-chip:hover { border-color: #9AA3B2; }
+
+        .tdm-photo-chip:focus-visible { outline: 2px solid #4AADA8; outline-offset: 2px; }
+
+    .tdm-photo-chip-mark { font-size: 0.82rem; line-height: 1; }
+
+    /* Photographed, and aged out since. Said rather than left blank, since a blank reads as
+       a fault nobody photographed. */
+    .tdm-photo-expired {
+        flex: none;
+        font-size: 0.72rem;
+        font-style: italic;
+        color: #B6BDC9;
+    }
+
+    /* Above the trip dialog, so it closes first and leaves the trip open underneath. */
+    .tdm-photo-overlay { z-index: 1010; }
+
+    .tdm-photo-dialog { max-width: 520px; }
+
+    .tdm-photo-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1a2a4a;
+    }
+
+    .tdm-photo-body { padding: 16px 20px 20px; }
+
+    .tdm-photo { margin: 0 0 14px; }
+
+        .tdm-photo:last-child { margin-bottom: 0; }
+
+        .tdm-photo img {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: #F2F4F8;
+        }
+
+        .tdm-photo figcaption {
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: #8A93A2;
+        }
+
+    .tdm-photo-gone {
+        margin: 0;
+        padding: 18px 0;
+        text-align: center;
+        font-size: 0.82rem;
+        color: #8A93A2;
+    }
+
     .tdm-notes-box {
         background: #F8F9FA;
         border: 1px solid #E8ECF0;
