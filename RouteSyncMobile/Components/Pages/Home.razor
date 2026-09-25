@@ -278,14 +278,15 @@ else
             <div class="ua-modal">
                 <h2>Bus @BusLabel has an open trip</h2>
                 <p class="ua-sub">
-                    @shiftContext!.OpenTripId has not been ended. Scheduled to end at
-                    @OpenTripEndLabel. Starting your trip will close it and record the
+                    Trip @shiftContext!.OpenTripId was due to end at @OpenTripEndLabel and
+                    has not been ended. Starting your shift closes it and records the
                     handover.
                 </p>
 
-                <div class="ua-actions">
+                @* Stacked, so each label keeps to one line on a narrow phone. *@
+                <div class="ua-actions stack">
+                    <button class="btn-confirm" @onclick="ConfirmTakeover">Close Trip and Start Shift</button>
                     <button class="btn-cancel" @onclick="@(() => showTakeoverModal = false)">Cancel</button>
-                    <button class="btn-confirm" @onclick="ConfirmTakeover">Close it and start</button>
                 </div>
             </div>
         </div>
@@ -448,9 +449,19 @@ else
 
     private DateTime ChecklistOpensAt => ShiftStart - TimeSpan.FromHours(ChecklistLeadHours);
 
-    private DateTime StartOpensAt => ShiftStart - (HasOpenTrip
-        ? TimeSpan.FromMinutes(TakeoverLeadMinutes)
-        : TimeSpan.FromHours(StartLeadHours));
+    // With the bus still out, the start also waits for the open trip's scheduled end. The
+    // database refuses to close a trip that is still inside its hours, so a button opened
+    // before then would offer a handover that could only fail.
+    private DateTime StartOpensAt
+    {
+        get
+        {
+            if (!HasOpenTrip) return ShiftStart - TimeSpan.FromHours(StartLeadHours);
+
+            var opens = ShiftStart - TimeSpan.FromMinutes(TakeoverLeadMinutes);
+            return shiftContext!.OpenTripEndsAt is DateTime ends && ends > opens ? ends : opens;
+        }
+    }
 
     private bool ChecklistOpen => assignment is not null && PhTime.Now >= ChecklistOpensAt;
 
