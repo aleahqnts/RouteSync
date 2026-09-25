@@ -17,6 +17,34 @@ else if (trip is null)
 {
     <div class="ta"><p class="ta-empty">Trip not found.</p></div>
 }
+@* Closed by something other than this phone, usually the next shift starting on the bus.
+   The counter is taken away entirely rather than covered, so there is nothing left to tap
+   into a trip that no longer takes counts. *@
+else if (closedTrip is not null)
+{
+    <div class="ta-closed">
+        <div class="flag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2e9e8f" stroke-width="2"><path d="M5 21V4M5 4h11l-2 4 2 4H5" /></svg>
+        </div>
+        <h1>@(closedByHandover ? "Your trip was handed over" : "Your trip has ended")</h1>
+        <p class="c-sub">@ClosedLine</p>
+
+        <div class="c-card">
+            <div class="c-grid2">
+                <div><p class="c-k">Start Time</p><p class="c-v">@StartLabel</p></div>
+                <div><p class="c-k">End Time</p><p class="c-v">@ClosedAtLabel</p></div>
+            </div>
+            <div class="c-div"></div>
+            <div class="c-grid2">
+                <div><p class="c-k">Total Passengers</p><p class="c-v">@closedTrip.TotalBoarded</p></div>
+                <div><p class="c-k">Estimated Revenue</p><p class="c-v">&#8369;@closedTrip.EstimatedRevenue.ToString("N2")</p></div>
+            </div>
+        </div>
+
+        <button class="btn-home" @onclick="@(() => Nav.NavigateTo("/home", new NavigationOptions { ReplaceHistoryEntry = true }))">Back to Home</button>
+        <button class="btn-report" @onclick="@(() => Nav.NavigateTo($"/trip-report/{TripId}", new NavigationOptions { ReplaceHistoryEntry = true }))">View Trip Report</button>
+    </div>
+}
 else
 {
     <MessageAlert />
@@ -351,6 +379,15 @@ else
         // launch straight back into it.
         if (trip is not null && !string.Equals(trip.TripStatus, "Active", StringComparison.OrdinalIgnoreCase))
         {
+            // This phone still had the trip down as running, so it was closed from
+            // somewhere else while the app was away. The driver is told that, rather than
+            // being put down on the report with no word of what happened.
+            if (IsClosed(trip) && await SecureStorage.Default.GetAsync(ActiveKey) == TripId)
+            {
+                await ShowClosedAsync(trip);
+                return;
+            }
+
             // Clear the resume target too, so a stale one does not send every launch back
             // through this screen.
             if (await SecureStorage.Default.GetAsync(ActiveKey) == TripId)
@@ -582,11 +619,22 @@ else
 
     private async Task RefreshCameraStateAsync()
     {
+        if (closedTrip is not null) return;
+
         try
         {
             var t = await Data.GetTripAsync(TripId);
             if (t is null) return;
             hbPollFails = 0;
+
+            // Checked on this read because it is the most frequent one the screen makes,
+            // so a trip closed by the next shift is noticed within seconds of the handover.
+            if (IsClosed(t))
+            {
+                await InvokeAsync(() => ShowClosedAsync(t));
+                return;
+            }
+
             ApplyCameraState(t);
             if (cameraAlive)
             {
@@ -702,6 +750,71 @@ else
     {
         locationPrompt = LocationState.Ready;
         locationSnoozedUntil = DateTime.UtcNow + LocationSnooze;
+    }
+
+    /// <summary>The trip as the server holds it, once it has been closed without this phone.</summary>
+    private Trip? closedTrip;
+
+    /// <summary>Whether the close came from the next shift starting on the same bus.</summary>
+    private bool closedByHandover;
+
+    private static bool IsClosed(Trip t) =>
+        string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase);
+
+    private string? ClosedAtLabel => closedTrip?.ActualEndTime is DateTime end
+        ? PhTime.Raw(end).ToString("h:mm tt")
+        : null;
+
+    private string ClosedLine
+    {
+        get
+        {
+            var bus = vehicle?.VehicleId ?? trip?.VehicleId ?? "";
+            var at = ClosedAtLabel is string t ? $" at {t}" : "";
+            var lead = closedByHandover
+                ? $"The next shift started on bus {bus}{at}, which closed this trip."
+                : $"This trip was closed{at}.";
+            return $"{lead} Nothing counted on this phone after that was added to it.";
+        }
+    }
+
+    /// <summary>Stops counting a trip that was closed somewhere other than this phone.</summary>
+    /// <remarks>
+    /// The next shift starting on the bus closes this one, and so does the stale trip
+    /// closer. Neither can reach the phone, which otherwise goes on showing the trip as
+    /// running: the counter phone has moved to the new trip, so the manual buttons come
+    /// out, and the driver taps and ends a trip that no longer exists. The server drops
+    /// those writes, and this is the half that stops them being made.
+    ///
+    /// Tracking stops and the resume target is cleared, so the next launch does not
+    /// reopen the trip. Whether it was a handover is asked of the same function the shift
+    /// screen uses: a bus still carrying another active trip means the next shift took it.
+    /// </remarks>
+    private async Task ShowClosedAsync(Trip fresh)
+    {
+        if (closedTrip is not null || ending) return;
+
+        closedTrip = fresh;
+        showConfirm = false;
+        askLeave = false;
+
+        Tracker.Stop();
+        timer?.Dispose();
+        if (BackNavigation.PageHandler == HandleHardwareBack) BackNavigation.PageHandler = null;
+
+        SecureStorage.Default.Remove(CountKey);
+        SecureStorage.Default.Remove(CacheKey);
+        if (await SecureStorage.Default.GetAsync(ActiveKey) == TripId)
+            SecureStorage.Default.Remove(ActiveKey);
+
+        try
+        {
+            var context = await Data.GetShiftStartContextAsync(TripId);
+            closedByHandover = context?.OpenTripId is not null;
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TripActive.Closed] {ex}"); }
+
+        StateHasChanged();
     }
 
     private async Task Flush()
