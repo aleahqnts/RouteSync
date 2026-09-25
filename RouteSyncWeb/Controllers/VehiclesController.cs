@@ -1612,41 +1612,20 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>
-        /// Serves an inspection photograph to the browser.
+        /// Serves an inspection photograph to the browser, by its row.
         /// </summary>
         /// <remarks>
-        /// Asked for by the row rather than by the stored path. The dashboard can already
-        /// see which photographs belong to a fault, so naming one costs it nothing, while
-        /// accepting a path would let anyone signed in fetch any object in the bucket:
-        /// the key here is the service key, and it would go and get whatever it was asked
-        /// for.
-        ///
         /// Cached hard, unlike the camera snapshot next to it. A snapshot is overwritten
-        /// in place on every wake, so a cached copy would show an earlier doorway. A
-        /// photograph is written once under a name nothing reuses, so a second look at the
-        /// same one need not travel again.
+        /// in place on every wake, so a cached copy would show an earlier doorway.
         /// </remarks>
         [HttpGet]
-        public async Task<IActionResult> InspectionPhoto(long photoId)
+        public async Task<IActionResult> InspectionPhoto(long photoId,
+            [FromServices] InspectionPhotoStore photos)
         {
-            var row = (await _supabase.From<Models.InspectionPhoto>()
-                .Select("photo_id,object_key")
-                .Filter("photo_id", Postgrest.Constants.Operator.Equals, photoId)
-                .Limit(1)
-                .Get()).Models.FirstOrDefault();
+            var bytes = await photos.ReadAsync(photoId);
+            if (bytes is null) return NotFound();
 
-            // A swept photograph keeps its row and loses its object, which is the point of
-            // keeping the row. The panel already knows not to offer it; this is the answer
-            // if it is asked for anyway.
-            if (row?.ObjectKey is null) return NotFound();
-
-            var req = CamReq(HttpMethod.Get,
-                $"storage/v1/object/authenticated/inspection-photos/{row.ObjectKey}");
-            var res = await _camHttp.SendAsync(req);
-            if (!res.IsSuccessStatusCode) return NotFound();
-
-            var bytes = await res.Content.ReadAsByteArrayAsync();
-            Response.Headers.CacheControl = "private, max-age=31536000, immutable";
+            Response.Headers.CacheControl = InspectionPhotoStore.CacheControl;
             return File(bytes, "image/jpeg");
         }
 
