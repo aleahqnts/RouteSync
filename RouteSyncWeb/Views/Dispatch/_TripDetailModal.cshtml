@@ -217,7 +217,6 @@
             const img = document.createElement('img');
             img.src = '@Url.Action("InspectionPhoto", "Dispatch")?photoId=' + encodeURIComponent(p.photoId);
             img.alt = 'Photograph taken during the inspection';
-            img.loading = 'lazy';
 
             // Worded without a cause. A failed image cannot say whether the photograph
             // aged out after the trip was opened or the server could not fetch it, and
@@ -236,10 +235,26 @@
             body.appendChild(figure);
         });
 
-        document.getElementById('tdmPhotoOverlay').style.display = 'flex';
+        // The dialog takes its width from the photograph, so it opens once the first one
+        // has arrived rather than appearing narrow and jumping wider. The wait is short
+        // and capped: a slow connection gets the dialog promptly and the jump with it,
+        // which is better than a click that seems to do nothing.
+        const opening = ++tdmPhotoOpening;
+        const first = body.querySelector('img');
+        Promise.race([
+            first ? first.decode().catch(function () { }) : Promise.resolve(),
+            new Promise(function (resolve) { setTimeout(resolve, 400); })
+        ]).then(function () {
+            // Closed, or another photograph asked for, while this one was arriving.
+            if (opening !== tdmPhotoOpening) return;
+            document.getElementById('tdmPhotoOverlay').style.display = 'flex';
+        });
     }
 
+    var tdmPhotoOpening = 0;
+
     function closeTripPhoto() {
+        tdmPhotoOpening++;
         const overlay = document.getElementById('tdmPhotoOverlay');
         if (!overlay || overlay.style.display === 'none') return;
         overlay.style.display = 'none';

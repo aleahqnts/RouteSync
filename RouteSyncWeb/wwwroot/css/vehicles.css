@@ -352,15 +352,34 @@
         flex: none;
     }
 
+    /* Wraps the photograph instead of setting its width, so a portrait photograph gets a
+       narrow dialog and a landscape one a wide dialog, and neither scrolls. Bootstrap
+       keeps a margin above and below the dialog, which is the rem term in the image's
+       limit below. */
+    .vh-modal-photo {
+        width: fit-content;
+        min-width: min(360px, calc(100% - var(--bs-modal-margin, 0.5rem) * 2));
+        max-width: min(960px, calc(100% - var(--bs-modal-margin, 0.5rem) * 2));
+    }
+
+    .vh-photo-body { padding: 16px 20px 20px; }
+
     .vh-photo {
         margin: 0 0 14px;
     }
 
+        .vh-photo:last-child { margin-bottom: 0; }
+
         .vh-photo img {
-            width: 100%;
+            display: block;
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: calc(100vh - var(--bs-modal-margin, 0.5rem) * 2 - 150px);
+            max-height: calc(100dvh - var(--bs-modal-margin, 0.5rem) * 2 - 150px);
+            margin: 0 auto;
             border-radius: 8px;
             background: #F2F4F8;
-            display: block;
         }
 
         .vh-photo figcaption {
