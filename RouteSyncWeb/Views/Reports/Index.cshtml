@@ -260,16 +260,32 @@
         <span class="rp-suggest-month ms-auto" id="rpSuggestMonth"></span>
     </div>
     <div class="rp-suggest-body">
-        <div class="rp-suggest-figure">
-            <div class="rp-summary-sublabel">Best match taken</div>
-            <div class="rp-summary-big" id="rpSuggestPct">—</div>
-            <div class="rp-vs-label" id="rpSuggestOf"></div>
-            <div class="rp-vs-label rp-suggest-screens" id="rpSuggestScreens"></div>
+        @* The month's figure, and the same figure for picks made to fix an issue, which
+           is where following the ranking matters most. *@
+        <div class="rp-suggest-overall">
+            <div class="rp-suggest-figure">
+                <div class="rp-summary-sublabel">Best match taken</div>
+                <div class="rp-suggest-big-row">
+                    <span class="rp-summary-big" id="rpSuggestPct">—</span>
+                    <span class="rp-vs-label" id="rpSuggestOf"></span>
+                </div>
+                <div class="rp-suggest-bar"><span id="rpSuggestBar"></span></div>
+            </div>
+            <div class="rp-suggest-figure rp-suggest-figure--minor">
+                <div class="rp-summary-sublabel">When fixing an assignment issue</div>
+                <div class="rp-suggest-big-row">
+                    <span class="rp-suggest-mid" id="rpSuggestIssuePct">—</span>
+                    <span class="rp-vs-label" id="rpSuggestIssueOf"></span>
+                </div>
+                <div class="rp-suggest-bar rp-suggest-bar--minor"><span id="rpSuggestIssueBar"></span></div>
+            </div>
         </div>
-        <div class="rp-suggest-figure">
-            <div class="rp-summary-sublabel">When fixing an assignment issue</div>
-            <div class="rp-summary-big" id="rpSuggestIssuePct">—</div>
-            <div class="rp-vs-label" id="rpSuggestIssueOf"></div>
+
+        @* Screen by screen, so a high figure on one screen cannot hide a low one on
+           another. A row each, in the order the screens are listed. *@
+        <div class="rp-suggest-screens">
+            <div class="rp-summary-sublabel">By screen</div>
+            <div id="rpSuggestScreens" class="rp-suggest-rows"></div>
         </div>
     </div>
 </div>
@@ -502,7 +518,7 @@
 </div>
 
 <div id="tripModal" data-dialog-close="closeTripModal" class="tr-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tripModalTitle">
-    <div class="tr-modal">
+    <div class="tr-modal tr-modal--trip">
         <div class="tr-modal-header">
             <h3 class="tr-modal-title" id="tripModalTitle">Daily Trip Report</h3>
             <button class="tr-modal-close" id="tripModalClose" aria-label="Close">&times;</button>
@@ -516,73 +532,79 @@
             </div>
 
             @* Content (hidden until loaded) *@
-            <div id="tripModalContent" class="tm" style="display:none;">
+            <div id="tripModalContent" class="trd" style="display:none;">
 
-                @* Laid out as the driver's own trip report on the phone is, so the office and
-                   the driver read the same trip the same way: what it was, what it came to,
-                   when it ran, who ran it, and whether the bus was checked first. *@
-                <div class="tm-hero">
-                    <div class="tm-hero-top">
-                        <span id="mdDate" class="tm-date"></span>
-                        <span id="mdStatus" class="tm-status"></span>
+                @* Which trip, and how it ended, first. *@
+                <div class="trd-head">
+                    <div class="trd-head-main">
+                        <span id="mdTripId" class="trd-id"></span>
+                        <span id="mdStatus" class="trd-badge"></span>
                     </div>
-                    <div id="mdRoute" class="tm-route"></div>
-                    <div class="tm-sub"><span id="mdTripId"></span> &middot; <span id="mdShiftType"></span> Shift</div>
-                </div>
-
-                <div class="tm-stats">
-                    <div class="tm-stat">
-                        <i class="ti ti-users" aria-hidden="true"></i>
-                        <span id="mdPassengers" class="tm-stat-n"></span>
-                        <span class="tm-stat-l">Passengers</span>
-                    </div>
-                    <div class="tm-stat">
-                        <i class="ti ti-currency-peso" aria-hidden="true"></i>
-                        <span id="mdRevenue" class="tm-stat-n"></span>
-                        <span class="tm-stat-l">Est. Revenue</span>
-                    </div>
-                    <div class="tm-stat">
-                        <i class="ti ti-clock" aria-hidden="true"></i>
-                        <span id="mdDuration" class="tm-stat-n"></span>
-                        <span class="tm-stat-l">Duration</span>
+                    <div class="trd-head-sub">
+                        <span id="mdRoute"></span>
+                        <span class="trd-sep" aria-hidden="true">&bull;</span>
+                        <span id="mdDate"></span>
+                        <span class="trd-sep" aria-hidden="true">&bull;</span>
+                        <span><span id="mdShiftType"></span> shift</span>
                     </div>
                 </div>
 
-                <div class="tm-card">
-                    <div class="tm-card-title">Time</div>
-                    <div class="tm-line">
-                        <span class="tm-dot tm-dot--plan"></span>
-                        <span class="tm-k">Scheduled shift</span>
-                        <span id="mdShiftTime" class="tm-v"></span>
+                @* What the trip came to, read across in one line. *@
+                <div class="trd-figures">
+                    <div class="trd-fig">
+                        <span class="trd-label">Passengers</span>
+                        <span id="mdPassengers" class="trd-fig-n"></span>
                     </div>
-                    <div class="tm-line">
-                        <span class="tm-dot tm-dot--start"></span>
-                        <span class="tm-k">Trip started</span>
-                        <span id="mdActualStart" class="tm-v"></span>
+                    <div class="trd-fig">
+                        <span class="trd-label">Est. Revenue</span>
+                        <span id="mdRevenue" class="trd-fig-n"></span>
                     </div>
-                    <div class="tm-line">
-                        <span class="tm-dot tm-dot--end"></span>
-                        <span class="tm-k">Trip ended</span>
-                        <span id="mdActualEnd" class="tm-v"></span>
+                    <div class="trd-fig">
+                        <span class="trd-label">Duration</span>
+                        <span id="mdDuration" class="trd-fig-n"></span>
                     </div>
-                </div>
-
-                <div class="tm-card">
-                    <div class="tm-card-title">Assignment</div>
-                    <div class="tm-pair"><span class="tm-k">Bus</span><span id="mdVehicleId" class="tm-v"></span></div>
-                    <div class="tm-pair"><span class="tm-k">Plate Number</span><span id="mdPlate" class="tm-v"></span></div>
-                    <div class="tm-pair">
-                        <span class="tm-k">Driver</span>
-                        <span class="tm-v"><span id="mdDriverName"></span> <span class="tm-id">#<span id="mdDriverId"></span></span></span>
+                    <div class="trd-fig">
+                        <span class="trd-label">Pre-Trip Checklist</span>
+                        <span class="trd-fig-check">
+                            <span id="mdChecklist" class="trd-badge"></span>
+                            <span id="mdChecklistSub" class="trd-fig-sub"></span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="tm-card tm-card--check">
-                    <div>
-                        <div class="tm-card-title">Pre-Trip Checklist</div>
-                        <div id="mdChecklistSub" class="tm-check-sub"></div>
-                    </div>
-                    <span id="mdChecklist" class="tm-status"></span>
+                <div class="trd-cols">
+                    @* The plan and what happened, one above the other, so a late start or an
+                       early finish reads down a column rather than across two places. *@
+                    <section class="trd-panel">
+                        <h4 class="trd-panel-title">Schedule vs Actual</h4>
+                        <table class="trd-times">
+                            <thead>
+                                <tr><th></th><th>Start</th><th>End</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Scheduled</th>
+                                    <td id="mdShiftStart"></td>
+                                    <td id="mdShiftEnd"></td>
+                                </tr>
+                                <tr class="trd-times-actual">
+                                    <th scope="row">Actual</th>
+                                    <td id="mdActualStart"></td>
+                                    <td id="mdActualEnd"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <section class="trd-panel">
+                        <h4 class="trd-panel-title">Assignment</h4>
+                        <dl class="trd-dl">
+                            <dt>Bus</dt><dd id="mdVehicleId"></dd>
+                            <dt>Plate Number</dt><dd id="mdPlate"></dd>
+                            <dt>Driver</dt><dd id="mdDriverName"></dd>
+                            <dt>Driver ID</dt><dd id="mdDriverId"></dd>
+                        </dl>
+                    </section>
                 </div>
 
             </div>
@@ -956,7 +978,11 @@
         const of = document.getElementById('rpSuggestOf');
         const issuePct = document.getElementById('rpSuggestIssuePct');
         const issueOf = document.getElementById('rpSuggestIssueOf');
+        const screens = document.getElementById('rpSuggestScreens');
         const share = (n, d) => d > 0 ? Math.round(n / d * 100) + '%' : '—';
+        const fill = (id, n, d) => {
+            document.getElementById(id).style.width = (d > 0 ? n / d * 100 : 0) + '%';
+        };
         const phrase = (n, d, noun) => d === 0
             ? 'No ' + noun + ' recorded'
             : n + ' of ' + d + ' ' + noun;
@@ -969,19 +995,56 @@
             document.getElementById('rpSuggestMonth').textContent = s.month;
             pct.textContent = share(s.tookTop, s.total);
             of.textContent = phrase(s.tookTop, s.total, s.total === 1 ? 'pick' : 'picks');
-            // Screen by screen, so a high figure on one screen cannot hide a low one on another.
-            document.getElementById('rpSuggestScreens').textContent = (s.byScreen || [])
-                .map(x => x.screen + ' ' + x.tookTop + ' of ' + x.total)
-                .join(', ');
+            fill('rpSuggestBar', s.tookTop, s.total);
             issuePct.textContent = share(s.issueTookTop, s.issueTotal);
             issueOf.textContent = phrase(s.issueTookTop, s.issueTotal, s.issueTotal === 1 ? 'issue' : 'issues');
+            fill('rpSuggestIssueBar', s.issueTookTop, s.issueTotal);
+
+            screens.replaceChildren();
+            const rows = s.byScreen || [];
+            if (rows.length === 0) {
+                const none = document.createElement('div');
+                none.className = 'rp-suggest-none';
+                none.textContent = 'No picks recorded this month.';
+                screens.append(none);
+            }
+            rows.forEach(x => {
+                const row = document.createElement('div');
+                // Picks from before the screen was recorded have no screen to be judged
+                // by, so they are set apart rather than read as one more screen.
+                row.className = 'rp-suggest-row' + (x.screen === 'Not recorded' ? ' rp-suggest-row--muted' : '');
+                if (x.screen === 'Not recorded') row.title = 'Picks made before the screen they were made on was recorded';
+
+                const name = document.createElement('span');
+                name.className = 'rp-suggest-row-name';
+                name.textContent = x.screen;
+
+                const bar = document.createElement('span');
+                bar.className = 'rp-suggest-bar rp-suggest-bar--row';
+                const barFill = document.createElement('span');
+                barFill.style.width = (x.total > 0 ? x.tookTop / x.total * 100 : 0) + '%';
+                bar.append(barFill);
+
+                const count = document.createElement('span');
+                count.className = 'rp-suggest-row-count';
+                count.textContent = x.tookTop + ' of ' + x.total;
+
+                const p = document.createElement('span');
+                p.className = 'rp-suggest-row-pct';
+                p.textContent = share(x.tookTop, x.total);
+
+                row.append(name, bar, count, p);
+                screens.append(row);
+            });
         } catch (e) {
             console.warn(e);
             pct.textContent = '—';
             issuePct.textContent = '—';
             of.textContent = 'Could not be read';
             issueOf.textContent = '';
-            document.getElementById('rpSuggestScreens').textContent = '';
+            fill('rpSuggestBar', 0, 0);
+            fill('rpSuggestIssueBar', 0, 0);
+            screens.replaceChildren();
         }
     }
 
@@ -1528,7 +1591,7 @@
     // One colour per meaning, shared by the trip's status and its checklist's: green for
     // done and passed, amber for a pass with defects or a trip under way, red for failed,
     // missed or skipped, grey for anything still waiting.
-    function tmTone(status) {
+    function trdTone(status) {
         const s = (status || '').toLowerCase();
         if (s === 'completed' || s === 'passed') return 'ok';
         if (s === 'active' || s.includes('defects')) return 'warn';
@@ -1547,7 +1610,8 @@
 
     document.getElementById('mdTripId').textContent      = d.tripId;
     document.getElementById('mdShiftType').textContent   = d.shiftType;
-    document.getElementById('mdShiftTime').textContent   = `${d.shiftStart} – ${d.shiftEnd}`;
+    document.getElementById('mdShiftStart').textContent  = d.shiftStart;
+    document.getElementById('mdShiftEnd').textContent    = d.shiftEnd;
     document.getElementById('mdActualStart').textContent = d.actualStart;
     document.getElementById('mdActualEnd').textContent   = d.actualEnd;
     document.getElementById('mdDuration').textContent    = d.duration;
@@ -1562,19 +1626,19 @@
 
     const statusEl = document.getElementById('mdStatus');
     statusEl.textContent  = d.tripStatus;
-    statusEl.className    = 'tm-status tm-status--' + tmTone(d.tripStatus);
+    statusEl.className    = 'trd-badge trd-badge--' + trdTone(d.tripStatus);
 
     // The checklist the driver filed before setting off, or the lack of one.
     const checkEl = document.getElementById('mdChecklist');
     const checkSub = document.getElementById('mdChecklistSub');
     if (d.checklistStatus) {
         checkEl.textContent = d.checklistStatus;
-        checkEl.className = 'tm-status tm-status--' + tmTone(d.checklistStatus);
+        checkEl.className = 'trd-badge trd-badge--' + trdTone(d.checklistStatus);
         checkEl.hidden = false;
-        checkSub.textContent = `Submitted ${d.checklistSubmitted}`;
+        checkSub.textContent = d.checklistSubmitted;
     } else {
         checkEl.hidden = true;
-        checkSub.textContent = 'No checklist submitted for this trip.';
+        checkSub.textContent = 'None submitted';
     }
 
     showContent();
