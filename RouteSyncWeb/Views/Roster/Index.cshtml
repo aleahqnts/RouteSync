@@ -335,11 +335,20 @@
 
 @* What auto-fill and Suggest rest days changed: a line for each marked place, which stays
    marked until the roster is published, then what no place is left to mark, which the page
-   keeps only until it reloads. *@
-<div class="ro-overlay" id="roChangesBox" hidden role="dialog" aria-modal="true" aria-labelledby="roChangesTitle">
+   keeps only until it reloads.
+
+   Movable, and it does not take the page while it is up, as the Schedule's conflict list
+   does. The roster behind it is what the list is about, and a box fixed over the middle of
+   it meant reading a line, closing the box to find the place, then opening it again for the
+   next line. Pressing a line finds its place. *@
+<div class="ro-overlay ro-overlay--free" id="roChangesBox" hidden role="dialog" aria-modal="false" aria-labelledby="roChangesTitle">
     <div class="ro-box ro-box--wide">
-        <h3 class="ro-box-title" id="roChangesTitle">Suggested changes</h3>
-        <p class="ro-box-desc">Marked places stay marked until the roster is published. Nothing is saved until you save the roster.</p>
+        <div class="ro-box-head" title="Drag to move">
+            <h3 class="ro-box-title" id="roChangesTitle">Suggested changes</h3>
+            @* Says the box can be taken hold of, which a cursor alone does not. *@
+            <span class="ro-box-grab" aria-hidden="true">&#8942;&#8942;</span>
+        </div>
+        <p class="ro-box-desc">Press a line to find its place on the roster. Marked places stay marked until the roster is published, and nothing is saved until you save it.</p>
         <div class="ro-changes-scroll" id="roChangesScroll">
             <ul class="ro-changes" id="roChangesList"></ul>
             <p class="ro-changes-sub" id="roChangesOtherTitle" hidden>Also changed</p>
@@ -792,6 +801,9 @@
             const n = markedPlaces().length + unmarkedNotes.length;
             seeChangesBtn.hidden = n === 0;
             document.getElementById('roChangesCount').textContent = n;
+
+            // The list stays open while the roster behind it is edited, so it follows.
+            if (!changesBox.hidden) renderChanges();
         }
 
         function placeLabel(place) {
@@ -816,7 +828,10 @@
                 const line = make('li', 'ro-change');
                 line.tabIndex = -1;
 
-                const main = make('div', 'ro-change-main');
+                // The line is the way to its place: pressed, the roster behind scrolls to it.
+                const main = make('button', 'ro-change-main');
+                main.type = 'button';
+                main.title = 'Show this place on the roster';
                 const where = make('span', 'ro-change-place', placeLabel(place));
                 where.id = 'roChangePlace-' + i;
                 const driver = driverIn(place);
@@ -824,6 +839,10 @@
                     where,
                     make('span', 'ro-change-driver' + (driver ? '' : ' ro-change-driver--none'), driver || 'Empty'),
                     make('span', 'ro-change-why', place.dataset.suggested));
+                main.addEventListener('click', function () {
+                    if (Date.now() - changesDraggedAt < 250) return;
+                    goToPlace(place);
+                });
                 line.appendChild(main);
 
                 // Only a place auto-fill chose the driver for. A mark that only set a rest day
@@ -865,6 +884,23 @@
             (next || document.getElementById('roChangesClose')).focus();
         }
 
+        // Brings a marked place into view and lights it for a moment. Its route is unfolded
+        // first if it was folded away, since a place in a closed route cannot be shown.
+        function goToPlace(place) {
+            // On a phone the list covers the roster, so it steps aside to show the place.
+            if (window.matchMedia('(max-width: 599px)').matches) closeChanges();
+
+            const card = place.closest('.ro-card[data-route]');
+            if (card && card.classList.contains('ro-route--folded')) {
+                setFolded(card, false);
+                rememberFolded(foldedRoutes().filter(function (id) { return id !== card.dataset.route; }));
+            }
+
+            place.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            place.classList.add('ro-found');
+            setTimeout(function () { place.classList.remove('ro-found'); }, 2000);
+        }
+
         // Opens the list, at a place's own line when one is given.
         function openChanges(place, opener) {
             changesOpener = opener;
@@ -898,8 +934,86 @@
             seeChangesBtn.addEventListener('click', function () { openChanges(null, seeChangesBtn); });
         }
         document.getElementById('roChangesClose').addEventListener('click', closeChanges);
-        changesBox.addEventListener('click', function (e) { if (e.target === changesBox) closeChanges(); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeChanges(); });
+
+        /* Dragged, and left wherever it was put, as the Schedule's conflict list is.
+
+           Taken hold of anywhere on the box that is not itself a control: the heading, the
+           line under it, the space around the list. Followed on the window rather than by
+           capturing the pointer, since capture retargets the click that ends a press onto
+           whatever holds it, and a line pressed would stop reaching that line. */
+        let changesDraggedAt = 0;
+
+        (function () {
+            const box = changesBox.querySelector('.ro-box');
+            let x = 0, y = 0, fromX = 0, fromY = 0, holding = false, moved = false, rest = null;
+
+            // Where the box would sit with no offset on it, taken before a drag, because a
+            // rect read during one already carries the offset being worked out from it.
+            function measure() {
+                const r = box.getBoundingClientRect();
+                rest = { left: r.left - x, top: r.top - y, w: r.width, h: r.height };
+            }
+
+            // Held inside the window. A box dragged past an edge could not be dragged back.
+            function place() {
+                if (!rest) measure();
+                const lowX = 8 - rest.left;
+                const highX = window.innerWidth - rest.w - 8 - rest.left;
+                const lowY = 8 - rest.top;
+                const highY = window.innerHeight - rest.h - 8 - rest.top;
+                x = Math.max(lowX, Math.min(x, Math.max(lowX, highX)));
+                y = Math.max(lowY, Math.min(y, Math.max(lowY, highY)));
+                box.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+            }
+
+            function follow(e) {
+                if (!holding) return;
+                const toX = e.clientX - fromX;
+                const toY = e.clientY - fromY;
+                // A few pixels of travel is a hand resting, not a move.
+                if (Math.abs(toX - x) + Math.abs(toY - y) > 3) moved = true;
+                x = toX;
+                y = toY;
+                place();
+            }
+
+            function drop() {
+                if (!holding) return;
+                holding = false;
+                if (moved) changesDraggedAt = Date.now();
+                window.removeEventListener('pointermove', follow);
+                window.removeEventListener('pointerup', drop);
+                window.removeEventListener('pointercancel', drop);
+            }
+
+            box.addEventListener('pointerdown', function (e) {
+                // Not on a phone, where the list takes the whole screen and a drag would fight
+                // the scroll.
+                if (window.matchMedia('(max-width: 599px)').matches) return;
+                if (e.button !== 0) return;
+                // A button is pressed, not dragged.
+                if (e.target.closest('button, a, input, select, textarea')) return;
+
+                holding = true;
+                moved = false;
+                measure();
+                fromX = e.clientX - x;
+                fromY = e.clientY - y;
+
+                window.addEventListener('pointermove', follow);
+                window.addEventListener('pointerup', drop);
+                window.addEventListener('pointercancel', drop);
+                e.preventDefault();
+            });
+
+            // A window made smaller can leave it outside, so it is pulled back in.
+            window.addEventListener('resize', function () {
+                if (changesBox.hidden) return;
+                measure();
+                place();
+            });
+        })();
 
         const autoFillBtn = document.getElementById('roAutoFill');
         const undoFillBtn = document.getElementById('roUndoFill');
