@@ -106,6 +106,7 @@ public class LocationTrackingService : Service
                 TotalPassengers = count,
                 Speed = loc.Speed,
                 Heading = loc.Course,
+                Accuracy = loc.Accuracy,
                 Timestamp = PhTime.Now
             });
 
