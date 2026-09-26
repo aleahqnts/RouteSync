@@ -477,6 +477,31 @@
         white-space: nowrap;
         }
 
+        /* The arrow for the way the bus is going, and the dashed edge of a bus off its
+           route, as on the Fleet Map page. */
+        .fm-bus-arrow {
+        display: inline-flex;
+        width: 9px;
+        height: 9px;
+        margin-right: 4px;
+        vertical-align: -1px;
+        transition: transform .4s ease-out;
+        }
+
+        .fm-bus-arrow[hidden] {
+        display: none;
+        }
+
+        .fm-bus-arrow svg {
+        width: 100%;
+        height: 100%;
+        }
+
+        .fm-bus-marker--off span {
+        border: 2px dashed rgba(255, 255, 255, .95);
+        padding: 2px 8px;
+        }
+
         .db-map-placeholder {
         position: relative;
         height: 280px;

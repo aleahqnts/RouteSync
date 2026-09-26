@@ -86,9 +86,12 @@
     // length of it.
     map.on('zoomstart', function () { map.getContainer().classList.add('fm-map--jump'); });
     map.on('zoomend', function () { map.getContainer().classList.remove('fm-map--jump'); });
+    RouteMotion.watch(map);
 
     var routeColors = {};        // routeName -> color, built from the routes fetch
     var routePolylines = {};     // routeId -> [polylines]
+    var routeLines = {};         // routeId -> measured line the markers travel along
+    var rawLayer = L.layerGroup(); // raw GPS readings, drawn only while the switch is on
     var stopLayer = L.layerGroup().addTo(map);
     var busLayer = L.layerGroup().addTo(map);
     var terminalLayer = L.layerGroup().addTo(map); // terminal name labels
@@ -116,6 +119,7 @@
     var clearBtn = document.getElementById('fmClearFilters');
     var countEl = document.getElementById('fmCount');
     var fitBtn = document.getElementById('fmFitBtn');
+    var rawBtn = document.getElementById('fmRawBtn');
     var connBadge = document.getElementById('fmConnBadge');
     var legendEl = document.getElementById('fmLegend');
     var legendToggle = document.getElementById('fmLegendToggle');
@@ -182,7 +186,8 @@
         document.getElementById('fmPanelBus').textContent = bus.vehicleId;
         document.getElementById('fmPanelRoute').textContent = String(bus.routeId).padStart(2, '0');
         document.getElementById('fmPanelShift').textContent = bus.shift;
-        document.getElementById('fmPanelStatus').textContent = statusText(bus);
+        document.getElementById('fmPanelStatus').textContent =
+            statusText(bus) + (bus.offRoute ? ' · Off route' : '');
         document.getElementById('fmPanelStatusDot').style.background = statusColor(bus.status);
         document.getElementById('fmPanelDriver').textContent = bus.driverName;
         document.getElementById('fmPanelPax').textContent = bus.passengers;
@@ -224,23 +229,47 @@
         return bus.status === 'On Trip' && readingAge(bus) >= STALE_AFTER_MS;
     }
 
-    function busIcon(label, color, stale) {
+    // A bus off its route is drawn with a dashed edge: it is where the phone is, not on
+    // the road the route runs along, and should not be read as keeping to it.
+    function busIcon(label, color, stale, off) {
         return L.divIcon({
-            className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : ''),
-            html: '<span style="background:' + color + '">' + label + '</span>',
+            className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : '') + (off ? ' fm-bus-marker--off' : ''),
+            html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + label + '</span>',
             iconSize: [80, 28],
             iconAnchor: [40, 14]
         });
     }
 
-    // 3. Gliding is armed a frame after the marker exists. Armed at once, its first
-    // position would be animated from the corner of the map: the element is in the
-    // page before Leaflet gives it a place.
-    function armGlide(marker) {
+    // Straight-line gliding, for a bus drawn where its phone is. A bus on its route is
+    // driven along the road frame by frame instead, and a CSS transition on top of that
+    // would drag every frame behind the last.
+    //
+    // Turned on a frame after the marker exists. On at once, its first position would be
+    // animated from the corner of the map: the element is in the page before Leaflet
+    // gives it a place.
+    function setGlide(marker, on) {
         requestAnimationFrame(function () {
             var el = marker.getElement();
-            if (el) el.classList.add('fm-bus-marker--glide');
+            if (el) el.classList.toggle('fm-bus-marker--glide', on);
         });
+    }
+
+    // Where a bus is drawn, and how it gets there. On its route it travels the road from
+    // the last reading to this one; otherwise it is placed at the position the server gave.
+    function moveBus(marker, bus, pos) {
+        var line = routeLines[bus.routeId];
+        var onRoad = bus.status === 'On Trip' && bus.onRoute && bus.along != null && line;
+
+        if (onRoad) {
+            setGlide(marker, false);
+            RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp);
+        } else {
+            RouteMotion.release(marker);
+            setGlide(marker, true);
+            marker.setLatLng(pos);
+            RouteMotion.point(marker, bus.status === 'On Trip' ? bus.bearing : null);
+        }
+        return !!onRoad;
     }
 
     function tooltipHtml(bus) {
@@ -253,6 +282,9 @@
                 '<div class="fm-tooltip__plate">' + bus.plateNumber + '</div>' +
                 '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + statusText(bus) + '</div>' +
                 '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + bus.passengers + '</strong></div>' +
+                (bus.offRoute
+                    ? '<div class="fm-tooltip__off">Off route. Shown where the phone is.</div>'
+                    : '') +
                 (isStale(bus)
                     ? '<div class="fm-tooltip__stale">Last heard from ' + relativeTime(bus.timestamp) + '</div>'
                     : '') +
@@ -376,28 +408,29 @@
                     var marker = busMarkers[bus.vehicleId];
 
                     var stale = isStale(bus);
-                    var iconKey = color + (stale ? '|stale' : '');
+                    var off = bus.status === 'On Trip' && bus.offRoute;
+                    var iconKey = color + (stale ? '|stale' : '') + (off ? '|off' : '');
 
                     if (marker) {
                         // Moved in place, and left alone otherwise. Setting the icon
                         // replaces the element it is drawn in, which throws away the
                         // travel between readings and any tooltip open on it, so it is
                         // done only when what the icon shows has changed.
-                        marker.setLatLng(pos);
                         if (marker._iconKey !== iconKey) {
-                            marker.setIcon(busIcon(bus.vehicleId, color, stale));
+                            marker.setIcon(busIcon(bus.vehicleId, color, stale, off));
                             marker._iconKey = iconKey;
-                            armGlide(marker);
+                            RouteMotion.repoint(marker);
                         }
+                        moveBus(marker, bus, pos);
                         marker.setTooltipContent(tooltipHtml(bus));
                     } else {
-                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale) })
+                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off) })
                             .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap' })
                             .addTo(busLayer);
                         marker.on('click', function () { openPanel(this._bus.vehicleId); });
                         marker._iconKey = iconKey;
-                        armGlide(marker);
                         busMarkers[bus.vehicleId] = marker;
+                        moveBus(marker, bus, pos);
                     }
                     marker._bus = bus; // keep latest data for tooltip/panel refresh
                 });
@@ -405,12 +438,14 @@
                 // Drop buses that fell out of the response (trip ended or filtered out).
                 Object.keys(busMarkers).forEach(function (id) {
                     if (!seen[id]) {
+                        RouteMotion.release(busMarkers[id]);
                         busLayer.removeLayer(busMarkers[id]);
                         delete busMarkers[id];
                     }
                 });
 
                 applySearch();
+                drawRaw();
 
                 // Live-update the open side panel with the selected bus's newest data.
                 if (selectedVehicleId && busMarkers[selectedVehicleId]) {
@@ -506,6 +541,50 @@
     }
     if (fitBtn) fitBtn.addEventListener('click', fitToBuses);
 
+    // Raw GPS: for checking the snapping on the road. Each bus on a trip also shows the
+    // reading its phone sent, a circle as wide as the phone said that reading could be
+    // off, and a thread to where the bus is drawn. Remembered per browser, since it is
+    // one person's working view of the map rather than a setting.
+    var RAW_KEY = 'fm.rawGps';
+    var showRaw = false;
+    try { showRaw = localStorage.getItem(RAW_KEY) === '1'; } catch (e) { /* storage unavailable */ }
+
+    function drawRaw() {
+        rawLayer.clearLayers();
+        if (!showRaw) return;
+
+        Object.keys(busMarkers).forEach(function (id) {
+            var m = busMarkers[id];
+            var bus = m && m._bus;
+            if (!bus || bus.status !== 'On Trip' || !busLayer.hasLayer(m)) return;
+
+            var raw = [bus.rawLat, bus.rawLng];
+            var color = colorForRoute(bus.routeName);
+            if (bus.accuracy != null) {
+                L.circle(raw, { radius: bus.accuracy, color: color, weight: 1, opacity: .5, fillOpacity: .08, interactive: false })
+                    .addTo(rawLayer);
+            }
+            L.polyline([raw, [bus.lat, bus.lng]], { color: '#374151', weight: 1.5, dashArray: '3 4', opacity: .7, interactive: false })
+                .addTo(rawLayer);
+            L.circleMarker(raw, { radius: 4, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 1, interactive: false })
+                .addTo(rawLayer);
+        });
+    }
+
+    function setRaw(on) {
+        showRaw = on;
+        try { localStorage.setItem(RAW_KEY, on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+        if (rawBtn) rawBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (on && !map.hasLayer(rawLayer)) rawLayer.addTo(map);
+        if (!on && map.hasLayer(rawLayer)) map.removeLayer(rawLayer);
+        drawRaw();
+    }
+
+    if (rawBtn) {
+        rawBtn.addEventListener('click', function () { setRaw(!showRaw); });
+        setRaw(showRaw);
+    }
+
     // The clear control only appears once something is actually filtered, so it does not
     // occupy the toolbar when there is nothing to undo.
     function syncClearBtn() {
@@ -557,6 +636,7 @@
                     try {
                         var waypoints = JSON.parse(route.waypointsJson);
                         var latLngs = waypoints.map(w => [w.lat, w.lng]);
+                        routeLines[route.routeId] = RouteMotion.measure(latLngs);
                         var polyline = L.polyline(latLngs, {
                             color: color,
                             weight: 5,
