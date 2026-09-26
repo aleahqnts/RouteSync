@@ -29,6 +29,11 @@ public class TelemetryData : BaseModel
     [Column("heading")]
     public float? Heading { get; set; }
 
+    // Radius in metres the phone placed the fix within. Null from driver app builds that
+    // do not send it.
+    [Column("accuracy")]
+    public float? Accuracy { get; set; }
+
     [Column("timestamp")]
     public DateTime Timestamp { get; set; }
 }

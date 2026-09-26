@@ -37,11 +37,41 @@ public class BusPositionDto
     [JsonPropertyName("terminalName")]
     public string TerminalName { get; set; }
 
+    // Where to draw the bus: on its route line when the reading is near it, the reading
+    // itself when it is off route or the route has no line.
     [JsonPropertyName("lat")]
     public double Lat { get; set; }
 
     [JsonPropertyName("lng")]
     public double Lng { get; set; }
+
+    // The reading as the phone reported it, and how accurate the phone said it was, for
+    // comparing against where the bus is drawn. The raw position of a parked bus is its
+    // terminal.
+    [JsonPropertyName("rawLat")]
+    public double RawLat { get; set; }
+
+    [JsonPropertyName("rawLng")]
+    public double RawLng { get; set; }
+
+    [JsonPropertyName("accuracy")]
+    public double? Accuracy { get; set; }
+
+    [JsonPropertyName("onRoute")]
+    public bool OnRoute { get; set; }
+
+    [JsonPropertyName("offRoute")]
+    public bool OffRoute { get; set; }
+
+    // Metres along the route line, while the bus is drawn on it. The map moves the marker
+    // along the road between two of these.
+    [JsonPropertyName("along")]
+    public double? Along { get; set; }
+
+    // Direction to point the marker: the road's when on the route, the phone's course when
+    // off it. Null when the bus is stopped.
+    [JsonPropertyName("bearing")]
+    public double? Bearing { get; set; }
 
     [JsonPropertyName("heading")]
     public double Heading { get; set; }
