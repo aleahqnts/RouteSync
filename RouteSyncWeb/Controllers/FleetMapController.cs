@@ -41,25 +41,21 @@ namespace FleetWise.Controllers
         private const int RecentTelemetryMinutes = 30;
 
         /// <summary>
-        /// Terminal positions per route, where buses that are not running are shown parked.
-        /// A route without an entry uses the first terminal.
+        /// Where a parked bus is drawn when neither its route nor any other route has a
+        /// terminal, stop or line to place it by: the EDSA-Ayala terminal, where the fleet
+        /// starts its day.
         /// </summary>
-        /// <remarks>The map spreads each terminal's buses into a grid so their markers do
-        /// not overlap.</remarks>
-        private static readonly Dictionary<int, (double Lat, double Lng, string Name)> Terminals = new()
-        {
-            [1] = (14.5466, 121.0285, "EDSA–Ayala Terminal"),
-            [2] = (14.5095, 121.0465, "Arca South Terminal"),
-        };
+        private static readonly RouteStops.Stop DefaultTerminal = new("EDSA-Ayala Terminal", 14.549272, 121.029103, true);
 
-        private static (double Lat, double Lng, string Name) TerminalFor(int? routeId) =>
-            routeId is int r && Terminals.TryGetValue(r, out var t) ? t : Terminals[1];
+        private readonly RouteSnapTracker _snaps;
 
-        public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache)
+        public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache,
+            RouteSnapTracker snaps)
         {
             _supabase = supabase;
             _fareCalculator = fareCalculator;
             _cache = cache;
+            _snaps = snaps;
         }
 
         /// <summary>Reads a reference list, reusing the last one for <see cref="ReferenceLifetime"/>.</summary>
@@ -119,39 +115,13 @@ namespace FleetWise.Controllers
                 if (routeId.HasValue && route.RouteId != routeId.Value)
                     continue;
 
-                if (string.IsNullOrWhiteSpace(route.StopsJson))
-                    continue;
-
-                try
+                stops.AddRange(RouteStops.Parse(route.StopsJson).Select(s => new StopDto
                 {
-                    using var doc = JsonDocument.Parse(route.StopsJson);
-                    var root = doc.RootElement;
-
-                    if (root.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var stopElement in root.EnumerateArray())
-                        {
-                            if (stopElement.TryGetProperty("name", out var nameElement) &&
-                                stopElement.TryGetProperty("lat", out var latElement) &&
-                                stopElement.TryGetProperty("lng", out var lngElement) &&
-                                latElement.TryGetDouble(out var lat) &&
-                                lngElement.TryGetDouble(out var lng))
-                            {
-                                stops.Add(new StopDto
-                                {
-                                    Name = nameElement.GetString() ?? "Unknown Stop",
-                                    Lat = lat,
-                                    Lng = lng,
-                                    RouteName = route.RouteName
-                                });
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error parsing stops for route {route.RouteId}: {ex.Message}");
-                }
+                    Name = s.Name,
+                    Lat = s.Lat,
+                    Lng = s.Lng,
+                    RouteName = route.RouteName
+                }));
             }
 
             return Json(stops);
@@ -237,6 +207,7 @@ namespace FleetWise.Controllers
             // memory on every poll. Ordered newest first, so the grouping below takes the
             // most recent reading per trip. Skipped when nothing is active, which would
             // otherwise build a filter against an empty set.
+            var readingsByTrip = new Dictionary<string, List<TelemetryData>>();
             var latestByTrip = new Dictionary<string, TelemetryData>();
             if (activeTripIds.Count > 0)
             {
@@ -252,9 +223,13 @@ namespace FleetWise.Controllers
                     .Order("timestamp", Postgrest.Constants.Ordering.Descending)
                     .Get();
 
-                latestByTrip = telemetryResponse.Models
+                // Every reading in the window goes to the snapper, which uses each once and in
+                // order. The newest is still what the marker's details are read from.
+                readingsByTrip = telemetryResponse.Models
                     .GroupBy(t => t.TripId)
-                    .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
+                    .ToDictionary(g => g.Key, g => g.ToList());
+                latestByTrip = readingsByTrip
+                    .ToDictionary(g => g.Key, g => g.Value.OrderByDescending(t => t.Timestamp).First());
             }
 
             var vehiclesById = vehicles
@@ -290,6 +265,12 @@ namespace FleetWise.Controllers
                 routesById.TryGetValue(trip.RouteId, out var route);
                 usersById.TryGetValue(trip.DriverId, out var driver);
 
+                // On its route line within the snap radius, where it really is otherwise.
+                var line = _snaps.LineFor(trip.RouteId, route?.WaypointsJson);
+                var snap = _snaps.Advance(trip.TripId, line,
+                    readingsByTrip[trip.TripId].Select(r => (r.TelemetryId, r.Timestamp, ToReading(r))));
+                var shown = snap?.Shown ?? new GeoPoint((double)telemetry.Latitude, (double)telemetry.Longitude);
+
                 var capacity = vehicle?.Capacity ?? 0;
 
                 // Two copies of one number. The counter phone writes the trip's figure
@@ -310,8 +291,15 @@ namespace FleetWise.Controllers
                     Shift = FormatShift(trip),
                     DriverName = FormatDriverName(driver),
                     Status = "On Trip",
-                    Lat = (double)telemetry.Latitude,
-                    Lng = (double)telemetry.Longitude,
+                    Lat = shown.Lat,
+                    Lng = shown.Lng,
+                    RawLat = snap?.Raw.Lat ?? (double)telemetry.Latitude,
+                    RawLng = snap?.Raw.Lng ?? (double)telemetry.Longitude,
+                    Accuracy = snap?.Accuracy,
+                    OnRoute = snap?.OnRoute ?? false,
+                    OffRoute = snap?.OffRoute ?? false,
+                    Along = snap?.Along,
+                    Bearing = snap?.Bearing,
                     Heading = telemetry.Heading ?? 0,
                     Speed = (double)(telemetry.Speed ?? 0),
                     Passengers = passengers,
@@ -327,6 +315,19 @@ namespace FleetWise.Controllers
             positions.AddRange(movingByVehicle.Values);
             foreach (var id in movingByVehicle.Keys)
                 movingVehicleIds.Add(id);
+
+            // Each route's terminal comes from its own stops, so a route added later parks
+            // its buses at its own terminal without a change here. A bus with no route, or
+            // a route with nothing to place it by, parks at the first route that has one.
+            var terminals = routes
+                .OrderBy(r => r.RouteId)
+                .Select(r => (r.RouteId, Stop: RouteStops.Terminal(r.StopsJson, r.WaypointsJson)))
+                .Where(t => t.Stop is not null)
+                .ToList();
+            RouteStops.Stop TerminalFor(int? routeId) =>
+                terminals.FirstOrDefault(t => t.RouteId == routeId).Stop
+                ?? terminals.FirstOrDefault().Stop
+                ?? DefaultTerminal;
 
             // Parked buses: every vehicle not on a trip, shown stationary at its terminal.
             foreach (var vehicle in vehicles)
@@ -363,6 +364,8 @@ namespace FleetWise.Controllers
                     TerminalName = terminal.Name,
                     Lat = terminal.Lat,
                     Lng = terminal.Lng,
+                    RawLat = terminal.Lat,
+                    RawLng = terminal.Lng,
                     Heading = 0,
                     Speed = 0,
                     Passengers = 0,
@@ -415,6 +418,12 @@ namespace FleetWise.Controllers
                 return "Ready to Deploy";
             return s;
         }
+
+        private static GpsReading ToReading(TelemetryData t) => new(
+            new GeoPoint((double)t.Latitude, (double)t.Longitude),
+            Heading: t.Heading,
+            Speed: t.Speed is decimal s ? (double)s : null,
+            Accuracy: t.Accuracy);
 
         private class WaypointDto
         {
