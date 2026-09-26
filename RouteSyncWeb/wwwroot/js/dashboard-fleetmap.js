@@ -33,6 +33,7 @@
         });
         map.attributionControl.setPrefix(false);
         map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+        RouteMotion.watch(map);
 
         // Same terms as the full map: the origin is sent as the Referer, which the site-wide
         // header otherwise withholds and without which OpenStreetMap blocks every tile.
@@ -43,6 +44,7 @@
         }).addTo(map);
 
         var routeColors = {};       // routeName -> color
+        var routeLines = {};        // routeId -> measured line the markers travel along
         var busLayer = L.layerGroup().addTo(map);
         var busMarkers = {};        // vehicleId -> marker (moved in place between polls)
         var legendEl = document.getElementById('dashMapLegend');
@@ -57,13 +59,28 @@
             return routeColors[routeName] || '#666';
         }
 
-        function busIcon(label, color) {
+        // Drawn as on the full map: an arrow for the way the bus is going, and a dashed
+        // edge when it is off its route and shown where its phone is.
+        function busIcon(label, color, off) {
             return L.divIcon({
-                className: 'fm-bus-marker',
-                html: '<span style="background:' + color + '">' + label + '</span>',
+                className: 'fm-bus-marker' + (off ? ' fm-bus-marker--off' : ''),
+                html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + label + '</span>',
                 iconSize: [80, 28],
                 iconAnchor: [40, 14]
             });
+        }
+
+        // On its route a bus travels the road from one reading to the next; otherwise it
+        // is placed where the server put it.
+        function moveBus(marker, bus) {
+            var line = routeLines[bus.routeId];
+            if (bus.status === 'On Trip' && bus.onRoute && bus.along != null && line) {
+                RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp);
+            } else {
+                RouteMotion.release(marker);
+                marker.setLatLng([bus.lat, bus.lng]);
+                RouteMotion.point(marker, bus.status === 'On Trip' ? bus.bearing : null);
+            }
         }
 
         function fetchPositions() {
@@ -74,27 +91,30 @@
                     buses.forEach(function (bus) {
                         seen[bus.vehicleId] = true;
                         var color = colorForRoute(bus.routeName);
-                        var pos = [bus.lat, bus.lng];
+                        var off = bus.status === 'On Trip' && bus.offRoute;
+                        var iconKey = color + (off ? '|off' : '');
                         var marker = busMarkers[bus.vehicleId];
                         if (marker) {
-                            marker.setLatLng(pos);
                             // setIcon throws the pill away and builds a new one, so it is
-                            // only called when the pill would look different. A bus keeps
-                            // its label, and changes colour only when it changes route.
-                            if (marker._iconKey !== color) {
-                                marker.setIcon(busIcon(bus.vehicleId, color));
-                                marker._iconKey = color;
+                            // only called when the pill would look different: a change of
+                            // route colour, or going off or back onto the route.
+                            if (marker._iconKey !== iconKey) {
+                                marker.setIcon(busIcon(bus.vehicleId, color, off));
+                                marker._iconKey = iconKey;
+                                RouteMotion.repoint(marker);
                             }
                         } else {
-                            marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color), interactive: false })
+                            marker = L.marker([bus.lat, bus.lng], { icon: busIcon(bus.vehicleId, color, off), interactive: false })
                                 .addTo(busLayer);
-                            marker._iconKey = color;
+                            marker._iconKey = iconKey;
                             busMarkers[bus.vehicleId] = marker;
                         }
+                        moveBus(marker, bus);
                     });
                     // Drop buses no longer in the response.
                     Object.keys(busMarkers).forEach(function (id) {
                         if (!seen[id]) {
+                            RouteMotion.release(busMarkers[id]);
                             busLayer.removeLayer(busMarkers[id]);
                             delete busMarkers[id];
                         }
@@ -134,6 +154,7 @@
                     if (route.waypointsJson) {
                         try {
                             var latLngs = JSON.parse(route.waypointsJson).map(function (w) { return [w.lat, w.lng]; });
+                            routeLines[route.routeId] = RouteMotion.measure(latLngs);
                             L.polyline(latLngs, { color: color, weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }).addTo(map);
                             allLatLng = allLatLng.concat(latLngs);
                         } catch (e) { /* skip malformed geometry */ }
