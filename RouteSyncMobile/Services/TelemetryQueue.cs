@@ -81,29 +81,31 @@ public class TelemetryQueue
                     .OrderBy(r => r.Id).Take(50).ToListAsync();
                 if (batch.Count == 0) return;
 
-                var body = batch.Select(r => new
+                var res = await PostTelemetryAsync(batch);
+                if (res.IsSuccessStatusCode)
                 {
-                    trip_id = r.TripId,
-                    latitude = r.Latitude,
-                    longitude = r.Longitude,
-                    total_passengers = r.TotalPassengers,
-                    speed = r.Speed,
-                    heading = r.Heading,
-                    timestamp = r.Timestamp
-                });
+                    var ids = batch.Select(r => r.Id).ToList();
+                    await _db.Table<PendingTelemetry>().DeleteAsync(r => ids.Contains(r.Id));
+                    continue;
+                }
 
-                var req = new HttpRequestMessage(HttpMethod.Post,
-                    $"{SupabaseConfig.Url}/rest/v1/telemetry_data");
-                req.Headers.TryAddWithoutValidation("apikey", SupabaseConfig.Key);
-                req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {SupabaseConfig.Bearer}");
-                req.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
-                req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+                if (!await RefusedForGoodAsync(res)) return; // keep rows, retry later
 
-                var res = await _http.SendAsync(req);
-                if (!res.IsSuccessStatusCode) return; // keep rows, retry later
-
-                var ids = batch.Select(r => r.Id).ToList();
-                await _db.Table<PendingTelemetry>().DeleteAsync(r => ids.Contains(r.Id));
+                // Something in this batch can never be stored, and the whole batch was
+                // refused for it. Sent one at a time, every reading that can be stored is,
+                // and only the ones refused for good are let go. A reading that fails for
+                // any other reason stops the flush with the rest still queued.
+                foreach (var row in batch)
+                {
+                    var one = await PostTelemetryAsync(new[] { row });
+                    if (!one.IsSuccessStatusCode)
+                    {
+                        if (!await RefusedForGoodAsync(one)) return;
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[TelemetryQueue.Flush] dropped a reading for trip {row.TripId} taken {row.Timestamp:u}, which the server will not store");
+                    }
+                    await _db.DeleteAsync(row);
+                }
             }
         }
         catch (Exception ex)
@@ -111,6 +113,62 @@ public class TelemetryQueue
             System.Diagnostics.Debug.WriteLine($"[TelemetryQueue.Flush] {ex}");
         }
         finally { _flushLock.Release(); }
+    }
+
+    private static Task<HttpResponseMessage> PostTelemetryAsync(IEnumerable<PendingTelemetry> rows)
+    {
+        var body = rows.Select(r => new
+        {
+            trip_id = r.TripId,
+            latitude = r.Latitude,
+            longitude = r.Longitude,
+            total_passengers = r.TotalPassengers,
+            speed = r.Speed,
+            heading = r.Heading,
+            accuracy = r.Accuracy,
+            timestamp = r.Timestamp
+        });
+
+        var req = new HttpRequestMessage(HttpMethod.Post,
+            $"{SupabaseConfig.Url}/rest/v1/telemetry_data");
+        req.Headers.TryAddWithoutValidation("apikey", SupabaseConfig.Key);
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {SupabaseConfig.Bearer}");
+        req.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+        req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        return _http.SendAsync(req);
+    }
+
+    /// <summary>
+    /// Whether the server refused readings over the readings themselves, which sending them
+    /// again can never change.
+    /// </summary>
+    /// <remarks>
+    /// Left unrecognised, one such reading holds back every reading queued after it, from
+    /// this trip and every later one, and the bus drops off the fleet map for good. It
+    /// happens when a trip is reassigned to another driver, or deleted, while this phone
+    /// still holds readings for it.
+    ///
+    /// Only the database's own verdicts on the rows count: a missing or foreign trip (row
+    /// security, 42501; foreign key, 23503) and any other integrity (23) or data (22)
+    /// error. Everything else is kept and tried again, and deliberately so for a mismatch
+    /// between this build and the database, such as a column not yet added: that refuses
+    /// every reading, and letting those go would throw a whole trip's route away over
+    /// something that is fixed on the server, after which they go through.
+    /// </remarks>
+    private static async Task<bool> RefusedForGoodAsync(HttpResponseMessage res)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            var code = doc.RootElement.TryGetProperty("code", out var c) ? c.GetString() : null;
+            return code is not null
+                && (code == "42501" || code.StartsWith("23", StringComparison.Ordinal)
+                                    || code.StartsWith("22", StringComparison.Ordinal));
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>Pushes queued trip finalizations, marking each trip completed and writing
