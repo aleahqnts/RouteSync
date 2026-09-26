@@ -84,8 +84,14 @@
     // A zoom puts every marker somewhere new at the same moment. Letting them travel
     // there turns one gesture into a second of drift, so the gliding is off for the
     // length of it.
+    //
+    // The parked grids are laid out again for the new zoom before gliding comes back on,
+    // a frame later, so they settle at once rather than sliding into place.
     map.on('zoomstart', function () { map.getContainer().classList.add('fm-map--jump'); });
-    map.on('zoomend', function () { map.getContainer().classList.remove('fm-map--jump'); });
+    map.on('zoomend', function () {
+        layoutParked();
+        requestAnimationFrame(function () { map.getContainer().classList.remove('fm-map--jump'); });
+    });
     RouteMotion.watch(map);
 
     var routeColors = {};        // routeName -> color, built from the routes fetch
@@ -97,16 +103,39 @@
     var terminalLayer = L.layerGroup().addTo(map); // terminal name labels
     var terminalSignature = null;                  // what those labels currently say
 
-    // Parked buses are grouped per terminal and spread into a centred grid (anchored on
-    // the terminal point the server sends) so the pills never overlap.
+    // Parked buses are grouped per terminal and spread into a centred grid under the
+    // terminal point the server sends, so the pills never overlap. The grid is measured
+    // on the screen and laid out again on every zoom. Measured on the ground it sat pill to
+    // pill zoomed out and spread across whole blocks zoomed in.
     var TERMINAL_PER_ROW = 4;
-    var TERMINAL_DLAT = 0.0006;  // row spacing (south)
-    var TERMINAL_DLNG = 0.0011;  // column spacing (pills are wide)
+    var SLOT_W_PX = 88;       // a pill is 80 wide
+    var SLOT_H_PX = 34;       // and 28 tall
+    var LABEL_RISE_PX = 32;   // the terminal's name sits this far above the first row
+    var parkedSlots = {};     // vehicleId -> { lat, lng, i }: its terminal and place in the grid
+
+    // The point this many screen pixels from another at the current zoom.
+    function offsetPx(lat, lng, dx, dy) {
+        var z = map.getZoom();
+        var p = map.project([lat, lng], z);
+        return map.unproject([p.x + dx, p.y + dy], z);
+    }
 
     function terminalSlot(lat, lng, i) {
         var row = Math.floor(i / TERMINAL_PER_ROW);
         var col = i % TERMINAL_PER_ROW;
-        return [lat - row * TERMINAL_DLAT, lng + (col - (TERMINAL_PER_ROW - 1) / 2) * TERMINAL_DLNG];
+        return offsetPx(lat, lng, (col - (TERMINAL_PER_ROW - 1) / 2) * SLOT_W_PX, row * SLOT_H_PX);
+    }
+
+    // Puts every parked bus and terminal label back in its grid for the current zoom.
+    function layoutParked() {
+        Object.keys(parkedSlots).forEach(function (id) {
+            var slot = parkedSlots[id];
+            var marker = busMarkers[id];
+            if (marker) marker.setLatLng(terminalSlot(slot.lat, slot.lng, slot.i));
+        });
+        terminalLayer.eachLayer(function (label) {
+            label.setLatLng(offsetPx(label._anchor[0], label._anchor[1], 0, -LABEL_RISE_PX));
+        });
     }
 
     // vehicleId -> live Leaflet marker; markers are moved in place between polls,
@@ -298,11 +327,13 @@
     // Add a terminal name label above its parked-bus grid.
     function addTerminalLabel(lat, lng, name, count) {
         var html = '<div class="fm-terminal-pill">🅿 ' + (name || 'Terminal') + ' · ' + count + '</div>';
-        L.marker([lat + 0.0006, lng], {
+        var label = L.marker(offsetPx(lat, lng, 0, -LABEL_RISE_PX), {
             icon: L.divIcon({ className: 'fm-terminal-label', html: html, iconSize: [200, 26], iconAnchor: [100, 13] }),
             interactive: false,
             zIndexOffset: -500
-        }).addTo(terminalLayer);
+        });
+        label._anchor = [lat, lng];
+        label.addTo(terminalLayer);
     }
 
     // Does a bus match the current search term? (vehicle id, plate, driver, or route)
@@ -376,6 +407,7 @@
                 });
 
                 var parkedPos = {};
+                parkedSlots = {};
                 var keys = Object.keys(parkedGroups).sort();
                 var signature = keys.map(function (key) {
                     var g = parkedGroups[key];
@@ -385,7 +417,10 @@
                 keys.forEach(function (key) {
                     var g = parkedGroups[key];
                     g.list.sort(function (a, b) { return a.vehicleId < b.vehicleId ? -1 : 1; });
-                    g.list.forEach(function (b, i) { parkedPos[b.vehicleId] = terminalSlot(g.lat, g.lng, i); });
+                    g.list.forEach(function (b, i) {
+                        parkedSlots[b.vehicleId] = { lat: g.lat, lng: g.lng, i: i };
+                        parkedPos[b.vehicleId] = terminalSlot(g.lat, g.lng, i);
+                    });
                 });
 
                 // The labels say a terminal name and a count, and neither changes from
