@@ -78,14 +78,28 @@
 <div class="fm-page">
     <div id="fleetMap" class="fm-map"></div>
 
-    <button id="fmFitBtn" class="fm-fit-btn" type="button" title="Center the map on the live (moving) buses">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-            <circle cx="12" cy="12" r="3" />
-        </svg>
-        Fit to buses
-    </button>
+    <div class="fm-map-tools">
+        <button id="fmFitBtn" class="fm-fit-btn" type="button" title="Center the map on the live (moving) buses">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                <circle cx="12" cy="12" r="3" />
+            </svg>
+            Fit to buses
+        </button>
+
+        @* For checking the road snapping: each bus on a trip also shows the reading its
+           phone sent and how far off the phone said it could be. *@
+        <button id="fmRawBtn" class="fm-fit-btn fm-raw-btn" type="button" aria-pressed="false"
+                title="Show each bus's raw GPS reading beside where it is drawn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="2.5" />
+                <circle cx="12" cy="12" r="8" stroke-dasharray="3 3" />
+            </svg>
+            Raw GPS
+        </button>
+    </div>
 
     <div id="fmConnBadge" class="fm-conn-badge">
         <span class="fm-conn-badge__dot"></span>Connection lost. Retrying…
@@ -175,5 +189,6 @@
             ? $"[{b[0]},{b[1]},{b[2]},{b[3]}]"
             : "null");
     </script>
+    <script src="~/js/route-motion.js" asp-append-version="true"></script>
     <script src="~/js/fleetmap.js" asp-append-version="true"></script>
 }
