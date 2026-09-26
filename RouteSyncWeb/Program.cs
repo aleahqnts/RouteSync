@@ -106,6 +106,10 @@ builder.Services.AddScoped<AuditLog>();
 // Security incidents: the table, and the detector that reads the audit trail into it.
 builder.Services.AddSingleton<SecurityIncidents>();
 builder.Services.AddScoped<SecurityDetector>();
+
+// Each running trip's place on its route line, kept between the fleet map's position reads.
+builder.Services.AddSingleton<RouteSnapTracker>();
+
 builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<NavCounts>();
 builder.Services.AddScoped<InspectionPhotoStore>();
