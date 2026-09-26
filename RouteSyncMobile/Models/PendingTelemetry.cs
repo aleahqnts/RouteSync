@@ -15,5 +15,11 @@ public class PendingTelemetry
     public int TotalPassengers { get; set; }
     public double? Speed { get; set; }
     public double? Heading { get; set; }
+
+    // Radius in metres Android places the fix within. The fleet map will not move a bus on
+    // a reading less accurate than 50 m. Rows queued by an earlier build read back as null,
+    // which the map treats as usable.
+    public double? Accuracy { get; set; }
+
     public DateTime Timestamp { get; set; }
 }
