@@ -1,0 +1,138 @@
+@model FleetWise.Models.ViewModels.GpsCheckViewModel
+@using FleetWise.Services
+@{
+    ViewData["Title"] = "GPS Check";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var day = Model.Date.ToString("yyyy-MM-dd", inv);
+    var radius = RouteSnapper.SnapRadius.ToString("0", inv);
+
+    // An empty cell is a figure that does not exist for the trip, such as an accuracy from a
+    // build that did not send one, not a zero.
+    string Pct(double? share) => share is double s ? (s * 100).ToString("0.#", inv) + "%" : "–";
+    string Metres(double? v) => v is double d ? d.ToString("0", inv) + " m" : "–";
+}
+
+<div class="gc-head">
+    <div>
+        <h2 class="gc-title">GPS Check</h2>
+        <p class="gc-subtitle">How each trip's GPS behaved against its route, replayed through the fleet map's road snapping.</p>
+    </div>
+    <a href="@Url.Action("Index", "FleetMap")" class="gc-btn gc-btn--outline">Back to Fleet Map</a>
+</div>
+
+<form method="get" class="gc-filters">
+    <div class="gc-filter">
+        <label for="gcDate">Trip date</label>
+        <input type="date" id="gcDate" name="date" value="@day" class="gc-input" />
+    </div>
+    <div class="gc-filter-actions">
+        <button type="submit" class="gc-btn gc-btn--primary">Show</button>
+        @if (Model.Trips.Count > 0)
+        {
+            <a href="@Url.Action("GpsCheckCsv", "FleetMap", new { date = day })" class="gc-btn gc-btn--outline">Download CSV</a>
+        }
+    </div>
+</form>
+
+<div class="gc-stats">
+    <div class="gc-stat">
+        <span class="gc-stat-label">Trips</span>
+        <span class="gc-stat-value">@Model.Totals.Trips</span>
+    </div>
+    <div class="gc-stat">
+        <span class="gc-stat-label">Readings</span>
+        <span class="gc-stat-value">@Model.Totals.Readings.ToString("N0", inv)</span>
+    </div>
+    <div class="gc-stat gc-stat--lead">
+        <span class="gc-stat-label">On the road</span>
+        <span class="gc-stat-value">@Pct(Model.Totals.OnRoadShare)</span>
+        <span class="gc-stat-note">within @radius&nbsp;m of the route line</span>
+    </div>
+    <div class="gc-stat">
+        <span class="gc-stat-label">Off route</span>
+        <span class="gc-stat-value">@Model.Totals.OffRoute.ToString("N0", inv)</span>
+    </div>
+    <div class="gc-stat">
+        <span class="gc-stat-label">Ignored</span>
+        <span class="gc-stat-value">@Model.Totals.Ignored.ToString("N0", inv)</span>
+        <span class="gc-stat-note">accuracy worse than @radius&nbsp;m</span>
+    </div>
+</div>
+
+<div class="gc-card">
+    <div class="gc-card-header">
+        Trips dated @Model.Date.ToString("MMMM d, yyyy", inv)
+        <span class="gc-count">@Model.Trips.Count @(Model.Trips.Count == 1 ? "trip" : "trips")</span>
+    </div>
+
+    @if (Model.Trips.Count == 0)
+    {
+        <p class="gc-empty">No trip ran on this date, so there are no readings to check.</p>
+    }
+    else
+    {
+        <div class="gc-table-wrap">
+            <table class="gc-table">
+                <thead>
+                    <tr>
+                        <th>Trip</th>
+                        <th>Route</th>
+                        <th>Bus</th>
+                        <th>Driver</th>
+                        <th>Shift</th>
+                        <th class="gc-num">Readings</th>
+                        <th class="gc-num">On road</th>
+                        <th class="gc-num">Held</th>
+                        <th class="gc-num">Off route</th>
+                        <th class="gc-num">Ignored</th>
+                        <th class="gc-num">Avg to road</th>
+                        <th class="gc-num">Worst on road</th>
+                        <th class="gc-num">Median accuracy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Trips)
+                    {
+                        var c = t.Check;
+                        <tr>
+                            <td class="gc-trip">@t.TripId<span class="gc-status">@t.Status</span></td>
+                            <td class="gc-nowrap">@t.RouteName</td>
+                            <td>@t.VehicleId</td>
+                            <td>@t.DriverName</td>
+                            <td class="gc-nowrap">@t.Shift</td>
+                            <td class="gc-num">@c.Readings.ToString("N0", inv)</td>
+                            <td class="gc-num">@c.OnRoad.ToString("N0", inv) <span class="gc-share">@Pct(c.OnRoadShare)</span></td>
+                            <td class="gc-num">@c.Held</td>
+                            <td class="gc-num">@c.OffRoute</td>
+                            <td class="gc-num">@c.Ignored</td>
+                            <td class="gc-num">@Metres(c.MeanToRoad)</td>
+                            <td class="gc-num">@Metres(c.WorstToRoad)</td>
+                            <td class="gc-num">@Metres(c.MedianAccuracy)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<dl class="gc-key">
+    <dt>On road</dt>
+    <dd>Drawn on the route line: the reading was within @radius&nbsp;m of it.</dd>
+    <dt>Held</dt>
+    <dd>A single reading more than @radius&nbsp;m away. The bus stayed on the road until a second one in a row agreed.</dd>
+    <dt>Off route</dt>
+    <dd>Drawn where the phone was, after two readings in a row more than @radius&nbsp;m from the route.</dd>
+    <dt>Ignored</dt>
+    <dd>The phone said the fix could be more than @radius&nbsp;m out, so it did not move the bus.</dd>
+    <dt>Avg and worst to road</dt>
+    <dd>How far the on-road readings were from the line before they were drawn on it.</dd>
+    <dt>Median accuracy</dt>
+    <dd>The accuracy radius the phone reported. A dash means the trip ran on a driver app build that did not send it.</dd>
+</dl>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/gps-check.css" asp-append-version="true" />
+}

@@ -1,0 +1,259 @@
+/* FleetMap/GpsCheck.cshtml. Built on the Audit Log's look: the same heading, filter bar,
+   buttons, card and table. */
+:root {
+    --gc-teal: #4AADA8;
+    --gc-text: #2D3748;
+    --gc-muted: #9AA5B4;
+    --gc-border: #E8ECF0;
+    --gc-bg: #F8F9FA;
+    --gc-white: #FFFFFF;
+}
+
+/* Heading. */
+.gc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.gc-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--gc-text);
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+}
+
+.gc-subtitle {
+    font-size: 0.875rem;
+    color: var(--gc-muted);
+    font-family: 'Segoe UI', sans-serif;
+    margin: 4px 0 0;
+}
+
+/* Filter bar. */
+.gc-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.gc-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.gc-filter label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gc-muted);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.gc-input {
+    padding: 7px 12px;
+    border: 1.5px solid var(--gc-border);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: 'Segoe UI', sans-serif;
+    color: var(--gc-text);
+    background: var(--gc-bg);
+    outline: none;
+    transition: border-color 180ms;
+}
+
+.gc-input:focus { border-color: var(--gc-teal); }
+
+.gc-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Buttons. */
+.gc-btn {
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--gc-border);
+    text-decoration: none;
+    display: inline-block;
+    transition: all 180ms;
+}
+
+.gc-btn--primary {
+    background: var(--gc-teal);
+    border-color: var(--gc-teal);
+    color: #fff;
+}
+
+.gc-btn--outline {
+    background: var(--gc-white);
+    color: var(--gc-text);
+}
+
+.gc-btn--outline:hover { border-color: var(--gc-teal); color: var(--gc-teal); }
+
+/* The day in figures. The share on the road leads, since it is the number the check exists
+   to give. */
+.gc-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.gc-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--gc-white);
+    border: 1px solid var(--gc-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-family: 'Segoe UI', sans-serif;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
+}
+
+.gc-stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gc-muted);
+}
+
+.gc-stat-value {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--gc-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.gc-stat-note {
+    font-size: 0.72rem;
+    color: var(--gc-muted);
+}
+
+.gc-stat--lead .gc-stat-value { color: var(--gc-teal); }
+
+/* Card and table. */
+.gc-card {
+    background: var(--gc-white);
+    border: 1px solid var(--gc-border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
+}
+
+.gc-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--gc-text);
+    font-family: 'Segoe UI', sans-serif;
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--gc-border);
+}
+
+.gc-count {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--gc-muted);
+}
+
+.gc-empty {
+    margin: 18px 0 4px;
+    font-size: 0.875rem;
+    color: var(--gc-muted);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.gc-table-wrap { overflow-x: auto; }
+
+.gc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.875rem;
+}
+
+.gc-table thead tr { border-bottom: 1.5px solid var(--gc-border); }
+
+.gc-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gc-muted);
+    white-space: nowrap;
+}
+
+.gc-table td {
+    padding: 11px 12px;
+    color: var(--gc-text);
+    border-bottom: 1px solid var(--gc-border);
+    vertical-align: top;
+}
+
+.gc-table tbody tr:last-child td { border-bottom: none; }
+
+.gc-table .gc-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.gc-nowrap { white-space: nowrap; }
+
+.gc-trip { font-weight: 600; white-space: nowrap; }
+
+.gc-status {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--gc-muted);
+}
+
+.gc-share {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--gc-muted);
+}
+
+/* What each column counts, under the table. */
+.gc-key {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 14px;
+    margin: 18px 2px 0;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.8rem;
+    color: var(--gc-muted);
+}
+
+.gc-key dt {
+    font-weight: 600;
+    color: var(--gc-text);
+}
+
+.gc-key dd { margin: 0; }
+
+@media (max-width: 599px) {
+    .gc-title { font-size: 1.3rem; }
+    .gc-card { padding: 14px 14px; }
+    .gc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gc-stat--lead { grid-column: 1 / -1; }
+    .gc-key { grid-template-columns: 1fr; gap: 2px; }
+    .gc-key dd { margin-bottom: 8px; }
+}
