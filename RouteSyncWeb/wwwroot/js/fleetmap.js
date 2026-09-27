@@ -149,6 +149,9 @@
     var countEl = document.getElementById('fmCount');
     var fitBtn = document.getElementById('fmFitBtn');
     var rawBtn = document.getElementById('fmRawBtn');
+    var gpsDrawer = document.getElementById('fmGpsDrawer');
+    var gpsToggle = document.getElementById('fmGpsToggle');
+    var gpsBody = document.getElementById('fmGpsBody');
     var connBadge = document.getElementById('fmConnBadge');
     var legendEl = document.getElementById('fmLegend');
     var legendToggle = document.getElementById('fmLegendToggle');
@@ -156,6 +159,15 @@
     if (legendToggle && legendEl && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
         legendToggle.setAttribute('aria-expanded', 'false');
         legendEl.hidden = true;
+    }
+
+    // The GPS tools drawer folds away to its heading, as the legend does.
+    if (gpsToggle && gpsBody) {
+        gpsToggle.addEventListener('click', function () {
+            var open = gpsToggle.getAttribute('aria-expanded') === 'true';
+            gpsToggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+            gpsBody.hidden = open;
+        });
     }
 
     if (legendToggle && legendEl) {
@@ -578,11 +590,9 @@
 
     // Raw GPS: for checking the snapping on the road. Each bus on a trip also shows the
     // reading its phone sent, a circle as wide as the phone said that reading could be
-    // off, and a thread to where the bus is drawn. Remembered per browser, since it is
-    // one person's working view of the map rather than a setting.
-    var RAW_KEY = 'fm.rawGps';
+    // off, and a thread to where the bus is drawn. Off on every visit, since it is for
+    // checking the snapping and not how the board is normally read.
     var showRaw = false;
-    try { showRaw = localStorage.getItem(RAW_KEY) === '1'; } catch (e) { /* storage unavailable */ }
 
     function drawRaw() {
         rawLayer.clearLayers();
@@ -608,8 +618,8 @@
 
     function setRaw(on) {
         showRaw = on;
-        try { localStorage.setItem(RAW_KEY, on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
         if (rawBtn) rawBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (gpsDrawer) gpsDrawer.classList.toggle('fm-drawer--live', on);
         if (on && !map.hasLayer(rawLayer)) rawLayer.addTo(map);
         if (!on && map.hasLayer(rawLayer)) map.removeLayer(rawLayer);
         drawRaw();

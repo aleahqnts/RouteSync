@@ -382,6 +382,123 @@ namespace FleetWise.Controllers
             return Json(positions);
         }
 
+        /// <summary>
+        /// The GPS check: every trip of one day replayed through the map's own snapping, to
+        /// show how the phones' GPS behaved on the real routes.
+        /// </summary>
+        [RequirePermission("routes")]
+        public async Task<IActionResult> GpsCheck(DateTime? date) =>
+            View(await BuildGpsCheckAsync(date));
+
+        /// <summary>The GPS check for one day as a spreadsheet, one row per trip and a total.</summary>
+        [RequirePermission("routes")]
+        public async Task<IActionResult> GpsCheckCsv(DateTime? date)
+        {
+            var model = await BuildGpsCheckAsync(date);
+            var inv = CultureInfo.InvariantCulture;
+            static string Csv(string? s) =>
+                s is null ? "" : s.IndexOfAny(new[] { ',', '"', '\n', '\r' }) >= 0 ? $"\"{s.Replace("\"", "\"\"")}\"" : s;
+            string Num(double? v, string format) => v is double d ? d.ToString(format, inv) : "";
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Trip ID,Date,Route,Bus,Driver,Shift,Status,Readings,On road,On road %,Held,Off route,Ignored,Average to road (m),Worst on road (m),Median accuracy (m),Readings with accuracy");
+            foreach (var t in model.Trips)
+            {
+                var c = t.Check;
+                sb.AppendLine(string.Join(",",
+                    Csv(t.TripId), model.Date.ToString("yyyy-MM-dd", inv), Csv(t.RouteName), Csv(t.VehicleId),
+                    Csv(t.DriverName), Csv(t.Shift), Csv(t.Status),
+                    c.Readings, c.OnRoad, Num(c.OnRoadShare * 100, "0.0"), c.Held, c.OffRoute, c.Ignored,
+                    Num(c.MeanToRoad, "0.0"), Num(c.WorstToRoad, "0.0"), Num(c.MedianAccuracy, "0.0"), c.WithAccuracy));
+            }
+
+            var tot = model.Totals;
+            sb.AppendLine();
+            sb.AppendLine(string.Join(",",
+                "TOTAL", model.Date.ToString("yyyy-MM-dd", inv), "", "", "", "", $"{tot.Trips} trips",
+                tot.Readings, tot.OnRoad, Num(tot.OnRoadShare * 100, "0.0"), tot.Held, tot.OffRoute, tot.Ignored,
+                "", "", "", tot.WithAccuracy));
+
+            return File(System.Text.Encoding.UTF8.GetBytes(sb.ToString()), "text/csv",
+                $"GpsCheck_{model.Date.ToString("yyyy-MM-dd", inv)}.csv");
+        }
+
+        /// <summary>Reads one day's trips and their readings, and replays each trip.</summary>
+        /// <remarks>
+        /// A trip counts when it has readings, or when it was started, since a started trip
+        /// with none is itself something the check should show. The route line is the
+        /// route's current one; a trip moved to another route mid-shift is measured against
+        /// the route it ended on.
+        /// </remarks>
+        private async Task<GpsCheckViewModel> BuildGpsCheckAsync(DateTime? date)
+        {
+            var day = (date ?? PhClock.OperationalDay).Date;
+
+            var trips = await PagedRead.AllAsync(() => _supabase.From<Trip>()
+                .Filter("date", Postgrest.Constants.Operator.Equals, day.ToString("yyyy-MM-dd"))
+                .Order("trip_id", Postgrest.Constants.Ordering.Ascending));
+
+            // Read in groups, so the list of trips in any one request stays short.
+            var readings = new List<TelemetryData>();
+            foreach (var group in trips.Select(t => t.TripId).Chunk(40))
+            {
+                var ids = group.Cast<object>().ToList();
+                readings.AddRange(await PagedRead.AllAsync(() => _supabase.From<TelemetryData>()
+                    .Filter("trip_id", Postgrest.Constants.Operator.In, ids)
+                    .Order("telemetry_id", Postgrest.Constants.Ordering.Ascending)));
+            }
+            var byTrip = readings.GroupBy(r => r.TripId).ToDictionary(g => g.Key, g => g.ToList());
+
+            var routes = await ReferenceAsync("fleetmap:routes", async () =>
+                (await _supabase.From<BusRoute>().Get()).Models);
+            var users = await ReferenceAsync("fleetmap:users", async () =>
+                (await _supabase.From<UserModel>()
+                    .Select("user_id,first_name,last_name")
+                    .Get()).Models);
+            var routesById = routes.ToDictionary(r => r.RouteId, r => r);
+            var usersById = users.ToDictionary(u => u.UserId, u => u);
+
+            var model = new GpsCheckViewModel { Date = day };
+            foreach (var trip in trips)
+            {
+                byTrip.TryGetValue(trip.TripId, out var tripReadings);
+                if ((tripReadings is null || tripReadings.Count == 0) && trip.ActualStartTime is null)
+                    continue;
+
+                routesById.TryGetValue(trip.RouteId, out var route);
+                usersById.TryGetValue(trip.DriverId, out var driver);
+
+                var check = Services.GpsCheck.Replay(
+                    _snaps.LineFor(trip.RouteId, route?.WaypointsJson),
+                    (tripReadings ?? new List<TelemetryData>()).Select(r => (r.Timestamp, r.TelemetryId, ToReading(r))));
+
+                model.Trips.Add(new GpsCheckRow
+                {
+                    TripId = trip.TripId,
+                    RouteName = route?.RouteName ?? $"Route {trip.RouteId}",
+                    VehicleId = trip.VehicleId ?? "",
+                    DriverName = FormatDriverName(driver),
+                    Shift = FormatShift(trip),
+                    Status = trip.TripStatus ?? "",
+                    Check = check
+                });
+            }
+
+            var t = model.Totals;
+            t.Trips = model.Trips.Count;
+            foreach (var row in model.Trips)
+            {
+                t.Readings += row.Check.Readings;
+                t.OnRoad += row.Check.OnRoad;
+                t.Held += row.Check.Held;
+                t.OffRoute += row.Check.OffRoute;
+                t.Ignored += row.Check.Ignored;
+                t.WithAccuracy += row.Check.WithAccuracy;
+            }
+
+            return model;
+        }
+
         /// <summary>The trip's shift window as a short label.</summary>
         private static string FormatShift(Trip trip)
         {
