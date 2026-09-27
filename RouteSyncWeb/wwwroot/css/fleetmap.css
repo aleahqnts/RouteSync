@@ -706,11 +706,128 @@
         cursor: default;
     }
 
-    /* On, it stays filled, so whoever is looking can tell the dots are not buses. */
-    .fm-raw-btn[aria-pressed="true"] {
-        background: var(--fm-text);
-        color: #fff;
-        border-color: var(--fm-text);
+    /* GPS tools drawer, in the bottom-right corner. Built like the routes legend across
+       the map: a heading that folds the box away to itself. It sits above Leaflet's
+       credit line, which the map's licence needs left in view. */
+    .fm-drawer {
+        position: absolute;
+        right: 16px;
+        bottom: 28px;
+        z-index: 1000;
+        width: 248px;
+        background: var(--fm-white);
+        border-radius: var(--fm-radius);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+        padding: 10px 14px;
+    }
+
+    .fm-drawer-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    /* Raw GPS still showing with the drawer folded. The dots on the map are not buses,
+       and whoever is looking should be able to tell why they are there. */
+    .fm-drawer-live {
+        display: none;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--fm-teal);
+    }
+
+    .fm-drawer--live .fm-drawer-live {
+        display: inline-block;
+    }
+
+    .fm-drawer-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 10px;
+    }
+
+    .fm-drawer-body[hidden] {
+        display: none;
+    }
+
+    .fm-drawer-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px;
+        margin: 0 -8px;
+        width: calc(100% + 16px);
+        border: none;
+        border-radius: 10px;
+        background: none;
+        text-align: left;
+        text-decoration: none;
+        color: var(--fm-text);
+        font-family: 'Segoe UI', sans-serif;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .fm-drawer-row:hover {
+        background: var(--fm-bg);
+        color: var(--fm-text);
+    }
+
+    .fm-drawer-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+    }
+
+    .fm-drawer-name {
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .fm-drawer-sub {
+        font-size: 0.72rem;
+        color: var(--fm-muted);
+    }
+
+    .fm-drawer-go {
+        flex-shrink: 0;
+        color: var(--fm-muted);
+    }
+
+    /* The Raw GPS switch. Its state is the row's aria-pressed, which the script sets. */
+    .fm-switch {
+        position: relative;
+        flex-shrink: 0;
+        width: 34px;
+        height: 20px;
+        border-radius: 999px;
+        background: #D5DBE3;
+        transition: background .15s;
+    }
+
+    .fm-switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+        transition: transform .15s;
+    }
+
+    .fm-drawer-row[aria-pressed="true"] .fm-switch {
+        background: var(--fm-teal);
+    }
+
+    .fm-drawer-row[aria-pressed="true"] .fm-switch::after {
+        transform: translateX(14px);
     }
 
 /* ===========================================================================
@@ -842,6 +959,14 @@
     .fm-map-tools {
         left: 12px;
         top: 12px;
+    }
+
+    /* Above the navigation bar, which owns the foot of the screen. */
+    .fm-drawer {
+        right: 12px;
+        bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
+        width: 220px;
+        padding: 6px 9px 8px;
     }
 }
 
