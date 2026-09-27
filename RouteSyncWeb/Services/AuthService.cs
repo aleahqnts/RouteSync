@@ -67,7 +67,7 @@ namespace FleetWise.Services
 
             return new SignInCheck(new AuthenticatedUser(
                 user.UserId,
-                FormatDisplayName(user.FirstName, user.MiddleName, user.LastName),
+                DisplayName(user.FirstName, user.MiddleName, user.LastName),
                 user.EmailAddress ?? "",
                 roleName,
                 permissions), user.UserId, null);
@@ -91,7 +91,8 @@ namespace FleetWise.Services
             await _supabase.From<UserModel>().Update(user);
         }
 
-        private static string FormatDisplayName(string? firstName, string? middleName, string? lastName)
+        /// <summary>How a signed-in person is named on the dashboard and in the audit trail.</summary>
+        public static string DisplayName(string? firstName, string? middleName, string? lastName)
         {
             var middleInitial = string.IsNullOrWhiteSpace(middleName) ? "" : $" {middleName.Trim()[0]}.";
             return $"{firstName}{middleInitial} {lastName}".Trim();

@@ -228,6 +228,31 @@
         margin-left: 2px;
     }
 
+    /* The avatar and the name together are one button, which opens the profile. */
+    .fw-sidebar__me {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+        padding: 4px 6px 4px 0;
+        border: none;
+        border-radius: 10px;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    .fw-sidebar:hover .fw-sidebar__me:hover {
+        background: var(--fw-teal-light);
+    }
+
+    .fw-sidebar__me:focus-visible {
+        outline: 2px solid var(--fw-teal);
+        outline-offset: 2px;
+    }
+
     .fw-sidebar__avatar {
         width: 32px;
         height: 32px;
@@ -560,7 +585,21 @@
     .fw-sheet__who {
         display: flex;
         flex-direction: column;
+        align-items: flex-start;
         min-width: 0;
+        padding: 0;
+        border: none;
+        background: none;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .fw-sheet__edit {
+        margin-top: 3px;
+        font-size: .74rem;
+        font-weight: 600;
+        color: var(--fw-teal);
     }
 
     .fw-sheet__name {
@@ -756,5 +795,256 @@
         max-width: none;
         border-radius: 16px 16px 0 0;
         padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
+    }
+}
+
+/* ===========================================================================
+   My Profile. The signed-in person's own name and password, opened from their
+   name on the rail or in the sheet. Shaped like the sign-out question, wider.
+   =========================================================================== */
+.fw-profile {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .45);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.fw-profile--open {
+    display: flex;
+}
+
+.fw-profile__box {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .28);
+    overflow: hidden;
+}
+
+.fw-profile__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--fw-divider);
+}
+
+.fw-profile__title {
+    margin: 0;
+    color: var(--fw-text-dark);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.fw-profile__close {
+    border: none;
+    background: none;
+    color: var(--fw-text-muted);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.fw-profile__body {
+    padding: 16px 22px 4px;
+    overflow-y: auto;
+}
+
+.fw-profile__loading {
+    padding: 24px 0;
+    text-align: center;
+    color: var(--fw-text-muted);
+    font-size: .88rem;
+}
+
+/* What is shown and not edited here, set apart from the fields. */
+.fw-profile__account {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #F8FAFB;
+}
+
+.fw-profile__account > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.fw-profile__fixed {
+    color: var(--fw-text-dark);
+    font-size: .88rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.fw-profile__note {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--fw-text-muted);
+    font-size: .76rem;
+}
+
+.fw-profile__group {
+    margin: 16px 0 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+}
+
+.fw-profile__legend {
+    margin-bottom: 8px;
+    padding: 0;
+    color: var(--fw-text-dark);
+    font-size: .82rem;
+    font-weight: 700;
+    float: none;
+    width: auto;
+}
+
+.fw-profile__legend em,
+.fw-profile__label em {
+    font-style: normal;
+    font-weight: 400;
+    color: var(--fw-text-muted);
+}
+
+.fw-profile__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px;
+}
+
+.fw-profile__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+    min-width: 0;
+}
+
+.fw-profile__label {
+    color: #5A6778;
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.fw-profile__field input {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--fw-divider);
+    border-radius: 10px;
+    color: var(--fw-text-dark);
+    font: inherit;
+    font-size: .88rem;
+}
+
+.fw-profile__field input:focus {
+    outline: none;
+    border-color: var(--fw-teal);
+    box-shadow: 0 0 0 3px var(--fw-teal-light);
+}
+
+.fw-profile__field--bad input,
+.fw-profile__field--bad input:focus {
+    border-color: #E74C3C;
+    box-shadow: 0 0 0 3px #FDECEC;
+}
+
+.fw-profile__err {
+    color: #C0392B;
+    font-size: .74rem;
+}
+
+.fw-profile__err:empty {
+    display: none;
+}
+
+.fw-profile__err--form {
+    margin: 4px 0 8px;
+}
+
+.fw-profile__hint {
+    margin: 0;
+    color: var(--fw-text-muted);
+    font-size: .74rem;
+}
+
+.fw-profile__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px 18px;
+    border-top: 1px solid var(--fw-divider);
+}
+
+.fw-profile__cancel,
+.fw-profile__save {
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.fw-profile__cancel {
+    border: 1px solid var(--fw-divider);
+    background: #fff;
+    color: var(--fw-text-dark);
+}
+
+.fw-profile__save {
+    border: none;
+    background: var(--fw-teal);
+    color: #fff;
+}
+
+.fw-profile__save:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+@media (max-width: 599px) {
+
+    /* From the bottom edge, the way every other dialog arrives on a phone. */
+    .fw-profile {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .fw-profile__box {
+        max-width: none;
+        max-height: 92dvh;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .fw-profile__row,
+    .fw-profile__account {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fw-profile__actions {
+        padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
+    }
+
+    .fw-profile__cancel,
+    .fw-profile__save {
+        flex: 1;
     }
 }
