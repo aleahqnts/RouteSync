@@ -277,6 +277,26 @@
     .rq-driver { display: block; font-weight: 700; }
     .rq-driver-id { display: block; font-size: .74rem; color: var(--rq-muted); }
 
+    /* Leave filed by staff from their profile, told apart from a driver's at a glance. */
+    .rq-staff {
+        display: inline-block;
+        margin-top: 3px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: #EEF2F9;
+        color: #4A5B7A;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .03em;
+    }
+
+    /* The reader's own request, in place of the controls they may not use on it. */
+    .rq-own {
+        font-size: .78rem;
+        color: var(--rq-muted);
+        font-style: italic;
+    }
+
     .rq-date,
     .rq-filed { display: block; white-space: nowrap; }
 

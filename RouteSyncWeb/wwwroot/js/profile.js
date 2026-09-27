@@ -1,113 +1,123 @@
-// The signed-in person's own profile, opened from their name on the rail or in the sheet.
+// The signed-in person's own page.
 //
-// The account is read when the dialog opens rather than drawn into every page, so a page
-// nobody opens it on costs nothing. Saving writes the name and, when all three password
-// fields are filled, the password; the server checks everything again and answers with
-// a message per field.
+// Every form here posts the same way: sent with fetch, answered with a message per field
+// when something is wrong, and followed by a reload when it is saved, since a name or a
+// leave request shows in more than one place on the page and the rail. The server
+// checks everything again; what is done here only saves a round trip.
 (function () {
-    var dialog = document.getElementById('fwProfile');
-    if (!dialog) return;
+    var page = document.querySelector('.pf-cols');
+    if (!page) return;
 
-    var form = document.getElementById('fwProfileForm');
-    var loading = dialog.querySelector('[data-profile-loading]');
-    var content = dialog.querySelector('[data-profile-content]');
-    var save = dialog.querySelector('[data-profile-save]');
-    var opener = null;
-
-    function field(name) { return form.elements[name]; }
-
-    function clearErrors() {
-        dialog.querySelectorAll('[data-err]').forEach(function (el) { el.textContent = ''; });
-        form.querySelectorAll('.fw-profile__field--bad').forEach(function (el) {
-            el.classList.remove('fw-profile__field--bad');
+    function clearErrors(form) {
+        form.querySelectorAll('[data-err]').forEach(function (el) { el.textContent = ''; });
+        form.querySelectorAll('.pf-field--bad').forEach(function (el) {
+            el.classList.remove('pf-field--bad');
         });
     }
 
-    function showErrors(errors) {
+    function showErrors(form, errors) {
         Object.keys(errors || {}).forEach(function (key) {
-            var slot = dialog.querySelector('[data-err="' + key + '"]');
-            if (!slot) slot = dialog.querySelector('[data-err="form"]');
+            var slot = form.querySelector('[data-err="' + key + '"]')
+                || form.querySelector('[data-err="form"]');
+            if (!slot) return;
             slot.textContent = errors[key];
-            var wrap = slot.closest('.fw-profile__field');
-            if (wrap) wrap.classList.add('fw-profile__field--bad');
+            var field = slot.closest('.pf-field');
+            if (field) field.classList.add('pf-field--bad');
         });
-        var first = form.querySelector('.fw-profile__field--bad input');
+        var first = form.querySelector('.pf-field--bad input, .pf-field--bad select, .pf-field--bad textarea');
         if (first) first.focus();
     }
 
-    async function open(e) {
-        opener = e && e.currentTarget;
-        clearErrors();
-        form.reset();
-        loading.textContent = 'Loading your profile…';
-        loading.hidden = false;
-        content.hidden = true;
-        save.disabled = true;
-        dialog.classList.add('fw-profile--open');
+    // A form that undoes something asks once more before it goes: the first press arms
+    // it and says so, and a second within a few seconds sends it.
+    function confirmed(form) {
+        var question = form.getAttribute('data-confirm');
+        if (!question) return true;
+        var button = form.querySelector('button[type="submit"]');
+        if (form.dataset.armed === '1') return true;
 
-        try {
-            var res = await fetch('/Profile/Details', { headers: { 'Accept': 'application/json' } });
-            if (!res.ok) throw new Error();
-            var me = await res.json();
-
-            field('FirstName').value = me.firstName;
-            field('MiddleName').value = me.middleName;
-            field('LastName').value = me.lastName;
-            dialog.querySelector('[data-profile-email]').textContent = me.email;
-            dialog.querySelector('[data-profile-role]').textContent = me.role;
-
-            loading.hidden = true;
-            content.hidden = false;
-            save.disabled = false;
-            field('FirstName').focus();
-        } catch (err) {
-            loading.textContent = 'Your profile could not be loaded. Close this and try again.';
-        }
+        form.dataset.armed = '1';
+        var was = button.textContent;
+        button.textContent = question + ' Click again';
+        button.classList.add('pf-btn--armed');
+        setTimeout(function () {
+            form.dataset.armed = '';
+            button.textContent = was;
+            button.classList.remove('pf-btn--armed');
+        }, 4000);
+        return false;
     }
 
-    function close() {
-        dialog.classList.remove('fw-profile--open');
-        if (opener && opener.focus) opener.focus();
-    }
+    document.querySelectorAll('[data-profile-form]').forEach(function (form) {
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (!confirmed(form)) return;
 
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        clearErrors();
-        save.disabled = true;
-        save.textContent = 'Saving…';
+            clearErrors(form);
+            var button = form.querySelector('button[type="submit"]');
+            var label = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Saving…';
 
-        try {
-            var res = await fetch('/Profile/Update', { method: 'POST', body: new FormData(form) });
-            var body = null;
-            try { body = await res.json(); } catch (x) { /* not JSON */ }
-
-            if (!res.ok) {
-                showErrors((body && body.errors) || { form: 'Your changes could not be saved. Try again.' });
-                return;
+            try {
+                var res = await fetch(form.getAttribute('action'), { method: 'POST', body: new FormData(form) });
+                if (res.ok) {
+                    location.reload();
+                    return;
+                }
+                var body = null;
+                try { body = await res.json(); } catch (x) { /* not JSON */ }
+                showErrors(form, (body && body.errors) || { form: 'This could not be saved. Try again.' });
+            } catch (err) {
+                showErrors(form, { form: 'This could not be saved. Check your connection and try again.' });
             }
 
-            // The rail and the sheet both name the person. The rest of the page is drawn
-            // from the account on the next load, which the server reads fresh.
-            document.querySelectorAll('.fw-sidebar__profile-name, .fw-sheet__name').forEach(function (el) {
-                el.textContent = body.name;
-            });
-            close();
-        } catch (err) {
-            showErrors({ form: 'Your changes could not be saved. Check your connection and try again.' });
-        } finally {
-            save.disabled = false;
-            save.textContent = 'Save changes';
-        }
+            form.dataset.armed = '';
+            button.disabled = false;
+            button.textContent = label;
+        });
     });
 
-    document.querySelectorAll('[data-profile-open]').forEach(function (btn) {
-        btn.addEventListener('click', open);
+    // Mobile numbers are written as the driver app writes them, 09XX XXX XXXX, while
+    // they are typed.
+    document.querySelectorAll('[data-phone]').forEach(function (input) {
+        input.addEventListener('input', function () {
+            var d = input.value.replace(/\D/g, '').slice(0, 11);
+            input.value = d.length <= 4 ? d
+                : d.length <= 7 ? d.slice(0, 4) + ' ' + d.slice(4)
+                : d.slice(0, 4) + ' ' + d.slice(4, 7) + ' ' + d.slice(7);
+        });
     });
-    dialog.querySelectorAll('[data-profile-close]').forEach(function (btn) {
-        btn.addEventListener('click', close);
-    });
-    dialog.addEventListener('click', function (e) { if (e.target === dialog) close(); });
 
-    // Named for dialog-stack.js, which closes the frontmost dialog on Escape.
-    window.fwCloseProfile = close;
+    // Filing leave opens under the heading and closes again once it has done its job.
+    var leaveForm = document.getElementById('pfLeaveForm');
+    var leaveOpener = document.querySelector('.pf-card-head [data-leave-toggle]');
+    document.querySelectorAll('[data-leave-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var open = leaveForm.hidden;
+            leaveForm.hidden = !open;
+            if (leaveOpener) {
+                leaveOpener.setAttribute('aria-expanded', open ? 'true' : 'false');
+                leaveOpener.hidden = open;
+            }
+            if (open) leaveForm.querySelector('select').focus();
+        });
+    });
+
+    // How many days the chosen dates come to, said beside them.
+    var start = document.querySelector('[data-leave-start]');
+    var end = document.querySelector('[data-leave-end]');
+    var days = document.querySelector('[data-leave-days]');
+    function countDays() {
+        if (!start || !end || !days) return;
+        if (end.value && start.value && end.value < start.value) end.value = start.value;
+        var a = new Date(start.value), b = new Date(end.value);
+        var n = Math.round((b - a) / 86400000) + 1;
+        days.textContent = isFinite(n) && n > 0 ? n + (n === 1 ? ' day. ' : ' days. ') : '';
+    }
+    if (start && end) {
+        start.addEventListener('change', countDays);
+        end.addEventListener('change', countDays);
+        countDays();
+    }
 })();

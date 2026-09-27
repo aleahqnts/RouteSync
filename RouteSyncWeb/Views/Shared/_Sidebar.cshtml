@@ -193,13 +193,13 @@
 
     @* User profile. The name opens the person's own account, beside the way out. *@
     <div class="fw-sidebar__profile">
-        <button type="button" class="fw-sidebar__me" data-profile-open title="Edit your profile">
+        <a class="fw-sidebar__me" asp-controller="Profile" asp-action="Index" title="My profile">
             <img src="~/images/user-avatar.png" alt="" class="fw-sidebar__avatar" />
             <span class="fw-sidebar__profile-info">
                 <span class="fw-sidebar__profile-name">@User.Identity?.Name</span>
                 <span class="fw-sidebar__profile-role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
             </span>
-        </button>
+        </a>
         <div class="fw-sidebar__logout">
             <button type="button" class="fw-sidebar__logout-btn" data-signout title="Logout">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -291,11 +291,11 @@
        session used to sit here, which put the one destructive control in the sheet
        under the thumb that opened it. *@
     <div class="fw-sheet__account">
-        <button type="button" class="fw-sheet__who" data-profile-open>
+        <a class="fw-sheet__who" asp-controller="Profile" asp-action="Index">
             <span class="fw-sheet__name">@User.Identity?.Name</span>
             <span class="fw-sheet__role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
-            <span class="fw-sheet__edit">Edit profile</span>
-        </button>
+            <span class="fw-sheet__edit">My profile</span>
+        </a>
     </div>
 
     <ul class="fw-sheet__list">
@@ -340,88 +340,6 @@
             </form>
         </div>
     </div>
-</div>
-
-@* The signed-in person's own account: their name, and their password. What they sign in
-   with and what they may do are shown and left to an administrator. Filled by profile.js
-   when opened, so every page does not read the account to draw a dialog nobody opened. *@
-<div class="fw-profile" id="fwProfile" data-dialog-close="fwCloseProfile"
-     role="dialog" aria-modal="true" aria-labelledby="fwProfileTitle">
-    <form class="fw-profile__box" id="fwProfileForm" novalidate>
-        @Html.AntiForgeryToken()
-        <div class="fw-profile__head">
-            <h2 class="fw-profile__title" id="fwProfileTitle">My Profile</h2>
-            <button type="button" class="fw-profile__close" data-profile-close aria-label="Close">&times;</button>
-        </div>
-
-        <div class="fw-profile__body">
-            <div class="fw-profile__loading" data-profile-loading>Loading your profile…</div>
-
-            <div class="fw-profile__content" data-profile-content hidden>
-                <div class="fw-profile__account">
-                    <div>
-                        <span class="fw-profile__label">Email</span>
-                        <span class="fw-profile__fixed" data-profile-email></span>
-                    </div>
-                    <div>
-                        <span class="fw-profile__label">Role</span>
-                        <span class="fw-profile__fixed" data-profile-role></span>
-                    </div>
-                    <p class="fw-profile__note">Your email and role are changed by an administrator on the Users page.</p>
-                </div>
-
-                <fieldset class="fw-profile__group">
-                    <legend class="fw-profile__legend">Name</legend>
-                    <div class="fw-profile__row">
-                        <label class="fw-profile__field">
-                            <span class="fw-profile__label">First name</span>
-                            <input type="text" name="FirstName" maxlength="50" autocomplete="given-name" required />
-                            <span class="fw-profile__err" data-err="firstName"></span>
-                        </label>
-                        <label class="fw-profile__field">
-                            <span class="fw-profile__label">Middle name <em>(optional)</em></span>
-                            <input type="text" name="MiddleName" maxlength="50" autocomplete="additional-name" />
-                            <span class="fw-profile__err" data-err="middleName"></span>
-                        </label>
-                    </div>
-                    <label class="fw-profile__field">
-                        <span class="fw-profile__label">Last name</span>
-                        <input type="text" name="LastName" maxlength="50" autocomplete="family-name" required />
-                        <span class="fw-profile__err" data-err="lastName"></span>
-                    </label>
-                </fieldset>
-
-                <fieldset class="fw-profile__group">
-                    <legend class="fw-profile__legend">Change password <em>(optional)</em></legend>
-                    <label class="fw-profile__field">
-                        <span class="fw-profile__label">Current password</span>
-                        <input type="password" name="CurrentPassword" autocomplete="current-password" />
-                        <span class="fw-profile__err" data-err="currentPassword"></span>
-                    </label>
-                    <div class="fw-profile__row">
-                        <label class="fw-profile__field">
-                            <span class="fw-profile__label">New password</span>
-                            <input type="password" name="NewPassword" autocomplete="new-password" />
-                            <span class="fw-profile__err" data-err="newPassword"></span>
-                        </label>
-                        <label class="fw-profile__field">
-                            <span class="fw-profile__label">Confirm new password</span>
-                            <input type="password" name="ConfirmPassword" autocomplete="new-password" />
-                            <span class="fw-profile__err" data-err="confirmPassword"></span>
-                        </label>
-                    </div>
-                    <p class="fw-profile__hint">@FleetWise.Services.PasswordPolicy.Rule Leave blank to keep your current password.</p>
-                </fieldset>
-            </div>
-
-            <p class="fw-profile__err fw-profile__err--form" data-err="form"></p>
-        </div>
-
-        <div class="fw-profile__actions">
-            <button type="button" class="fw-profile__cancel" data-profile-close>Cancel</button>
-            <button type="submit" class="fw-profile__save" data-profile-save disabled>Save changes</button>
-        </div>
-    </form>
 </div>
 
 <script>
