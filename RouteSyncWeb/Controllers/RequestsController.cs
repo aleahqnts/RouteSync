@@ -102,6 +102,14 @@ namespace FleetWise.Controllers
             var names = usersTask.Result.Models
                 .ToDictionary(u => u.UserId, u => $"{u.FirstName} {u.LastName}");
 
+            // Staff file leave from their profile into this same queue. Their requests are
+            // marked so, and whoever is reading is shown their own without the controls.
+            var staff = usersTask.Result.Models
+                .Where(u => u.RoleId != DriverRoleId)
+                .Select(u => u.UserId)
+                .ToHashSet();
+            var me = SenderId();
+
             // An approval part way through still belongs in the queue. It is work
             // somebody has started and not finished, and the one place it must not be
             // filed under is Approved, which it is not.
@@ -123,7 +131,13 @@ namespace FleetWise.Controllers
                     // A queue is worked oldest first; history reads newest first. Filing
                     // order serves both better than the dates being asked for.
                     .OrderByDescending(r => r.FiledAt)
-                    .Select(r => ToRow(r, names, all))
+                    .Select(r =>
+                    {
+                        var row = ToRow(r, names, all);
+                        row.IsStaff = staff.Contains(r.UserId);
+                        row.IsOwn = me == r.UserId;
+                        return row;
+                    })
                     .ToList(),
             };
 
@@ -139,6 +153,7 @@ namespace FleetWise.Controllers
 
             var found = await FindAsync(requestId);
             if (found is null) return NotFound();
+            if (IsOwn(found)) return BadRequest(OwnRequest);
 
             if (!LeaveEntitlement.IsOpen(found.Status))
                 return BadRequest($"This request was already {found.Status.ToLowerInvariant()}.");
@@ -190,6 +205,7 @@ namespace FleetWise.Controllers
         {
             var found = await FindAsync(requestId);
             if (found is null) return NotFound();
+            if (IsOwn(found)) return BadRequest(OwnRequest);
 
             if (!LeaveEntitlement.IsOpen(found.Status))
                 return BadRequest($"This request was already {found.Status.ToLowerInvariant()}.");
@@ -283,6 +299,7 @@ namespace FleetWise.Controllers
 
             var found = await FindAsync(req.RequestId);
             if (found is null) return NotFound();
+            if (IsOwn(found)) return BadRequest(OwnRequest);
 
             if (!LeaveEntitlement.IsOpen(found.Status))
                 return BadRequest($"This request was already {found.Status.ToLowerInvariant()}.");
@@ -359,9 +376,23 @@ namespace FleetWise.Controllers
                 .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
                 .Get()).Models.FirstOrDefault();
 
+        // The role that signs in to the driver app, as elsewhere on the dashboard.
+        private const int DriverRoleId = 2;
+
         private int? SenderId() =>
             int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
                 ? id : null;
+
+        /// <summary>Whether the request is the signed-in person's own.</summary>
+        /// <remarks>
+        /// Staff file leave from their profile, and it comes to this same queue. Whoever
+        /// filed a request is never the one to grant it, refuse it, cancel it, take it back
+        /// or move it along, whatever their role, so every action here asks this first.
+        /// </remarks>
+        private bool IsOwn(LeaveRequest r) => SenderId() is int me && r.UserId == me;
+
+        private const string OwnRequest =
+            "This is your own request. Someone else with access to Requests has to decide it.";
 
         private static string BlockingMessage(int count) =>
             count == 1
@@ -502,6 +533,7 @@ namespace FleetWise.Controllers
                 .Get()).Models.FirstOrDefault();
 
             if (found is null) return NotFound();
+            if (IsOwn(found)) return BadRequest(OwnRequest);
 
             if (!string.Equals(found.Status, "Approved", StringComparison.OrdinalIgnoreCase))
                 return BadRequest($"Only approved leave can be revoked. This request is {found.Status.ToLowerInvariant()}.");
@@ -636,6 +668,7 @@ namespace FleetWise.Controllers
                 .Get()).Models.FirstOrDefault();
 
             if (found is null) return NotFound();
+            if (IsOwn(found)) return BadRequest(OwnRequest);
 
             if (!IsAskOutstanding(found))
                 return BadRequest("No cancellation is waiting to be answered on this leave.");
@@ -778,6 +811,7 @@ namespace FleetWise.Controllers
                 .Get()).Models.FirstOrDefault();
 
             if (found is null) return NotFound();
+            if (IsOwn(found)) return BadRequest(OwnRequest);
 
             if (!string.Equals(found.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
                 return BadRequest("This request is not waiting on a schedule change.");

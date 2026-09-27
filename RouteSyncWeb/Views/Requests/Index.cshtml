@@ -229,6 +229,10 @@
                             <td data-label="Driver">
                                 <span class="rq-driver">@r.DriverName</span>
                                 <span class="rq-driver-id">@r.DriverId</span>
+                                @if (r.IsStaff)
+                                {
+                                    <span class="rq-staff" title="Filed by a member of staff from their profile">Staff</span>
+                                }
                             </td>
 
                             <td data-label="Type">
@@ -292,7 +296,13 @@
 
                             <td data-label="Actions">
                                 <div class="rq-actions">
-                                    @if (pending)
+                                    @if (r.IsOwn)
+                                    {
+                                        @* The server refuses these too. Shown as a note rather
+                                           than as buttons that could only fail. *@
+                                        <span class="rq-own">Your request &middot; decided by someone else</span>
+                                    }
+                                    else if (pending)
                                     {
                                         <button type="button" class="rq-btn rq-btn--approve"
                                                 onclick="rqDecide(@r.RequestId, 'Approved')">Approve</button>
@@ -316,14 +326,14 @@
                                     @* Answering the driver comes before taking days off
                                        them: both end in the leave changing, and only one of
                                        them was asked for. *@
-                                    @if (r.WithdrawAsked)
+                                    @if (!r.IsOwn && r.WithdrawAsked)
                                     {
                                         <button type="button" class="rq-btn rq-btn--approve"
                                                 onclick="rqWithdrawal(@r.RequestId, true)">Cancel the leave</button>
                                         <button type="button" class="rq-btn rq-btn--outline"
                                                 onclick="rqWithdrawal(@r.RequestId, false)">Keep the leave</button>
                                     }
-                                    else if (r.RevokableDays.Count > 0)
+                                    else if (!r.IsOwn && r.RevokableDays.Count > 0)
                                     {
                                         <button type="button" class="rq-btn rq-btn--reject"
                                                 onclick="rqRevoke(@r.RequestId)">Revoke</button>

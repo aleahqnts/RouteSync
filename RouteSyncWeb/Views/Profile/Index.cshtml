@@ -1,0 +1,335 @@
+﻿@model ProfilePageViewModel
+@{
+    ViewData["Title"] = "My Profile";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var saved = TempData["ProfileSaved"] as string;
+
+    static string StatusClass(string status) => status switch
+    {
+        "Approved" => "pf-badge--ok",
+        "Rejected" => "pf-badge--bad",
+        "Cancelled" => "pf-badge--idle",
+        _ => "pf-badge--wait",
+    };
+
+    static string StatusLabel(string status) =>
+        status == "AwaitingChange" ? "Pending" : status;
+
+    static string Span(LeaveRequest r) =>
+        r.StartDate.Date == r.EndDate.Date
+            ? r.StartDate.ToString("MMM d, yyyy")
+            : r.StartDate.Year == r.EndDate.Year
+                ? $"{r.StartDate:MMM d} – {r.EndDate:MMM d, yyyy}"
+                : $"{r.StartDate:MMM d, yyyy} – {r.EndDate:MMM d, yyyy}";
+}
+
+<h2 class="pf-title">My Profile</h2>
+
+@if (!string.IsNullOrEmpty(saved))
+{
+    <div class="pf-flash" role="status">@saved</div>
+}
+
+@* Who this is, before anything about them. *@
+<section class="pf-card pf-hero">
+    <div class="pf-avatar" aria-hidden="true">@Model.Initials</div>
+    <div class="pf-hero-text">
+        <div class="pf-hero-name">@Model.FullName</div>
+        <div class="pf-hero-tags">
+            <span class="pf-badge pf-badge--role">@Model.Role</span>
+            <span class="pf-badge @(Model.Status == "Activated" ? "pf-badge--ok" : "pf-badge--idle")">@Model.Status</span>
+        </div>
+        <div class="pf-hero-since">With RouteSync since @Model.MemberSince.ToString("MMMM yyyy")</div>
+    </div>
+
+    @* What this person has done lately, in place of a driver's trip counts. *@
+    <div class="pf-stats">
+        <div class="pf-stat">
+            <span class="pf-stat-n">@(Model.ActionsThisMonth?.ToString("N0") ?? "—")</span>
+            <span class="pf-stat-l">Actions this month</span>
+        </div>
+        <div class="pf-stat">
+            <span class="pf-stat-n">@(Model.DecisionsThisMonth?.ToString("N0") ?? "—")</span>
+            <span class="pf-stat-l">Leave decisions this month</span>
+        </div>
+        <div class="pf-stat">
+            <span class="pf-stat-n">@Model.LeaveDaysTaken</span>
+            <span class="pf-stat-l">Leave days taken in @Model.Year</span>
+        </div>
+    </div>
+</section>
+
+<div class="pf-cols">
+
+    <div class="pf-col">
+
+        <section class="pf-card">
+            <h3 class="pf-card-title">Account</h3>
+            <dl class="pf-dl">
+                <dt>Email</dt><dd>@Model.Email</dd>
+                <dt>Role</dt><dd>@Model.Role</dd>
+                <dt>Status</dt><dd>@Model.Status</dd>
+                <dt>Member since</dt><dd>@Model.MemberSince.ToString("MMM d, yyyy")</dd>
+                <dt>Last sign-in</dt><dd>@(Model.LastSignIn?.ToString("MMM d, yyyy h:mm tt") ?? "—")</dd>
+            </dl>
+            <p class="pf-note">Your email and role are changed by an administrator on the Users page.</p>
+        </section>
+
+        <section class="pf-card">
+            <h3 class="pf-card-title">Personal details</h3>
+            <form class="pf-form" data-profile-form action="@Url.Action("SaveDetails", "Profile")" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="pf-row3">
+                    <label class="pf-field">
+                        <span class="pf-label">First name</span>
+                        <input type="text" name="FirstName" value="@Model.FirstName" maxlength="50" autocomplete="given-name" required />
+                        <span class="pf-err" data-err="firstName"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">Middle name <em>(optional)</em></span>
+                        <input type="text" name="MiddleName" value="@Model.MiddleName" maxlength="50" autocomplete="additional-name" />
+                        <span class="pf-err" data-err="middleName"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">Last name</span>
+                        <input type="text" name="LastName" value="@Model.LastName" maxlength="50" autocomplete="family-name" required />
+                        <span class="pf-err" data-err="lastName"></span>
+                    </label>
+                </div>
+                <div class="pf-row2">
+                    <label class="pf-field">
+                        <span class="pf-label">Contact number</span>
+                        <input type="tel" name="ContactNumber" value="@Model.ContactNumber" placeholder="09XX XXX XXXX" data-phone inputmode="numeric" autocomplete="tel" />
+                        <span class="pf-err" data-err="contactNumber"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">Address</span>
+                        <input type="text" name="Address" value="@Model.Address" maxlength="200" placeholder="Home address" autocomplete="street-address" />
+                        <span class="pf-err" data-err="address"></span>
+                    </label>
+                </div>
+                <div class="pf-row2">
+                    <label class="pf-field">
+                        <span class="pf-label">Emergency contact name</span>
+                        <input type="text" name="EmergencyContactName" value="@Model.EmergencyContactName" maxlength="100" />
+                        <span class="pf-err" data-err="emergencyContactName"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">Emergency contact number</span>
+                        <input type="tel" name="EmergencyContactNumber" value="@Model.EmergencyContactNumber" placeholder="09XX XXX XXXX" data-phone inputmode="numeric" />
+                        <span class="pf-err" data-err="emergencyContactNumber"></span>
+                    </label>
+                </div>
+                <p class="pf-err pf-err--form" data-err="form"></p>
+                <div class="pf-actions">
+                    <button type="submit" class="pf-btn pf-btn--primary">Save details</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="pf-card">
+            <h3 class="pf-card-title">Change password</h3>
+            <form class="pf-form" data-profile-form action="@Url.Action("ChangePassword", "Profile")" novalidate>
+                @Html.AntiForgeryToken()
+                <label class="pf-field">
+                    <span class="pf-label">Current password</span>
+                    <input type="password" name="CurrentPassword" autocomplete="current-password" />
+                    <span class="pf-err" data-err="currentPassword"></span>
+                </label>
+                <div class="pf-row2">
+                    <label class="pf-field">
+                        <span class="pf-label">New password</span>
+                        <input type="password" name="NewPassword" autocomplete="new-password" />
+                        <span class="pf-err" data-err="newPassword"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">Confirm new password</span>
+                        <input type="password" name="ConfirmPassword" autocomplete="new-password" />
+                        <span class="pf-err" data-err="confirmPassword"></span>
+                    </label>
+                </div>
+                <p class="pf-hint">@FleetWise.Services.PasswordPolicy.Rule</p>
+                <p class="pf-err pf-err--form" data-err="form"></p>
+                <div class="pf-actions">
+                    <button type="submit" class="pf-btn pf-btn--primary">Change password</button>
+                </div>
+            </form>
+        </section>
+
+    </div>
+
+    <div class="pf-col">
+
+        @* What is left of each allowance. Pending days are named separately, as on the
+           driver app, or a request waiting on a decision reads as days still available. *@
+        <section class="pf-card">
+            <h3 class="pf-card-title">Leave credits <span class="pf-card-sub">@Model.Year</span></h3>
+            <div class="pf-credits">
+                @foreach (var b in Model.Balances)
+                {
+                    <div class="pf-credit">
+                        <span class="pf-credit-n">@b.Left<span class="pf-credit-of">/@b.OfYear</span></span>
+                        <span class="pf-credit-l">@b.Type</span>
+                        @if (b.Pending > 0)
+                        {
+                            <span class="pf-credit-p">@b.Pending pending</span>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="pf-card">
+            <div class="pf-card-head">
+                <h3 class="pf-card-title">My leave requests</h3>
+                <button type="button" class="pf-btn pf-btn--primary pf-btn--sm" data-leave-toggle aria-expanded="false" aria-controls="pfLeaveForm">File leave</button>
+            </div>
+
+            <form id="pfLeaveForm" class="pf-form pf-leave-form" data-profile-form action="@Url.Action("FileLeave", "Profile")" hidden novalidate>
+                @Html.AntiForgeryToken()
+                <div class="pf-row3">
+                    <label class="pf-field">
+                        <span class="pf-label">Type</span>
+                        <select name="LeaveType">
+                            @foreach (var t in LeaveEntitlement.Types)
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </select>
+                        <span class="pf-err" data-err="leaveType"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">From</span>
+                        <input type="date" name="StartDate" value="@Model.Today.ToString("yyyy-MM-dd")" min="@Model.Earliest.ToString("yyyy-MM-dd")" data-leave-start />
+                        <span class="pf-err" data-err="startDate"></span>
+                    </label>
+                    <label class="pf-field">
+                        <span class="pf-label">To</span>
+                        <input type="date" name="EndDate" value="@Model.Today.ToString("yyyy-MM-dd")" min="@Model.Earliest.ToString("yyyy-MM-dd")" data-leave-end />
+                        <span class="pf-err" data-err="endDate"></span>
+                    </label>
+                </div>
+                <label class="pf-field">
+                    <span class="pf-label">Reason <em>(optional)</em></span>
+                    <textarea name="Reason" rows="2" maxlength="500"></textarea>
+                    <span class="pf-err" data-err="reason"></span>
+                </label>
+                <p class="pf-hint">
+                    <span data-leave-days></span>
+                    Vacation is filed ahead; sick and emergency leave can be filed up to @LeaveEntitlement.BackdatingDays days late.
+                </p>
+                <p class="pf-err pf-err--form" data-err="form"></p>
+                <div class="pf-actions">
+                    <button type="button" class="pf-btn pf-btn--ghost" data-leave-toggle>Cancel</button>
+                    <button type="submit" class="pf-btn pf-btn--primary">Submit request</button>
+                </div>
+            </form>
+
+            @if (Model.Requests.Count == 0)
+            {
+                <p class="pf-empty">You have not filed any leave.</p>
+            }
+            else
+            {
+                <ul class="pf-leave-list">
+                    @foreach (var r in Model.Requests)
+                    {
+                        var open = LeaveEntitlement.IsOpen(r.Status);
+                        var approved = r.Status == "Approved";
+                        var canAsk = approved && r.WithdrawRequestedAt is null && r.StartDate.Date >= Model.Today;
+                        var chip = approved && r.WithdrawRequestedAt is not null
+                            ? (r.WithdrawAnsweredAt is null ? "Cancel asked" : "Cancel refused")
+                            : null;
+                        var days = LeaveEntitlement.Days(r);
+
+                        <li class="pf-leave">
+                            <div class="pf-leave-main">
+                                <div class="pf-leave-top">
+                                    <span class="pf-leave-type">@r.LeaveType</span>
+                                    <span class="pf-badge @StatusClass(r.Status)">@StatusLabel(r.Status)</span>
+                                    @if (chip is not null)
+                                    {
+                                        <span class="pf-badge pf-badge--idle">@chip</span>
+                                    }
+                                </div>
+                                <div class="pf-leave-span">@Span(r) &middot; @days @(days == 1 ? "day" : "days")</div>
+                                @if (!string.IsNullOrWhiteSpace(r.Reason))
+                                {
+                                    <div class="pf-leave-note">“@r.Reason”</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(r.DecisionNote))
+                                {
+                                    <div class="pf-leave-note pf-leave-note--answer">Answer: @r.DecisionNote</div>
+                                }
+                                @if (r.RevokedDates?.Count > 0)
+                                {
+                                    var n = r.RevokedDates.Count;
+                                    var taken = $"{n} {(n == 1 ? "day was" : "days were")} taken back"
+                                        + (string.IsNullOrWhiteSpace(r.RevokeNote) ? "" : $": {r.RevokeNote}");
+                                    <div class="pf-leave-note pf-leave-note--answer">@taken</div>
+                                }
+                            </div>
+
+                            @if (open)
+                            {
+                                <form class="pf-leave-act" data-profile-form data-confirm="Cancel this request?"
+                                      action="@Url.Action("CancelLeave", "Profile", new { requestId = r.RequestId })">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="pf-btn pf-btn--ghost pf-btn--sm">Cancel request</button>
+                                    <p class="pf-err" data-err="form"></p>
+                                </form>
+                            }
+                            else if (canAsk)
+                            {
+                                <details class="pf-leave-act">
+                                    <summary class="pf-btn pf-btn--ghost pf-btn--sm">Ask to cancel</summary>
+                                    <form class="pf-form pf-ask" data-profile-form
+                                          action="@Url.Action("AskToCancel", "Profile", new { requestId = r.RequestId })">
+                                        @Html.AntiForgeryToken()
+                                        <label class="pf-field">
+                                            <span class="pf-label">Why should this leave be cancelled?</span>
+                                            <input type="text" name="reason" maxlength="500" />
+                                            <span class="pf-err" data-err="withdrawReason"></span>
+                                        </label>
+                                        <p class="pf-err pf-err--form" data-err="form"></p>
+                                        <button type="submit" class="pf-btn pf-btn--primary pf-btn--sm">Send</button>
+                                    </form>
+                                </details>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="pf-card">
+            <h3 class="pf-card-title">Recent activity</h3>
+            @if (Model.Recent.Count == 0)
+            {
+                <p class="pf-empty">Nothing recorded yet.</p>
+            }
+            else
+            {
+                <ul class="pf-activity">
+                    @foreach (var e in Model.Recent)
+                    {
+                        <li>
+                            <span class="pf-activity-what">@e.Summary</span>
+                            <span class="pf-activity-when">@FleetWise.Services.PhClock.ToPh(e.OccurredAt).ToString("MMM d, h:mm tt")</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/profile.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script src="~/js/profile.js" asp-append-version="true"></script>
+}
