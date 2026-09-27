@@ -191,13 +191,15 @@
         </ul>
     </nav>
 
-    @* User profile *@
+    @* User profile. The name opens the person's own account, beside the way out. *@
     <div class="fw-sidebar__profile">
-        <img src="~/images/user-avatar.png" alt="User avatar" class="fw-sidebar__avatar" />
-        <div class="fw-sidebar__profile-info">
-            <span class="fw-sidebar__profile-name">@User.Identity?.Name</span>
-            <span class="fw-sidebar__profile-role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
-        </div>
+        <a class="fw-sidebar__me" asp-controller="Profile" asp-action="Index" title="My profile">
+            <img src="~/images/user-avatar.png" alt="" class="fw-sidebar__avatar" />
+            <span class="fw-sidebar__profile-info">
+                <span class="fw-sidebar__profile-name">@User.Identity?.Name</span>
+                <span class="fw-sidebar__profile-role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
+            </span>
+        </a>
         <div class="fw-sidebar__logout">
             <button type="button" class="fw-sidebar__logout-btn" data-signout title="Logout">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -289,10 +291,11 @@
        session used to sit here, which put the one destructive control in the sheet
        under the thumb that opened it. *@
     <div class="fw-sheet__account">
-        <span class="fw-sheet__who">
+        <a class="fw-sheet__who" asp-controller="Profile" asp-action="Index">
             <span class="fw-sheet__name">@User.Identity?.Name</span>
             <span class="fw-sheet__role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
-        </span>
+            <span class="fw-sheet__edit">My profile</span>
+        </a>
     </div>
 
     <ul class="fw-sheet__list">

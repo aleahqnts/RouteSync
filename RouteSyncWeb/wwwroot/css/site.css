@@ -666,6 +666,7 @@ html.rs-dialog-open .main-content {
 .sch-week-label.sch-week-label,
 .ro-title.ro-title,
 .ro-month.ro-month,
+.pf-title.pf-title,
 .rs-bar-title.rs-bar-title {
     font-family: 'Poppins', 'Segoe UI', sans-serif;
     text-transform: uppercase;
@@ -683,7 +684,8 @@ html.rs-dialog-open .main-content {
 .rq-title.rq-title,
 .au-title.au-title,
 .sch-title.sch-title,
-.ro-title.ro-title {
+.ro-title.ro-title,
+.pf-title.pf-title {
     font-weight: 800;
 }
 

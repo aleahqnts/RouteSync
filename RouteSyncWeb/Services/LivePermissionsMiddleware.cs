@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 namespace FleetWise.Services
 {
     /// <summary>
-    /// Replaces the permission claims on the signed-in user with what their role holds now.
+    /// Replaces the name, email, role and permission claims on the signed-in user with what
+    /// their account and role hold now.
     /// </summary>
     /// <remarks>
     /// Done here rather than at each place that asks, so nothing downstream changes. The
@@ -14,6 +15,10 @@ namespace FleetWise.Services
     ///
     /// Runs between authentication and authorization: after the cookie has been read, and
     /// before anything decides what it allows.
+    ///
+    /// The name, email and role are refreshed for the same reason. The sidebar and the
+    /// audit trail read the name from here, and the permissions are looked up by role, so
+    /// a stale role would carry stale permissions with it.
     /// </remarks>
     public class LivePermissionsMiddleware
     {
@@ -21,7 +26,7 @@ namespace FleetWise.Services
 
         public LivePermissionsMiddleware(RequestDelegate next) => _next = next;
 
-        public async Task InvokeAsync(HttpContext context, RolePermissions roles)
+        public async Task InvokeAsync(HttpContext context, RolePermissions roles, LiveAccount accounts)
         {
             var identity = context.User?.Identity as ClaimsIdentity;
 
@@ -34,13 +39,22 @@ namespace FleetWise.Services
 
             if (isPage && identity?.IsAuthenticated == true)
             {
-                var roleName = context.User!.FindFirst(ClaimTypes.Role)?.Value;
-                var live = await roles.ForRoleAsync(roleName);
-
                 // Everything the cookie carries except the permissions, which are replaced.
                 // The forced-password-change claim is among the ones kept, or a first
                 // sign-in would escape the change it is there to compel.
-                var kept = identity.Claims.Where(c => c.Type != "perm");
+                var kept = identity.Claims.Where(c => c.Type != "perm").ToList();
+
+                if (int.TryParse(context.User!.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId)
+                    && await accounts.ForUserAsync(userId) is AccountNow now)
+                {
+                    Replace(kept, ClaimTypes.Name, now.Name);
+                    Replace(kept, ClaimTypes.Email, now.Email);
+                    if (now.RoleName is not null) Replace(kept, ClaimTypes.Role, now.RoleName);
+                }
+
+                var roleName = kept.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+                var live = await roles.ForRoleAsync(roleName);
+
                 var rebuilt = new ClaimsIdentity(kept, identity.AuthenticationType);
                 foreach (var permission in live)
                     rebuilt.AddClaim(new Claim("perm", permission));
@@ -49,6 +63,12 @@ namespace FleetWise.Services
             }
 
             await _next(context);
+        }
+
+        private static void Replace(List<Claim> claims, string type, string value)
+        {
+            claims.RemoveAll(c => c.Type == type);
+            claims.Add(new Claim(type, value));
         }
     }
 }

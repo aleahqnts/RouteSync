@@ -141,6 +141,9 @@ namespace FleetWise.Controllers
             user.UpdatedAt = PhClock.Now;
 
             await _supabase.From<UserModel>().Update(user);
+            // The account's owner may be signed in, and their name and role are read from
+            // here on their next page rather than from their sign-in.
+            LiveAccount.Invalidate();
 
             var changes = new List<string>();
             if (!string.Equals(wasStatus, model.AccountStatus, StringComparison.OrdinalIgnoreCase))

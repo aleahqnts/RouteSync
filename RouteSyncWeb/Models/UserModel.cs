@@ -38,4 +38,18 @@ public class UserModel : BaseModel
 
     [Column("last_login")]
     public DateTime? LastLogin { get; set; }
+
+    // Personal details, the same four the driver app's profile edits. Every user has them,
+    // and staff now edit their own from the dashboard profile.
+    [Column("contact_number")]
+    public string? ContactNumber { get; set; }
+
+    [Column("address")]
+    public string? Address { get; set; }
+
+    [Column("emergency_contact_name")]
+    public string? EmergencyContactName { get; set; }
+
+    [Column("emergency_contact_number")]
+    public string? EmergencyContactNumber { get; set; }
 }

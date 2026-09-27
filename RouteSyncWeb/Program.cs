@@ -111,6 +111,7 @@ builder.Services.AddScoped<SecurityDetector>();
 builder.Services.AddSingleton<RouteSnapTracker>();
 
 builder.Services.AddScoped<RolePermissions>();
+builder.Services.AddScoped<LiveAccount>();
 builder.Services.AddScoped<NavCounts>();
 builder.Services.AddScoped<InspectionPhotoStore>();
 builder.Services.AddScoped<SchedulingData>();

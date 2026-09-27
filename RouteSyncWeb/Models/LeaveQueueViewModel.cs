@@ -42,6 +42,12 @@
         public string Status { get; set; } = "";
         public string Filed { get; set; } = "";
 
+        /// <summary>Filed by a member of staff from their profile rather than by a driver.</summary>
+        public bool IsStaff { get; set; }
+
+        /// <summary>The signed-in person's own request, which somebody else has to decide.</summary>
+        public bool IsOwn { get; set; }
+
         /// <summary>
         /// Days of this allowance left once this request is counted, out of the year's
         /// entitlement.
