@@ -285,8 +285,8 @@
         padding: 0;
         margin: -2px 0 14px;
         display: grid;
-        grid-template-columns: repeat(4, max-content);
-        gap: 5px 18px;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px 12px;
     }
 
     .pw-rules li {
@@ -467,7 +467,6 @@
         .pf-stat { padding: 8px 10px; }
         .pf-stat-n { font-size: 1.1rem; }
         .pf-row2, .pf-row3 { grid-template-columns: minmax(0, 1fr); }
-        .pw-rules { grid-template-columns: 1fr 1fr; }
         .pf-credit { padding: 10px; }
         .pf-credit-n { font-size: 1.2rem; }
         .pf-leave { flex-direction: column; }
