@@ -132,24 +132,49 @@
             <h3 class="pf-card-title">Change password</h3>
             <form class="pf-form" data-profile-form action="@Url.Action("ChangePassword", "Profile")" novalidate>
                 @Html.AntiForgeryToken()
-                <label class="pf-field">
-                    <span class="pf-label">Current password</span>
-                    <input type="password" name="CurrentPassword" autocomplete="current-password" />
-                    <span class="pf-err" data-err="currentPassword"></span>
-                </label>
+                <div class="pf-field">
+                        <label class="pf-label" for="CurrentPassword">Current password</label>
+                        <span class="pf-pw">
+                            <input type="password" id="CurrentPassword" name="CurrentPassword" autocomplete="current-password" />
+                            <button type="button" class="eye" data-for="CurrentPassword" aria-label="Show password">
+                            <svg class="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+                            <svg class="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7c2 0 3.8.6 5.3 1.5M22 12s-3.5 7-10 7c-2 0-3.8-.6-5.3-1.5" /><path d="M3 3l18 18" /><circle cx="12" cy="12" r="3" /></svg>
+                        </button>
+                        </span>
+                        <span class="pf-err" data-err="currentPassword"></span>
+                    </div>
                 <div class="pf-row2">
-                    <label class="pf-field">
-                        <span class="pf-label">New password</span>
-                        <input type="password" name="NewPassword" autocomplete="new-password" />
+                    <div class="pf-field">
+                        <label class="pf-label" for="NewPassword">New password</label>
+                        <span class="pf-pw">
+                            <input type="password" id="NewPassword" name="NewPassword" autocomplete="new-password" />
+                            <button type="button" class="eye" data-for="NewPassword" aria-label="Show password">
+                            <svg class="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+                            <svg class="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7c2 0 3.8.6 5.3 1.5M22 12s-3.5 7-10 7c-2 0-3.8-.6-5.3-1.5" /><path d="M3 3l18 18" /><circle cx="12" cy="12" r="3" /></svg>
+                        </button>
+                        </span>
                         <span class="pf-err" data-err="newPassword"></span>
-                    </label>
-                    <label class="pf-field">
-                        <span class="pf-label">Confirm new password</span>
-                        <input type="password" name="ConfirmPassword" autocomplete="new-password" />
+                    </div>
+                    <div class="pf-field">
+                        <label class="pf-label" for="ConfirmPassword">Confirm new password</label>
+                        <span class="pf-pw">
+                            <input type="password" id="ConfirmPassword" name="ConfirmPassword" autocomplete="new-password" />
+                            <button type="button" class="eye" data-for="ConfirmPassword" aria-label="Show password">
+                            <svg class="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+                            <svg class="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7c2 0 3.8.6 5.3 1.5M22 12s-3.5 7-10 7c-2 0-3.8-.6-5.3-1.5" /><path d="M3 3l18 18" /><circle cx="12" cy="12" r="3" /></svg>
+                        </button>
+                        </span>
                         <span class="pf-err" data-err="confirmPassword"></span>
-                    </label>
+                    </div>
                 </div>
-                <p class="pf-hint">@FleetWise.Services.PasswordPolicy.Rule</p>
+                @* The same live checklist as the change and reset pages, driven by
+                   password-ui.js from the same policy. *@
+                <ul class="pw-rules" id="pwRules" data-min="@FleetWise.Services.PasswordPolicy.MinLength">
+                    <li data-rule="len"><span class="dot"></span>@(FleetWise.Services.PasswordPolicy.MinLength)+ characters</li>
+                    <li data-rule="digit"><span class="dot"></span>A number</li>
+                    <li data-rule="upper"><span class="dot"></span>Uppercase</li>
+                    <li data-rule="lower"><span class="dot"></span>Lowercase</li>
+                </ul>
                 <p class="pf-err pf-err--form" data-err="form"></p>
                 <div class="pf-actions">
                     <button type="submit" class="pf-btn pf-btn--primary">Change password</button>
@@ -331,5 +356,6 @@
 }
 
 @section Scripts {
+    <script src="~/js/password-ui.js" asp-append-version="true"></script>
     <script src="~/js/profile.js" asp-append-version="true"></script>
 }
