@@ -264,9 +264,9 @@
                                                     <span class="rs-pick">
                                                         <select class="sch-sel sch-drv rs-id-list">
                                                             <option value="">Driver…</option>
-                                                            @foreach (var dr in Model.Drivers)
+                                                            @foreach (var dr in Model.Drivers.Where(d => d.Active || cell?.DriverId == d.DriverId))
                                                             {
-                                                                <option value="@dr.DriverId" data-face="@DriverFace(dr.DriverName, dr.DriverId)" selected="@(cell != null && cell.DriverId == dr.DriverId)">@DriverLabel(dr.DriverName, dr.DriverId)</option>
+                                                                <option value="@dr.DriverId" data-face="@DriverFace(dr.DriverName, dr.DriverId)" selected="@(cell != null && cell.DriverId == dr.DriverId)">@DriverLabel(dr.DriverName, dr.DriverId)@(dr.Active ? "" : " (deactivated)")</option>
                                                             }
                                                         </select>
                                                         <span class="rs-pick-face" aria-hidden="true">@(picked is null ? "" : DriverFace(picked.DriverName, picked.DriverId))</span>
@@ -455,7 +455,7 @@
     const SCH_VEHICLES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Vehicles.Where(v => v.Offered).Select(v => new { id = v.VehicleId, label = $"{v.VehicleId} · {v.PlateNumber}" })));
     const SCH_DRIVERS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Drivers.Select(d => new
+        Model.Drivers.Where(d => d.Active).Select(d => new
         {
             id = d.DriverId,
             label = DriverLabel(d.DriverName, d.DriverId),

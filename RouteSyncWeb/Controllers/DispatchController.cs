@@ -92,9 +92,11 @@ namespace FleetWise.Controllers
                                        .Get();
             var vehiclesTask = _supabase.From<Vehicle>().Get();
             var routesTask = _supabase.From<BusRoute>().Get();
+            // Every driver, deactivated ones included. A trip they drove before leaving is
+            // still theirs, and without them it reads as never having had a driver.
+            // TripStatus marks the account where it still has a trip to run.
             var driversTask = _supabase.From<UserModel>()
                                        .Filter("role_id", Operator.Equals, "2")
-                                       .Filter("account_status", Operator.Equals, "Activated")
                                        .Get();
             var availabilityTask = _supabase.From<DriverAvailability>().Get();
             var checklistsTask = _supabase.From<BusChecklist>().Get();
@@ -1192,6 +1194,7 @@ namespace FleetWise.Controllers
                 parts.Add("Driver reported they cannot drive"
                     + (string.IsNullOrWhiteSpace(awayReason) ? "" : $": {awayReason}"));
             if (driverStatus == "On Leave") parts.Add("Driver is on approved leave");
+            if (driverStatus == "Deactivated") parts.Add("Driver's account is deactivated");
             return parts.Count > 0 ? string.Join(" · ", parts) : "Needs reassignment";
         }
     }

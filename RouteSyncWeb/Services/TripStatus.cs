@@ -193,8 +193,11 @@ namespace FleetWise.Services
                               : vehicleFlagged ? "Flagged"
                               : "Ready to Deploy";
 
-            // A driver with no availability row counts as available.
+            // A driver with no availability row counts as available. A deactivated account
+            // matters only to a trip still to run: one whose window has closed was the
+            // driver's while the account was live, and keeps their name like any other.
             var driverStatus = driver == null ? "Unavailable"
+                             : !IsActive(driver) && ShiftEndAt(trip) >= now ? "Deactivated"
                              : string.IsNullOrEmpty(driverAvailability) ? "Available"
                              : driverAvailability;
 
@@ -205,6 +208,7 @@ namespace FleetWise.Services
                 ShiftEndAt(trip) < now ? "Missed"
                 : (vehicle?.OutOfService == true
                    || driverStatus == "Unavailable"
+                   || driverStatus == "Deactivated"
                    // Approved leave for this day. A driver who is rostered off cannot run
                    // the trip, and the board has to say so while there is still time to
                    // put somebody else on it.
@@ -215,5 +219,9 @@ namespace FleetWise.Services
             return new TripStatusView(
                 vehicleStatus, driverStatus, tripStatus, vehicleFlagged, LateBy(trip, now));
         }
+
+        /// <summary>Whether the driver's account can still sign in and drive.</summary>
+        public static bool IsActive(UserModel driver) =>
+            string.Equals(driver.AccountStatus, "Activated", StringComparison.OrdinalIgnoreCase);
     }
 }

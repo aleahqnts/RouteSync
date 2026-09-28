@@ -58,6 +58,12 @@ namespace FleetWise.ViewModels
         public bool Offered { get; set; } = true;
 
         /// <summary>
+        /// Whether the account is still activated. A deactivated driver is listed only
+        /// where a trip already holds them, so a trip they drove keeps their name.
+        /// </summary>
+        public bool Active { get; set; } = true;
+
+        /// <summary>
         /// Why this driver is not free, when they are not. Shown beside the name so the
         /// reason is read before the choice rather than after it.
         /// </summary>
