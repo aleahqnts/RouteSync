@@ -229,6 +229,22 @@
         return hrs === 1 ? '1 hour ago' : hrs + ' hours ago';
     }
 
+    // The moment itself, on the Philippine clock to the second, whatever zone the
+    // browser is in. The date is said too once it is not today's.
+    var phTimeFmt = new Intl.DateTimeFormat('en-PH', {
+        timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+    });
+    var phDateFmt = new Intl.DateTimeFormat('en-PH', {
+        timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric'
+    });
+    function phClock(ts) {
+        var then = new Date(ts + 'Z');
+        if (isNaN(then.getTime())) return '';
+        var day = phDateFmt.format(then);
+        var time = phTimeFmt.format(then);
+        return day === phDateFmt.format(new Date()) ? time : day + ', ' + time;
+    }
+
     // A bus on its driver's break is still on its trip: it keeps reporting, keeps its
     // color and still counts as out. Only what it is called changes.
     function statusText(bus) {
@@ -249,7 +265,7 @@
         // peso sign is the one character here that would not survive being read as
         // anything but UTF-8.
         document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
-        document.getElementById('fmPanelUpdated').textContent = 'Last updated: ' + relativeTime(bus.timestamp);
+        document.getElementById('fmPanelUpdated').textContent = 'Last updated: ' + phClock(bus.timestamp);
     }
 
     function openPanel(vehicleId) {
