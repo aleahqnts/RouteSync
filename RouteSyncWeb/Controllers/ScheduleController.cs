@@ -45,7 +45,6 @@ namespace FleetWise.Controllers
             var vehiclesTask = _supabase.From<Vehicle>().Get();
             var driversTask = _supabase.From<UserModel>()
                                 .Filter("role_id", Operator.Equals, "2")
-                                .Filter("account_status", Operator.Equals, "Activated")
                                 .Get();
             var availabilityTask = _supabase.From<DriverAvailability>().Get();
             var tripsTask = _supabase.From<Trip>()
@@ -74,6 +73,7 @@ namespace FleetWise.Controllers
             // and a slot showing nothing is read as cleared and deleted on the next save.
             var trips = tripsTask.Result.Models;
             var bookedVehicles = trips.Select(t => t.VehicleId).ToHashSet();
+            var bookedDrivers = trips.Select(t => t.DriverId).ToHashSet();
 
             var unavailable = availabilityTask.Result.Models
                 .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable", StringComparison.OrdinalIgnoreCase))
@@ -121,13 +121,17 @@ namespace FleetWise.Controllers
                 // names none and so speaks only for the day it was set on. Withholding a
                 // driver on either count took them out of Thursday's planning because they
                 // called in sick on Monday, and left the grid unable to say why.
+                // A deactivated driver stays only where this week already holds them, the same
+                // as a bus that has left the fleet.
                 Drivers = driversTask.Result.Models
+                    .Where(d => TripStatus.IsActive(d) || bookedDrivers.Contains(d.UserId))
                     .OrderBy(d => d.FirstName)
                     .Select(d => new DriverOption
                     {
                         DriverId = d.UserId,
                         DriverName = $"{d.FirstName} {d.LastName}",
                         Offered = !unavailable.Contains(d.UserId),
+                        Active = TripStatus.IsActive(d),
                     }).ToList(),
                 LeaveDays = leaveDays,
                 TodayInWeek = PhClock.OperationalDay.Date >= weekStart && PhClock.OperationalDay.Date <= weekEnd
