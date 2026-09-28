@@ -193,7 +193,7 @@
 
     @* User profile. The name opens the person's own account, beside the way out. *@
     <div class="fw-sidebar__profile">
-        <a class="fw-sidebar__me" asp-controller="Profile" asp-action="Index" title="My profile">
+        <a class="fw-sidebar__me" asp-controller="Profile" asp-action="Index" title="@User.Identity?.Name · My profile">
             <img src="~/images/user-avatar.png" alt="" class="fw-sidebar__avatar" />
             <span class="fw-sidebar__profile-info">
                 <span class="fw-sidebar__profile-name">@User.Identity?.Name</span>
