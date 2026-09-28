@@ -272,6 +272,13 @@
     .fm-terminal-label {
         background: transparent !important;
         border: none !important;
+        cursor: pointer;
+    }
+
+    /* Zoomed out, parked buses fold into their terminal's label, which carries the count
+       and zooms in to them when clicked. */
+    .fm-map--far .fm-bus-marker--parked {
+        display: none;
     }
 
     .fm-terminal-pill {
@@ -706,34 +713,70 @@
         cursor: default;
     }
 
-    /* GPS tools drawer, in the bottom-right corner. Built like the routes legend across
-       the map: a heading that folds the box away to itself. It sits above Leaflet's
-       credit line, which the map's licence needs left in view. */
+    /* GPS tools: a tray kept out of the way behind a small tab in the bottom-right
+       corner. The tab sits above Leaflet's credit line, which the map's licence needs
+       left in view, and the tray opens above the tab. */
     .fm-drawer {
         position: absolute;
-        right: 16px;
+        right: 12px;
         bottom: 28px;
         z-index: 1000;
-        width: 248px;
-        background: var(--fm-white);
-        border-radius: var(--fm-radius);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
-        padding: 10px 14px;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-end;
+        gap: 8px;
     }
 
-    .fm-drawer-title {
-        display: inline-flex;
+    .fm-drawer-tab {
+        position: relative;
+        display: flex;
         align-items: center;
-        gap: 7px;
+        justify-content: center;
+        width: 30px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: 8px;
+        background: var(--fm-white);
+        color: var(--fm-muted);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .14);
+        cursor: pointer;
+        transition: color .15s;
     }
 
-    /* Raw GPS still showing with the drawer folded. The dots on the map are not buses,
+    .fm-drawer-tab:hover {
+        color: var(--fm-teal);
+    }
+
+    /* Points up while the tray is shut, down to shut it. */
+    .fm-drawer-tab svg {
+        transform: rotate(180deg);
+        transition: transform .15s;
+    }
+
+    .fm-drawer-tab[aria-expanded="true"] svg {
+        transform: none;
+    }
+
+    .fm-drawer-heading {
+        font: 700 0.74rem 'Segoe UI', sans-serif;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: #9AA5B4;
+        padding: 2px 0 2px;
+    }
+
+    /* Raw GPS still showing with the tray shut. The dots on the map are not buses,
        and whoever is looking should be able to tell why they are there. */
     .fm-drawer-live {
         display: none;
-        width: 7px;
-        height: 7px;
+        position: absolute;
+        top: -3px;
+        right: -3px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
+        border: 1.5px solid var(--fm-white);
         background: var(--fm-teal);
     }
 
@@ -745,7 +788,12 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
-        margin-top: 10px;
+        width: 248px;
+        box-sizing: border-box;
+        background: var(--fm-white);
+        border-radius: var(--fm-radius);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+        padding: 10px 14px;
     }
 
     .fm-drawer-body[hidden] {
@@ -965,8 +1013,11 @@
     .fm-drawer {
         right: 12px;
         bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
-        width: 220px;
-        padding: 6px 9px 8px;
+    }
+
+    .fm-drawer-body {
+        width: 224px;
+        padding: 8px 11px;
     }
 }
 

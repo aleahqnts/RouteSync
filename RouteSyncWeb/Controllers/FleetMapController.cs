@@ -107,7 +107,11 @@ namespace FleetWise.Controllers
 
         public async Task<IActionResult> Stops(int? routeId)
         {
-            var routesResponse = await _supabase.From<BusRoute>().Get();
+            // In route order, as every list of routes on the map is. The database returns
+            // rows in whatever order it last stored them.
+            var routesResponse = await _supabase.From<BusRoute>()
+                .Order("route_id", Postgrest.Constants.Ordering.Ascending)
+                .Get();
             var stops = new List<StopDto>();
 
             foreach (var route in routesResponse.Models)
@@ -129,7 +133,10 @@ namespace FleetWise.Controllers
 
         public async Task<IActionResult> Routes()
         {
-            var routesResponse = await _supabase.From<BusRoute>().Get();
+            // In route order: the route filter and the legend list them as they come.
+            var routesResponse = await _supabase.From<BusRoute>()
+                .Order("route_id", Postgrest.Constants.Ordering.Ascending)
+                .Get();
             var routeData = routesResponse.Models.Select(r => new
             {
                 r.RouteId,

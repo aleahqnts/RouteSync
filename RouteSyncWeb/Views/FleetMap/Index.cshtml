@@ -164,20 +164,21 @@
         <div class="fm-legend-list" id="fmLegend"></div>
     </div>
 
-    @* GPS tools, for checking the road snapping. Folded to its heading until wanted, in
-       the corner the map leaves free. *@
+    @* GPS tools, for checking the road snapping. Kept behind a small tab in the corner
+       the map leaves free, since the board is not read with them. *@
     <div class="fm-drawer" id="fmGpsDrawer">
-        <button id="fmGpsToggle" class="fm-legend-head" type="button"
-                aria-expanded="false" aria-controls="fmGpsBody">
-            <span class="fm-drawer-title">GPS tools<span class="fm-drawer-live" title="Raw GPS is showing"></span></span>
-            <svg class="fm-legend-caret" xmlns="http://www.w3.org/2000/svg" width="11" height="11"
-                 fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                 stroke-linejoin="round" viewBox="0 0 24 24">
+        <button id="fmGpsToggle" class="fm-drawer-tab" type="button" title="GPS tools"
+                aria-label="GPS tools" aria-expanded="false" aria-controls="fmGpsBody">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                 fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                 stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9" />
             </svg>
+            <span class="fm-drawer-live" title="Raw GPS is showing"></span>
         </button>
 
         <div class="fm-drawer-body" id="fmGpsBody" hidden>
+            <div class="fm-drawer-heading">GPS tools</div>
             @* Each bus on a trip also shows the reading its phone sent and how far off the
                phone said it could be. *@
             <button id="fmRawBtn" class="fm-drawer-row" type="button" aria-pressed="false">
