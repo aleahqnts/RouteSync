@@ -245,6 +245,72 @@
         box-shadow: 0 0 0 3px #FDECEC;
     }
 
+    /* A password field with its reveal toggle inside it, as on the sign-in pages. */
+    .pf-pw {
+        position: relative;
+        display: block;
+    }
+
+    .pf-pw input { padding-right: 42px; }
+
+    .pf-pw input::-ms-reveal,
+    .pf-pw input::-ms-clear { display: none; }
+
+    .pf-pw .eye {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        border: none;
+        background: none;
+        color: #aaa;
+        cursor: pointer;
+    }
+
+    .pf-pw .eye:hover { color: #3ab5a4; }
+    .pf-pw .eye svg { width: 18px; height: 18px; display: block; }
+
+    /* The icon reports the state of the field: slashed while hidden, open while readable. */
+    .pf-pw .eye .i-eye { display: none; }
+    .pf-pw .eye.showing .i-eye-off { display: none; }
+    .pf-pw .eye.showing .i-eye { display: block; }
+
+    /* The live rule checklist the change and reset pages use: a hollow circle until the
+       rule is met, filled after. Styled here too, since this page does not load theirs. */
+    .pw-rules {
+        list-style: none;
+        padding: 0;
+        margin: -2px 0 14px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px 12px;
+    }
+
+    .pw-rules li {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: #9aa3b2;
+        transition: color .15s ease;
+    }
+
+    .pw-rules .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 1.5px solid #cfd6e0;
+        background: transparent;
+        flex: none;
+        transition: background .15s ease, border-color .15s ease;
+    }
+
+    .pw-rules li.met { color: #2f8d7e; }
+    .pw-rules li.met .dot { background: #3ab5a4; border-color: #3ab5a4; }
+
     .pf-err { color: #C0392B; font-size: .76rem; }
     .pf-err:empty { display: none; }
     .pf-err--form { margin: 0 0 8px; }
