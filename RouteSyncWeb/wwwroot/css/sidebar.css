@@ -264,9 +264,12 @@
         margin-left: 3px;
     }
 
+    /* Allowed to shrink, so a long name is cut short with an ellipsis rather than
+       running on under the logout button. The full name is on the link's tooltip. */
     .fw-sidebar__profile-info {
         display: flex;
         flex-direction: column;
+        min-width: 0;
         opacity: 0;
         transform: translateX(-6px);
         transition: opacity var(--fw-transition), transform var(--fw-transition);
@@ -276,6 +279,30 @@
     .fw-sidebar:hover .fw-sidebar__profile-info {
         opacity: 1;
         transform: translateX(0);
+    }
+
+    .fw-sidebar__profile-role {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fw-sidebar__profile-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.25;
+    }
+
+    /* Two lines before the ellipsis once the rail is open: it is narrow, and most full
+       names fit in two where one would cut them off after the first name. Only while
+       open, since the closed rail squeezes the hidden name and wrapping it there would
+       make the block taller and jump when the rail opens. */
+    .fw-sidebar:hover .fw-sidebar__profile-name {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
     }
 
     .fw-sidebar__profile-name {
@@ -294,6 +321,7 @@
     /* Logout button. */
     .fw-sidebar__logout {
         margin-left: auto;
+        flex-shrink: 0;
         opacity: 0;
         transform: translateX(-6px);
         transition: opacity var(--fw-transition), transform var(--fw-transition);
