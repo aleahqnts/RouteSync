@@ -90,6 +90,7 @@
     map.on('zoomstart', function () { map.getContainer().classList.add('fm-map--jump'); });
     map.on('zoomend', function () {
         layoutParked();
+        foldParked();
         requestAnimationFrame(function () { map.getContainer().classList.remove('fm-map--jump'); });
     });
     RouteMotion.watch(map);
@@ -111,6 +112,17 @@
     var SLOT_W_PX = 88;       // a pill is 80 wide
     var SLOT_H_PX = 34;       // and 28 tall
     var LABEL_RISE_PX = 32;   // the terminal's name sits this far above the first row
+
+    // A grid a fixed size on the screen is a city block at street level and half the
+    // city zoomed out, where two terminals' grids run into each other and over the
+    // routes. Below this zoom the parked buses fold into their terminal's label, which
+    // keeps the count; clicking the label zooms in to them.
+    var PARKED_MIN_ZOOM = 17;
+
+    // A search is for one bus, so a parked bus that matches is shown at any zoom.
+    function foldParked() {
+        map.getContainer().classList.toggle('fm-map--far', map.getZoom() < PARKED_MIN_ZOOM && !searchTerm);
+    }
     var parkedSlots = {};     // vehicleId -> { lat, lng, i }: its terminal and place in the grid
 
     // The point this many screen pixels from another at the current zoom.
@@ -272,9 +284,10 @@
 
     // A bus off its route is drawn with a dashed edge: it is where the phone is, not on
     // the road the route runs along, and should not be read as keeping to it.
-    function busIcon(label, color, stale, off) {
+    function busIcon(label, color, stale, off, parked) {
         return L.divIcon({
-            className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : '') + (off ? ' fm-bus-marker--off' : ''),
+            className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : '') + (off ? ' fm-bus-marker--off' : '')
+                + (parked ? ' fm-bus-marker--parked' : ''),
             html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + label + '</span>',
             iconSize: [80, 28],
             iconAnchor: [40, 14]
@@ -341,10 +354,12 @@
         var html = '<div class="fm-terminal-pill">🅿 ' + (name || 'Terminal') + ' · ' + count + '</div>';
         var label = L.marker(offsetPx(lat, lng, 0, -LABEL_RISE_PX), {
             icon: L.divIcon({ className: 'fm-terminal-label', html: html, iconSize: [200, 26], iconAnchor: [100, 13] }),
-            interactive: false,
             zIndexOffset: -500
         });
         label._anchor = [lat, lng];
+        label.on('click', function () {
+            map.setView(this._anchor, Math.max(map.getZoom(), PARKED_MIN_ZOOM));
+        });
         label.addTo(terminalLayer);
     }
 
@@ -456,7 +471,8 @@
 
                     var stale = isStale(bus);
                     var off = bus.status === 'On Trip' && bus.offRoute;
-                    var iconKey = color + (stale ? '|stale' : '') + (off ? '|off' : '');
+                    var parked = !!parkedPos[bus.vehicleId];
+                    var iconKey = color + (stale ? '|stale' : '') + (off ? '|off' : '') + (parked ? '|parked' : '');
 
                     if (marker) {
                         // Moved in place, and left alone otherwise. Setting the icon
@@ -464,14 +480,14 @@
                         // travel between readings and any tooltip open on it, so it is
                         // done only when what the icon shows has changed.
                         if (marker._iconKey !== iconKey) {
-                            marker.setIcon(busIcon(bus.vehicleId, color, stale, off));
+                            marker.setIcon(busIcon(bus.vehicleId, color, stale, off, parked));
                             marker._iconKey = iconKey;
                             RouteMotion.repoint(marker);
                         }
                         moveBus(marker, bus, pos);
                         marker.setTooltipContent(tooltipHtml(bus));
                     } else {
-                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off) })
+                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off, parked) })
                             .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap' })
                             .addTo(busLayer);
                         marker.on('click', function () { openPanel(this._bus.vehicleId); });
@@ -493,6 +509,7 @@
 
                 applySearch();
                 drawRaw();
+                foldParked();
 
                 // Live-update the open side panel with the selected bus's newest data.
                 if (selectedVehicleId && busMarkers[selectedVehicleId]) {
@@ -647,6 +664,7 @@
             statusSelect.value = '';
             if (searchInput) searchInput.value = '';
             searchTerm = '';
+            foldParked();
             syncClearBtn();
             refetch();
         });
@@ -655,6 +673,7 @@
         searchInput.addEventListener('input', function () {
             var had = !!searchTerm;
             searchTerm = searchInput.value.trim().toLowerCase();
+            foldParked();
             syncClearBtn();
             applySearch();
             // Only the transitions in and out of searching change which buses the server
