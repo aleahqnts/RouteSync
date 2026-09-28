@@ -378,7 +378,9 @@ namespace FleetWise.Controllers
                     Passengers = 0,
                     Capacity = vehicle.Capacity,
                     EstimatedRevenue = 0,
-                    Timestamp = PhClock.Now
+                    // A real UTC instant like a reading's, so the panel's clock reads the
+                    // moment the board was drawn rather than eight hours ahead of it.
+                    Timestamp = DateTime.UtcNow
                 });
             }
 
