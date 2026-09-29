@@ -105,7 +105,7 @@ else
             <div class="card check" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{trip.TripId}"))">
                 <div class="check-main">
                     <p class="card-title">Pre-Trip Checklist</p>
-                    <p class="check-sub">Submitted @PhTime.Raw(checklist.SubmittedAt).ToString("h:mm tt")</p>
+                    <p class="check-sub">Submitted @PhTime.Inspected(checklist).ToString("h:mm tt")</p>
                 </div>
                 <span class="check-status @ChecklistClass">@checklist.ChecklistStatus</span>
                 <span class="check-chev">&#8250;</span>

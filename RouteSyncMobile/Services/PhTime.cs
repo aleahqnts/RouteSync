@@ -42,6 +42,24 @@ public static class PhTime
         ? dt
         : DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime();
 
+    /// <summary>A column written in true UTC, as Philippine time.</summary>
+    /// <remarks>
+    /// The database clock and the edge functions stamp in UTC: inspections submitted
+    /// through the app, leave filed and answered, the audit trail.
+    /// </remarks>
+    public static DateTime FromUtc(DateTime dt) =>
+        TimeZoneInfo.ConvertTime(new DateTimeOffset(DateTime.SpecifyKind(Raw(dt), DateTimeKind.Utc)), Tz).DateTime;
+
+    /// <summary>When an inspection was submitted, or skipped, as Philippine time.</summary>
+    /// <remarks>
+    /// A skipped inspection is written by this app in Philippine time, a submitted one by
+    /// the edge function in UTC, so the row's status says which.
+    /// </remarks>
+    public static DateTime Inspected(FleetWiseMobile.Models.BusChecklist checklist) =>
+        string.Equals(checklist.ChecklistStatus, "Skipped", StringComparison.OrdinalIgnoreCase)
+            ? Raw(checklist.SubmittedAt)
+            : FromUtc(checklist.SubmittedAt);
+
     private static TimeZoneInfo Resolve()
     {
         foreach (var id in new[] { "Asia/Manila", "Singapore Standard Time", "Taipei Standard Time" })

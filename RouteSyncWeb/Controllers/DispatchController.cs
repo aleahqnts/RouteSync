@@ -468,7 +468,8 @@ namespace FleetWise.Controllers
                 Checklist = checklist != null ? new TripChecklistViewModel
                 {
                     ChecklistId = checklist.ChecklistId,
-                    SubmittedAt = checklist.SubmittedAt,
+                    // Philippine time with no zone marker, which the page reads as it is.
+                    SubmittedAt = StoredTimes.Inspected(checklist),
                     ChecklistStatus = checklist.ChecklistStatus,
                     Notes = checklist.Notes,
                     ExteriorInspection = checklist.ExteriorInspection ?? new(),
@@ -555,8 +556,7 @@ namespace FleetWise.Controllers
             TripInspectionPhotoViewModel Shown(InspectionPhoto p) => new()
             {
                 PhotoId = p.PhotoId,
-                TakenAt = PhClock.ToPh(new DateTimeOffset(DateTime.SpecifyKind(p.TakenAt, DateTimeKind.Utc)))
-                    .ToString("MMM d, yyyy h:mm tt"),
+                TakenAt = StoredTimes.FromUtc(p.TakenAt).ToString("MMM d, yyyy h:mm tt"),
             };
 
             var failedLabels = new[]
