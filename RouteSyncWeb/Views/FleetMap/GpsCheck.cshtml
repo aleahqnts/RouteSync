@@ -74,7 +74,7 @@
     else
     {
         <div class="gc-table-wrap">
-            <table class="gc-table">
+            <table class="gc-table" data-sort>
                 <thead>
                     <tr>
                         <th>Trip</th>
@@ -103,7 +103,7 @@
                             <td>@t.DriverName</td>
                             <td class="gc-nowrap">@t.Shift</td>
                             <td class="gc-num">@c.Readings.ToString("N0", inv)</td>
-                            <td class="gc-num">@c.OnRoad.ToString("N0", inv) <span class="gc-share">@Pct(c.OnRoadShare)</span></td>
+                            <td class="gc-num" data-sort-value="@c.OnRoad">@c.OnRoad.ToString("N0", inv) <span class="gc-share">@Pct(c.OnRoadShare)</span></td>
                             <td class="gc-num">@c.Held</td>
                             <td class="gc-num">@c.OffRoute</td>
                             <td class="gc-num">@c.Ignored</td>

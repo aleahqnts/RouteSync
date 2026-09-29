@@ -77,7 +77,7 @@
     </div>
 
     <div class="au-table-wrap">
-        <table class="au-table si-table">
+        <table class="au-table si-table" data-sort>
             <thead>
                 <tr>
                     <th style="width:90px">Severity</th>
@@ -116,13 +116,13 @@
                         <tr class="si-row @(i.NeedsReview ? "si-row--new" : "")"
                             data-incident="@i.IncidentId" tabindex="0"
                             aria-label="@row.Title, @row.Subject. Open details.">
-                            <td><span class="si-sev @sev.Css">@sev.Label</span></td>
+                            <td data-sort-value="@(i.Severity == "high" ? 3 : i.Severity == "low" ? 1 : 2)"><span class="si-sev @sev.Css">@sev.Label</span></td>
                             <td>
                                 <div class="si-title">@row.Title</div>
                                 <div class="si-subject">@row.Subject</div>
                             </td>
                             <td class="si-count">@i.EventCount</td>
-                            <td class="si-when">@Span(i.FirstSeenAt, i.LastSeenAt)</td>
+                            <td class="si-when" data-sort-value="@i.LastSeenAt.ToUnixTimeSeconds()">@Span(i.FirstSeenAt, i.LastSeenAt)</td>
                             <td>
                                 @if (grewSinceReview)
                                 {

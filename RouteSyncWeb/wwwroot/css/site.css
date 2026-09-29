@@ -642,6 +642,18 @@ html.rs-dialog-open .main-content {
     display: none;
 }
 
+/* The control's own text runs on under the face to the identifier, whose last characters
+   would show in the strip left uncovered for the arrow. Hidden while the face is up. The
+   fill rather than the colour, which the arrow is drawn in; the rows of the open list are
+   given theirs back. */
+.rs-pick:has(> .rs-pick-face:not(:empty)) > select {
+    -webkit-text-fill-color: transparent;
+}
+
+.rs-pick > select option {
+    -webkit-text-fill-color: #2D3748;
+}
+
 /* ===========================================================================
    Page headings.
 
@@ -711,7 +723,8 @@ html.rs-dialog-open .main-content {
     .rp-title,
     .vh-title,
     .us-title,
-    .au-title {
+    .au-title,
+    .pf-title {
         display: none;
     }
 }
@@ -856,4 +869,44 @@ html.rs-dialog-open .main-content {
         border-left: 1px solid #E8ECF0;
         border-right: 1px solid #E8ECF0;
     }
+}
+
+/* ===========================================================================
+   Sortable column headings (table-sort.js).
+
+   The heading keeps the look its own table gives it. What it gains is a pointer,
+   a small arrow beside the column the rows are sorted by, and a faint one on
+   hover to show the others can be.
+   =========================================================================== */
+
+th.rs-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.rs-sortable::after {
+    content: '';
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+th.rs-sortable:hover::after { opacity: .35; }
+
+th.rs-sortable[aria-sort="ascending"]::after,
+th.rs-sortable[aria-sort="descending"]::after { opacity: .9; }
+
+th.rs-sortable[aria-sort="ascending"]::after {
+    border-top: 0;
+    border-bottom: 5px solid currentColor;
+}
+
+th.rs-sortable:focus-visible {
+    outline: 2px solid #4AADA8;
+    outline-offset: -2px;
 }

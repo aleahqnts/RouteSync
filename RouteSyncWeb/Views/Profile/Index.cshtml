@@ -24,41 +24,58 @@
                 : $"{r.StartDate:MMM d, yyyy} – {r.EndDate:MMM d, yyyy}";
 }
 
-<h2 class="pf-title">My Profile</h2>
+@* Held at the top while the page scrolls, so whose profile this is stays in view. *@
+<div class="pf-sticky">
+    <h2 class="pf-title">My Profile</h2>
+
+    <section class="pf-card pf-hero">
+        <div class="pf-avatar" aria-hidden="true">@Model.Initials</div>
+        <div class="pf-hero-text">
+            <div class="pf-hero-name">@Model.FullName</div>
+            <div class="pf-hero-tags">
+                <span class="pf-badge pf-badge--role">@Model.Role</span>
+                <span class="pf-badge @(Model.Status == "Activated" ? "pf-badge--ok" : "pf-badge--idle")">@Model.Status</span>
+            </div>
+            <div class="pf-hero-since">With RouteSync since @Model.MemberSince.ToString("MMMM yyyy")</div>
+        </div>
+    </section>
+</div>
 
 @if (!string.IsNullOrEmpty(saved))
 {
     <div class="pf-flash" role="status">@saved</div>
 }
 
-@* Who this is, before anything about them. *@
-<section class="pf-card pf-hero">
-    <div class="pf-avatar" aria-hidden="true">@Model.Initials</div>
-    <div class="pf-hero-text">
-        <div class="pf-hero-name">@Model.FullName</div>
-        <div class="pf-hero-tags">
-            <span class="pf-badge pf-badge--role">@Model.Role</span>
-            <span class="pf-badge @(Model.Status == "Activated" ? "pf-badge--ok" : "pf-badge--idle")">@Model.Status</span>
-        </div>
-        <div class="pf-hero-since">With RouteSync since @Model.MemberSince.ToString("MMMM yyyy")</div>
-    </div>
-
-    @* What this person has done lately, in place of a driver's trip counts. *@
-    <div class="pf-stats">
-        <div class="pf-stat">
+@* What this person has done lately, in place of a driver's trip counts. *@
+<div class="pf-stats">
+    <div class="pf-card pf-stat">
+        <span class="pf-ico pf-ico--teal" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4" /></svg>
+        </span>
+        <span class="pf-stat-text">
             <span class="pf-stat-n">@(Model.ActionsThisMonth?.ToString("N0") ?? "—")</span>
             <span class="pf-stat-l">Actions this month</span>
-        </div>
-        <div class="pf-stat">
+        </span>
+    </div>
+    <div class="pf-card pf-stat">
+        <span class="pf-ico pf-ico--blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /><path d="M9 15l2 2 4-4" /></svg>
+        </span>
+        <span class="pf-stat-text">
             <span class="pf-stat-n">@(Model.DecisionsThisMonth?.ToString("N0") ?? "—")</span>
             <span class="pf-stat-l">Leave decisions this month</span>
-        </div>
-        <div class="pf-stat">
+        </span>
+    </div>
+    <div class="pf-card pf-stat">
+        <span class="pf-ico pf-ico--amber" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>
+        </span>
+        <span class="pf-stat-text">
             <span class="pf-stat-n">@Model.LeaveDaysTaken</span>
             <span class="pf-stat-l">Leave days taken in @Model.Year</span>
-        </div>
+        </span>
     </div>
-</section>
+</div>
 
 <div class="pf-cols">
 
@@ -66,14 +83,28 @@
 
         <section class="pf-card">
             <h3 class="pf-card-title">Account</h3>
-            <dl class="pf-dl">
-                <dt>Email</dt><dd>@Model.Email</dd>
-                <dt>Role</dt><dd>@Model.Role</dd>
-                <dt>Status</dt><dd>@Model.Status</dd>
-                <dt>Member since</dt><dd>@Model.MemberSince.ToString("MMM d, yyyy")</dd>
-                <dt>Last sign-in</dt><dd>@(Model.LastSignIn?.ToString("MMM d, yyyy h:mm tt") ?? "—")</dd>
-            </dl>
-            <p class="pf-note">Your email and role are changed by an administrator on the Users page.</p>
+            <div class="pf-info">
+                <div class="pf-row">
+                    <span class="pf-ico pf-ico--blue" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg></span>
+                    <span class="pf-k">Email</span><span class="pf-v">@Model.Email</span>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-ico pf-ico--navy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></svg></span>
+                    <span class="pf-k">Role</span><span class="pf-v">@Model.Role</span>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-ico pf-ico--green" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.5 2.5 5-6" /></svg></span>
+                    <span class="pf-k">Status</span><span class="pf-v">@Model.Status</span>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-ico pf-ico--amber" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg></span>
+                    <span class="pf-k">Member since</span><span class="pf-v">@Model.MemberSince.ToString("MMM d, yyyy")</span>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-ico pf-ico--teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></span>
+                    <span class="pf-k">Last sign-in</span><span class="pf-v">@(Model.LastSignIn?.ToString("MMM d, yyyy h:mm tt") ?? "—")</span>
+                </div>
+            </div>
         </section>
 
         <section class="pf-card">
@@ -240,10 +271,6 @@
                     <textarea name="Reason" rows="2" maxlength="500"></textarea>
                     <span class="pf-err" data-err="reason"></span>
                 </label>
-                <p class="pf-hint">
-                    <span data-leave-days></span>
-                    Vacation is filed ahead; sick and emergency leave can be filed up to @LeaveEntitlement.BackdatingDays days late.
-                </p>
                 <p class="pf-err pf-err--form" data-err="form"></p>
                 <div class="pf-actions">
                     <button type="button" class="pf-btn pf-btn--ghost" data-leave-toggle>Cancel</button>

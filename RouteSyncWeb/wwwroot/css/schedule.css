@@ -40,7 +40,6 @@
 
     /* Which days a roster covers, and what editing them means. Kept on a phone, unlike
        the hint above: it is about this week, not about how the page works. */
-    .sch-roster-note { font-size:.8rem; color:#2F5F5B; background:#F2FAF9; border:1px solid #DCEFEC; border-radius:8px; padding:8px 12px; margin:0 0 18px; }
 
     /* No overflow of its own. A box that hides its overflow is a scrollport, and a
        heading held inside one is held against that box rather than against the page, which
