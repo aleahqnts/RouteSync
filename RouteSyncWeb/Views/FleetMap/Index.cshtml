@@ -206,12 +206,12 @@
 </div>
 
 @section Styles {
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <link rel="stylesheet" href="~/css/fleetmap.css" asp-append-version="true" />
 }
 
 @section Scripts {
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script>
         window.fleetMapBounds = @Html.Raw(ViewBag.MapBounds is double[] b
             ? $"[{b[0]},{b[1]},{b[2]},{b[3]}]"
