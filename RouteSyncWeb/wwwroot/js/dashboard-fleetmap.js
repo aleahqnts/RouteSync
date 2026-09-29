@@ -1,7 +1,7 @@
 (function () {
     // Read-only Fleet Map preview for the Dashboard card. Pulls the same /FleetMap/Routes
     // and /FleetMap/Positions data as the full map, draws route polylines + live bus pills,
-    // and polls every 5s. The map itself is non-interactive — the card links to /FleetMap.
+    // and polls every 2s. The map itself is non-interactive — the card links to /FleetMap.
     //
     // Init is deferred to DOMContentLoaded: this script is included mid-body, before the
     // page's inline <style> that gives the map its height, so initializing immediately would
