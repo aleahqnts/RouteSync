@@ -1,6 +1,7 @@
 ﻿using FleetWise.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,15 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/";
         options.AccessDeniedPath = "/";
     });
+
+// The form token and the one-time message cookie are sent only over HTTPS. Left alone,
+// both go out without the Secure flag, so a browser would hand them over plain HTTP too.
+// SameAsRequest rather than Always keeps a local run over plain HTTP working; behind the
+// edge every request reads as HTTPS through the forwarded headers above.
+builder.Services.AddAntiforgery(options =>
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
+builder.Services.Configure<CookieTempDataProviderOptions>(options =>
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<FareCalculator>();
@@ -179,6 +189,11 @@ if (!string.IsNullOrWhiteSpace(canonicalHost) && aliasHosts.Length > 0)
         if (aliasHosts.Contains(context.Request.Host.Host, StringComparer.OrdinalIgnoreCase))
         {
             var target = $"https://{canonicalHost}{context.Request.PathBase}{context.Request.Path}{context.Request.QueryString}";
+            // This answer is sent before UseHsts below is reached, so it carries the
+            // header itself: the bare domain and www should refuse plain HTTP as well.
+            // Same 30 days UseHsts sends.
+            if (context.Request.IsHttps)
+                context.Response.Headers.StrictTransportSecurity = "max-age=2592000";
             context.Response.Redirect(target, permanent: true);
             return;
         }
