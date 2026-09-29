@@ -275,10 +275,14 @@
             }
         };
 
-        // The top of the axis clears the tallest bar or usual figure by about a quarter,
-        // rounded to a whole five, which leaves room for the shift names.
+        // The top of the axis clears the tallest bar or average figure by about a quarter,
+        // rounded to a whole five, which leaves room for the shift names. Only series in
+        // view are measured, so switching off a large average brings today's bars up to a
+        // readable height.
         function dbYMax(d) {
-            const m = Math.max(0, ...d.bars.filter(v => v != null), ...(d.usual || []));
+            const m = Math.max(0,
+                ...(dbSeriesOff[0] ? [] : d.bars.filter(v => v != null)),
+                ...(dbSeriesOff[1] ? [] : (d.usual || [])));
             return m <= 0 ? 10 : Math.ceil((m * 1.25) / 5) * 5;
         }
 
@@ -462,6 +466,12 @@
             return d.innerHTML;
         }
 
+        // The hourly chart is the largest part of each refresh and moves the least, so it is
+        // asked for once a minute, or at once when refreshed by hand, while the cards keep
+        // the five-second pace. Counted from the page load, which drew it.
+        const dbChartEvery = 60000;
+        let dbChartAt = Date.now();
+
         async function dbRefresh(manual) {
             if (dbBusy) return;
             dbBusy = true;
@@ -471,6 +481,11 @@
                 const url = new URL('@Url.Action("Stats", "Dashboard")', window.location.origin);
                 const route = new URLSearchParams(window.location.search).get('routeId');
                 if (route) url.searchParams.set('routeId', route);
+                const withChart = manual || Date.now() - dbChartAt >= dbChartEvery;
+                if (!withChart) url.searchParams.set('chart', 'false');
+                // Figures are shared between viewers for a few seconds; a refresh asked for
+                // by hand reads past that.
+                if (manual) url.searchParams.set('fresh', 'true');
 
                 const res = await fetch(url, {
                     cache: 'no-store',
@@ -487,9 +502,12 @@
                 dbDelta('dbRevenueDelta', d.revenueDelta, true);
                 dbBreakdown(d.breakdown || [], d.totalPassengers);
 
-                const chart = document.getElementById('dbChartData');
-                if (chart) chart.textContent = JSON.stringify(d.chartData || {});
-                dbUpdateChart();
+                if (d.chartData) {
+                    const chart = document.getElementById('dbChartData');
+                    if (chart) chart.textContent = JSON.stringify(d.chartData);
+                    dbUpdateChart();
+                    dbChartAt = Date.now();
+                }
                 dbStamp();
             } catch (e) {
                 console.warn('dashboard refresh failed', e);
@@ -500,7 +518,8 @@
         }
 
         // Five seconds, the rate the counter phones write at. Nothing here changes faster
-        // than that, so asking more often would only cost. The map beside it moves on its
+        // than that, so asking more often would only cost. The chart rides along once a
+        // minute, as set above. The map beside it moves on its
         // own two-second clock, set in dashboard-fleetmap.js.
         setInterval(() => {
             if (document.hidden) return;
