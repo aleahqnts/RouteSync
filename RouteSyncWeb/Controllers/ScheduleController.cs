@@ -803,7 +803,7 @@ namespace FleetWise.Controllers
                 return "The saved record of this week is no longer available. Please reload "
                      + "before saving, so that your changes are applied to the current schedule.";
 
-            var saved = WallClock(week.SavedAt);
+            var saved = StoredTimes.FromWall(week.SavedAt);
             var when = saved.Date == PhClock.Today
                 ? saved.ToString("h:mm tt")
                 : saved.ToString("MMM d, h:mm tt");
@@ -826,25 +826,6 @@ namespace FleetWise.Controllers
                  + "Reload to bring in their changes. Your unsaved changes will be "
                  + "reapplied, and any that conflict will be listed for review.";
         }
-
-        /// <summary>The wall clock that was written, whatever the round trip did to it.</summary>
-        /// <remarks>
-        /// Timestamps are stored throughout as Philippine wall clock tagged UTC, so the
-        /// digits in the column are the time meant and nothing has to be converted to show
-        /// them. That holds while the column carries no zone of its own.
-        ///
-        /// schedule_weeks.saved_at does carry one, so the driver hands the value back
-        /// converted into the zone the server is set to. On a machine set to Manila that
-        /// reads eight hours past the moment it names, and a save at half past five in the
-        /// afternoon was reported as half past one the following morning.
-        ///
-        /// Taking such a value back to UTC undoes exactly that conversion and leaves the
-        /// digits that were written. A value that arrived without a zone is already those
-        /// digits and is left alone, since converting it would introduce the error this is
-        /// here to remove.
-        /// </remarks>
-        private static DateTime WallClock(DateTime stored) =>
-            stored.Kind == DateTimeKind.Local ? stored.ToUniversalTime() : stored;
 
         /// <summary>Who saved the week, or "Somebody" where that cannot be answered.</summary>
         /// <remarks>
