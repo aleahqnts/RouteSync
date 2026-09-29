@@ -29,8 +29,13 @@ namespace FleetWise.Services
     public static class StoredTimes
     {
         /// <summary>The digits the column holds, whatever time zone the client moved them into.</summary>
+        /// <remarks>
+        /// The client hands a value back moved into the machine's zone and marked either Local
+        /// or Unspecified, depending on the path it took. Both are moved back; only a value
+        /// already marked UTC is taken as it is.
+        /// </remarks>
         public static DateTime Stored(DateTime fromDb) =>
-            fromDb.Kind == DateTimeKind.Local ? fromDb.ToUniversalTime() : fromDb;
+            fromDb.Kind == DateTimeKind.Utc ? fromDb : fromDb.ToUniversalTime();
 
         /// <summary>A column written in Philippine clock time.</summary>
         public static DateTime FromWall(DateTime fromDb) =>
