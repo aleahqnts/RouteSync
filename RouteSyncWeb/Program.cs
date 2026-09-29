@@ -229,7 +229,7 @@ app.Use(async (context, next) =>
     var headers = context.Response.Headers;
     headers["Content-Security-Policy"] =
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; " +
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
         "font-src 'self' data: https://cdn.jsdelivr.net; " +
         // Leaflet pulls map tiles straight from OpenStreetMap, from the bare host. A
