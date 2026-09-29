@@ -161,7 +161,7 @@
                             {
                                 var day = Model.Days[dayIndex];
                                 <th data-sch-day="@dayIndex"
-                                    class="@(day.Date == DateTime.Today ? "sch-today" : "")">
+                                    class="@(day.Date == FleetWise.Services.PhClock.OperationalDay ? "sch-today" : "")">
                                     <div class="sch-day-name">@day.ToString("ddd")</div>
                                     <div class="sch-day-num">@day.ToString("MMM d")</div>
                                 </th>

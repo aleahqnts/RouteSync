@@ -107,7 +107,8 @@ namespace FleetWise.Services
         {
             Action = action,
             At = at,
-            When = at.ToString(Stamp),
+            // Leave is stamped by the database clock, in UTC.
+            When = StoredTimes.FromUtc(at).ToString(Stamp),
             By = by,
             Note = note,
         };

@@ -520,10 +520,6 @@
     color: var(--rp-text);
     }
 
-    .rp-suggest-row--muted .rp-suggest-row-name,
-    .rp-suggest-row--muted .rp-suggest-row-pct { color: var(--rp-muted); font-weight: 600; }
-    .rp-suggest-row--muted .rp-suggest-bar > span { background: #C5CDD8; }
-
     .rp-suggest-none {
     padding: 10px 0;
     font-size: 0.84rem;

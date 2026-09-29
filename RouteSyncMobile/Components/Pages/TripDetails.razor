@@ -41,7 +41,7 @@ else
             {
                 <div class="done">
                     <p class="green strong">Bus Checklist Completed</p>
-                    <p class="muted">@checklist.SubmittedAt.ToString("MMM d, h:mm tt")</p>
+                    <p class="muted">@PhTime.Inspected(checklist).ToString("MMM d, h:mm tt")</p>
                 </div>
             }
         </div>

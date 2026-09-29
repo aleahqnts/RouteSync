@@ -104,8 +104,8 @@ namespace FleetWise.Controllers
                 Email = user.EmailAddress ?? "",
                 Role = User.FindFirstValue(ClaimTypes.Role) ?? "",
                 Status = user.AccountStatus ?? "",
-                MemberSince = PhClock.ToPh(new DateTimeOffset(user.CreatedAt)),
-                LastSignIn = user.LastLogin is DateTime seen ? PhClock.ToPh(new DateTimeOffset(seen)) : null,
+                MemberSince = StoredTimes.FromWall(user.CreatedAt),
+                LastSignIn = user.LastLogin is DateTime seen ? StoredTimes.FromWall(seen) : null,
                 ContactNumber = user.ContactNumber ?? "",
                 Address = user.Address ?? "",
                 EmergencyContactName = user.EmergencyContactName ?? "",
@@ -397,7 +397,7 @@ namespace FleetWise.Controllers
                 .Filter("user_id", Operator.Equals, id.ToString())
                 .Filter("status", Operator.In, new List<object> { "Pending", "AwaitingChange" })
                 .Set(x => x.Status, "Cancelled")
-                .Set(x => x.DecidedAt, PhClock.Now)
+                .Set(x => x.DecidedAt, DateTime.UtcNow)
                 .Update();
 
             if (changed.Models.Count == 0)
@@ -433,7 +433,7 @@ namespace FleetWise.Controllers
                 .Filter("status", Operator.Equals, "Approved")
                 .Filter<object>("withdraw_requested_at", Operator.Is, null)
                 .Filter("start_date", Operator.GreaterThanOrEqual, PhClock.OperationalDay.ToString("yyyy-MM-dd"))
-                .Set(x => x.WithdrawRequestedAt, PhClock.Now)
+                .Set(x => x.WithdrawRequestedAt, DateTime.UtcNow)
                 .Set(x => x.WithdrawReason, why)
                 .Update();
 

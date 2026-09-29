@@ -143,7 +143,7 @@ else
                         <div class="checklist-done">
                             <div>
                                 <p class="green s-title">Bus Checklist Completed</p>
-                                <p class="s-sub">@checklist.SubmittedAt.ToString("MMM d, h:mm tt")</p>
+                                <p class="s-sub">@PhTime.Inspected(checklist).ToString("MMM d, h:mm tt")</p>
                             </div>
                             <button class="link-btn" @onclick="@(() => Nav.NavigateTo($"/checklist-log/{assignment.TripId}"))">View Log</button>
                         </div>

@@ -461,7 +461,7 @@ namespace FleetWise.Controllers
 
             found.Status = decision;
             found.DecidedBy = deciderId;
-            found.DecidedAt = PhClock.Now;
+            found.DecidedAt = DateTime.UtcNow;
             found.DecisionNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
 
             // Only the four columns a decision touches, named one at a time.
@@ -566,7 +566,7 @@ namespace FleetWise.Controllers
 
             var write = _supabase.From<LeaveRequest>()
                 .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
-                .Set(x => x.RevokedAt, PhClock.Now)
+                .Set(x => x.RevokedAt, DateTime.UtcNow)
                 .Set(x => x.RevokeNote, note.Trim());
 
             if (by.HasValue) write = write.Set(x => x.RevokedBy, by.Value);
@@ -581,7 +581,7 @@ namespace FleetWise.Controllers
                 // leave left to cancel. Stamped so the driver's app stops showing it waiting.
                 if (IsAskOutstanding(found))
                 {
-                    write = write.Set(x => x.WithdrawAnsweredAt, PhClock.Now);
+                    write = write.Set(x => x.WithdrawAnsweredAt, DateTime.UtcNow);
                     if (by.HasValue) write = write.Set(x => x.WithdrawAnsweredBy, by.Value);
                 }
             }
@@ -684,7 +684,7 @@ namespace FleetWise.Controllers
                 // Stamped, not cleared. Clearing the asking took the request out of the
                 // queue and out of its own history together, so neither the driver nor
                 // anybody else could see it had been asked about at all.
-                .Set(x => x.WithdrawAnsweredAt, PhClock.Now);
+                .Set(x => x.WithdrawAnsweredAt, DateTime.UtcNow);
 
             if (by.HasValue) write = write.Set(x => x.WithdrawAnsweredBy, by.Value);
             if (!string.IsNullOrWhiteSpace(note)) write = write.Set(x => x.WithdrawAnswerNote, note.Trim());
@@ -916,14 +916,16 @@ namespace FleetWise.Controllers
                 Days = LeaveEntitlement.Days(r),
                 Reason = r.Reason,
                 Status = r.Status,
-                Filed = r.FiledAt.ToString("MMM d, yyyy h:mm tt"),
+                Filed = StoredTimes.FromUtc(r.FiledAt).ToString("MMM d, yyyy h:mm tt"),
                 BalanceAfter = Math.Max(0, entitlement - granted - (spends ? LeaveEntitlement.EffectiveDays(r) : 0)),
                 EntitlementOfType = entitlement,
                 OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),
                 DecisionNote = LeaveHistory.StatusNote(r),
                 WithdrawAsked = IsAskOutstanding(r),
                 WithdrawReason = r.WithdrawReason,
-                WithdrawAskedWhen = r.WithdrawRequestedAt?.ToString("MMM d, yyyy h:mm tt"),
+                WithdrawAskedWhen = r.WithdrawRequestedAt is DateTime asked
+                    ? StoredTimes.FromUtc(asked).ToString("MMM d, yyyy h:mm tt")
+                    : null,
                 RevokedCount = r.RevokedDates?.Count ?? 0,
                 RevokableDays = RevokableDaysOf(r),
                 History = LeaveHistory.Of(r, names),

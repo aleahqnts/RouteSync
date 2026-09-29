@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Caching.Memory;
 using FleetWise.Models;
 using FleetWise.Services;
 
@@ -10,8 +11,22 @@ namespace FleetWise.Controllers
     public class DashboardController : Controller
     {
         private readonly Supabase.Client _supabase;
+        private readonly IMemoryCache _cache;
 
-        public DashboardController(Supabase.Client supabase) => _supabase = supabase;
+        public DashboardController(Supabase.Client supabase, IMemoryCache cache)
+        {
+            _supabase = supabase;
+            _cache = cache;
+        }
+
+        /// <summary>How many past weeks the usual day is averaged over.</summary>
+        private const int UsualWeeks = 4;
+
+        /// <summary>
+        /// How long the usual day is kept between refreshes. It is built from days already
+        /// over, so it changes only when the day does, and the page asks every few seconds.
+        /// </summary>
+        private static readonly TimeSpan UsualFreshness = TimeSpan.FromMinutes(10);
 
         public async Task<IActionResult> Index(int? routeId) => View(await BuildAsync(routeId));
 
@@ -38,7 +53,7 @@ namespace FleetWise.Controllers
                 passengerDelta = vm.PassengerDelta,
                 totalRevenue = vm.TotalRevenue,
                 revenueDelta = vm.RevenueDelta,
-                chartData = vm.ChartData,
+                chartData = new { bars = vm.ChartData, usual = vm.ChartUsual, now = vm.ChartNowIndex },
                 breakdown = vm.ActiveTripBreakdown
                     .Where(r => r.Passengers > 0)
                     .Select(r => new
@@ -108,104 +123,19 @@ namespace FleetWise.Controllers
             decimal yesterdayRevenue = yesterdayTrips.Where(Earned).Sum(t => t.EstimatedRevenue);
 
             // Passenger Count (from trips.total_boarded).
-            var todayTripIds = todayTrips.Select(t => t.TripId).ToHashSet();
-            var yesterdayTripIds = yesterdayTrips.Select(t => t.TripId).ToHashSet();
-
             int todayPassengers = todayTrips.Sum(t => t.TotalBoarded);
             int yesterdayPassengers = yesterdayTrips.Sum(t => t.TotalBoarded);
 
-            // Telemetry feeds the hourly chart only. The stored trip total has no
-            // breakdown within the day, so the chart still needs the raw readings.
-            //
-            // The window is this service cycle: 06:00 on the operational day inclusive, to
-            // 06:00 the next morning exclusive.
-            var cycleStart = today.Add(PhClock.DayStartTime);
-            var cycleEnd = today.AddDays(1).Add(PhClock.DayStartTime);
-            var telemetryResponse = await _supabase
-                .From<TelemetryData>()
-                .Filter("timestamp", Postgrest.Constants.Operator.GreaterThanOrEqual,
-                        cycleStart.ToString("yyyy-MM-dd HH:mm:ss"))
-                .Filter("timestamp", Postgrest.Constants.Operator.LessThan,
-                        cycleEnd.ToString("yyyy-MM-dd HH:mm:ss"))
-                .Get();
-
-            // Hour marks across the full cycle: 25 points from 06:00 to 06:00, with both
-            // ends shown.
-            var markTimes = Enumerable.Range(0, 25).Select(i => cycleStart.AddHours(i)).ToList();
-
-            var labels = markTimes
-                .Select(dt => dt.Hour switch
-                {
-                    0 => "12:00 AM",
-                    12 => "12:00 PM",
-                    < 12 => $"{dt.Hour}:00 AM",
-                    _ => $"{dt.Hour - 12}:00 PM",
-                })
-                .ToList();
-
-            // The stored digits are already Philippine wall-clock time, so no offset is
-            // added here. Doing so shifts them a second time.
-            var todayTelemetry = telemetryResponse.Models
-                .Where(t => todayTripIds.Contains(t.TripId))
-                .ToList();
+            // Boardings hour by hour across the service day, 06:00 to 05:59, with the usual
+            // day beside them: the same hours on the same weekday in the weeks before.
             var now = PhClock.Now;
+            var cycleStart = HourlyBoardings.CycleStart(today);
+            var hourly = HourlyBoardings.ByHour(today, todayTrips, await EventsForAsync(today), now);
+            var usual = await UsualAsync(today, routeId);
 
-            // Only boardings are recorded, never alightings, so occupancy cannot be known.
-            // The chart shows passengers boarded cumulatively by hour: a figure that only
-            // rises and finishes exactly at the trip's stored total.
-            //
-            // Each trip's window uses the actual start and end when the driver app recorded
-            // them, and the scheduled shift otherwise, rolling forward when overnight.
-            static DateTime FloorHour(DateTime d) => new(d.Year, d.Month, d.Day, d.Hour, 0, 0);
-            var tripWindows = todayTrips.Select(t =>
-            {
-                var schedStart = t.Date.Date + t.ShiftStartTime;
-                var schedEnd = t.Date.Date + t.ShiftEndTime
-                    + (t.ShiftEndTime <= t.ShiftStartTime ? TimeSpan.FromDays(1) : TimeSpan.Zero);
-                // Postgrest returns a local-kind timestamp, shifting the stored digits
-                // eight hours ahead. Normalizing back aligns them with the hour marks.
-                // Without it an overnight trip falls outside the cycle window and
-                // disappears from the chart.
-                var start = t.ActualStartTime?.ToUniversalTime() ?? schedStart;
-                var end = t.ActualEndTime?.ToUniversalTime() ?? (t.TripStatus == "Active" ? now : schedEnd);
-                // Guards against clock skew: a phone can record a start slightly ahead of
-                // server time. The window never begins after the current time, is floored
-                // to the hour so the first bucket is included, and never ends in the future.
-                if (start > now) start = now;
-                start = FloorHour(start);
-                if (end > now) end = now;
-                if (end < start) end = start;
-                return new { Trip = t, Start = start, End = end };
-            }).ToList();
-
-            // Each hour mark sums every trip's boardings so far. Marks after the current
-            // time return no value, so the line stops at now.
-            var data = markTimes.Select(mark =>
-            {
-                if (mark > now) return (int?)null;
-                int sum = 0;
-                foreach (var w in tripWindows)
-                {
-                    if (mark < w.Start) continue;                       // trip hasn't started yet
-                    if (mark > w.End) { sum += w.Trip.TotalBoarded; continue; } // ended earlier today -> count persists
-                    // Boardings up to this hour: the highest telemetry reading seen so far,
-                    // which only rises, capped at the trip's total. The current hour is
-                    // anchored to that total so the chart agrees with the headline figure.
-                    int boarded = todayTelemetry
-                        .Where(x => x.TripId == w.Trip.TripId && x.Timestamp.ToUniversalTime() <= mark)
-                        .Select(x => x.TotalPassengers)
-                        .DefaultIfEmpty(0)
-                        .Max();
-                    boarded = Math.Min(boarded, w.Trip.TotalBoarded);
-                    if (mark.AddHours(1) > w.End) boarded = w.Trip.TotalBoarded; // last/current hour = truth
-                    sum += boarded;
-                }
-                return (int?)sum;
-            }).ToList();
-
-            var maxVal = data.Where(d => d.HasValue).Select(d => d!.Value).DefaultIfEmpty(0).Max();
-            int yMax = maxVal > 0 ? (int)(Math.Ceiling((maxVal + 50) / 100.0) * 100) : 400;
-            int yStep = yMax / 4;
+            var labels = Enumerable.Range(0, HourlyBoardings.Hours)
+                .Select(h => HourLabel(cycleStart.AddHours(h)))
+                .ToList();
 
             // Routes dropdown.
             var routesResponse = await _supabase
@@ -247,9 +177,9 @@ namespace FleetWise.Controllers
                 TotalRevenue = todayRevenue,
                 RevenueDelta = todayRevenue - yesterdayRevenue,
                 ChartLabels = labels,
-                ChartData = data,
-                ChartYMax = yMax,
-                ChartYStep = yStep,
+                ChartData = hourly.ToList(),
+                ChartUsual = usual?.ToList(),
+                ChartNowIndex = (int)Math.Floor((now - cycleStart).TotalHours),
                 Routes = routes,
                 SelectedRouteId = routeId,
                 Today = today,
@@ -257,6 +187,63 @@ namespace FleetWise.Controllers
             };
 
             return vm;
+        }
+
+        private static string HourLabel(DateTime at) => at.Hour switch
+        {
+            0 => "12:00 AM",
+            12 => "12:00 PM",
+            < 12 => $"{at.Hour}:00 AM",
+            _ => $"{at.Hour - 12}:00 PM",
+        };
+
+        /// <summary>The boarding events around one service day.</summary>
+        /// <remarks>
+        /// Read by time rather than by trip, since a day's trips can number more than a filter
+        /// on their identifiers carries. The window runs on past the day's end so a trip that
+        /// finished late still has all of its events counted against its total.
+        /// </remarks>
+        private async Task<List<BoardingEvent>> EventsForAsync(DateTime day)
+        {
+            var from = new DateTimeOffset(HourlyBoardings.CycleStart(day), TimeSpan.FromHours(8)).UtcDateTime;
+            var to = from.AddHours(HourlyBoardings.Hours + 12);
+
+            return await PagedRead.AllAsync(() => _supabase.From<BoardingEvent>()
+                .Select("event_id,trip_id,direction,device_timestamp")
+                .Filter("direction", Postgrest.Constants.Operator.Equals, "in")
+                .Filter("device_timestamp", Postgrest.Constants.Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-ddTHH:mm:ssZ"))
+                .Filter("device_timestamp", Postgrest.Constants.Operator.LessThan, to.ToString("yyyy-MM-ddTHH:mm:ssZ"))
+                .Order("event_id", Postgrest.Constants.Ordering.Ascending));
+        }
+
+        /// <summary>
+        /// The average boardings for each hour on the same weekday over the past four weeks,
+        /// or null when none of those days had any.
+        /// </summary>
+        private async Task<double[]?> UsualAsync(DateTime today, int? routeId)
+        {
+            var key = $"dashboard_usual:{today:yyyy-MM-dd}:{routeId?.ToString() ?? "all"}";
+            if (_cache.TryGetValue<double[]?>(key, out var held)) return held;
+
+            var days = Enumerable.Range(1, UsualWeeks).Select(w => today.AddDays(-7 * w)).ToList();
+
+            var trips = await PagedRead.AllAsync(() => _supabase.From<Trip>()
+                .Filter("date", Postgrest.Constants.Operator.In, days.Select(d => (object)d.ToString("yyyy-MM-dd")).ToList())
+                .Order("trip_id", Postgrest.Constants.Ordering.Ascending));
+
+            var perDay = new List<int?[]>();
+            foreach (var day in days)
+            {
+                var dayTrips = trips
+                    .Where(t => t.Date.Date == day && (!routeId.HasValue || t.RouteId == routeId.Value))
+                    .ToList();
+                var events = dayTrips.Count == 0 ? new List<BoardingEvent>() : await EventsForAsync(day);
+                perDay.Add(HourlyBoardings.ByHour(day, dayTrips, events, HourlyBoardings.CycleStart(day).AddDays(2)));
+            }
+
+            var usual = HourlyBoardings.Usual(perDay);
+            _cache.Set(key, usual, UsualFreshness);
+            return usual;
         }
     }
 }
