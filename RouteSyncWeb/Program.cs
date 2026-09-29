@@ -1,7 +1,7 @@
 ﻿using FleetWise.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
