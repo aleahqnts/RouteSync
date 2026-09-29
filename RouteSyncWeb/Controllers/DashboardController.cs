@@ -28,6 +28,47 @@ namespace FleetWise.Controllers
         /// </summary>
         private static readonly TimeSpan UsualFreshness = TimeSpan.FromMinutes(10);
 
+        /// <summary>
+        /// The trip columns the dashboard reads. The page asks every few seconds, so each
+        /// read carries only what the figures and the chart are worked out from.
+        /// </summary>
+        private const string TripColumns =
+            "trip_id,date,route_id,vehicle_id,shift_type,shift_start_time,shift_end_time," +
+            "trip_status,estimated_revenue,total_boarded,actual_end_time";
+
+        /// <summary>
+        /// How long the figures are shared between everyone watching the same route.
+        /// </summary>
+        /// <remarks>
+        /// Just under the page's five-second refresh. A single viewer finds the last answer
+        /// expired every time and is read for afresh, exactly as without sharing, while a
+        /// room of viewers costs one read per refresh between them. Nobody is shown figures
+        /// older than a refresh and a few seconds.
+        /// </remarks>
+        private static readonly TimeSpan FiguresShared = TimeSpan.FromSeconds(4);
+
+        /// <summary>
+        /// How long the hourly chart is shared, just under the minute the page waits between
+        /// asking for it, on the same terms as <see cref="FiguresShared"/>.
+        /// </summary>
+        private static readonly TimeSpan ChartShared = TimeSpan.FromSeconds(55);
+
+        /// <summary>The dashboard's figures at one moment, for everyone watching one route.</summary>
+        private sealed record Figures(
+            DateTime Today,
+            IReadOnlyList<Trip> TodayTrips,
+            int ActiveTrips,
+            int FlaggedVehicles,
+            int TodayPassengers,
+            int YesterdayPassengers,
+            decimal TodayRevenue,
+            decimal YesterdayRevenue,
+            IReadOnlyList<BusRoute> Routes,
+            IReadOnlyList<ActiveTripRow> Breakdown);
+
+        /// <summary>The hourly chart at one moment: today's bars, the average, and the hour now.</summary>
+        private sealed record HourlyChart(int?[] Bars, double[]? Usual, int NowIndex);
+
         public async Task<IActionResult> Index(int? routeId) => View(await BuildAsync(routeId));
 
         /// <summary>
@@ -39,12 +80,22 @@ namespace FleetWise.Controllers
         /// sent the markup for cards and a map that never change, and threw all but the
         /// numbers away. Only the figures travel here, so the refresh can be frequent
         /// enough to be worth having.
+        ///
+        /// The hourly chart is the largest part of the answer and moves the least, so the page
+        /// asks for it on only some refreshes. Without it, chartData is null and none of the
+        /// boardings behind it are read.
         /// </remarks>
+        /// <param name="routeId">The route the page is narrowed to, if any.</param>
+        /// <param name="chart">Whether to include the hourly chart.</param>
+        /// <param name="fresh">
+        /// Read now rather than share what another viewer was just given, for a refresh asked
+        /// for by hand.
+        /// </param>
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public async Task<IActionResult> Stats(int? routeId)
+        public async Task<IActionResult> Stats(int? routeId, bool chart = true, bool fresh = false)
         {
-            var vm = await BuildAsync(routeId);
+            var vm = await BuildAsync(routeId, chart, fresh);
             return Json(new
             {
                 activeTrips = vm.ActiveTrips,
@@ -53,7 +104,7 @@ namespace FleetWise.Controllers
                 passengerDelta = vm.PassengerDelta,
                 totalRevenue = vm.TotalRevenue,
                 revenueDelta = vm.RevenueDelta,
-                chartData = new { bars = vm.ChartData, usual = vm.ChartUsual, now = vm.ChartNowIndex },
+                chartData = chart ? new { bars = vm.ChartData, usual = vm.ChartUsual, now = vm.ChartNowIndex } : null,
                 breakdown = vm.ActiveTripBreakdown
                     .Where(r => r.Passengers > 0)
                     .Select(r => new
@@ -68,7 +119,48 @@ namespace FleetWise.Controllers
             });
         }
 
-        private async Task<DashboardViewModel> BuildAsync(int? routeId)
+        /// <summary>The dashboard for one route, or all of them, from answers shared between viewers.</summary>
+        private async Task<DashboardViewModel> BuildAsync(int? routeId, bool withChart = true, bool fresh = false)
+        {
+            var scope = routeId?.ToString() ?? "all";
+            var figures = await SharedRead.GetAsync(_cache, $"dashboard:figures:{scope}", FiguresShared,
+                () => ReadFiguresAsync(routeId), fresh);
+            var chart = withChart
+                ? await SharedRead.GetAsync(_cache, $"dashboard:chart:{figures.Today:yyyy-MM-dd}:{scope}", ChartShared,
+                    () => ReadChartAsync(figures, routeId), fresh)
+                : null;
+
+            var cycleStart = HourlyBoardings.CycleStart(figures.Today);
+            return new DashboardViewModel
+            {
+                ActiveTrips = figures.ActiveTrips,
+                FlaggedVehicles = figures.FlaggedVehicles,
+                TotalPassengers = figures.TodayPassengers,
+                PassengerDelta = figures.TodayPassengers - figures.YesterdayPassengers,
+                TotalRevenue = figures.TodayRevenue,
+                RevenueDelta = figures.TodayRevenue - figures.YesterdayRevenue,
+                ChartLabels = Enumerable.Range(0, HourlyBoardings.Hours)
+                    .Select(h => HourLabel(cycleStart.AddHours(h)))
+                    .ToList(),
+                ChartData = chart?.Bars.ToList() ?? new List<int?>(),
+                ChartUsual = chart?.Usual?.ToList(),
+                ChartNowIndex = chart?.NowIndex ?? (int)Math.Floor((PhClock.Now - cycleStart).TotalHours),
+                Routes = figures.Routes
+                    .Select(r => new SelectListItem
+                    {
+                        Value = r.RouteId.ToString(),
+                        Text = r.RouteName,
+                        Selected = routeId.HasValue && r.RouteId == routeId.Value
+                    })
+                    .ToList(),
+                SelectedRouteId = routeId,
+                Today = figures.Today,
+                ActiveTripBreakdown = figures.Breakdown.ToList(),
+            };
+        }
+
+        /// <summary>The cards' figures and the trips behind them, read from the database.</summary>
+        private async Task<Figures> ReadFiguresAsync(int? routeId)
         {
             // The service day is the current operational cycle, 06:00 to 05:59 the next
             // morning, rather than the calendar day. A trip is dated by the day it starts,
@@ -79,10 +171,14 @@ namespace FleetWise.Controllers
             // Flagged vehicles, which the page filters do not affect, are buses with an
             // unresolved maintenance log. Counting the vehicle_status column instead reads
             // zero, because the next shift overwrites it. This matches how the dispatch
-            // board and the vehicle registry define the same figure.
-            var maintResponse = await _supabase.From<MaintenanceLog>().Get();
+            // board and the vehicle registry define the same figure. Only open logs are read,
+            // since the table keeps every log ever raised and grows with the fleet's age.
+            var maintResponse = await _supabase.From<MaintenanceLog>()
+                .Select("log_id,vehicle_id")
+                .Filter<object>("resolved_at", Postgrest.Constants.Operator.Is, null)
+                .Get();
             int flaggedVehicles = maintResponse.Models
-                .Where(l => l.ResolvedAt == null && l.VehicleId != null)
+                .Where(l => l.VehicleId != null)
                 .Select(l => l.VehicleId)
                 .Distinct()
                 .Count();
@@ -90,11 +186,13 @@ namespace FleetWise.Controllers
             // Base queries for today's and yesterday's trips.
             var todayTripsResponse = await _supabase
                 .From<Trip>()
+                .Select(TripColumns)
                 .Filter("date", Postgrest.Constants.Operator.Equals, today.ToString("yyyy-MM-dd"))
                 .Get();
 
             var yesterdayTripsResponse = await _supabase
                 .From<Trip>()
+                .Select(TripColumns)
                 .Filter("date", Postgrest.Constants.Operator.Equals, yesterday.ToString("yyyy-MM-dd"))
                 .Get();
 
@@ -126,31 +224,13 @@ namespace FleetWise.Controllers
             int todayPassengers = todayTrips.Sum(t => t.TotalBoarded);
             int yesterdayPassengers = yesterdayTrips.Sum(t => t.TotalBoarded);
 
-            // Boardings hour by hour across the service day, 06:00 to 05:59, with the usual
-            // day beside them: the same hours on the same weekday in the weeks before.
-            var now = PhClock.Now;
-            var cycleStart = HourlyBoardings.CycleStart(today);
-            var hourly = HourlyBoardings.ByHour(today, todayTrips, await EventsForAsync(today), now);
-            var usual = await UsualAsync(today, routeId);
-
-            var labels = Enumerable.Range(0, HourlyBoardings.Hours)
-                .Select(h => HourLabel(cycleStart.AddHours(h)))
-                .ToList();
-
-            // Routes dropdown.
+            // Routes dropdown. Names only: a route's row also holds its path for the map,
+            // which is most of its size.
             var routesResponse = await _supabase
                 .From<BusRoute>()
+                .Select("route_id,route_name")
                 .Order("route_name", Postgrest.Constants.Ordering.Ascending)
                 .Get();
-
-            var routes = routesResponse.Models
-                .Select(r => new SelectListItem
-                {
-                    Value = r.RouteId.ToString(),
-                    Text = r.RouteName,
-                    Selected = routeId.HasValue && r.RouteId == routeId.Value
-                })
-                .ToList();
 
             // Passenger breakdown across every trip this cycle, for the totals modal.
             var routeNames = routesResponse.Models.ToDictionary(r => r.RouteId, r => r.RouteName);
@@ -167,26 +247,23 @@ namespace FleetWise.Controllers
                 })
                 .ToList();
 
-            // Assemble the view model.
-            var vm = new DashboardViewModel
-            {
-                ActiveTrips = activeTrips,
-                FlaggedVehicles = flaggedVehicles,
-                TotalPassengers = todayPassengers,
-                PassengerDelta = todayPassengers - yesterdayPassengers,
-                TotalRevenue = todayRevenue,
-                RevenueDelta = todayRevenue - yesterdayRevenue,
-                ChartLabels = labels,
-                ChartData = hourly.ToList(),
-                ChartUsual = usual?.ToList(),
-                ChartNowIndex = (int)Math.Floor((now - cycleStart).TotalHours),
-                Routes = routes,
-                SelectedRouteId = routeId,
-                Today = today,
-                ActiveTripBreakdown = tripBreakdown,
-            };
+            return new Figures(today, todayTrips, activeTrips, flaggedVehicles,
+                todayPassengers, yesterdayPassengers, todayRevenue, yesterdayRevenue,
+                routesResponse.Models, tripBreakdown);
+        }
 
-            return vm;
+        /// <summary>
+        /// Boardings hour by hour across the service day, 06:00 to 05:59, with the usual day
+        /// beside them: the same hours on the same weekday in the weeks before.
+        /// </summary>
+        private async Task<HourlyChart> ReadChartAsync(Figures figures, int? routeId)
+        {
+            var now = PhClock.Now;
+            var hourly = HourlyBoardings.ByHour(figures.Today, figures.TodayTrips,
+                await BoardedHoursAsync(figures.TodayTrips), now);
+            var usual = await UsualAsync(figures.Today, routeId);
+            var nowIndex = (int)Math.Floor((now - HourlyBoardings.CycleStart(figures.Today)).TotalHours);
+            return new HourlyChart(hourly, usual, nowIndex);
         }
 
         private static string HourLabel(DateTime at) => at.Hour switch
@@ -197,23 +274,27 @@ namespace FleetWise.Controllers
             _ => $"{at.Hour - 12}:00 PM",
         };
 
-        /// <summary>The boarding events around one service day.</summary>
+        /// <summary>The boardings of one day's trips, counted by trip and hour.</summary>
         /// <remarks>
-        /// Read by time rather than by trip, since a day's trips can number more than a filter
-        /// on their identifiers carries. The window runs on past the day's end so a trip that
-        /// finished late still has all of its events counted against its total.
+        /// <para>Counted in the database, which answers a full day with a few hundred small rows
+        /// however many passengers rode, where reading the events themselves meant one row per
+        /// passenger on every refresh. The trip identifiers travel in the request body, so a
+        /// day's worth is never too long to send.</para>
+        ///
+        /// <para>The answer is one read, which the API caps at a thousand rows. A day's trips
+        /// board in eight or nine hours each, so a day would need more than a hundred trips to
+        /// reach it; a single day is asked for at a time to keep it that way.</para>
         /// </remarks>
-        private async Task<List<BoardingEvent>> EventsForAsync(DateTime day)
+        private async Task<List<BoardedHour>> BoardedHoursAsync(IEnumerable<Trip> trips)
         {
-            var from = new DateTimeOffset(HourlyBoardings.CycleStart(day), TimeSpan.FromHours(8)).UtcDateTime;
-            var to = from.AddHours(HourlyBoardings.Hours + 12);
+            var ids = trips.Select(t => t.TripId).Distinct().ToList();
+            if (ids.Count == 0) return new List<BoardedHour>();
 
-            return await PagedRead.AllAsync(() => _supabase.From<BoardingEvent>()
-                .Select("event_id,trip_id,direction,device_timestamp")
-                .Filter("direction", Postgrest.Constants.Operator.Equals, "in")
-                .Filter("device_timestamp", Postgrest.Constants.Operator.GreaterThanOrEqual, from.ToString("yyyy-MM-ddTHH:mm:ssZ"))
-                .Filter("device_timestamp", Postgrest.Constants.Operator.LessThan, to.ToString("yyyy-MM-ddTHH:mm:ssZ"))
-                .Order("event_id", Postgrest.Constants.Ordering.Ascending));
+            var response = await _supabase.Rpc("boardings_by_hour", new Dictionary<string, object?>
+            {
+                ["p_trip_ids"] = ids,
+            });
+            return HourlyBoardings.ParseHours(response.Content);
         }
 
         /// <summary>
@@ -228,6 +309,7 @@ namespace FleetWise.Controllers
             var days = Enumerable.Range(1, UsualWeeks).Select(w => today.AddDays(-7 * w)).ToList();
 
             var trips = await PagedRead.AllAsync(() => _supabase.From<Trip>()
+                .Select(TripColumns)
                 .Filter("date", Postgrest.Constants.Operator.In, days.Select(d => (object)d.ToString("yyyy-MM-dd")).ToList())
                 .Order("trip_id", Postgrest.Constants.Ordering.Ascending));
 
@@ -237,8 +319,8 @@ namespace FleetWise.Controllers
                 var dayTrips = trips
                     .Where(t => t.Date.Date == day && (!routeId.HasValue || t.RouteId == routeId.Value))
                     .ToList();
-                var events = dayTrips.Count == 0 ? new List<BoardingEvent>() : await EventsForAsync(day);
-                perDay.Add(HourlyBoardings.ByHour(day, dayTrips, events, HourlyBoardings.CycleStart(day).AddDays(2)));
+                var boarded = await BoardedHoursAsync(dayTrips);
+                perDay.Add(HourlyBoardings.ByHour(day, dayTrips, boarded, HourlyBoardings.CycleStart(day).AddDays(2)));
             }
 
             var usual = HourlyBoardings.Usual(perDay);

@@ -1,17 +1,18 @@
+using System.Text.Json;
 using FleetWise.Models;
 
 namespace FleetWise.Services
 {
     /// <summary>A service day's boardings, hour by hour from 06:00 to 05:59.</summary>
     /// <remarks>
-    /// <para>Built from the counter's boarding events, each placed in the hour it happened.
-    /// A trip's count can run ahead of its events, since a driver can add passengers by hand
-    /// during a camera outage and those carry no time. That remainder is placed in the hour
-    /// the trip ended, or the current hour for a trip still running, so the hours add up to
-    /// the trips' reported totals.</para>
+    /// <para>Built from the counter's boardings, which the database counts by trip and hour.
+    /// A trip's count can run ahead of them, since a driver can add passengers by hand during
+    /// a camera outage and those carry no time. That remainder is placed in the hour the trip
+    /// ended, or the current hour for a trip still running, so the hours add up to the trips'
+    /// reported totals.</para>
     ///
-    /// <para>Event times are true UTC and are moved to Philippine time here. Trip start and
-    /// end times are stored as Philippine clock time already and are read as they are.</para>
+    /// <para>The counted hours are instants and are moved to Philippine time here. Trip start
+    /// and end times are stored as Philippine clock time already and are read as they are.</para>
     /// </remarks>
     public static class HourlyBoardings
     {
@@ -28,9 +29,12 @@ namespace FleetWise.Services
         /// </summary>
         /// <param name="day">The operational day.</param>
         /// <param name="trips">The day's trips, already narrowed to the routes wanted.</param>
-        /// <param name="events">Boarding events for those trips; others are ignored.</param>
+        /// <param name="boarded">
+        /// Boardings by trip and hour. Other trips' hours are ignored, and a trip's hours outside
+        /// the day still count toward what its camera saw.
+        /// </param>
         /// <param name="now">Philippine time now. A past day passes its end or later.</param>
-        public static int?[] ByHour(DateTime day, IReadOnlyList<Trip> trips, IEnumerable<BoardingEvent> events, DateTime now)
+        public static int?[] ByHour(DateTime day, IReadOnlyList<Trip> trips, IEnumerable<BoardedHour> boarded, DateTime now)
         {
             var start = CycleStart(day);
             var counts = new int[Hours];
@@ -44,15 +48,14 @@ namespace FleetWise.Services
             var tripIds = trips.Select(t => t.TripId).ToHashSet();
             var inByTrip = new Dictionary<string, int>();
 
-            foreach (var e in events)
+            foreach (var b in boarded)
             {
-                if (!string.Equals(e.Direction, "in", StringComparison.OrdinalIgnoreCase) || !tripIds.Contains(e.TripId))
-                    continue;
+                if (!tripIds.Contains(b.TripId)) continue;
 
-                inByTrip[e.TripId] = inByTrip.GetValueOrDefault(e.TripId) + 1;
+                inByTrip[b.TripId] = inByTrip.GetValueOrDefault(b.TripId) + b.Boarded;
 
-                var at = e.DeviceTimestamp.ToOffset(Ph).DateTime;
-                if (at <= now && Hour(at) is int h) counts[h]++;
+                var at = b.HourStart.ToOffset(Ph).DateTime;
+                if (at <= now && Hour(at) is int h) counts[h] += b.Boarded;
             }
 
             foreach (var t in trips)
@@ -70,6 +73,12 @@ namespace FleetWise.Services
                 .Select(h => start.AddHours(h) > now ? (int?)null : counts[h])
                 .ToArray();
         }
+
+        /// <summary>The rows boardings_by_hour returns, read from its JSON.</summary>
+        public static List<BoardedHour> ParseHours(string? json) =>
+            string.IsNullOrWhiteSpace(json)
+                ? new List<BoardedHour>()
+                : JsonSerializer.Deserialize<List<BoardedHour>>(json) ?? new List<BoardedHour>();
 
         /// <summary>
         /// The average for each hour across past days, leaving out days nobody boarded on,
