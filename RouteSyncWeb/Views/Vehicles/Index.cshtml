@@ -166,7 +166,7 @@
                   placeholder="Note (optional): who is doing the work, when it is booked"></textarea>
 
         <div class="vh-action-btns">
-            <button type="button" class="vh-btn vh-btn--outline" onclick="vhScheduleCancel()">Cancel</button>
+            <button type="button" class="vh-btn vh-btn--outline" data-on="click:vhScheduleCancel">Cancel</button>
             <button type="button" class="vh-btn vh-btn--primary" id="vhScheduleSave">Schedule</button>
         </div>
     </div>
@@ -184,7 +184,7 @@
                   placeholder="Note (optional): progress, parts on order, who is working on it…"></textarea>
         <p id="vhItemsFoot" class="vh-item-summary"></p>
         <div class="vh-action-btns">
-            <button type="button" class="vh-btn vh-btn--outline" onclick="vhItemsCancel()">Cancel</button>
+            <button type="button" class="vh-btn vh-btn--outline" data-on="click:vhItemsCancel">Cancel</button>
             <button type="button" class="vh-btn vh-btn--primary" id="vhItemsSave">Save</button>
         </div>
     </div>
@@ -234,13 +234,13 @@
         <p id="vhActionError" class="vh-action-error" style="display:none;"></p>
         <textarea id="vhActionNote" class="vh-form-input vh-action-note" rows="3" placeholder="Reason / details…"></textarea>
         <div class="vh-action-btns">
-            <button type="button" class="vh-btn vh-btn--outline" onclick="vhActionCancel()">Cancel</button>
+            <button type="button" class="vh-btn vh-btn--outline" data-on="click:vhActionCancel">Cancel</button>
             <button type="button" class="vh-btn vh-btn--primary" id="vhActionConfirm">Confirm</button>
         </div>
     </div>
 </div>
 
-<script>
+<script nonce="@CspNonce.Value">
     // Proxy endpoints for the camera calibration overlay. The service key stays on the
     // server, so the browser only ever calls these.
     window.camUrls = {
@@ -252,7 +252,38 @@
 </script>
 <script src="~/js/camera-calib.js"></script>
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    // The vehicle details and the edit form arrive by fetch, where a script would not run, and
+    // the camera dialog has none of its own, so their controls are named here as well.
+    rsOn({
+        vhScheduleCancel:      function () { vhScheduleCancel(); },
+        vhItemsCancel:         function () { vhItemsCancel(); },
+        vhActionCancel:        function () { vhActionCancel(); },
+        vhFilterSubmit:        function () { this.form.submit(); },
+        // _CameraCalibrateModal
+        camClose:              function () { camClose(); },
+        camStart:              function () { camStart(); },
+        camFlipSide:           function () { camFlipSide(); },
+        camFlipLens:           function () { camFlipLens(); },
+        camRefresh:            function () { camRefresh(); },
+        camSave:               function () { camSave(); },
+        // _VehicleDetails
+        vhCamOpen:             function () { camOpen(this.dataset.vehicleId); },
+        vhOpenChecklist:       function () { vhOpenChecklist(); },
+        vhReturnToService:     function () { vhSetService(this.dataset.vehicleId, false, this.dataset.logId ? Number(this.dataset.logId) : null); },
+        vhMarkOutOfService:    function () { vhMarkOutOfService(this.dataset.vehicleId, this.dataset.logId ? Number(this.dataset.logId) : null); },
+        vhScheduleMaintenance: function () { vhScheduleMaintenance(this.dataset.vehicleId); },
+        vhOpenPhotos:          function () { vhOpenPhotos(this); },
+        vhOpenItems:           function () { vhOpenItems(this.dataset.logId ? Number(this.dataset.logId) : undefined); },
+        vhItemsTick:           function () { vhItemsTick(this.closest('.vh-item-edit')); },
+        vhItemsDismiss:        function () { vhItemsDismiss(this.closest('.vh-item-edit')); },
+        // _EditVehicleForm
+        vhRestore:             function () { vhRestore(this.dataset.vehicleId); },
+        vhRetire:              function () { vhRetire(this.dataset.vehicleId); }
+    });
+
     // Copies the checklist built with the vehicle details into its own dialog. The
     // markup is cloned rather than rebuilt, so the two always agree.
     // The open order being edited, and the outcome chosen for each of its items.
@@ -489,7 +520,7 @@
     }
 </script>
 
-<script>
+<script nonce="@CspNonce.Value">
     // Load the vehicle table rows in the background so the page itself renders instantly
     // (server-rendered HTML fetched into the table body).
     document.addEventListener('DOMContentLoaded', function () {
@@ -782,7 +813,7 @@
         <div class="vh-filter">
             <label class="vh-filter-label">Route:</label>
             <div class="vh-select-wrap">
-                <select name="route" class="vh-select" onchange="this.form.submit()">
+                <select name="route" class="vh-select" data-on="change:vhFilterSubmit">
                     <option value="">All Routes</option>
                     @foreach (var r in Model.RouteOptions)
                     {
@@ -797,7 +828,7 @@
         <div class="vh-filter">
             <label class="vh-filter-label">Status:</label>
             <div class="vh-select-wrap">
-                <select name="status" class="vh-select" onchange="this.form.submit()">
+                <select name="status" class="vh-select" data-on="change:vhFilterSubmit">
                     <option value="">All</option>
                     @foreach (var s in Model.StatusOptions)
                     {
@@ -812,7 +843,7 @@
         <div class="vh-filter">
             <label class="vh-filter-label">Issues:</label>
             <div class="vh-select-wrap">
-                <select name="condition" class="vh-select" onchange="this.form.submit()">
+                <select name="condition" class="vh-select" data-on="change:vhFilterSubmit">
                     <option value="">All</option>
                     @foreach (var c in Model.ConditionOptions)
                     {

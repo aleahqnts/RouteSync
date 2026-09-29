@@ -59,7 +59,7 @@
            offered on a week a roster covers whole, which the roster fills instead. *@
         @if (!Model.WeekClosed && !Model.AllRostered)
         {
-            <button type="button" class="sch-btn-ghost" id="sch-copy" onclick="schCopyLastWeek()">
+            <button type="button" class="sch-btn-ghost" id="sch-copy" data-on="click:schCopyLastWeek">
                 Copy last week
             </button>
         }
@@ -79,7 +79,7 @@
         <div class="sch-pick">
             <label>Week starting</label>
             <input type="date" id="sch-start" value="@Model.WeekStart.ToString("yyyy-MM-dd")" />
-            <button class="sch-btn-ghost" onclick="schGoWeek()">Go</button>
+            <button class="sch-btn-ghost" data-on="click:schGoWeek">Go</button>
         </div>
         @* A week whose every shift has finished is a record, not a plan. The controls that
            would write to it are withheld rather than left to be refused on use. *@
@@ -91,7 +91,7 @@
         }
         else
         {
-            <button class="sch-btn-save" id="sch-save" onclick="schSave()">Save Schedule</button>
+            <button class="sch-btn-save" id="sch-save" data-on="click:schSave">Save Schedule</button>
         }
     </div>
 
@@ -120,7 +120,7 @@
             <span class="sch-draft-ico" aria-hidden="true">&#9888;</span>
             <span class="sch-draft-text" id="schMovedText"></span>
         </span>
-        <button type="button" class="sch-draft-go" onclick="schReloadWeek()">Reload the week</button>
+        <button type="button" class="sch-draft-go" data-on="click:schReloadWeek">Reload the week</button>
     </div>
 
     </div>@* /sch-sticky-top *@
@@ -137,8 +137,8 @@
            are not on screen, Show me cannot reach them, and this week's Save does not
            write them. *@
         <span class="sch-draft-other" id="schDraftOther" hidden></span>
-        <button type="button" class="sch-draft-go" id="schDraftGo" onclick="schNextDirty()">Show me</button>
-        <button type="button" class="sch-draft-drop" id="schDraftDrop" onclick="schDiscardDraft()">Discard them</button>
+        <button type="button" class="sch-draft-go" id="schDraftGo" data-on="click:schNextDirty">Show me</button>
+        <button type="button" class="sch-draft-drop" id="schDraftDrop" data-on="click:schDiscardDraft">Discard them</button>
     </div>
 
 
@@ -191,7 +191,7 @@
                                             <div class="sch-shift-name">@shift</div>
                                             @if (!Model.WeekClosed)
                                             {
-                                                <button type="button" class="sch-add-bus" onclick="schAddBus(this)">+ Add bus</button>
+                                                <button type="button" class="sch-add-bus" data-on="click:schAddBus">+ Add bus</button>
                                             }
                                         </td>
                                     }
@@ -271,7 +271,7 @@
                                                     {
                                                         <button type="button" class="sch-suggest" hidden aria-haspopup="dialog" aria-controls="sch-suggest"
                                                                 aria-label="Suggest a driver for @gap.VehicleId, @shift shift, @day.ToString("ddd, MMM d")"
-                                                                onclick="schSuggestOpen(this)">Suggest</button>
+                                                                data-on="click:schSuggestOpen">Suggest</button>
                                                     }
                                                 </div>
                                             }
@@ -308,8 +308,8 @@
             <p id="sch-conflict-sub" class="sch-modal-sub">Review the highlighted cells before saving.</p>
             <ul id="sch-conflict-list" class="sch-modal-list"></ul>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCloseConflicts()">Back</button>
-                <button id="sch-override-btn" class="sch-modal-btn sch-modal-btn-override" style="display:none;" onclick="schConfirmOverride()">Save Anyway</button>
+                <button class="sch-modal-btn" data-on="click:schCloseConflicts">Back</button>
+                <button id="sch-override-btn" class="sch-modal-btn sch-modal-btn-override" style="display:none;" data-on="click:schConfirmOverride">Save Anyway</button>
             </div>
         </div>
     </div>
@@ -323,8 +323,8 @@
             </div>
             <p id="sch-away-text" class="sch-modal-sub"></p>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCancelAway()">Choose Another</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schConfirmAway()">Assign Anyway</button>
+                <button class="sch-modal-btn" data-on="click:schCancelAway">Choose Another</button>
+                <button class="sch-modal-btn sch-modal-btn-override" data-on="click:schConfirmAway">Assign Anyway</button>
             </div>
         </div>
     </div>
@@ -339,8 +339,8 @@
             <p class="sch-modal-sub">The following conflicts were found. Proceed only if this assignment is intended.</p>
             <ul id="sch-override-list" class="sch-modal-list"></ul>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCancelOverride()">Cancel</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schSave(true)">Save Anyway</button>
+                <button class="sch-modal-btn" data-on="click:schCancelOverride">Cancel</button>
+                <button class="sch-modal-btn sch-modal-btn-override" data-on="click:schSaveAnyway">Save Anyway</button>
             </div>
         </div>
     </div>
@@ -355,8 +355,8 @@
             </div>
             <p id="sch-moved-text" class="sch-modal-sub"></p>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCloseMoved()">Keep Editing</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schReloadWeek()">Reload Week</button>
+                <button class="sch-modal-btn" data-on="click:schCloseMoved">Keep Editing</button>
+                <button class="sch-modal-btn sch-modal-btn-override" data-on="click:schReloadWeek">Reload Week</button>
             </div>
         </div>
     </div>
@@ -372,8 +372,8 @@
             <p id="sch-overwrite-sub" class="sch-modal-sub"></p>
             <ul id="sch-overwrite-list" class="sch-modal-list"></ul>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCloseOverwrite()">Back</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schSaveOverOthers()">Save Anyway</button>
+                <button class="sch-modal-btn" data-on="click:schCloseOverwrite">Back</button>
+                <button class="sch-modal-btn sch-modal-btn-override" data-on="click:schSaveOverOthers">Save Anyway</button>
             </div>
         </div>
     </div>
@@ -391,8 +391,8 @@
                 These are kept while this tab remains open and are lost when it closes.
             </p>
             <div class="sch-modal-actions">
-                <button class="sch-modal-btn" onclick="schCloseLeave()">Stay Here</button>
-                <button class="sch-modal-btn sch-modal-btn-override" onclick="schLeaveAnyway()">Leave Anyway</button>
+                <button class="sch-modal-btn" data-on="click:schCloseLeave">Stay Here</button>
+                <button class="sch-modal-btn sch-modal-btn-override" data-on="click:schLeaveAnyway">Leave Anyway</button>
             </div>
         </div>
     </div>
@@ -414,8 +414,8 @@
         <p class="sch-suggest-cost" id="sch-suggest-cost" hidden></p>
         <p class="sch-suggest-error" id="sch-suggest-error" hidden></p>
         <div class="sch-suggest-actions">
-            <button type="button" class="sch-btn-ghost" id="sch-suggest-cancel" onclick="schSuggestClose()">Cancel</button>
-            <button type="button" class="sch-suggest-use" id="sch-suggest-use" onclick="schSuggestUse()" disabled>Use</button>
+            <button type="button" class="sch-btn-ghost" id="sch-suggest-cancel" data-on="click:schSuggestClose">Cancel</button>
+            <button type="button" class="sch-suggest-use" id="sch-suggest-use" data-on="click:schSuggestUse" disabled>Use</button>
         </div>
     </div>
 </div>
@@ -426,7 +426,33 @@
 }
 
 <script src="~/js/candidate-list.js" asp-append-version="true"></script>
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        schCopyLastWeek:    function () { schCopyLastWeek(); },
+        schGoWeek:          function () { schGoWeek(); },
+        schSave:            function () { schSave(); },
+        schSaveAnyway:      function () { schSave(true); },
+        schReloadWeek:      function () { schReloadWeek(); },
+        schNextDirty:       function () { schNextDirty(); },
+        schDiscardDraft:    function () { schDiscardDraft(); },
+        schAddBus:          function () { schAddBus(this); },
+        schSuggestOpen:     function () { schSuggestOpen(this); },
+        schCloseConflicts:  function () { schCloseConflicts(); },
+        schConfirmOverride: function () { schConfirmOverride(); },
+        schCancelAway:      function () { schCancelAway(); },
+        schConfirmAway:     function () { schConfirmAway(); },
+        schCancelOverride:  function () { schCancelOverride(); },
+        schCloseMoved:      function () { schCloseMoved(); },
+        schCloseOverwrite:  function () { schCloseOverwrite(); },
+        schSaveOverOthers:  function () { schSaveOverOthers(); },
+        schCloseLeave:      function () { schCloseLeave(); },
+        schLeaveAnyway:     function () { schLeaveAnyway(); },
+        schSuggestClose:    function () { schSuggestClose(); },
+        schSuggestUse:      function () { schSuggestUse(); }
+    });
+
     // Who the draft below belongs to. Storage is shared by everything served from this
     // origin, and a tab outlives a sitting: without this, signing in after somebody else
     // restores their unsaved week and offers it to be saved under the new name.

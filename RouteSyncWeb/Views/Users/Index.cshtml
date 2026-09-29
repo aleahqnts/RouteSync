@@ -88,7 +88,13 @@
 @await Html.PartialAsync("_EditUserModal", (EditUserViewModel)ViewBag.EditUserModel)
 @await Html.PartialAsync("_ManageRolesModal", (RoleFormViewModel)ViewBag.RoleFormModel)
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        usLoadRows: function () { loadUserRows(); }
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
         // Auto-reopen the relevant modal after a failed POST
         const openModal = '@(ViewBag.OpenModal ?? "")';
@@ -273,7 +279,7 @@
         <div class="us-filter">
         <label class="us-role-filter-label">Roles:</label>
         <div class="us-select-wrap">
-            <select name="role" class="us-select" onchange="loadUserRows()">
+            <select name="role" class="us-select" data-on="change:usLoadRows">
                 <option value="">All Roles</option>
                 @foreach (var r in roles)
                 {

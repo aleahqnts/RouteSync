@@ -6,7 +6,7 @@
         @* Header *@
         <div class="bm-header">
             <h2 class="bm-title" id="bm-modal-title">Broadcast Message</h2>
-            <button class="bm-close" onclick="closeBroadcastModal()">&times;</button>
+            <button class="bm-close" data-on="click:bmClose">&times;</button>
         </div>
 
         @* Body *@
@@ -55,7 +55,7 @@
                 <label class="bm-label">Priority:</label>
                 <div class="bm-priority-wrap">
                     <input type="hidden" id="bm-priority" value="Normal" />
-                    <button type="button" class="bm-priority-btn" onclick="bmTogglePriority(event)">
+                    <button type="button" class="bm-priority-btn" data-on="click:bmTogglePriority">
                         <span class="bm-priority-dot" id="bm-priority-dot" style="background:#27AE60;"></span>
                         <span id="bm-priority-text">Normal</span>
                         <svg class="bm-select-arrow" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none"
@@ -64,10 +64,10 @@
                         </svg>
                     </button>
                     <div class="bm-priority-menu" id="bm-priority-menu">
-                        <div class="bm-priority-opt" onclick="bmPickPriority('Normal')">
+                        <div class="bm-priority-opt" data-on="click:bmPickNormal">
                             <span class="bm-priority-dot" style="background:#27AE60;"></span> Normal
                         </div>
-                        <div class="bm-priority-opt" onclick="bmPickPriority('High')">
+                        <div class="bm-priority-opt" data-on="click:bmPickHigh">
                             <span class="bm-priority-dot" style="background:#E74C3C;"></span> High
                         </div>
                     </div>
@@ -78,8 +78,8 @@
 
         @* Footer *@
         <div class="bm-footer">
-            <button class="bm-btn-cancel" onclick="closeBroadcastModal()">Cancel</button>
-            <button class="bm-btn-send" id="bm-send-btn" onclick="submitBroadcast()">
+            <button class="bm-btn-cancel" data-on="click:bmClose">Cancel</button>
+            <button class="bm-btn-send" id="bm-send-btn" data-on="click:bmSubmit">
                 <span id="bm-send-label">Send Message</span>
                 <span id="bm-send-spinner" style="display:none;">
                     <svg class="bm-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none"
@@ -104,7 +104,17 @@
 </div>
 
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this dialog's controls run, by the names in their data-on attributes. The
+    // content security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        bmClose:          function () { closeBroadcastModal(); },
+        bmTogglePriority: function (event) { bmTogglePriority(event); },
+        bmPickNormal:     function () { bmPickPriority('Normal'); },
+        bmPickHigh:       function () { bmPickPriority('High'); },
+        bmSubmit:         function () { submitBroadcast(); }
+    });
+
     (function () {
         const overlay   = document.getElementById('broadcastModal');
         const bodyInput = document.getElementById('bm-body');

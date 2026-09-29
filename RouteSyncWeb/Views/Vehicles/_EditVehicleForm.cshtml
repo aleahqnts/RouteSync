@@ -74,7 +74,7 @@
             of service, so its roadworthiness is decided separately.
         </p>
         <button type="button" class="vh-btn vh-btn--outline"
-                onclick="vhRestore('@Model.VehicleId')">Restore to Fleet</button>
+                data-vehicle-id="@Model.VehicleId" data-on="click:vhRestore">Restore to Fleet</button>
     }
     else
     {
@@ -87,6 +87,6 @@
             that is off the road today.
         </p>
         <button type="button" class="vh-btn vh-btn--danger"
-                onclick="vhRetire('@Model.VehicleId')">Retire Bus</button>
+                data-vehicle-id="@Model.VehicleId" data-on="click:vhRetire">Retire Bus</button>
     }
 </div>

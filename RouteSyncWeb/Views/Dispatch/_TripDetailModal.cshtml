@@ -8,7 +8,7 @@
     <div class="tdm-dialog tdm-photo-dialog">
         <div class="tdm-header">
             <h2 class="tdm-photo-title" id="tdm-photo-title">Inspection Photo</h2>
-            <button class="tdm-close" onclick="closeTripPhoto()" aria-label="Close">&times;</button>
+            <button class="tdm-close" data-on="click:tdmClosePhoto" aria-label="Close">&times;</button>
         </div>
         <div class="tdm-photo-body" id="tdm-photo-body"></div>
     </div>
@@ -20,7 +20,7 @@
         @* Header *@
         <div class="tdm-header">
             <h2 class="tdm-title">TRIP <span id="tdm-trip-id">—</span></h2>
-            <button class="tdm-close" onclick="closeTripModal()">&times;</button>
+            <button class="tdm-close" data-on="click:tdmClose">&times;</button>
         </div>
 
         @* Loading *@
@@ -114,7 +114,7 @@
 
                 @* Inspection Log Accordion *@
                 <div class="tdm-accordion">
-                    <button class="tdm-accordion-btn" onclick="toggleInspectionLog()">
+                    <button class="tdm-accordion-btn" data-on="click:tdmToggleInspection">
                         <span>View Inspection Log</span>
                         <svg class="tdm-accordion-chevron" id="tdm-chevron"
                              xmlns="http://www.w3.org/2000/svg" width="14" height="14"
@@ -185,7 +185,15 @@
 </div>
 
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this dialog's controls run, by the names in their data-on attributes. The
+    // content security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        tdmClosePhoto:       function () { closeTripPhoto(); },
+        tdmClose:            function () { closeTripModal(); },
+        tdmToggleInspection: function () { toggleInspectionLog(); }
+    });
+
     function openTripModal(tripId) {
         document.getElementById('tripDetailModal').style.display = 'flex';
         document.body.style.overflow = 'hidden';

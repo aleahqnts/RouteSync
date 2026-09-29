@@ -166,7 +166,7 @@
     <div class="au-head-actions">
         <span class="au-updated" id="auUpdated" title="Refreshes on its own every 30 seconds"></span>
         <button type="button" class="au-btn au-btn--outline au-btn--icon au-refresh" id="auRefreshBtn"
-                onclick="auRefresh(true)" title="Load new entries without losing your filters">
+                data-on="click:auRefreshNow" title="Load new entries without losing your filters">
             <span class="au-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                  aria-hidden="true">
@@ -260,7 +260,7 @@
         @* Rendered at every width and shown only on a phone, where the title row
            above carries nothing but this button. *@
         <button type="button" class="au-btn au-btn--outline au-btn--icon au-refresh au-refresh--inline"
-                onclick="auRefresh(true)" title="Load new entries without losing your filters">
+                data-on="click:auRefreshNow" title="Load new entries without losing your filters">
             <span class="au-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                  aria-hidden="true">
@@ -467,7 +467,13 @@
 }
 </div>
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        auRefreshNow: function () { auRefresh(true); }
+    });
+
     // Click a row to open its detail row underneath. Plain DOM, no fetch: the detail is
     // already on the page, so opening it is instant and works with the browser's back
     // button. Re-run after a refresh swaps the table out, or the new rows are dead.
