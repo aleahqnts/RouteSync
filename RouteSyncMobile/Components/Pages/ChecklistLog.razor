@@ -46,7 +46,7 @@ else
         <div class="summary">
             <div>
                 <p class="sum-status @StatusClass(checklist.ChecklistStatus)">@checklist.ChecklistStatus</p>
-                <p class="sum-time">Submitted @checklist.SubmittedAt.ToString("MMM d, yyyy h:mm tt")</p>
+                <p class="sum-time">Submitted @PhTime.Inspected(checklist).ToString("MMM d, yyyy h:mm tt")</p>
             </div>
         </div>
 

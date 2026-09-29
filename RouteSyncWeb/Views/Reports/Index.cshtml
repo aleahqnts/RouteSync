@@ -285,7 +285,7 @@
         @* Screen by screen, so a high figure on one screen cannot hide a low one on
            another. A row each, in the order the screens are listed. *@
         <div class="rp-suggest-screens">
-            <div class="rp-summary-sublabel">By screen</div>
+            <div class="rp-summary-sublabel">Categories</div>
             <div id="rpSuggestScreens" class="rp-suggest-rows"></div>
         </div>
     </div>
@@ -734,6 +734,10 @@
     grid: { color: '#F0F0F0' },
     border: { display: false },
     ticks: { font: { size: 10, family: 'Segoe UI' }, color: '#9AA5B4', maxTicksLimit: 5 },
+    // Counts and takings are never negative, so the axis starts at zero even when a
+    // period has nothing in it yet.
+    beginAtZero: true,
+    suggestedMax: 1,
     grace: '10%'
     }
     },
@@ -915,10 +919,10 @@
     document.getElementById('passengerSummaryVsLabel').textContent = summary.comparisonLabel;
 
     if (!passengerChart) {
-    passengerChart = miniLineChart('passengerMiniChart', summary.weekLabels, summary.weekData, '#9B59B6', v => formatNumber(v) + ' passengers');
+    passengerChart = miniLineChart('passengerMiniChart', summary.seriesLabels, summary.seriesData, '#9B59B6', v => formatNumber(v) + ' passengers');
     } else {
-    passengerChart.data.labels = summary.weekLabels;
-    passengerChart.data.datasets[0].data = summary.weekData;
+    passengerChart.data.labels = summary.seriesLabels;
+    passengerChart.data.datasets[0].data = summary.seriesData;
     passengerChart.update();
     }
 
@@ -943,10 +947,10 @@
     document.getElementById('revenueSummaryVsLabel').textContent = summary.comparisonLabel;
 
     if (!revenueChart) {
-    revenueChart = miniLineChart('revenueMiniChart', summary.weekLabels, summary.weekData, '#4AADA8', v => formatCurrencyCompact(v));
+    revenueChart = miniLineChart('revenueMiniChart', summary.seriesLabels, summary.seriesData, '#4AADA8', v => formatCurrencyCompact(v));
     } else {
-    revenueChart.data.labels = summary.weekLabels;
-    revenueChart.data.datasets[0].data = summary.weekData;
+    revenueChart.data.labels = summary.seriesLabels;
+    revenueChart.data.datasets[0].data = summary.seriesData;
     revenueChart.update();
     }
 
@@ -1013,10 +1017,7 @@
             }
             rows.forEach(x => {
                 const row = document.createElement('div');
-                // Picks from before the screen was recorded have no screen to be judged
-                // by, so they are set apart rather than read as one more screen.
-                row.className = 'rp-suggest-row' + (x.screen === 'Not recorded' ? ' rp-suggest-row--muted' : '');
-                if (x.screen === 'Not recorded') row.title = 'Picks made before the screen they were made on was recorded';
+                row.className = 'rp-suggest-row';
 
                 const name = document.createElement('span');
                 name.className = 'rp-suggest-row-name';

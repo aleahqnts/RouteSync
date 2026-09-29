@@ -1,4 +1,5 @@
-﻿using FleetWise.Models;
+﻿using System.Globalization;
+using FleetWise.Models;
 using FleetWise.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,8 +59,8 @@ namespace FleetWise.Controllers
                 issueTookTop = issues.Count(p => p.TookTopSuggestion),
 
                 // In the order the screens are listed, leaving out any with no picks. Picks
-                // recorded before screens were come last, as not recorded.
-                byScreen = PickScreen.All.Append(null)
+                // recorded before the screen was noted count in the figures above only.
+                byScreen = PickScreen.All
                     .Select(screen => new
                     {
                         screen = screen switch
@@ -68,8 +69,7 @@ namespace FleetWise.Controllers
                             PickScreen.Reassign => "Reassign",
                             PickScreen.Cover => "Cover",
                             PickScreen.Roster => "Roster",
-                            PickScreen.Planner => "Planner",
-                            _ => "Not recorded",
+                            _ => "Planner",
                         },
                         total = picks.Count(p => p.Screen == screen),
                         tookTop = picks.Count(p => p.Screen == screen && p.TookTopSuggestion),
@@ -262,16 +262,27 @@ namespace FleetWise.Controllers
                 ? (total == 0 ? 0 : 100)
                 : (double)((total - prevTotal) / prevTotal * 100);
 
-            // Seven-day series for the mini chart, Monday to Sunday, covering the week
-            // containing the selected date.
-            int offset = ((int)anchor.DayOfWeek + 6) % 7; // days since Monday
-            var weekStart = anchor.AddDays(-offset);
-            var weekData = new decimal[7];
-            for (int i = 0; i < 7; i++)
+            decimal Figure(IEnumerable<Trip> trips) =>
+                isPassenger ? trips.Sum(passengers) : trips.Where(Earned).Sum(t => t.EstimatedRevenue);
+
+            // The mini chart covers the same period as the total above it: a day by shift, a
+            // week by day, a month by day.
+            string[] seriesLabels;
+            decimal[] seriesData;
+            if (period == "This Day")
             {
-                var day = weekStart.AddDays(i);
-                var dayTrips = allTrips.Where(t => InRoute(t) && t.Date.Date == day);
-                weekData[i] = isPassenger ? dayTrips.Sum(passengers) : dayTrips.Where(Earned).Sum(t => t.EstimatedRevenue);
+                seriesLabels = TripStatus.Windows.Keys.ToArray();
+                seriesData = seriesLabels
+                    .Select(shift => Figure(current.Where(t => string.Equals(t.ShiftType, shift, StringComparison.OrdinalIgnoreCase))))
+                    .ToArray();
+            }
+            else
+            {
+                var days = Enumerable.Range(0, (end - start).Days + 1).Select(i => start.AddDays(i)).ToList();
+                seriesLabels = days
+                    .Select(d => period == "This Month" ? d.ToString("MMM d", CultureInfo.InvariantCulture) : d.ToString("dddd", CultureInfo.InvariantCulture))
+                    .ToArray();
+                seriesData = days.Select(d => Figure(current.Where(t => t.Date.Date == d))).ToArray();
             }
 
             // The three busiest routes in the selected period.
@@ -307,8 +318,8 @@ namespace FleetWise.Controllers
                     "This Month" => "vs Last Month",
                     _ => "vs Last Week"
                 },
-                weekLabels = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" },
-                weekData,
+                seriesLabels,
+                seriesData,
                 topRoutes = topRoutesWithPct
             };
         }
@@ -513,7 +524,7 @@ namespace FleetWise.Controllers
                 actualEnd = FmtActual(tripResponse.ActualEndTime),
                 duration = TripDuration(tripResponse),
                 checklistStatus = checklist?.ChecklistStatus,
-                checklistSubmitted = checklist is null ? null : FmtActual(checklist.SubmittedAt),
+                checklistSubmitted = checklist is null ? null : StoredTimes.Inspected(checklist).ToString("hh:mm tt"),
                 routeName = routeResponse?.RouteName ?? "N/A",
                 vehicleType = "Bus", // the vehicle_type column was dropped; every unit is a bus
                 vehicleId = vehicleResponse?.VehicleId ?? "N/A",

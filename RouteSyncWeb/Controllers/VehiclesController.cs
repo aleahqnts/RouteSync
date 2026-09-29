@@ -467,9 +467,7 @@ namespace FleetWise.Controllers
                         .OrderByDescending(p => p.TakenAt)
                         .Select(p => new InspectionPhotoLineViewModel(
                             p.PhotoId,
-                            PhClock.ToPh(new DateTimeOffset(
-                                DateTime.SpecifyKind(p.TakenAt, DateTimeKind.Utc)))
-                                .ToString("MM/dd/yy h:mm tt"),
+                            StoredTimes.FromUtc(p.TakenAt).ToString("MM/dd/yy h:mm tt"),
                             p.ObjectKey is null))
                         .ToList());
 
@@ -528,7 +526,7 @@ namespace FleetWise.Controllers
 
             return rows
                 .Select(r => new VehicleHistoryEntryViewModel(
-                    r.OccurredAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt"),
+                    PhClock.ToPh(r.OccurredAt).ToString("MMM d, yyyy h:mm tt"),
                     string.IsNullOrWhiteSpace(r.ActorRole) ? "Dashboard" : r.ActorRole,
                     r.Summary ?? r.Action,
                     !string.Equals(r.Outcome, "ok", OIC)))
@@ -652,7 +650,7 @@ namespace FleetWise.Controllers
             {
                 vm.HasInspection = true;
                 vm.ReportedBy = DriverName(driver, checklist.DriverId);
-                vm.TimeOfReport = checklist.SubmittedAt.ToString("MM/dd/yy hh:mm tt");
+                vm.TimeOfReport = StoredTimes.Inspected(checklist).ToString("MM/dd/yy hh:mm tt");
                 vm.Issue = DeriveInspectionIssue(checklist);
                 vm.InspectionSections = DeriveInspectionSections(checklist);
                 var itemsResponse = await _supabase.From<ChecklistItem>().Get();
@@ -774,8 +772,8 @@ namespace FleetWise.Controllers
                         return new PastOrderViewModel
                         {
                             LogId = l.LogId,
-                            Opened = l.CreatedAt.ToString("MM/dd/yy"),
-                            Closed = l.ResolvedAt!.Value.ToString("MM/dd/yy"),
+                            Opened = StoredTimes.Opened(l).ToString("MM/dd/yy"),
+                            Closed = StoredTimes.FromWall(l.ResolvedAt!.Value).ToString("MM/dd/yy"),
                             Summary = summary,
                             Items = items,
                             Notes = notesByOrder.TryGetValue(l.LogId, out var notes) ? notes : new(),
@@ -1478,7 +1476,7 @@ namespace FleetWise.Controllers
 
             return new MaintenanceEntryViewModel
             {
-                Date = (log.ResolvedAt ?? log.CreatedAt).ToString("MM/dd/yy"),
+                Date = (log.ResolvedAt is DateTime done ? StoredTimes.FromWall(done) : StoredTimes.Opened(log)).ToString("MM/dd/yy"),
                 Summary = summary,
                 Status = log.ResolvedAt != null
                     ? "Resolved"

@@ -21,14 +21,17 @@ namespace FleetWise.Models
         /// <summary>Hour labels along the horizontal axis.</summary>
         public List<string> ChartLabels { get; set; } = new();
 
-        /// <summary>Passenger counts against each label. A null entry is an hour still to come.</summary>
+        /// <summary>Passengers boarded in each hour. A null entry is an hour still to come.</summary>
         public List<int?> ChartData { get; set; } = new();
 
-        /// <summary>Y-axis maximum (defaults to 400).</summary>
-        public int ChartYMax { get; set; } = 400;
+        /// <summary>
+        /// The usual figure for each hour, averaged over the same weekday in the weeks before,
+        /// or null when those days had no boardings to average.
+        /// </summary>
+        public List<double>? ChartUsual { get; set; }
 
-        /// <summary>Y-axis step size (defaults to 100).</summary>
-        public int ChartYStep { get; set; } = 100;
+        /// <summary>The hour the service day is in now, counted from its 06:00 start.</summary>
+        public int ChartNowIndex { get; set; }
 
         /// <summary>Today's date in Philippine time, for the header.</summary>
         public DateTime Today { get; set; }
