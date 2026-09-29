@@ -159,7 +159,7 @@
    every page, so this page loads it here, ahead of the code that opens the panel. *@
 @section Scripts {
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+<script nonce="@CspNonce.Value">
     (function () {
         var modalEl = document.getElementById('siModal');
         var content = document.getElementById('siModalContent');

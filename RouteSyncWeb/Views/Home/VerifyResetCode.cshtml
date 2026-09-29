@@ -67,7 +67,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@CspNonce.Value">
         // The six boxes are presentation only. They keep the hidden Code field in step,
         // which is what the model binds and what the server validates, so the rules do
         // not change just because the input looks different.

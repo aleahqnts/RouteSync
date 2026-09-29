@@ -212,7 +212,7 @@
 
 @section Scripts {
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-    <script>
+    <script nonce="@CspNonce.Value">
         window.fleetMapBounds = @Html.Raw(ViewBag.MapBounds is double[] b
             ? $"[{b[0]},{b[1]},{b[2]},{b[3]}]"
             : "null");

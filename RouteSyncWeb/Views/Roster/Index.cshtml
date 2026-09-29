@@ -80,7 +80,7 @@
            is reloaded, because until then every save from here would be refused. *@
         <div class="ro-banner ro-banner--moved" id="roMoved" hidden>
             <span id="roMovedText"></span>
-            <button type="button" class="ro-btn ro-btn--ghost" onclick="location.reload()">Reload</button>
+            <button type="button" class="ro-btn ro-btn--ghost" data-on="click:roReload">Reload</button>
         </div>
     </div>
 
@@ -409,7 +409,13 @@
 @Html.AntiForgeryToken()
 
 <script src="~/js/candidate-list.js" asp-append-version="true"></script>
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        roReload: function () { location.reload(); }
+    });
+
     (function () {
         const page = document.getElementById('roPage');
         const readOnly = page.dataset.readonly === 'true';

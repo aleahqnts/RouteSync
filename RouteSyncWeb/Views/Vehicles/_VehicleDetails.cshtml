@@ -62,7 +62,7 @@
                 {
                     <div class="vh-detail-inline">
                         <div class="vh-detail-row"><strong>Counter Phone:</strong> @Model.CounterDeviceId</div>
-                        <button type="button" class="vh-btn vh-btn--primary vh-btn--sm" onclick="camOpen('@Model.VehicleId')">Calibrate Camera</button>
+                        <button type="button" class="vh-btn vh-btn--primary vh-btn--sm" data-vehicle-id="@Model.VehicleId" data-on="click:vhCamOpen">Calibrate Camera</button>
                     </div>
                 }
                 else
@@ -91,7 +91,7 @@
                         @if (Model.InspectionChecklist.Count > 0)
                         {
                             <button type="button" class="vh-btn vh-btn--outline vh-btn--sm"
-                                    onclick="vhOpenChecklist()">View inspection checklist</button>
+                                    data-on="click:vhOpenChecklist">View inspection checklist</button>
                         }
                     </div>
                     @if (Model.InspectionChecklist.Count > 0)
@@ -229,12 +229,12 @@
                     <div class="vh-review-actions">
                         @if (Model.OutOfService)
                         {
-                            <button type="button" class="vh-btn vh-btn--outline" onclick="vhSetService('@Model.VehicleId', false, @(Model.OpenLogId?.ToString() ?? "null"))">Return to Service</button>
+                            <button type="button" class="vh-btn vh-btn--outline" data-vehicle-id="@Model.VehicleId" data-log-id="@Model.OpenLogId" data-on="click:vhReturnToService">Return to Service</button>
                         }
                         else
                         {
                             <button type="button" class="vh-btn vh-btn--danger"
-                                    onclick="vhMarkOutOfService('@Model.VehicleId', @(Model.OpenLogId?.ToString() ?? "null"))"
+                                    data-vehicle-id="@Model.VehicleId" data-log-id="@Model.OpenLogId" data-on="click:vhMarkOutOfService"
                                     disabled="@Model.OnTrip"
                                     title="@(Model.OnTrip ? "The bus is on a trip. End it from Dispatch first." : null)">Mark Out of Service</button>
                         }
@@ -248,7 +248,7 @@
             <div class="vh-section-header">
                 <span>Maintenance Log</span>
                 <span class="vh-maint-head-right">
-                    <button type="button" class="vh-btn-mini" onclick="vhScheduleMaintenance('@Model.VehicleId')">+ Schedule Maintenance</button>
+                    <button type="button" class="vh-btn-mini" data-vehicle-id="@Model.VehicleId" data-on="click:vhScheduleMaintenance">+ Schedule Maintenance</button>
                     <span class="vh-section-badge @MaintClass(Model.CurrentStatus)">@Model.CurrentStatus</span>
                 </span>
             </div>
@@ -286,7 +286,7 @@
                                                 data-photos="@string.Join(",", shots.Live.Select(p => p.PhotoId))"
                                                 data-taken="@string.Join("|", shots.Live.Select(p => p.TakenAt))"
                                                 title="Photographed by the driver during the inspection"
-                                                onclick="vhOpenPhotos(this)">
+                                                data-on="click:vhOpenPhotos">
                                             <span class="vh-item-photo-mark" aria-hidden="true">▣</span>@shots.Live.Count
                                         </button>
                                     }
@@ -313,7 +313,7 @@
                         </div>
 
                         <button type="button" class="vh-btn vh-btn--primary vh-btn--sm"
-                                onclick="vhOpenItems(@Model.OpenLogId)">Update Maintenance</button>
+                                data-log-id="@Model.OpenLogId" data-on="click:vhOpenItems">Update Maintenance</button>
 
                         @* Rendered with the details and cloned into the update dialog, so both
                            read from one list. *@
@@ -325,7 +325,7 @@
                                     <div class="vh-item-edit-top">
                                         <label class="vh-item-check">
                                             <input type="checkbox" checked="@(state == "fixed")"
-                                                   onchange="vhItemsTick(this.closest('.vh-item-edit'))" />
+                                                   data-on="change:vhItemsTick" />
                                             <span class="vh-item-label">@item.Label</span>
                                         </label>
                                         @if (item.IsCritical)
@@ -335,7 +335,7 @@
                                         else
                                         {
                                             <button type="button" class="vh-item-dismiss"
-                                                    onclick="vhItemsDismiss(this.closest('.vh-item-edit'))">Not an issue</button>
+                                                    data-on="click:vhItemsDismiss">Not an issue</button>
                                         }
                                     </div>
                                     <div class="vh-item-why" style="display:none;">
@@ -418,7 +418,7 @@
                                                                 data-photos="@string.Join(",", pastShots.Live.Select(p => p.PhotoId))"
                                                                 data-taken="@string.Join("|", pastShots.Live.Select(p => p.TakenAt))"
                                                                 title="Photographed by the driver during the inspection"
-                                                                onclick="vhOpenPhotos(this)">
+                                                                data-on="click:vhOpenPhotos">
                                                             <span class="vh-item-photo-mark" aria-hidden="true">▣</span>@pastShots.Live.Count
                                                         </button>
                                                     }

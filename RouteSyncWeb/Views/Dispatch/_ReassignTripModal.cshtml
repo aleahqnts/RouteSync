@@ -20,7 +20,7 @@
                 <span class="rtm-badge-dot"></span>
                 <span id="rtm-status-text">Assignment Issue</span>
             </span>
-            <button class="rtm-close" onclick="closeReassignModal()" aria-label="Close">&times;</button>
+            <button class="rtm-close" data-on="click:rtmClose" aria-label="Close">&times;</button>
         </div>
 
         @* Loading state *@
@@ -100,9 +100,9 @@
         @* Footer *@
         <div class="rtm-footer">
             @* Taking a trip off the schedule, asked for here since a list has no blank to clear. *@
-            <button type="button" class="rtm-btn-remove" id="rtm-remove-btn" onclick="rtmAskRemove()">Remove trip</button>
-            <button class="rtm-btn-cancel" onclick="closeReassignModal()">Cancel</button>
-            <button class="rtm-btn-save" id="rtm-save-btn" onclick="submitReassign()">
+            <button type="button" class="rtm-btn-remove" id="rtm-remove-btn" data-on="click:rtmAskRemove">Remove trip</button>
+            <button class="rtm-btn-cancel" data-on="click:rtmClose">Cancel</button>
+            <button class="rtm-btn-save" id="rtm-save-btn" data-on="click:rtmSubmit">
                 <span id="rtm-save-label">Save changes</span>
                 <span id="rtm-save-spinner" style="display:none;">
                     <svg class="rtm-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none"
@@ -122,7 +122,7 @@
     <div class="rtm-dialog" style="max-width:430px;">
         <div class="rtm-header">
             <h2 class="rtm-title">Override schedule conflict?</h2>
-            <button class="rtm-close" onclick="rtmCancelOverride()">&times;</button>
+            <button class="rtm-close" data-on="click:rtmCancelOverride">&times;</button>
         </div>
         <div class="rtm-section rtm-section--last" style="gap:10px;">
             <div id="rtm-override-msg" class="rtm-override-msg"></div>
@@ -131,8 +131,8 @@
             </p>
         </div>
         <div class="rtm-footer">
-            <button class="rtm-btn-cancel" onclick="rtmCancelOverride()">Cancel</button>
-            <button class="rtm-btn-save rtm-btn-override" onclick="rtmConfirmOverride()">Yes, override</button>
+            <button class="rtm-btn-cancel" data-on="click:rtmCancelOverride">Cancel</button>
+            <button class="rtm-btn-save rtm-btn-override" data-on="click:rtmConfirmOverride">Yes, override</button>
         </div>
     </div>
 </div>
@@ -142,7 +142,7 @@
     <div class="rtm-dialog" style="max-width:430px;">
         <div class="rtm-header">
             <h2 class="rtm-title">Remove this trip?</h2>
-            <button class="rtm-close" onclick="rtmCancelRemove()">&times;</button>
+            <button class="rtm-close" data-on="click:rtmCancelRemove">&times;</button>
         </div>
         <div class="rtm-section rtm-section--last">
             <p style="margin:0; font-size:0.9rem; color:#4A5568;">
@@ -150,14 +150,26 @@
             </p>
         </div>
         <div class="rtm-footer">
-            <button class="rtm-btn-cancel" onclick="rtmCancelRemove()">Cancel</button>
-            <button class="rtm-btn-save rtm-btn-danger" onclick="rtmConfirmRemove()">Remove trip</button>
+            <button class="rtm-btn-cancel" data-on="click:rtmCancelRemove">Cancel</button>
+            <button class="rtm-btn-save rtm-btn-danger" data-on="click:rtmConfirmRemove">Remove trip</button>
         </div>
     </div>
 </div>
 
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this dialog's controls run, by the names in their data-on attributes. The
+    // content security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        rtmClose:           function () { closeReassignModal(); },
+        rtmAskRemove:       function () { rtmAskRemove(); },
+        rtmSubmit:          function () { submitReassign(); },
+        rtmCancelOverride:  function () { rtmCancelOverride(); },
+        rtmConfirmOverride: function () { rtmConfirmOverride(); },
+        rtmCancelRemove:    function () { rtmCancelRemove(); },
+        rtmConfirmRemove:   function () { rtmConfirmRemove(); }
+    });
+
     /* Reassign Trip Modal. */
     (function () {
         let _rtmOptions  = null;   // full options from server

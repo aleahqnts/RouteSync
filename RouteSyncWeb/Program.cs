@@ -69,6 +69,7 @@ builder.Services.Configure<CookieTempDataProviderOptions>(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
 
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<CspNonce>();
 builder.Services.AddScoped<FareCalculator>();
 
 // Forgotten-password steps run in the edge functions the driver app also calls, so
@@ -221,15 +222,18 @@ app.UseHttpsRedirection();
 // runs, it cannot send the session or fleet data to another server, because the browser
 // refuses the request. The frame-ancestors directive prevents the dashboard being framed.
 //
-// script-src still allows inline script, which is a genuine weakness. The views carry
-// inline blocks and event handlers throughout, so removing it would break every page until
-// they are all rewritten.
+// Inline script runs only when it carries this request's nonce, which every inline block in
+// the views does, so a script injected into a page is refused. An event handler attribute
+// such as onclick cannot carry a nonce and is refused too: the views name their handlers
+// in data-on instead, and wwwroot/js/data-on.js wires them up. style-src still allows
+// inline styles, which cannot run anything.
 app.Use(async (context, next) =>
 {
+    var nonce = context.RequestServices.GetRequiredService<CspNonce>().Value;
     var headers = context.Response.Headers;
     headers["Content-Security-Policy"] =
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
+        $"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://unpkg.com; " +
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
         "font-src 'self' data: https://cdn.jsdelivr.net; " +
         // Leaflet pulls map tiles straight from OpenStreetMap, from the bare host. A

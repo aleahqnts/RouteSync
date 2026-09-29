@@ -9,7 +9,7 @@
         <div class="cam-panel-head">
             <span class="cam-panel-title">Calibrate Camera</span>
             <span id="camChip" class="cam-chip cam-chip--off">Offline</span>
-            <button type="button" class="btn-close" onclick="camClose()" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-on="click:camClose" aria-label="Close"></button>
         </div>
 
         @* Counts the camera has made and cannot get stored. Absent in normal running,
@@ -19,7 +19,7 @@
         <div id="camWait" class="cam-wait">
             <div class="vh-spinner"></div>
             <p id="camWaitText" class="cam-wait-text">Waking the camera&#8230;</p>
-            <button id="camRetry" type="button" class="cam-btn" style="display:none;" onclick="camStart()">Try again</button>
+            <button id="camRetry" type="button" class="cam-btn" style="display:none;" data-on="click:camStart">Try again</button>
         </div>
 
         <div id="camEditor" style="display:none;">
@@ -40,10 +40,10 @@
                 </div>
             </div>
             <div class="cam-actions">
-                <button type="button" class="cam-btn" id="camFlipSide" onclick="camFlipSide()">Flip Boarding Side</button>
-                <button type="button" class="cam-btn" id="camFlipLens" onclick="camFlipLens()">Flip Camera</button>
-                <button type="button" class="cam-btn" id="camRefresh" onclick="camRefresh()">Refresh</button>
-                <button type="button" class="cam-btn cam-btn--save" id="camSave" onclick="camSave()">Save</button>
+                <button type="button" class="cam-btn" id="camFlipSide" data-on="click:camFlipSide">Flip Boarding Side</button>
+                <button type="button" class="cam-btn" id="camFlipLens" data-on="click:camFlipLens">Flip Camera</button>
+                <button type="button" class="cam-btn" id="camRefresh" data-on="click:camRefresh">Refresh</button>
+                <button type="button" class="cam-btn cam-btn--save" id="camSave" data-on="click:camSave">Save</button>
             </div>
             <p id="camNote" class="cam-note" style="display:none;"></p>
         </div>

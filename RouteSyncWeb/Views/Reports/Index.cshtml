@@ -621,7 +621,7 @@
 
 @* Chart.js *@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
-<script>
+<script nonce="@CspNonce.Value">
     /* State. */
     let currentPage = 1;
     // The trip table's order, chosen from its headings. Empty is the server's own order.
@@ -1175,7 +1175,7 @@
     rpStamp();
 </script>
 
-<script>
+<script nonce="@CspNonce.Value">
     /* Report Generation Modal. */
     (function () {
 
@@ -1564,7 +1564,7 @@
     })();
 </script>
 
-<script>
+<script nonce="@CspNonce.Value">
     // Trip Detail Modal.
     const modal        = document.getElementById('tripModal');
     const modalClose   = document.getElementById('tripModalClose');
