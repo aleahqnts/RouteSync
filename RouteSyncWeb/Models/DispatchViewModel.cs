@@ -113,7 +113,8 @@ namespace FleetWise.ViewModels
         /// </remarks>
         public string LateLabel =>
             LateBy is not TimeSpan by ? null
-            : by.TotalHours >= 1 ? $"{(int)by.TotalHours}h late"
+            : by.TotalHours >= 1
+                ? (by.Minutes == 0 ? $"{(int)by.TotalHours}h late" : $"{(int)by.TotalHours}h {by.Minutes}m late")
             : $"{(int)by.TotalMinutes}m late";
     }
 }
