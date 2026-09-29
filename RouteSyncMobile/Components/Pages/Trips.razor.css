@@ -33,6 +33,7 @@
     color: #1b2a56;
     font-size: 20px;
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .tsum-l {

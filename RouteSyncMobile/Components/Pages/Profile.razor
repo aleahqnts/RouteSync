@@ -39,15 +39,15 @@ else
 
         <div class="stats">
             <div class="stat">
-                <p class="stat-n">@tripsDone</p>
+                <p class="stat-n">@Figures.Compact(tripsDone)</p>
                 <p class="stat-l">Trips</p>
             </div>
             <div class="stat mid">
-                <p class="stat-n">@passengers.ToString("N0")</p>
+                <p class="stat-n">@Figures.Compact(passengers)</p>
                 <p class="stat-l">Passengers</p>
             </div>
             <div class="stat">
-                <p class="stat-n">@tripsThisMonth</p>
+                <p class="stat-n">@Figures.Compact(tripsThisMonth)</p>
                 <p class="stat-l">This month</p>
             </div>
         </div>

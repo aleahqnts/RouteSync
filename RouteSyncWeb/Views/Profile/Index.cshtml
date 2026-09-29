@@ -53,7 +53,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4" /></svg>
         </span>
         <span class="pf-stat-text">
-            <span class="pf-stat-n">@(Model.ActionsThisMonth?.ToString("N0") ?? "—")</span>
+            <span class="pf-stat-n" title="@Model.ActionsThisMonth?.ToString("N0")">@(Model.ActionsThisMonth is int a ? FleetWise.Services.Figures.Compact(a) : "—")</span>
             <span class="pf-stat-l">Actions this month</span>
         </span>
     </div>
@@ -62,7 +62,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /><path d="M9 15l2 2 4-4" /></svg>
         </span>
         <span class="pf-stat-text">
-            <span class="pf-stat-n">@(Model.DecisionsThisMonth?.ToString("N0") ?? "—")</span>
+            <span class="pf-stat-n" title="@Model.DecisionsThisMonth?.ToString("N0")">@(Model.DecisionsThisMonth is int d ? FleetWise.Services.Figures.Compact(d) : "—")</span>
             <span class="pf-stat-l">Leave decisions this month</span>
         </span>
     </div>
@@ -71,7 +71,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>
         </span>
         <span class="pf-stat-text">
-            <span class="pf-stat-n">@Model.LeaveDaysTaken</span>
+            <span class="pf-stat-n" title="@Model.LeaveDaysTaken.ToString("N0")">@FleetWise.Services.Figures.Compact(Model.LeaveDaysTaken)</span>
             <span class="pf-stat-l">Leave days taken in @Model.Year</span>
         </span>
     </div>

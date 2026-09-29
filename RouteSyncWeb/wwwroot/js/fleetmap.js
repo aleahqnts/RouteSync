@@ -409,10 +409,16 @@
             if (st === 'On Trip' || st === 'Active') moving++;
         });
 
+        // Two pills: the buses shown, and how many of them are on a trip, whose dot pulses
+        // while any are moving.
         if (countEl) {
             countEl.innerHTML = shown === 0
                 ? ''
-                : shown + (shown === 1 ? ' bus' : ' buses') + ', <em>' + moving + ' on trip</em>';
+                : '<span class="fm-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+                    + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="14" rx="3"/>'
+                    + '<path d="M4 11h16M8 21v-4M16 21v-4"/></svg>' + shown + (shown === 1 ? ' bus' : ' buses') + '</span>'
+                + '<span class="fm-chip fm-chip--trip' + (moving > 0 ? ' fm-chip--live' : '') + '">'
+                    + '<span class="fm-chip-dot"></span>' + moving + ' on trip</span>';
         }
         if (fitBtn) fitBtn.disabled = shown === 0;
     }

@@ -72,6 +72,41 @@
                 Clear
             </button>
         </div>
+
+        @* GPS tools, for checking the road snapping. Opened from an unmarked spot at the far
+           end of the bar, since the board is not read with them and needs no room for them. *@
+        <div class="fm-drawer" id="fmGpsDrawer">
+            <button id="fmGpsToggle" class="fm-drawer-tab" type="button"
+                    aria-label="GPS tools" aria-expanded="false" aria-controls="fmGpsBody">
+                <span class="fm-drawer-live" title="Raw GPS is showing"></span>
+            </button>
+
+            <div class="fm-drawer-body" id="fmGpsBody" hidden>
+                <div class="fm-drawer-heading">GPS tools</div>
+                @* Each bus on a trip also shows the reading its phone sent and how far off the
+                   phone said it could be. *@
+                <button id="fmRawBtn" class="fm-drawer-row" type="button" aria-pressed="false">
+                    <span class="fm-drawer-text">
+                        <span class="fm-drawer-name">Raw GPS</span>
+                        <span class="fm-drawer-sub">Each bus's phone reading and accuracy</span>
+                    </span>
+                    <span class="fm-switch" aria-hidden="true"></span>
+                </button>
+
+                @* The after-the-fact counterpart: a day's trips replayed against their routes. *@
+                <a href="@Url.Action("GpsCheck", "FleetMap")" class="fm-drawer-row">
+                    <span class="fm-drawer-text">
+                        <span class="fm-drawer-name">GPS check</span>
+                        <span class="fm-drawer-sub">How each trip's GPS behaved, by day</span>
+                    </span>
+                    <svg class="fm-drawer-go" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none"
+                         stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                         viewBox="0 0 24 24" aria-hidden="true">
+                        <polyline points="9 6 15 12 9 18" />
+                    </svg>
+                </a>
+            </div>
+        </div>
     </div>
 }
 
@@ -164,45 +199,6 @@
         <div class="fm-legend-list" id="fmLegend"></div>
     </div>
 
-    @* GPS tools, for checking the road snapping. Kept behind a small tab in the corner
-       the map leaves free, since the board is not read with them. *@
-    <div class="fm-drawer" id="fmGpsDrawer">
-        <button id="fmGpsToggle" class="fm-drawer-tab" type="button" title="GPS tools"
-                aria-label="GPS tools" aria-expanded="false" aria-controls="fmGpsBody">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
-                 fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-                 stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9" />
-            </svg>
-            <span class="fm-drawer-live" title="Raw GPS is showing"></span>
-        </button>
-
-        <div class="fm-drawer-body" id="fmGpsBody" hidden>
-            <div class="fm-drawer-heading">GPS tools</div>
-            @* Each bus on a trip also shows the reading its phone sent and how far off the
-               phone said it could be. *@
-            <button id="fmRawBtn" class="fm-drawer-row" type="button" aria-pressed="false">
-                <span class="fm-drawer-text">
-                    <span class="fm-drawer-name">Raw GPS</span>
-                    <span class="fm-drawer-sub">Each bus's phone reading and accuracy</span>
-                </span>
-                <span class="fm-switch" aria-hidden="true"></span>
-            </button>
-
-            @* The after-the-fact counterpart: a day's trips replayed against their routes. *@
-            <a href="@Url.Action("GpsCheck", "FleetMap")" class="fm-drawer-row">
-                <span class="fm-drawer-text">
-                    <span class="fm-drawer-name">GPS check</span>
-                    <span class="fm-drawer-sub">How each trip's GPS behaved, by day</span>
-                </span>
-                <svg class="fm-drawer-go" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none"
-                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
-                     viewBox="0 0 24 24" aria-hidden="true">
-                    <polyline points="9 6 15 12 9 18" />
-                </svg>
-            </a>
-        </div>
-    </div>
 </div>
 
 @section Styles {

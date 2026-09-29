@@ -144,6 +144,7 @@
         font-weight: 700;
         color: var(--pf-dark);
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
     }
 
     .pf-stat-l {
