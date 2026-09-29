@@ -6,7 +6,7 @@
         @* Header *@
         <div class="atm-header">
             <h2 class="atm-title">Add New Trip</h2>
-            <button class="atm-close" onclick="closeAddTripModal()">&times;</button>
+            <button class="atm-close" data-on="click:atmClose">&times;</button>
         </div>
 
         @* Body *@
@@ -18,7 +18,7 @@
                 <div class="atm-field">
                     <label class="atm-label" for="atm-shift-type">Shift Type</label>
                     <div class="atm-select-wrap">
-                        <select id="atm-shift-type" class="atm-select" onchange="onShiftChange()">
+                        <select id="atm-shift-type" class="atm-select" data-on="change:atmShiftChange">
                             <option value="">Select shift type…</option>
                             <option value="Morning">Morning Shift</option>
                             <option value="Afternoon">Afternoon Shift</option>
@@ -76,8 +76,8 @@
 
         @* Footer *@
         <div class="atm-footer">
-            <button class="atm-btn-cancel" onclick="closeAddTripModal()">Cancel</button>
-            <button class="atm-btn-create" id="atm-create-btn" onclick="submitAddTrip()">
+            <button class="atm-btn-cancel" data-on="click:atmClose">Cancel</button>
+            <button class="atm-btn-create" id="atm-create-btn" data-on="click:atmSubmit">
                 <span id="atm-create-label">Create Trip</span>
                 <span id="atm-create-spinner" style="display:none;">
                     <svg class="atm-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none"
@@ -97,7 +97,7 @@
     <div class="atm-dialog" style="max-width:430px;">
         <div class="atm-header">
             <h2 class="atm-title">Override schedule conflict?</h2>
-            <button class="atm-close" onclick="atmCancelOverride()">&times;</button>
+            <button class="atm-close" data-on="click:atmCancelOverride">&times;</button>
         </div>
         <div class="atm-section atm-section--last" style="gap:10px;">
             <div id="atm-override-msg" class="atm-override-msg"></div>
@@ -106,14 +106,24 @@
             </p>
         </div>
         <div class="atm-footer">
-            <button class="atm-btn-cancel" onclick="atmCancelOverride()">Cancel</button>
-            <button class="atm-btn-create atm-btn-override" onclick="atmConfirmOverride()">Yes, override</button>
+            <button class="atm-btn-cancel" data-on="click:atmCancelOverride">Cancel</button>
+            <button class="atm-btn-create atm-btn-override" data-on="click:atmConfirmOverride">Yes, override</button>
         </div>
     </div>
 </div>
 
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this dialog's controls run, by the names in their data-on attributes. The
+    // content security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        atmClose:           function () { closeAddTripModal(); },
+        atmShiftChange:     function () { onShiftChange(); },
+        atmSubmit:          function () { submitAddTrip(); },
+        atmCancelOverride:  function () { atmCancelOverride(); },
+        atmConfirmOverride: function () { atmConfirmOverride(); }
+    });
+
     // Shift time map.
     const SHIFT_TIMES = {
         'Morning':   { label: '6:00 AM – 2:00 PM',   start: '06:00', end: '14:00' },

@@ -66,7 +66,7 @@
                 <div class="rp-stat-sub">Awaiting departure</div>
             </div>
             <div class="@(Model.DelayedTrips > 0 ? "dp-side-btn" : "")"
-                 @(Model.DelayedTrips > 0 ? "onclick=dpHighlightDelayed()" : "")
+                 data-on="@(Model.DelayedTrips > 0 ? "click:dpHighlightDelayed" : null)"
                  title="Departure time passed and the trip has not started">
                 <div class="rp-stat-label">Delayed</div>
                 <div class="rp-stat-value dp-side-value--red">@Model.DelayedTrips</div>
@@ -79,7 +79,7 @@
     </div>
 
     <div class="rp-stat-card @(Model.UnassignedTrips > 0 ? "dp-card-click" : "")"
-         @(Model.UnassignedTrips > 0 ? "onclick=dpHighlightIssues()" : "")>
+         data-on="@(Model.UnassignedTrips > 0 ? "click:dpHighlightIssues" : null)">
         <div class="rp-stat-header">
             <span class="rp-stat-icon rp-stat-icon--red">
                 <i class="ti ti-alert-circle"></i>
@@ -123,10 +123,10 @@
 
 @* TOOLBAR *@
 <div class="dp-toolbar">
-    <button class="dp-btn-primary" onclick="openAddTripModal()">
+    <button class="dp-btn-primary" data-on="click:dpOpenAddTrip">
         <i class="ti ti-plus"></i> Add Trip
     </button>
-    <button class="dp-btn-secondary" onclick="openBroadcastModal()"><i class="ti ti-speakerphone"></i> Broadcast Message</button>
+    <button class="dp-btn-secondary" data-on="click:dpOpenBroadcast"><i class="ti ti-speakerphone"></i> Broadcast Message</button>
     <a class="dp-btn-secondary" href="/Schedule" style="text-decoration:none;"><i class="ti ti-calendar-week"></i> Edit Schedule
         @if (showRosterBadge)
         {
@@ -137,9 +137,9 @@
     </a>
     <div class="dp-search-wrap">
         <i class="ti ti-search dp-search-icon"></i>
-        <input type="text" id="searchInput" class="dp-search-input" placeholder="Search bus, plate, driver or ID…" oninput="filterRows()" />
+        <input type="text" id="searchInput" class="dp-search-input" placeholder="Search bus, plate, driver or ID…" data-on="input:dpFilterRows" />
     </div>
-    <button class="dp-btn-refresh" id="dpRefreshBtn" onclick="dpRefresh(true)" title="Refresh this page only">
+    <button class="dp-btn-refresh" id="dpRefreshBtn" data-on="click:dpRefreshNow" title="Refresh this page only">
         <i class="ti ti-refresh"></i> Refresh
     </button>
     <span class="dp-updated" id="dpUpdated" title="Checks for changes every 5 seconds"></span>
@@ -171,7 +171,7 @@
                 {
                     <span class="dp-needs-badge"><span class="dp-needs-dot"></span> Needs Reassignment</span>
                 }
-                <button class="dp-btn-route-msg" onclick="openRouteMessageModal(@route.RouteId, '@route.RouteName')"><i class="ti ti-message-2"></i> Route Message</button>
+                <button class="dp-btn-route-msg" data-route-id="@route.RouteId" data-route-name="@(route.RouteName ?? "")" data-on="click:dpRouteMessage"><i class="ti ti-message-2"></i> Route Message</button>
             </div>
         </div>
 
@@ -355,13 +355,13 @@
                                                             data-name="@trip.SuggestedDriver.Name"
                                                             data-reason="@trip.SuggestedDriverReason"
                                                             data-note="@trip.SuggestedDriver.Warning"
-                                                            onclick="dpApplySuggestion(this)">Assign</button>
+                                                            data-on="click:dpApplySuggestion">Assign</button>
                                                     @if (!busBlock)
                                                     {
                                                         <button type="button" class="dp-suggest-more"
                                                                 aria-label="Other options for @trip.TripId"
                                                                 data-trip-id="@trip.TripId"
-                                                                onclick="openReassignModal(this.dataset.tripId)">Other options</button>
+                                                                data-on="click:dpOpenReassign">Other options</button>
                                                     }
                                                 </div>
                                             </div>
@@ -375,7 +375,7 @@
                                                     <div class="dp-suggest-actions">
                                                         <button type="button" class="dp-suggest-more"
                                                                 data-trip-id="@trip.TripId"
-                                                                onclick="openReassignModal(this.dataset.tripId)">Open Reassign</button>
+                                                                data-on="click:dpOpenReassign">Open Reassign</button>
                                                     </div>
                                                 }
                                             </div>
@@ -396,11 +396,11 @@
                                                             data-plate="@trip.SuggestedVehicle.PlateNumber"
                                                             data-reason="@trip.SuggestedVehicleReason"
                                                             data-note="@trip.SuggestedVehicle.Warning"
-                                                            onclick="dpApplySuggestion(this)">Assign</button>
+                                                            data-on="click:dpApplySuggestion">Assign</button>
                                                     <button type="button" class="dp-suggest-more"
                                                             aria-label="Other options for @trip.TripId"
                                                             data-trip-id="@trip.TripId"
-                                                            onclick="openReassignModal(this.dataset.tripId)">Other options</button>
+                                                            data-on="click:dpOpenReassign">Other options</button>
                                                 </div>
                                             </div>
                                         }
@@ -411,14 +411,14 @@
                                                 <div class="dp-suggest-actions">
                                                     <button type="button" class="dp-suggest-more"
                                                             data-trip-id="@trip.TripId"
-                                                            onclick="openReassignModal(this.dataset.tripId)">Open Reassign</button>
+                                                            data-on="click:dpOpenReassign">Open Reassign</button>
                                                 </div>
                                             </div>
                                         }
                                     </td>
                                     <td data-label="Actions">
                                         <div class="dp-actions-cell">
-                                            <button class="rp-btn-view" onclick="openTripModal('@trip.TripId')">View</button>
+                                            <button class="rp-btn-view" data-trip-id="@trip.TripId" data-on="click:dpOpenTrip">View</button>
                                             @* Open while a trip is running. A driver taken ill, a bus that
                                                has to come off the road and a route that needs another bus on
                                                it all happen mid-shift, and each is answered here. A trip
@@ -426,11 +426,11 @@
                                             <button class="dp-btn-reassign"
                                                     data-trip-id="@trip.TripId"
                                                     data-status="@trip.TripStatus"
-                                                    onclick="handleReassignClick(this)"
+                                                    data-on="click:dpReassignClick"
                                                 @(trip.TripStatus == "Completed" || trip.TripStatus == "Missed" ? "disabled" : "")>
                                                 Reassign
                                             </button>
-                                            <button class="dp-btn-msg" title="Message" onclick="openTripMessageModal('@trip.TripId', '@trip.VehicleId', '@trip.DriverName')"><i class="ti ti-message"></i></button>
+                                            <button class="dp-btn-msg" title="Message" data-trip-id="@trip.TripId" data-vehicle-id="@(trip.VehicleId ?? "")" data-driver-name="@(trip.DriverName ?? "")" data-on="click:dpTripMessage"><i class="ti ti-message"></i></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -472,8 +472,8 @@
         <p class="dp-apply-note" id="dp-apply-note" hidden></p>
         <p class="dp-apply-source">Best match, suggested by the scheduling rules.</p>
         <div class="dp-apply-actions">
-            <button type="button" class="dp-apply-cancel" id="dp-apply-cancel" onclick="dpCloseApply()">Cancel</button>
-            <button type="button" class="dp-msg-btn" id="dp-apply-confirm" onclick="dpConfirmApply()">Assign</button>
+            <button type="button" class="dp-apply-cancel" id="dp-apply-cancel" data-on="click:dpCloseApply">Cancel</button>
+            <button type="button" class="dp-msg-btn" id="dp-apply-confirm" data-on="click:dpConfirmApply">Assign</button>
         </div>
     </div>
 </div>
@@ -486,11 +486,31 @@
             <h3 id="dp-msg-title">Schedule conflict</h3>
         </div>
         <ul id="dp-msg-list" class="dp-msg-list"></ul>
-        <button class="dp-msg-btn" onclick="dpCloseMsg()">Got it</button>
+        <button class="dp-msg-btn" data-on="click:dpCloseMsg">Got it</button>
     </div>
 </div>
 
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        dpHighlightDelayed: function () { dpHighlightDelayed(); },
+        dpHighlightIssues:  function () { dpHighlightIssues(); },
+        dpOpenAddTrip:      function () { openAddTripModal(); },
+        dpOpenBroadcast:    function () { openBroadcastModal(); },
+        dpFilterRows:       function () { filterRows(); },
+        dpRefreshNow:       function () { dpRefresh(true); },
+        dpRouteMessage:     function () { openRouteMessageModal(Number(this.dataset.routeId), this.dataset.routeName); },
+        dpApplySuggestion:  function () { dpApplySuggestion(this); },
+        dpOpenReassign:     function () { openReassignModal(this.dataset.tripId); },
+        dpOpenTrip:         function () { openTripModal(this.dataset.tripId); },
+        dpReassignClick:    function () { handleReassignClick(this); },
+        dpTripMessage:      function () { openTripMessageModal(this.dataset.tripId, this.dataset.vehicleId, this.dataset.driverName); },
+        dpCloseApply:       function () { dpCloseApply(); },
+        dpConfirmApply:     function () { dpConfirmApply(); },
+        dpCloseMsg:         function () { dpCloseMsg(); }
+    });
+
     function dpShowMsg(messages, title) {
         document.getElementById('dp-msg-title').textContent = title || 'Schedule conflict';
         // These sentences are built on the server, and still rendered as text. A conflict
@@ -879,7 +899,7 @@
     </div>
 }
 
-<script>
+<script nonce="@CspNonce.Value">
     function applyFilters() {
         const q = document.getElementById('searchInput').value.toLowerCase();
         const routeId = document.getElementById('routeFilter').value;
@@ -1143,10 +1163,10 @@
 <div class="dp-more-backdrop" id="dpMoreBackdrop"></div>
 <div class="dp-more-sheet" id="dpMoreSheet" role="dialog" aria-modal="true" aria-label="More actions">
     <div class="dp-more-grip"></div>
-    <button type="button" class="dp-more-item" onclick="openAddTripModal()">
+    <button type="button" class="dp-more-item" data-on="click:dpOpenAddTrip">
         <i class="ti ti-plus"></i> Add Trip
     </button>
-    <button type="button" class="dp-more-item" onclick="openBroadcastModal()">
+    <button type="button" class="dp-more-item" data-on="click:dpOpenBroadcast">
         <i class="ti ti-speakerphone"></i> Broadcast Message
     </button>
     <a class="dp-more-item" href="/Schedule">

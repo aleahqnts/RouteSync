@@ -59,7 +59,7 @@
             </span>
             <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 5 seconds"></span>
             <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
-                    onclick="rqRefresh(true)" title="Load newly filed requests without losing your filters">
+                    data-on="click:rqRefreshNow" title="Load newly filed requests without losing your filters">
                 <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                      aria-hidden="true">
@@ -93,7 +93,7 @@
             @* Drawn only on a phone. The desktop reload is the one in the row's far end,
                which carries a word beside the mark and the time of the last check. *@
             <button type="button" class="rq-btn rq-btn--outline rq-refresh rq-refresh--pills"
-                    onclick="rqRefresh(true)" title="Load newly filed requests"
+                    data-on="click:rqRefreshNow" title="Load newly filed requests"
                     aria-label="Refresh">
                 <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -305,20 +305,20 @@
                                     else if (pending)
                                     {
                                         <button type="button" class="rq-btn rq-btn--approve"
-                                                onclick="rqDecide(@r.RequestId, 'Approved')">Approve</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqApprove">Approve</button>
                                         <button type="button" class="rq-btn rq-btn--reject"
-                                                onclick="rqDecide(@r.RequestId, 'Rejected')">Reject</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
                                     }
                                     else if (held)
                                     {
                                         @* The approval was begun. This runs the check again
                                            against the schedule as it now stands. *@
                                         <button type="button" class="rq-btn rq-btn--approve"
-                                                onclick="rqDecide(@r.RequestId, 'Approved')">Continue approval</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqApprove">Continue approval</button>
                                         <button type="button" class="rq-btn rq-btn--reject"
-                                                onclick="rqDecide(@r.RequestId, 'Rejected')">Reject</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
                                         <button type="button" class="rq-btn rq-btn--outline"
-                                                onclick="rqRelease(@r.RequestId)"
+                                                data-request-id="@r.RequestId" data-on="click:rqRelease"
                                                 title="Put this back in the queue without deciding it">Back to queue</button>
                                     }
                                     @* Only where there is something left to take back.
@@ -329,17 +329,17 @@
                                     @if (!r.IsOwn && r.WithdrawAsked)
                                     {
                                         <button type="button" class="rq-btn rq-btn--approve"
-                                                onclick="rqWithdrawal(@r.RequestId, true)">Cancel the leave</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqCancelLeave">Cancel the leave</button>
                                         <button type="button" class="rq-btn rq-btn--outline"
-                                                onclick="rqWithdrawal(@r.RequestId, false)">Keep the leave</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqKeepLeave">Keep the leave</button>
                                     }
                                     else if (!r.IsOwn && r.RevokableDays.Count > 0)
                                     {
                                         <button type="button" class="rq-btn rq-btn--reject"
-                                                onclick="rqRevoke(@r.RequestId)">Revoke</button>
+                                                data-request-id="@r.RequestId" data-on="click:rqRevoke">Revoke</button>
                                     }
                                     <button type="button" class="rq-btn rq-btn--history"
-                                            onclick="rqHistory(@r.RequestId)">History</button>
+                                            data-request-id="@r.RequestId" data-on="click:rqHistory">History</button>
                                 </div>
                             </td>
                         </tr>
@@ -364,7 +364,7 @@
     <div class="rq-box">
         <div class="rq-box-head">
             <h3 class="rq-box-title" id="rqAskTitle">Cancel this leave</h3>
-            <button type="button" class="rq-box-close" onclick="rqAskClose()" aria-label="Close">&times;</button>
+            <button type="button" class="rq-box-close" data-on="click:rqAskClose" aria-label="Close">&times;</button>
         </div>
 
         <p class="rq-box-desc" id="rqAskWho"></p>
@@ -390,7 +390,7 @@
                   placeholder="Optional"></textarea>
 
         <div class="rq-box-actions">
-            <button type="button" class="rq-btn rq-btn--outline" onclick="rqAskClose()">Close</button>
+            <button type="button" class="rq-btn rq-btn--outline" data-on="click:rqAskClose">Close</button>
             <button type="button" class="rq-btn rq-btn--primary" id="rqAskGo">Confirm</button>
         </div>
     </div>
@@ -403,7 +403,7 @@
     <div class="rq-box">
         <div class="rq-box-head">
             <h3 class="rq-box-title" id="rqRevokeTitle">Revoke leave</h3>
-            <button type="button" class="rq-box-close" onclick="rqRevokeClose()" aria-label="Close">&times;</button>
+            <button type="button" class="rq-box-close" data-on="click:rqRevokeClose" aria-label="Close">&times;</button>
         </div>
 
         <div id="rqRevokeBody"></div>
@@ -415,7 +415,7 @@
                   placeholder="The driver is told this."></textarea>
 
         <div class="rq-box-actions">
-            <button type="button" class="rq-btn rq-btn--outline" onclick="rqRevokeClose()">Cancel</button>
+            <button type="button" class="rq-btn rq-btn--outline" data-on="click:rqRevokeClose">Cancel</button>
             <button type="button" class="rq-btn rq-btn--reject" id="rqRevokeGo">Revoke</button>
         </div>
     </div>
@@ -426,7 +426,7 @@
     <div class="rq-box">
         <div class="rq-box-head">
             <h3 class="rq-box-title" id="rqHistoryTitle">Request history</h3>
-            <button type="button" class="rq-box-close" onclick="rqHistoryClose()" aria-label="Close">&times;</button>
+            <button type="button" class="rq-box-close" data-on="click:rqHistoryClose" aria-label="Close">&times;</button>
         </div>
         <div id="rqHistoryBody"></div>
     </div>
@@ -520,7 +520,7 @@
         <textarea id="rqDecideNote" class="rq-box-note" rows="3" maxlength="300"></textarea>
 
         <div class="rq-box-actions">
-            <button type="button" class="rq-btn rq-btn--outline" onclick="rqCancel()">Cancel</button>
+            <button type="button" class="rq-btn rq-btn--outline" data-on="click:rqCancel">Cancel</button>
             <button type="button" class="rq-btn rq-btn--primary" id="rqDecideGo">Confirm</button>
         </div>
     </div>
@@ -529,7 +529,24 @@
 @Html.AntiForgeryToken()
 
 <script src="~/js/candidate-list.js" asp-append-version="true"></script>
-<script>
+<script nonce="@CspNonce.Value">
+    // What this page's controls run, by the names in their data-on attributes. The content
+    // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+    rsOn({
+        rqRefreshNow:   function () { rqRefresh(true); },
+        rqApprove:      function () { rqDecide(Number(this.dataset.requestId), 'Approved'); },
+        rqReject:       function () { rqDecide(Number(this.dataset.requestId), 'Rejected'); },
+        rqRelease:      function () { rqRelease(Number(this.dataset.requestId)); },
+        rqCancelLeave:  function () { rqWithdrawal(Number(this.dataset.requestId), true); },
+        rqKeepLeave:    function () { rqWithdrawal(Number(this.dataset.requestId), false); },
+        rqRevoke:       function () { rqRevoke(Number(this.dataset.requestId)); },
+        rqHistory:      function () { rqHistory(Number(this.dataset.requestId)); },
+        rqAskClose:     function () { rqAskClose(); },
+        rqRevokeClose:  function () { rqRevokeClose(); },
+        rqHistoryClose: function () { rqHistoryClose(); },
+        rqCancel:       function () { rqCancel(); }
+    });
+
     (function () {
         let pending = null;   // { id, decision }
 

@@ -11,7 +11,7 @@
     <h2 class="db-title">Dashboard</h2>
     <div class="db-title-tools">
         <span class="db-date-badge">@Model.Today.ToString("ddd, dd MMM yyyy")</span>
-        <button class="db-btn-refresh" id="dbRefreshBtn" onclick="dbRefresh(true)" title="Refresh this page only">
+        <button class="db-btn-refresh" id="dbRefreshBtn" data-on="click:dbRefreshNow" title="Refresh this page only">
             <span class="db-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                  aria-hidden="true">
@@ -62,7 +62,7 @@
         <div class="db-stat-value" id="dbFlagged">@Model.FlaggedVehicles</div>
     </a>
 
-    <div class="db-stat-card db-stat-card--click" onclick="dbToggleBreakdown()" title="Click for per-trip breakdown">
+    <div class="db-stat-card db-stat-card--click" data-on="click:dbToggleBreakdown" title="Click for per-trip breakdown">
         <div class="db-stat-header">
             <span class="db-stat-icon db-stat-icon--blue">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
@@ -110,7 +110,7 @@
 </div>
 
 @* TOTAL PASSENGERS MODAL (opened by the card) *@
-<div class="db-modal-overlay" id="dbBreakdown" style="display:none;" onclick="if(event.target===this)dbCloseModal()">
+<div class="db-modal-overlay" id="dbBreakdown" style="display:none;" data-on="click:dbBreakdownBackdrop">
     <div class="db-modal">
         @{
             // Only trips that carried passengers. A trip yet to start contributes nothing.
@@ -121,7 +121,7 @@
                 <div class="db-modal-title">Total Boarded Breakdown</div>
                 <div class="db-modal-sub" id="dbBreakdownSub">Trips with boarding (@boardedRows.Count) &bull; @Model.TotalPassengers boarded</div>
             </div>
-            <button class="db-modal-close" onclick="dbCloseModal()" aria-label="Close">&times;</button>
+            <button class="db-modal-close" data-on="click:dbCloseModal" aria-label="Close">&times;</button>
         </div>
         <div class="db-modal-body" id="dbBreakdownBody">
             @if (boardedRows.Count == 0)
@@ -207,7 +207,16 @@
 
     @* Chart.js *@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
-    <script>
+    <script nonce="@CspNonce.Value">
+        // What this page's controls run, by the names in their data-on attributes. The content
+        // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
+        rsOn({
+            dbRefreshNow:        function () { dbRefresh(true); },
+            dbToggleBreakdown:   function () { dbToggleBreakdown(); },
+            dbBreakdownBackdrop: function (event) { if (event.target === this) dbCloseModal(); },
+            dbCloseModal:        function () { dbCloseModal(); }
+        });
+
         // Hour labels from the ViewModel; per-hour onboard counts read from the live
         // region so an AJAX refresh can update the chart without a reload.
         const chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
