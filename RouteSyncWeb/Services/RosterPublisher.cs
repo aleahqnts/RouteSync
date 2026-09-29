@@ -456,6 +456,12 @@ namespace FleetWise.Services
         /// </remarks>
         public async Task<PublishPlan> PlanDraftAsync(
             DateTime month, IReadOnlyList<RosterSeat> seats,
+            IReadOnlyDictionary<int, string> routes, IReadOnlyList<Vehicle> vehicles, IReadOnlyList<UserModel> drivers) =>
+            RosterGenerator.Plan(await DraftWorldAsync(month, seats, routes, vehicles, drivers));
+
+        /// <summary>The month a publish would plan, around a roster that may not be saved yet.</summary>
+        public async Task<RosterWorld> DraftWorldAsync(
+            DateTime month, IReadOnlyList<RosterSeat> seats,
             IReadOnlyDictionary<int, string> routes, IReadOnlyList<Vehicle> vehicles, IReadOnlyList<UserModel> drivers)
         {
             var key = $"roster_draft_world:{month:yyyy-MM}";
@@ -465,7 +471,7 @@ namespace FleetWise.Services
                 _cache.Set(key, around, DraftWorldFreshness);
             }
 
-            return RosterGenerator.Plan(WorldFor(month, seats, around, routes, vehicles, drivers));
+            return WorldFor(month, seats, around, routes, vehicles, drivers);
         }
 
         /// <summary>

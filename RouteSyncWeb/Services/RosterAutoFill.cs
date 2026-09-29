@@ -110,7 +110,7 @@ namespace FleetWise.Services
 
             // A name two accounts share carries the id, so a note says which of them it means.
             var shared = drivers.GroupBy(NameOf, Ci).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(Ci);
-            string Label(UserModel d) => shared.Contains(NameOf(d)) ? $"{NameOf(d)} ({d.UserId})" : NameOf(d);
+            string Label(UserModel d) => shared.Contains(NameOf(d)) ? $"{NameOf(d)} · {d.UserId}" : NameOf(d);
             string Name(int id) => driverById.TryGetValue(id, out var d) ? Label(d) : $"Driver {id}";
             string Route(int id) => routeNames.TryGetValue(id, out var n) && !string.IsNullOrWhiteSpace(n) ? n : $"route {id}";
             bool Active(int id) => driverById.TryGetValue(id, out var d) && IsActiveDriver(d);
@@ -182,14 +182,14 @@ namespace FleetWise.Services
                         if (!Active(id))
                         {
                             notes.Add($"Emptied {bus.VehicleId} {s.Shift}: {Name(id)} is no longer an active driver.");
-                            place.Said.Add($"Replaces {Name(id)}, who is no longer an active driver.");
+                            place.Said.Add($"Replaces {Name(id)}, who is no longer active.");
                             seat = seat with { DriverId = null, RestWeekday = null };
                             emptied++;
                         }
                         else if (!placed.Add(id))
                         {
                             notes.Add($"Emptied {bus.VehicleId} {s.Shift}: {Name(id)} already has a place.");
-                            place.Said.Add($"{Name(id)} already had another place.");
+                            place.Said.Add($"{Name(id)} is already assigned elsewhere.");
                             seat = seat with { DriverId = null, RestWeekday = null };
                             emptied++;
                         }
@@ -244,10 +244,10 @@ namespace FleetWise.Services
             {
                 var onBus = busId is null ? 0 : history.OnBus(driverId, busId);
                 var onRoute = history.OnRoute(driverId, routeId);
-                return onBus > 0 ? $"{Trips(onBus)} on {busId} in the last {SchedulingData.HistoryDays} days."
-                     : onRoute > 0 ? $"{Trips(onRoute)} on {Route(routeId)} in the last {SchedulingData.HistoryDays} days."
-                     : history.Anywhere(driverId) > 0 ? $"Free, and new to {Route(routeId)}."
-                     : $"New driver, with no trips in the last {SchedulingData.HistoryDays} days.";
+                return onBus > 0 ? $"{Trips(onBus)} on {busId} in the past {SchedulingData.HistoryDays} days."
+                     : onRoute > 0 ? $"{Trips(onRoute)} on {Route(routeId)} in the past {SchedulingData.HistoryDays} days."
+                     : history.Anywhere(driverId) > 0 ? $"Available. No recent trips on {Route(routeId)}."
+                     : $"New driver. No trips in the past {SchedulingData.HistoryDays} days.";
             }
 
             // ---- 2. Crew places ----------------------------------------------------------------
@@ -277,7 +277,7 @@ namespace FleetWise.Services
 
             foreach (var p in emptyCrew)
             {
-                p.Said.Add("No active driver is free for this place.");
+                p.Said.Add("No available driver for this place.");
                 notes.Add($"Nobody is free for {p.Seat.VehicleId} {p.Seat.Shift}.");
                 leftEmpty++;
             }
@@ -334,7 +334,7 @@ namespace FleetWise.Services
                 }
                 else
                 {
-                    NoteUnmarked($"No active driver is free for the empty {Route(p.Seat.RouteId)} floater row.");
+                    NoteUnmarked($"No available driver for the empty {Route(p.Seat.RouteId)} floater row.");
                     leftEmpty++;
                 }
             }
@@ -363,7 +363,7 @@ namespace FleetWise.Services
                         .First();
 
                     f.Seat = f.Seat with { RestWeekday = day };
-                    f.Said.Add($"{RestDayMark}{DayName(day)}, the day fewest {Route(routeId)} floaters rest.");
+                    f.Said.Add($"{RestDayMark}{DayName(day)}. Fewest floaters off that day.");
                     floatersResting[day]++;
                     justSet.Add(f);
                     restSet++;
@@ -385,7 +385,7 @@ namespace FleetWise.Services
                         .First();
 
                     c.Seat = c.Seat with { RestWeekday = day };
-                    c.Said.Add($"{RestDayMark}{DayName(day)}, the day with the most floater cover to spare.");
+                    c.Said.Add($"{RestDayMark}{DayName(day)}. Most floater cover available that day.");
                     crewResting[day]++;
                     justSet.Add(c);
                     restSet++;
@@ -409,7 +409,7 @@ namespace FleetWise.Services
                             .First();
 
                         f.Seat = f.Seat with { Shift = shift };
-                        f.Said.Add($"Usually covers the {shift} shift, where the route is shortest of floaters.");
+                        f.Said.Add($"Covers the {shift} shift, which has the fewest floaters.");
                         current[shift]++;
                     }
                 }
@@ -432,7 +432,7 @@ namespace FleetWise.Services
                     var p = onRoute[k];
                     p.Seat = p.Seat with { RestWeekday = day };
                     var at = p.Said.FindIndex(s => s.StartsWith(RestDayMark, StringComparison.Ordinal));
-                    var said = $"{RestDayMark}{DayName(day)}, a day the {Route(routeId)} floaters can cover.";
+                    var said = $"{RestDayMark}{DayName(day)}. Covered by the route's floaters.";
                     if (at >= 0) p.Said[at] = said;
                     else p.Said.Add(said);
                 }

@@ -334,7 +334,7 @@ namespace FleetWise.Services
         private const string NobodyRostered = "nobody rostered";
 
         /// <summary>Why a slot went unfilled, in a line a dispatcher can act on.</summary>
-        /// <example>Pedro Reyes on their rest day, no floater free (1 resting, 1 on leave)</example>
+        /// <example>Pedro Reyes is on a rest day, and no floater is available: 1 on a rest day, 1 on leave</example>
         /// <param name="crewName">The crew driver, or null for a seat with nobody on it.</param>
         private static string GapReason(string? crewName, string crewReason, IEnumerable<string?> floaterReasons)
         {
@@ -347,28 +347,32 @@ namespace FleetWise.Services
                 .ToList();
 
             var floaters = counts.Count == 0
-                ? "the route has no floaters"
-                : $"no floater free ({string.Join(", ", counts)})";
+                ? "and the route has no floaters"
+                : $"and no floater is available: {string.Join(", ", counts)}";
 
             return crewName is null
-                ? $"Nobody is rostered on this shift, {floaters}"
-                : $"{crewName} {CrewPhrase(crewReason)}, {floaters}";
+                ? $"No driver is rostered on this shift, {floaters}"
+                : $"{crewName} is {CrewPhrase(crewReason)}, {floaters}";
         }
 
         private static string CrewPhrase(string reason) => reason switch
         {
-            "rest day" => "on their rest day",
-            "account not active" => "not an active driver",
+            "rest day" => "on a rest day",
+            "on leave" => "on leave",
+            "booked on another bus" => "assigned to another bus",
+            "too soon after another shift" => "in required rest after a shift",
+            "would work a seventh day running" => "due a day off after six days",
+            "account not active" => "no longer an active driver",
             _ => reason,
         };
 
         private static string FloaterPhrase(string reason) => reason switch
         {
-            "rest day" => "resting",
+            "rest day" => "on a rest day",
             "on leave" => "on leave",
-            "booked on another bus" => "already booked",
-            "too soon after another shift" => "just off a shift",
-            "would work a seventh day running" => "at six days running",
+            "booked on another bus" => "assigned to another bus",
+            "too soon after another shift" => "in required rest after a shift",
+            "would work a seventh day running" => "due a day off after six days",
             "account not active" => "inactive",
             _ => reason,
         };

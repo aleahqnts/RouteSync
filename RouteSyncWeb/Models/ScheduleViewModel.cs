@@ -79,9 +79,6 @@ namespace FleetWise.ViewModels
         /// <summary>The days in <see cref="RosterDays"/> as a phrase, such as "Oct 1 to Oct 5".</summary>
         public string RosterSpan { get; set; } = "";
 
-        /// <summary>What the roster means for this week, or empty when no roster covers any of it.</summary>
-        public string RosterNote { get; set; } = "";
-
         /// <summary>Roster slots with nobody on them, keyed like <see cref="Cells"/>.</summary>
         /// <remarks>
         /// Slots the last publish could not fill, still without a trip or a skip, on shifts

@@ -319,35 +319,11 @@ namespace FleetWise.Controllers
         private static void FillRoster(ScheduleViewModel vm, RosterWeek roster, List<Trip> trips, List<Vehicle> vehicles)
         {
             var en = System.Globalization.CultureInfo.InvariantCulture;
-            var notes = new List<string>();
 
-            foreach (var month in roster.Months.OrderBy(m => m.Month))
-            {
-                var days = vm.Days.Where(d => RosterPublisher.FirstOf(d) == month.Month.Date).ToList();
-                if (days.Count == 0) continue;
+            foreach (var month in roster.Months)
+                foreach (var d in vm.Days.Where(d => RosterPublisher.FirstOf(d) == month.Month.Date))
+                    vm.RosterDays.Add(d.ToString("yyyy-MM-dd"));
 
-                foreach (var d in days) vm.RosterDays.Add(d.ToString("yyyy-MM-dd"));
-
-                var name = month.Month.ToString("MMMM", en);
-                var published = month.Status == "Published";
-
-                if (days.Count == vm.Days.Count)
-                {
-                    notes.Add(published
-                        ? $"This week follows the {name} roster. A trip changed or removed here stays that way when the roster is published again."
-                        : $"This week belongs to the {name} roster, which fills it when it is published.");
-                }
-                else
-                {
-                    var span = Span(days, en);
-                    var many = days.Count > 1;
-                    notes.Add(published
-                        ? $"{span} {(many ? "follow" : "follows")} the {name} roster. A trip changed or removed on {(many ? "those days" : "that day")} stays that way when the roster is published again."
-                        : $"{span} {(many ? "belong" : "belongs")} to the {name} roster, which fills {(many ? "them" : "it")} when it is published.");
-                }
-            }
-
-            vm.RosterNote = string.Join(" ", notes);
             vm.RosterSpan = Span(vm.Days.Where(d => vm.RosterDays.Contains(d.ToString("yyyy-MM-dd"))).ToList(), en);
 
             // A gap reads as open while its slot has no trip and no skip, on whatever route.

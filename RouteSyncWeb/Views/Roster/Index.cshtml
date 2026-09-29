@@ -348,12 +348,12 @@
             @* Says the box can be taken hold of, which a cursor alone does not. *@
             <span class="ro-box-grab" aria-hidden="true">&#8942;&#8942;</span>
         </div>
-        <p class="ro-box-desc">Press a line to find its place on the roster. Marked places stay marked until the roster is published, and nothing is saved until you save it.</p>
+        <p class="ro-box-desc">Select a change to locate it on the roster. Changes are not saved until you save the roster.</p>
         <div class="ro-changes-scroll" id="roChangesScroll">
             <ul class="ro-changes" id="roChangesList"></ul>
             <p class="ro-changes-sub" id="roChangesOtherTitle" hidden>Also changed</p>
             <ul class="ro-report" id="roChangesOther" hidden></ul>
-            <p class="ro-changes-lost" id="roChangesLost" hidden>What auto-fill took off the roster is not listed once the page has reloaded.</p>
+            <p class="ro-changes-lost" id="roChangesLost" hidden>Removals made by auto-fill are not listed after the page reloads.</p>
         </div>
         <p class="visually-hidden" id="roChangesLive" aria-live="polite"></p>
         <div class="ro-box-actions ro-box-actions--single">
@@ -1080,8 +1080,8 @@
 
         // ---- Suggest rest days --------------------------------------------------------------
 
-        // Least disruption first: a spare driver as a floater, then the fewest rest days moved,
-        // and only then that the route needs another floater. Each change carries a mark, so
+        // Least disruption first: floaters' rest days, then the fewest crew rest days, then a spare
+        // driver as a floater, and only then that the route needs another floater. Each change carries a mark, so
         // See changes lists who moved and why.
         async function suggest() {
             try {
@@ -1089,7 +1089,7 @@
                 const res = await fetch('/Roster/Suggest', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seats: before, held: heldList() })
+                    body: JSON.stringify({ month: page.dataset.month, seats: before, held: heldList() })
                 });
                 if (!res.ok || res.redirected) throw new Error();
                 const result = await res.json();

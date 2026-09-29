@@ -148,11 +148,6 @@
         Conflicts are reported when the schedule is saved.
     </p>
 
-    @if (!string.IsNullOrEmpty(Model.RosterNote))
-    {
-        <p class="sch-roster-note">@Model.RosterNote</p>
-    }
-
     @foreach (var route in Model.Routes)
     {
         <div class="sch-card">

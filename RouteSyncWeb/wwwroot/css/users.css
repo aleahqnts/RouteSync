@@ -362,7 +362,7 @@
         position: relative;
         justify-content: center;
         border-bottom: 1px solid var(--us-border);
-        padding: 18px 24px;
+        padding: 13px 24px;
     }
 
     .us-modal .modal-header .btn-close {
@@ -376,7 +376,7 @@
     .us-modal-title {
         color: var(--us-navy);
         font-weight: 700;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -393,22 +393,22 @@
         background: var(--us-bg);
         color: var(--us-muted);
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-family: 'Segoe UI', sans-serif;
-        padding: 10px 24px;
+        padding: 6px 24px;
         margin: 0;
     }
 
     .us-section-body {
-        padding: 18px 24px;
+        padding: 12px 24px;
     }
 
     .us-form-row {
         display: grid;
-        grid-template-columns: 145px 1fr;
+        grid-template-columns: 130px 1fr;
         align-items: center;
-        gap: 8px 14px;
-        margin-bottom: 14px;
+        gap: 4px 14px;
+        margin-bottom: 9px;
     }
 
     .us-form-row:last-child {
@@ -442,7 +442,7 @@
 
     .us-form-input {
         width: 100%;
-        padding: 8px 12px;
+        padding: 6px 12px;
         border: 1.5px solid var(--us-border);
         border-radius: 10px;
         font-size: 0.875rem;
@@ -852,7 +852,7 @@
        a card is the same two lines whatever it holds. */
     .us-table.rs-cards tbody tr {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        grid-template-columns: auto auto minmax(0, 1fr) auto auto;
         align-items: center;
         column-gap: 8px;
         row-gap: 4px;
@@ -883,10 +883,10 @@
         font-size: .74rem;
     }
 
-    /* A name long enough to reach the badges is cut rather than allowed to push
-       them off the card. */
-    .us-table.rs-cards td[data-label="Name"] {
-        grid-column: 2;
+    /* First and last name read as one name. A name long enough to reach the badges
+       is cut rather than allowed to push them off the card. */
+    .us-table.rs-cards td[data-label="First name"],
+    .us-table.rs-cards td[data-label="Last name"] {
         grid-row: 1;
         overflow: hidden;
         font-size: .92rem;
@@ -895,14 +895,17 @@
         text-overflow: ellipsis;
     }
 
+    .us-table.rs-cards td[data-label="First name"] { grid-column: 2; margin-right: -4px; }
+    .us-table.rs-cards td[data-label="Last name"] { grid-column: 3; }
+
     .us-table.rs-cards td[data-label="Role"] {
-        grid-column: 3;
+        grid-column: 4;
         grid-row: 1;
         justify-self: end;
     }
 
     .us-table.rs-cards td[data-label="Status"] {
-        grid-column: 4;
+        grid-column: 5;
         grid-row: 1;
         justify-self: end;
     }
@@ -910,7 +913,7 @@
     /* The address runs under the name and takes the width of all three columns
        above it, cut at the edge rather than wrapping the card open. */
     .us-table.rs-cards td[data-label="Email"] {
-        grid-column: 1 / 4;
+        grid-column: 1 / 5;
         grid-row: 2;
         overflow: hidden;
         color: var(--us-muted);
@@ -924,7 +927,7 @@
     .us-table.rs-cards td[data-label="Actions"] {
         display: flex;
         justify-content: flex-end;
-        grid-column: 4;
+        grid-column: 5;
         grid-row: 2;
     }
 

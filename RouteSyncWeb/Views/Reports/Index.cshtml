@@ -112,18 +112,19 @@
     </div>
 
     <div class="rp-table-wrap rs-list-wrap">
-        <table class="rp-table rs-cards rs-collapse rs-list">
+        @* Sorted by the server, which holds every page of the list. *@
+        <table class="rp-table rs-cards rs-collapse rs-list" data-sort="server" id="tripsTable">
             <thead>
                 <tr>
-                    <th>Trip ID</th>
-                    <th>Driver</th>
-                    <th>Bus ID</th>
-                    <th>Route</th>
-                    <th>Shift</th>
-                    <th>Status</th>
-                    <th>Passengers</th>
-                    <th>Revenue</th>
-                    <th>Actions</th>
+                    <th data-sort-key="trip">Trip ID</th>
+                    <th data-sort-key="driver">Driver</th>
+                    <th data-sort-key="bus">Bus ID</th>
+                    <th data-sort-key="route">Route</th>
+                    <th data-sort-key="shift">Shift</th>
+                    <th data-sort-key="status">Status</th>
+                    <th data-sort-key="passengers">Passengers</th>
+                    <th data-sort-key="revenue">Revenue</th>
+                    <th data-nosort>Actions</th>
                 </tr>
             </thead>
             <tbody id="tripsTableBody">
@@ -505,7 +506,7 @@
             <div id="statModalContent" style="display:none;">
                 <div class="tr-section tr-section--last">
                     <div class="rp-table-wrap">
-                        <table class="rp-table rs-cards rp-stat-table"><thead id="statModalHead"></thead><tbody id="statModalBody"></tbody></table>
+                        <table class="rp-table rs-cards rp-stat-table" data-sort><thead id="statModalHead"></thead><tbody id="statModalBody"></tbody></table>
                     </div>
                     <div class="st-empty" id="statModalEmpty" style="display:none;">Nothing to show for this day.</div>
                 </div>
@@ -623,6 +624,8 @@
 <script>
     /* State. */
     let currentPage = 1;
+    // The trip table's order, chosen from its headings. Empty is the server's own order.
+    let tripSort = { key: '', dir: 'asc' };
     let passengerChart, revenueChart, passengerBarChart;
 
     function getFilters() {
@@ -1054,6 +1057,8 @@
     loadSuggestionStats(f.date);
     const params = new URLSearchParams({
     page: currentPage,
+    sort: tripSort.key,
+    dir: tripSort.dir,
     passengerPeriod: f.passengerPeriod,
     revenuePeriod: f.revenuePeriod
     });
@@ -1076,6 +1081,13 @@
     console.error(e);
     }
     }
+
+    // A new order starts again from the first page.
+    document.getElementById('tripsTable').addEventListener('rs-sort', e => {
+        tripSort = e.detail;
+        currentPage = 1;
+        loadAll();
+    });
 
     /* Filter event wiring. */
     document.getElementById('routeFilter').addEventListener('change', () => { currentPage = 1; loadAll(); });

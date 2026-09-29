@@ -130,7 +130,7 @@
             }
             else
             {
-                <table class="db-breakdown-table rs-cards">
+                <table class="db-breakdown-table rs-cards" data-sort>
                     <thead>
                         <tr><th>Trip</th><th>Route</th><th>Vehicle</th><th>Shift</th><th>Status</th><th class="db-num">Boarded</th></tr>
                     </thead>
@@ -380,7 +380,7 @@
                 .map(v => '<td>' + dbEscape(v) + '</td>').join('') +
                 '<td class="db-num"><strong>' + r.passengers + '</strong></td>';
             body.innerHTML =
-                '<table class="db-breakdown-table rs-cards"><thead><tr>' +
+                '<table class="db-breakdown-table rs-cards" data-sort><thead><tr>' +
                 '<th>Trip</th><th>Route</th><th>Vehicle</th><th>Shift</th><th>Status</th>' +
                 '<th class="db-num">Boarded</th></tr></thead><tbody>' +
                 rows.map(r => '<tr>' + cells(r) + '</tr>').join('') +
