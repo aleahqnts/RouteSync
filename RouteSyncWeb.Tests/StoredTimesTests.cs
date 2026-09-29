@@ -10,6 +10,9 @@ public class StoredTimesTests
     private static readonly DateTime StoredUtc = new(2026, 9, 25, 13, 58, 0, DateTimeKind.Utc);
     private static readonly DateTime StoredLocal = StoredUtc.ToLocalTime();
 
+    // The same value as it also arrives: moved into the machine's zone but left unmarked.
+    private static readonly DateTime StoredUnmarked = DateTime.SpecifyKind(StoredLocal, DateTimeKind.Unspecified);
+
     [Fact]
     public void A_true_UTC_column_reads_eight_hours_later_wherever_the_app_runs()
     {
@@ -17,6 +20,7 @@ public class StoredTimesTests
 
         Assert.Equal(expected, StoredTimes.FromUtc(StoredUtc));
         Assert.Equal(expected, StoredTimes.FromUtc(StoredLocal));
+        Assert.Equal(expected, StoredTimes.FromUtc(StoredUnmarked));
     }
 
     [Fact]
@@ -26,6 +30,7 @@ public class StoredTimesTests
 
         Assert.Equal(expected, StoredTimes.FromWall(StoredUtc));
         Assert.Equal(expected, StoredTimes.FromWall(StoredLocal));
+        Assert.Equal(expected, StoredTimes.FromWall(StoredUnmarked));
     }
 
     [Fact]
