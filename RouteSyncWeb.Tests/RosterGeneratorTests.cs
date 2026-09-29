@@ -111,7 +111,7 @@ public class RosterGeneratorTests
 
         Assert.Equal(4, plan.Gaps.Count);
         Assert.All(plan.Gaps, g => Assert.Equal(DayOfWeek.Monday, g.Date.DayOfWeek));
-        Assert.Equal("Pedro Reyes on their rest day, no floater free (1 resting)", plan.Gaps[0].Reason);
+        Assert.Equal("Pedro Reyes is on a rest day, and no floater is available: 1 on a rest day", plan.Gaps[0].Reason);
     }
 
     [Fact]

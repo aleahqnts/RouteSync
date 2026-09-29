@@ -32,11 +32,14 @@ namespace FleetWise.Services
         /// <list type="number">
         /// <item>Rest days missing are set, and moved if that helps. They were nobody's yet,
         /// so moving them disturbs nobody.</item>
-        /// <item>A spare driver, active, unplaced and not held back, is added as a floater.
-        /// Nobody's rest day moves.</item>
-        /// <item>The fewest rest days are moved, each to the weekday that uncovers the least,
-        /// and to a day near the one it was on when two are equal.</item>
-        /// <item>Both together.</item>
+        /// <item>Floaters' rest days are moved. A floater's week is built around covering
+        /// others, so theirs is the first to give.</item>
+        /// <item>Crew rest days are moved as well, the fewest that will do, each to the weekday
+        /// that uncovers the least and to a day near the one it was on when two are equal.</item>
+        /// <item>A spare driver, active, unplaced and not held back, is added as a floater, first
+        /// on its own and then with rest days moved around it. Only when moving rest days
+        /// cannot close the gaps: a floater is a whole driver's month, and is not spent on a gap
+        /// that a different rest day would close.</item>
         /// </list>
         /// <para>When nothing closes the gaps, the arrangement that leaves fewest is handed back
         /// and the route is said to need another floater, rather than a pattern that still
@@ -44,19 +47,25 @@ namespace FleetWise.Services
         ///
         /// <para>Floaters' usual shifts are left as they are. Only a floater added here is given
         /// one, the shift the route is shortest on.</para>
+        ///
+        /// <para>Gaps are counted in the pattern and, when the real month is given, in its first
+        /// week as well, where the month before still weighs on who is free. See
+        /// <see cref="RosterStructure.OpeningGapCount"/>.</para>
         /// </remarks>
+        /// <param name="month">The real month, or null to judge the pattern alone.</param>
         public static RestDaySuggestion SuggestRestDays(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<Vehicle> vehicles,
             IReadOnlyList<UserModel> drivers,
             IReadOnlyDictionary<int, string> routeNames,
-            IReadOnlySet<int> held)
+            IReadOnlySet<int> held,
+            RosterWorld? month = null)
         {
             var driverById = new Dictionary<int, UserModel>();
             foreach (var d in drivers) driverById.TryAdd(d.UserId, d);
 
             var shared = drivers.GroupBy(NameOf, Ci).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(Ci);
-            string Label(UserModel d) => shared.Contains(NameOf(d)) ? $"{NameOf(d)} ({d.UserId})" : NameOf(d);
+            string Label(UserModel d) => shared.Contains(NameOf(d)) ? $"{NameOf(d)} · {d.UserId}" : NameOf(d);
             string Name(int id) => driverById.TryGetValue(id, out var d) ? Label(d) : $"Driver {id}";
             string Route(int id) => routeNames.TryGetValue(id, out var n) && !string.IsNullOrWhiteSpace(n) ? n : $"route {id}";
 
@@ -90,7 +99,8 @@ namespace FleetWise.Services
                 var before = idx.Select(i => seats[i].RestWeekday).ToList();
                 var freshLocal = Enumerable.Range(0, idx.Count).Where(k => fresh.Contains(idx[k])).ToHashSet();
 
-                int Count(List<RosterSeat> s) => RosterStructure.RestDayGapCount(s, drivers, vehicles, routeNames);
+                int Opening(List<RosterSeat> s) => month is null ? 0 : RosterStructure.OpeningGapCount(s, month);
+                int Count(List<RosterSeat> s) => RosterStructure.RestDayGapCount(s, drivers, vehicles, routeNames) + Opening(s);
 
                 var gaps = Count(local);
                 var chosen = new Attempt(local, gaps, 0, null);
@@ -104,19 +114,26 @@ namespace FleetWise.Services
 
                     if (free.Gaps > 0)
                     {
-                        var spare = spares.Count > 0 ? WithSpare(free.Seats, spares[0], routeId, drivers, vehicles, routeNames, Count) : null;
-                        if (spare is not null) attempts.Add(spare);
+                        var floaters = MoveRestDays(free.Seats, free.Gaps,
+                            k => freshLocal.Contains(k) || free.Seats[k].Kind == Floater, before, Count);
+                        attempts.Add(new Attempt(floaters.Seats, floaters.Gaps, Moved(floaters.Seats, before, freshLocal), null));
 
-                        if (spare is null || spare.Gaps > 0)
+                        if (floaters.Gaps > 0)
                         {
-                            var moves = MoveRestDays(free.Seats, free.Gaps, _ => true, before, Count);
+                            var moves = MoveRestDays(floaters.Seats, floaters.Gaps, _ => true, before, Count);
                             attempts.Add(new Attempt(moves.Seats, moves.Gaps, Moved(moves.Seats, before, freshLocal), null));
 
-                            if (moves.Gaps > 0 && spare is not null)
+                            if (moves.Gaps > 0 && spares.Count > 0)
                             {
-                                var withSpareBefore = before.Append(spare.Seats[^1].RestWeekday).ToList();
-                                var both = MoveRestDays(spare.Seats, spare.Gaps, _ => true, withSpareBefore, Count);
-                                attempts.Add(new Attempt(both.Seats, both.Gaps, Moved(both.Seats, before, freshLocal), spare.Spare));
+                                var spare = WithSpare(free.Seats, spares[0], routeId, drivers, vehicles, routeNames, Count);
+                                attempts.Add(spare);
+
+                                if (spare.Gaps > 0)
+                                {
+                                    var withSpareBefore = before.Append(spare.Seats[^1].RestWeekday).ToList();
+                                    var both = MoveRestDays(spare.Seats, spare.Gaps, _ => true, withSpareBefore, Count);
+                                    attempts.Add(new Attempt(both.Seats, both.Gaps, Moved(both.Seats, before, freshLocal), spare.Spare));
+                                }
                             }
                         }
                     }
@@ -138,12 +155,12 @@ namespace FleetWise.Services
 
                     if (freshLocal.Contains(k))
                     {
-                        marks[idx[k]] = $"{RestDayMark}{DayName(now!.Value)}, where it was missing.";
+                        marks[idx[k]] = $"{RestDayMark}{DayName(now!.Value)}. No rest day was set.";
                         set++;
                     }
                     else if (was is int from && now is int to && from != to)
                     {
-                        marks[idx[k]] = $"{RestDayMark}{DayName(to)}, moved from {DayName(from)} so the route's floaters can cover every rest day.";
+                        marks[idx[k]] = $"{RestDayMark}{DayName(to)}. Moved from {DayName(from)} to keep floater cover complete.";
                         notes.Add($"Moved {Name(chosen.Seats[k].DriverId!.Value)}'s rest day from {DayName(from)} to {DayName(to)}.");
                         moved++;
                     }
@@ -155,8 +172,8 @@ namespace FleetWise.Services
                     var movedHere = chosen.Moves > 0;
                     newRows.Add(row with
                     {
-                        Suggested = $"Added as a {Route(routeId)} floater so its rest days are covered."
-                            + (movedHere ? "" : " Nobody's rest day moved."),
+                        Suggested = "Added as a floater to cover rest days."
+                            + (movedHere ? "" : " No rest days changed."),
                     });
                     notes.Add($"Added {Label(taken)} as a {Route(routeId)} floater, resting {DayName(row.RestWeekday!.Value)}.");
                     spares.Remove(taken);
@@ -167,9 +184,13 @@ namespace FleetWise.Services
                 {
                     var weekly = RosterStructure.WeeklyGaps(chosen.Seats, drivers, vehicles, routeNames)
                         .Count(g => g.RouteId == routeId && g.RestDay);
-                    gapsLeft += weekly;
-                    var note = $"{Route(routeId)} still leaves {weekly} bus {(weekly == 1 ? "shift" : "shifts")} a week "
-                        + $"with nobody to cover {(weekly == 1 ? "it" : "them")}, however its rest days are arranged. It needs another floater.";
+                    var opening = weekly > 0 ? 0 : Opening(chosen.Seats);
+                    gapsLeft += weekly + opening;
+                    var note = weekly > 0
+                        ? $"{Route(routeId)} still leaves {weekly} bus {(weekly == 1 ? "shift" : "shifts")} a week "
+                            + $"with nobody to cover {(weekly == 1 ? "it" : "them")}, however its rest days are arranged. It needs another floater."
+                        : $"{Route(routeId)} still leaves {opening} bus {(opening == 1 ? "shift" : "shifts")} uncovered in the first week "
+                            + "of the month, where it meets the month before. Assign cover for those days on Edit Schedule.";
                     notes.Add(note);
                     unmarked.Add(note);
                 }
@@ -238,10 +259,10 @@ namespace FleetWise.Services
         /// </summary>
         /// <remarks>
         /// Each move must leave strictly fewer gaps, so this ends. Between two moves that leave
-        /// as many, a crew driver's is moved before a floater's, then the one that moves the
-        /// day least from where it was, so a Wednesday becomes a Thursday before a Sunday, then
-        /// the day fewest crew already rest on, so rest days spread rather than stack and a
-        /// floater is not handed two shifts on one day when a quieter day was as near.
+        /// as many, a floater's is moved before a crew driver's, since a floater's week is
+        /// already arranged around other people's, then the one that moves the day least from
+        /// where it was, so a Wednesday becomes a Thursday before a Sunday, then the day fewest
+        /// crew already rest on, so rest days spread rather than stack.
         /// </remarks>
         private static (List<RosterSeat> Seats, int Gaps) MoveRestDays(
             List<RosterSeat> start, int gaps, Func<int, bool> movable, IReadOnlyList<int?> before,
@@ -270,7 +291,7 @@ namespace FleetWise.Services
                         var resting = 0;
                         for (var j = 0; j < current.Count; j++)
                             if (j != k && current[j].Kind == Crew && current[j].RestWeekday == day) resting++;
-                        var rank = (current[k].Kind == Crew ? 0 : 1000) + Distance(from ?? now, day) * 10 + resting;
+                        var rank = (current[k].Kind == Floater ? 0 : 1000) + Distance(from ?? now, day) * 10 + resting;
 
                         if (best is null
                             || left < best.Value.Gaps

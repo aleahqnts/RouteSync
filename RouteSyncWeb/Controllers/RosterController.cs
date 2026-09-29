@@ -295,7 +295,14 @@ namespace FleetWise.Controllers
 
             var (routes, vehicles, drivers) = await _publisher.ReadFleetAsync();
             var seats = ToSeats(req.Seats);
-            var fix = RosterRules.SuggestRestDays(seats, vehicles, drivers, routes, RosterPublisher.LiveHolds(req.Held, seats));
+
+            // The real month too, so the first days after the month before are judged as a
+            // publish would plan them. A month already over has nothing left to plan.
+            RosterWorld? world = null;
+            if (TryParseMonth(req.Month, out var month) && month >= FirstOf(PhClock.OperationalDay))
+                world = await _publisher.DraftWorldAsync(month, seats, routes, vehicles, drivers);
+
+            var fix = RosterRules.SuggestRestDays(seats, vehicles, drivers, routes, RosterPublisher.LiveHolds(req.Held, seats), world);
 
             return Json(new
             {
