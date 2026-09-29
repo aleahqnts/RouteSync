@@ -27,7 +27,7 @@
 <div id="dbStats">
 
 @* chart data carried here so refresh can update the chart without reloading the page *@
-<script type="application/json" id="dbChartData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData))</script>
+<script type="application/json" id="dbChartData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { bars = Model.ChartData, usual = Model.ChartUsual, now = Model.ChartNowIndex }))</script>
 
 @* STAT CARDS *@
 <div class="db-stat-grid">
@@ -171,9 +171,18 @@
             </span>
             <span class="db-card-title">Passengers Boarded by Hour</span>
             <span class="db-badge db-badge--teal">@Model.SelectedRouteName</span>
+            @* Each entry shows or hides its series on the chart. *@
             <div class="db-chart-legend">
-                <span class="db-legend-swatch" style="background:#4AADA8;"></span>
-                <span class="db-legend-text">@Model.SelectedRouteName</span>
+                <button type="button" class="db-legend-item" data-series="0" aria-pressed="true"
+                        title="Show or hide today's boardings">
+                    <span class="db-legend-swatch" style="background:#4AADA8;"></span>
+                    <span class="db-legend-text">Today</span>
+                </button>
+                <button type="button" class="db-legend-item" data-series="1" aria-pressed="true"
+                        title="The average for each hour over the last four @(Model.Today.ToString("dddd"))s. Show or hide.">
+                    <span class="db-legend-line"></span>
+                    <span class="db-legend-text">@Model.Today.ToString("dddd") average</span>
+                </button>
             </div>
         </div>
         <canvas id="demandChart" class="db-chart-canvas"></canvas>
@@ -217,115 +226,164 @@
             dbCloseModal:        function () { dbCloseModal(); }
         });
 
-        // Hour labels from the ViewModel; per-hour onboard counts read from the live
-        // region so an AJAX refresh can update the chart without a reload.
+        // Hour labels from the view model; the figures are read from the live region so a
+        // refresh can update the chart without a reload.
         const chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
-        const chartDay1 = '@Model.Today.ToString("ddd, dd MMM")';
-        const chartDay2 = '@Model.Today.AddDays(1).ToString("ddd, dd MMM")';
-        // midnight = first "12:00 AM" -> start of the 2nd calendar day in this 6am->6am cycle
-        const dbMidnightIdx = chartLabels.indexOf('12:00 AM');
 
         function dbReadHourly() {
-            try { return JSON.parse(document.getElementById('dbChartData').textContent) || []; }
-            catch (e) { return []; }
+            try {
+                const d = JSON.parse(document.getElementById('dbChartData').textContent) || {};
+                return { bars: d.bars || [], usual: d.usual || null, now: d.now ?? -1 };
+            } catch (e) { return { bars: [], usual: null, now: -1 }; }
         }
 
-        // Tints the 2nd day's region + draws a divider and day labels so it's obvious
-        // where one calendar day ends and the next begins inside the cycle.
-        const dbDayBandPlugin = {
-            id: 'dbDayBand',
+        // The service day is read in shifts, so the shifts are drawn behind the bars, each
+        // named along the top. Hours still to come are faded. Drawn before the grid, so the
+        // grid lines run unbroken across all of it.
+        const dbShifts = [
+            { name: 'Morning', from: 0, to: 8, fill: 'rgba(74,173,168,0.06)' },
+            { name: 'Afternoon', from: 8, to: 16, fill: 'rgba(59,130,246,0.05)' },
+            { name: 'Evening', from: 16, to: 24, fill: 'rgba(124,58,237,0.05)' },
+        ];
+
+        const dbShiftBandPlugin = {
+            id: 'dbShiftBand',
             beforeDraw(chart) {
-                if (dbMidnightIdx < 0) return;
-                const { ctx, chartArea: area, scales } = chart;
-                const xMid = scales.x.getPixelForValue(dbMidnightIdx);
+                const { ctx, chartArea: area, scales: { x } } = chart;
+                const half = (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2;
+                const left = i => Math.max(area.left, x.getPixelForValue(i) - half);
+                const right = i => Math.min(area.right, x.getPixelForValue(i - 1) + half);
+
                 ctx.save();
-                // shade day 2
-                ctx.fillStyle = 'rgba(59,130,246,0.05)';
-                ctx.fillRect(xMid, area.top, area.right - xMid, area.bottom - area.top);
-                // divider
-                ctx.strokeStyle = 'rgba(59,130,246,0.45)';
-                ctx.lineWidth = 1.2;
-                ctx.setLineDash([5, 4]);
-                ctx.beginPath();
-                ctx.moveTo(xMid, area.top);
-                ctx.lineTo(xMid, area.bottom);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                // day labels
-                ctx.font = '600 11px Segoe UI';
-                ctx.textBaseline = 'top';
-                ctx.fillStyle = '#9AA5B4';
-                ctx.textAlign = 'center';
-                ctx.fillText(chartDay1, (area.left + xMid) / 2, area.top + 2);
-                ctx.fillStyle = '#3B82F6';
-                ctx.fillText(chartDay2, (xMid + area.right) / 2, area.top + 2);
+                dbShifts.forEach(s => {
+                    ctx.fillStyle = s.fill;
+                    ctx.fillRect(left(s.from), area.top, right(s.to) - left(s.from), area.bottom - area.top);
+                    ctx.font = '600 11px Segoe UI';
+                    ctx.textBaseline = 'top';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#9AA5B4';
+                    ctx.fillText(s.name, (left(s.from) + right(s.to)) / 2, area.top + 4);
+                });
+
+                const now = dbReadHourly().now;
+                if (now >= 0 && now < chartLabels.length - 1) {
+                    const from = left(now + 1);
+                    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                    ctx.fillRect(from, area.top + 20, area.right - from, area.bottom - area.top - 20);
+                }
                 ctx.restore();
             }
         };
 
+        // The top of the axis clears the tallest bar or usual figure by about a quarter,
+        // rounded to a whole five, which leaves room for the shift names.
+        function dbYMax(d) {
+            const m = Math.max(0, ...d.bars.filter(v => v != null), ...(d.usual || []));
+            return m <= 0 ? 10 : Math.ceil((m * 1.25) / 5) * 5;
+        }
+
+        const dbAverageLabel = '@Model.Today.ToString("dddd") average';
+
+        // Series the viewer has switched off, by dataset index. Kept across refreshes, so the
+        // next reading does not switch one back on.
+        const dbSeriesOff = { 0: false, 1: false };
+
+        const dbFirst = dbReadHourly();
         const ctx = document.getElementById('demandChart').getContext('2d');
         window.demandChart = new Chart(ctx, {
-        type: 'line',
-        plugins: [dbDayBandPlugin],
-        data: {
-        labels: chartLabels,
-        datasets: [{
-        label: 'Passengers boarded',
-        data: dbReadHourly(),
-        borderColor: '#4AADA8',
-        backgroundColor: 'rgba(74,173,168,0.08)',
-        borderWidth: 2.2,
-        pointBackgroundColor: '#4AADA8',
-        pointRadius: 5,
-        pointHoverRadius: 9,
-        pointHitRadius: 25,
-        tension: 0.25,
-        fill: true
-        }]
-        },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        // wider grab zone: hover snaps to nearest point even without pixel-perfect aim
-        interaction: { mode: 'index', intersect: false, axis: 'x' },
-        plugins: {
-        legend: { display: false },
-        tooltip: {
-        callbacks: {
-        title: items => 'Hour: ' + items[0].label,
-        label: item => 'Boarded so far: ' + item.parsed.y
-        }
-        }
-        },
-        scales: {
-        x: {
-        title: { display: true, text: 'Hour of day (PHT)', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
-        grid: { color: '#F0F0F0' },
-        ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' }
-        },
-        y: {
-        beginAtZero: true,
-        suggestedMax: dbYMax(dbReadHourly()),
-        title: { display: true, text: 'Passengers', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
-        ticks: { precision: 0, font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' },
-        grid: { color: '#F0F0F0' }
-        }
-        }
-        }
+            plugins: [dbShiftBandPlugin],
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    type: 'bar',
+                    label: 'Boarded',
+                    data: dbFirst.bars,
+                    backgroundColor: '#4AADA8',
+                    hoverBackgroundColor: '#3D9490',
+                    borderRadius: 4,
+                    maxBarThickness: 22,
+                    order: 2
+                }, {
+                    type: 'line',
+                    label: dbAverageLabel,
+                    data: dbFirst.usual || [],
+                    borderColor: '#94A3B8',
+                    borderWidth: 1.8,
+                    borderDash: [5, 4],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHitRadius: 12,
+                    // Follows the points without overshooting them, so the line never dips
+                    // below zero or rises above a peak it only passes through.
+                    cubicInterpolationMode: 'monotone',
+                    fill: false,
+                    hidden: !dbFirst.usual || dbSeriesOff[1],
+                    order: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false, axis: 'x' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        filter: item => item.raw != null,
+                        callbacks: {
+                            title: items => {
+                                const i = items[0].dataIndex;
+                                return chartLabels[i] + ' to ' + chartLabels[(i + 1) % chartLabels.length];
+                            },
+                            label: item => (item.datasetIndex === 1 ? dbAverageLabel + ': ' : 'Boarded: ') + item.parsed.y
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Hour of day (PHT)', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
+                        grid: { display: false },
+                        ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: dbYMax(dbFirst),
+                        title: { display: true, text: 'Passengers', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
+                        ticks: { precision: 0, font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' },
+                        grid: { color: '#F0F0F0' }
+                    }
+                }
+            }
         });
 
-        // top of axis = peak + ~20% headroom (rounded to a nice 10), so the line never
-        // hugs the very top of the chart.
-        function dbYMax(data) {
-        const m = Math.max(0, ...data.filter(v => v != null));
-        return m <= 0 ? 10 : Math.ceil((m * 1.2) / 10) * 10;
+        // The average has nothing to show until there is history, so its entry is disabled
+        // until then rather than toggling a line that is not there.
+        function dbLegendState(hasAverage) {
+            document.querySelectorAll('.db-legend-item').forEach(b => {
+                const i = +b.dataset.series;
+                b.disabled = i === 1 && !hasAverage;
+                b.setAttribute('aria-pressed', String(!dbSeriesOff[i] && !b.disabled));
+            });
         }
 
+        document.querySelectorAll('.db-legend-item').forEach(b => {
+            b.addEventListener('click', () => {
+                const i = +b.dataset.series;
+                dbSeriesOff[i] = !dbSeriesOff[i];
+                dbUpdateChart();
+            });
+        });
+        dbLegendState(!!dbFirst.usual);
+
         function dbUpdateChart() {
-        const d = dbReadHourly();
-        window.demandChart.data.datasets[0].data = d;
-        window.demandChart.options.scales.y.suggestedMax = dbYMax(d);
-        window.demandChart.update();
+            const d = dbReadHourly();
+            const c = window.demandChart;
+            c.data.datasets[0].data = d.bars;
+            c.data.datasets[1].data = d.usual || [];
+            c.data.datasets[0].hidden = dbSeriesOff[0];
+            c.data.datasets[1].hidden = !d.usual || dbSeriesOff[1];
+            dbLegendState(!!d.usual);
+            c.options.scales.y.suggestedMax = dbYMax(d);
+            c.update();
         }
 
         // Total Passengers modal.
@@ -430,7 +488,7 @@
                 dbBreakdown(d.breakdown || [], d.totalPassengers);
 
                 const chart = document.getElementById('dbChartData');
-                if (chart) chart.textContent = JSON.stringify(d.chartData || []);
+                if (chart) chart.textContent = JSON.stringify(d.chartData || {});
                 dbUpdateChart();
                 dbStamp();
             } catch (e) {
