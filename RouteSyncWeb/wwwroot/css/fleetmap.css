@@ -69,16 +69,61 @@
     }
 
     .fm-count {
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: #6B7A8C;
-        font-family: 'Segoe UI', sans-serif;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         white-space: nowrap;
     }
 
-    .fm-count em {
-        font-style: normal;
-        color: var(--fm-teal);
+    .fm-count:empty {
+        display: none;
+    }
+
+    .fm-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 11px;
+        border-radius: 999px;
+        background: #F1F4F8;
+        color: #4A5568;
+        font: 700 0.76rem 'Segoe UI', sans-serif;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .fm-chip svg {
+        width: 14px;
+        height: 14px;
+        color: #8A96A8;
+    }
+
+    .fm-chip--trip {
+        background: #E8F6F5;
+        color: #2E8C87;
+    }
+
+    .fm-chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #A8D8D5;
+    }
+
+    /* A bus is moving: the dot fills and breathes. */
+    .fm-chip--live .fm-chip-dot {
+        background: var(--fm-teal);
+        animation: fm-chip-pulse 1.8s ease-out infinite;
+    }
+
+    @keyframes fm-chip-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(74, 173, 168, .55); }
+        70% { box-shadow: 0 0 0 6px rgba(74, 173, 168, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(74, 173, 168, 0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fm-chip--live .fm-chip-dot { animation: none; }
     }
 
     .fm-clear-btn {
@@ -713,49 +758,33 @@
         cursor: default;
     }
 
-    /* GPS tools: a tray kept out of the way behind a small tab in the bottom-right
-       corner. The tab sits above Leaflet's credit line, which the map's licence needs
-       left in view, and the tray opens above the tab. */
+    /* GPS tools: a tray opened from an unmarked spot at the far right of the top bar. Laid
+       over the bar's own edge rather than in its row, so the bar keeps the layout it has
+       without it. The tray drops down over the map from under it. */
     .fm-drawer {
         position: absolute;
-        right: 12px;
-        bottom: 28px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column-reverse;
-        align-items: flex-end;
-        gap: 8px;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2;
     }
 
     .fm-drawer-tab {
         position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 30px;
-        height: 22px;
+        display: block;
+        width: 28px;
+        height: 100%;
         padding: 0;
         border: none;
-        border-radius: 8px;
-        background: var(--fm-white);
-        color: var(--fm-muted);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .14);
-        cursor: pointer;
-        transition: color .15s;
+        background: none;
+        cursor: default;
     }
 
-    .fm-drawer-tab:hover {
-        color: var(--fm-teal);
-    }
-
-    /* Points up while the tray is shut, down to shut it. */
-    .fm-drawer-tab svg {
-        transform: rotate(180deg);
-        transition: transform .15s;
-    }
-
-    .fm-drawer-tab[aria-expanded="true"] svg {
-        transform: none;
+    /* Found by keyboard all the same, and shown while it has the focus. */
+    .fm-drawer-tab:focus-visible {
+        outline: 2px solid var(--fm-teal);
+        outline-offset: -6px;
+        border-radius: 10px;
     }
 
     .fm-drawer-heading {
@@ -771,8 +800,9 @@
     .fm-drawer-live {
         display: none;
         position: absolute;
-        top: -3px;
-        right: -3px;
+        top: 50%;
+        left: 50%;
+        margin: -4px 0 0 -4px;
         width: 8px;
         height: 8px;
         border-radius: 50%;
@@ -785,6 +815,10 @@
     }
 
     .fm-drawer-body {
+        position: absolute;
+        top: calc(100% + 12px);
+        right: 12px;
+        z-index: 1100;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -1009,10 +1043,9 @@
         top: 12px;
     }
 
-    /* Above the navigation bar, which owns the foot of the screen. */
-    .fm-drawer {
-        right: 12px;
-        bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
+    /* Kept inside the bar's narrower edge here, clear of the Filters button. */
+    .fm-drawer-tab {
+        width: 16px;
     }
 
     .fm-drawer-body {
