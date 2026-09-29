@@ -91,6 +91,8 @@ namespace FleetWise.Controllers
             int? routeId,
             DateTime? date,
             int page = 1,
+            string? sort = null,
+            string? dir = null,
             string passengerPeriod = "This Week",
             string revenuePeriod = "This Week")
         {
@@ -132,6 +134,35 @@ namespace FleetWise.Controllers
             var tableTrips = filtered
                 .Where(t => string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                 .ToList();
+
+            // A heading clicked on the table. Sorted here rather than in the browser, which
+            // only ever holds one page of the list.
+            string DriverOf(Trip t) => userNames.TryGetValue(t.DriverId, out var n) ? n : "";
+            string RouteOf(Trip t) => routeNames.TryGetValue(t.RouteId, out var n) ? n : "";
+            Func<Trip, object>? by = sort switch
+            {
+                "trip" => t => t.TripId,
+                "driver" => t => DriverOf(t),
+                "bus" => t => t.VehicleId ?? "",
+                "route" => t => RouteOf(t),
+                "shift" => t => t.ShiftStartTime,
+                "status" => t => DeriveStatus(t),
+                "passengers" => t => Passengers(t),
+                "revenue" => t => t.EstimatedRevenue,
+                _ => null,
+            };
+            if (by is not null)
+            {
+                var order = Comparer<object>.Create((a, b) => a is string x && b is string y
+                    ? StringComparer.OrdinalIgnoreCase.Compare(x, y)
+                    : Comparer<object>.Default.Compare(a, b));
+                tableTrips = (dir == "desc"
+                        ? tableTrips.OrderByDescending(by, order)
+                        : tableTrips.OrderBy(by, order))
+                    .ThenByDescending(t => t.Date)
+                    .ThenBy(t => t.TripId)
+                    .ToList();
+            }
 
             int totalCount = tableTrips.Count;
             int totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));

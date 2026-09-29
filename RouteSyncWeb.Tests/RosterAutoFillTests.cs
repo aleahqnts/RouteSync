@@ -46,7 +46,7 @@ public class RosterAutoFillTests
 
         Assert.Equal(knowsBus.UserId, afternoon.DriverId);
         Assert.NotNull(afternoon.RestWeekday);
-        Assert.StartsWith("Replaces Gone Cruz, who is no longer an active driver. 3 trips on B01 in the last 30 days.", afternoon.Suggested);
+        Assert.StartsWith("Replaces Gone Cruz, who is no longer active. 3 trips on B01 in the past 30 days.", afternoon.Suggested);
         Assert.Equal(CrewOn(ana, b01, "Morning", 1), At(r, b01, "Morning"));
         Assert.Equal((1, 1), (r.Filled, r.Emptied));
     }
@@ -65,7 +65,7 @@ public class RosterAutoFillTests
 
         Assert.Equal(placed.UserId, At(r, b01, "Morning").DriverId);
         Assert.Equal(veteran.UserId, At(r, b02, "Morning").DriverId);
-        Assert.Contains("10 trips on North Loop in the last 30 days.", At(r, b02, "Morning").Suggested);
+        Assert.Contains("10 trips on North Loop in the past 30 days.", At(r, b02, "Morning").Suggested);
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class RosterAutoFillTests
         Assert.Equal(local.UserId, At(r, b01, "Morning").DriverId);
         Assert.Equal(newcomer.UserId, At(r, b01, "Afternoon").DriverId);
         Assert.Equal(fromElsewhere.UserId, At(r, b01, "Evening").DriverId);
-        Assert.Contains("New driver, with no trips in the last 30 days.", At(r, b01, "Afternoon").Suggested);
-        Assert.Contains("Free, and new to North Loop.", At(r, b01, "Evening").Suggested);
+        Assert.Contains("New driver. No trips in the past 30 days.", At(r, b01, "Afternoon").Suggested);
+        Assert.Contains("Available. No recent trips on North Loop.", At(r, b01, "Evening").Suggested);
         Assert.DoesNotContain(r.Seats, s => s.Kind == Floater);
         Assert.Contains("North Loop needs another floater and no active driver is free.", r.Notes);
     }
@@ -132,7 +132,7 @@ public class RosterAutoFillTests
         Assert.Equal(2, added.RestWeekday);
         // Morning and Afternoon carry most crew, and Morning already has its floater.
         Assert.Equal("Afternoon", added.Shift);
-        Assert.Contains("Usually covers the Afternoon shift", added.Suggested);
+        Assert.Contains("Covers the Afternoon shift", added.Suggested);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class RosterAutoFillTests
         var r = Fill(w, new List<RosterSeat> { CrewOn(a, b01, "Morning", 1), CrewOn(null, b01, "Afternoon"), FloaterOn(f, 2) });
 
         Assert.Null(At(r, b01, "Afternoon").DriverId);
-        Assert.Equal("No active driver is free for this place.", At(r, b01, "Afternoon").Suggested);
+        Assert.Equal("No available driver for this place.", At(r, b01, "Afternoon").Suggested);
         Assert.Equal(1, r.LeftEmpty);
         Assert.Contains("Nobody is free for B01 Afternoon.", r.Notes);
     }
@@ -291,7 +291,7 @@ public class RosterAutoFillTests
         Assert.Equal(27, plan.Inserts.Count);
         Assert.All(plan.Inserts, i => Assert.True(i.IsCover && i.DriverId == flo.UserId));
         Assert.Equal(4, plan.Gaps.Count);
-        Assert.Equal("Nobody is rostered on this shift, no floater free (1 resting)", plan.Gaps[0].Reason);
+        Assert.Equal("No driver is rostered on this shift, and no floater is available: 1 on a rest day", plan.Gaps[0].Reason);
     }
 
     [Fact]

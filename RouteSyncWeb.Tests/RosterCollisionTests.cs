@@ -48,7 +48,7 @@ public class RosterCollisionTests
         Assert.Equal("V001", gap.VehicleId);
         Assert.Equal("Morning", gap.Shift);
         Assert.True(gap.RestDay);
-        Assert.Contains("just off a shift", gap.Reason);
+        Assert.Contains("in required rest after a shift", gap.Reason);
     }
 
     [Fact]
@@ -90,24 +90,52 @@ public class RosterCollisionTests
     }
 
     [Fact]
-    public void Suggest_adds_a_spare_driver_before_moving_anybody()
+    public void Suggest_moves_a_rest_day_before_adding_a_floater()
     {
         var fix = SuggestRestDays(October(), Buses(), Drivers(Aleah, Evening, Floater, Spare), Routes, new HashSet<int>());
 
         Assert.Equal(0, fix.GapsLeft);
-        Assert.Equal(1, fix.Added);
-        Assert.Equal(0, fix.Moved);
+        Assert.Equal(0, fix.Added);
+        Assert.Equal(1, fix.Moved);
+        Assert.DoesNotContain(fix.Seats, s => s.DriverId == Spare);
+    }
 
+    [Fact]
+    public void Suggest_moves_a_floaters_rest_day_before_a_crew_drivers()
+    {
+        // The floater rests on the crew driver's rest day, so nobody covers it. Either day could
+        // move; the floater's is the one that gives.
+        var seats = new List<RosterSeat>
+        {
+            new(Aleah, Crew, North, "V001", "Morning", 2),
+            new(Floater, RosterRules.Floater, North, null, "Morning", 2),
+        };
+
+        var fix = SuggestRestDays(seats, Buses(1), Drivers(Aleah, Floater, Spare), Routes, new HashSet<int>());
+
+        Assert.Equal(0, fix.GapsLeft);
+        Assert.Equal(0, fix.Added);
+        var byDriver = fix.Seats.ToDictionary(s => s.DriverId!.Value);
+        Assert.Equal(2, byDriver[Aleah].RestWeekday);
+        Assert.NotEqual(2, byDriver[Floater].RestWeekday);
+    }
+
+    [Fact]
+    public void Suggest_adds_a_spare_only_when_no_rest_day_can_close_the_gap()
+    {
+        // Seven Morning crews and one floater: no arrangement of rest days covers the week.
+        var seats = Enumerable.Range(1, 7)
+            .Select(n => new RosterSeat(n, Crew, North, $"V{n:000}", "Morning", n))
+            .Append(new RosterSeat(Floater, RosterRules.Floater, North, null, "Morning", 1))
+            .ToList();
+
+        var fix = SuggestRestDays(seats, Buses(7), Drivers(1, 2, 3, 4, 5, 6, 7, Floater, Spare), Routes, new HashSet<int>());
+
+        Assert.Equal(0, fix.GapsLeft);
+        Assert.Equal(1, fix.Added);
         var added = Assert.Single(fix.Seats, s => s.DriverId == Spare);
         Assert.Equal(RosterRules.Floater, added.Kind);
-        Assert.Equal(North, added.RouteId);
-        Assert.NotNull(added.RestWeekday);
         Assert.True(MarkIsAboutDriver(added.Suggested));
-
-        // Everybody else keeps the rest day they had.
-        var byDriver = fix.Seats.ToDictionary(s => s.DriverId!.Value);
-        Assert.Equal(3, byDriver[Aleah].RestWeekday);
-        Assert.Equal(2, byDriver[Evening].RestWeekday);
     }
 
     [Fact]
@@ -191,5 +219,70 @@ public class RosterCollisionTests
         Assert.Equal(2, byDriver[Evening].RestWeekday);
         Assert.Equal(1, byDriver[Floater].RestWeekday);
         Assert.Equal(0, RosterStructure.RestDayGapCount(fill.Seats, Drivers(Aleah, Evening, Floater), Buses(), Routes));
+    }
+
+    // ---- The turn of the month -------------------------------------------------------------
+
+    /// <summary>
+    /// North Express as rostered for November 2026. The V022 Evening driver rested on Sundays in
+    /// October and on Mondays in November, so Sunday 1 November would be their seventh day
+    /// running. A floater covers it and is then not free for the Monday Morning after.
+    /// </summary>
+    private static (List<RosterSeat> Seats, List<UserModel> Drivers, List<Vehicle> Buses, RosterWorld Month) November()
+    {
+        var seats = new List<RosterSeat>
+        {
+            new(1, Crew, North, "V001", "Afternoon", 2), new(2, Crew, North, "V001", "Morning", 4),
+            new(3, Crew, North, "V002", "Afternoon", 6), new(4, Crew, North, "V002", "Morning", 5),
+            new(5, Crew, North, "V003", "Afternoon", 7), new(6, Crew, North, "V003", "Morning", 1),
+            new(7, Crew, North, "V008", "Afternoon", 2), new(8, Crew, North, "V008", "Morning", 3),
+            new(9, Crew, North, "V009", "Evening", 4), new(10, Crew, North, "V015", "Evening", 5),
+            new(11, Crew, North, "V021", "Evening", 6), new(12, Crew, North, "V022", "Evening", 1),
+            new(13, RosterRules.Floater, North, null, "Afternoon", 1),
+            new(14, RosterRules.Floater, North, null, "Evening", 3),
+        };
+        var drivers = Drivers(Enumerable.Range(1, 14).ToArray());
+        var buses = seats.Where(s => s.VehicleId != null).Select(s => s.VehicleId!).Distinct()
+            .Select(id => new Vehicle { VehicleId = id, RouteId = North }).ToList();
+
+        // The last week of October as it ran: the V022 driver worked every day from the 26th.
+        var trips = Enumerable.Range(26, 6).Select(d => new Trip
+        {
+            TripId = $"T{d}", Date = new DateTime(2026, 10, d), ShiftType = "Evening", VehicleId = "V022",
+            DriverId = 12, RouteId = North, TripStatus = "Completed",
+            ShiftStartTime = TripStatus.Windows["Evening"].Start, ShiftEndTime = TripStatus.Windows["Evening"].End,
+        }).ToList();
+
+        var month = new RosterWorld
+        {
+            Month = new DateTime(2026, 11, 1), OperationalDay = new DateTime(2026, 9, 28), Now = new DateTime(2026, 9, 28, 12, 0, 0),
+            Seats = seats, Trips = trips, Marks = new Dictionary<string, TripRosterMark>(), Drivers = drivers, Vehicles = buses,
+            Leave = Array.Empty<LeaveRequest>(), Skips = new HashSet<(DateTime, string, string)>(), RouteNames = Routes,
+        };
+        return (seats, drivers, buses, month);
+    }
+
+    [Fact]
+    public void The_first_week_shows_a_gap_the_pattern_alone_cannot_see()
+    {
+        var (seats, drivers, buses, month) = November();
+
+        Assert.Equal(0, RosterStructure.RestDayGapCount(seats, drivers, buses, Routes));
+        Assert.Equal(1, RosterStructure.OpeningGapCount(seats, month));
+    }
+
+    [Fact]
+    public void Suggest_given_the_real_month_closes_the_first_week_gap()
+    {
+        var (seats, drivers, buses, month) = November();
+
+        var patternOnly = SuggestRestDays(seats, buses, drivers, Routes, new HashSet<int>());
+        Assert.False(patternOnly.Changed);
+
+        var fix = SuggestRestDays(seats, buses, drivers, Routes, new HashSet<int>(), month);
+        Assert.Equal(0, fix.GapsLeft);
+        Assert.Equal(0, fix.Added);
+        Assert.Equal(0, RosterStructure.OpeningGapCount(fix.Seats, month));
+        Assert.Equal(0, RosterStructure.RestDayGapCount(fix.Seats, drivers, buses, Routes));
     }
 }

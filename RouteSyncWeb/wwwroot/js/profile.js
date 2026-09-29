@@ -104,20 +104,14 @@
         });
     });
 
-    // How many days the chosen dates come to, said beside them.
+    // The end date never falls before the start.
     var start = document.querySelector('[data-leave-start]');
     var end = document.querySelector('[data-leave-end]');
-    var days = document.querySelector('[data-leave-days]');
-    function countDays() {
-        if (!start || !end || !days) return;
+    function keepOrder() {
         if (end.value && start.value && end.value < start.value) end.value = start.value;
-        var a = new Date(start.value), b = new Date(end.value);
-        var n = Math.round((b - a) / 86400000) + 1;
-        days.textContent = isFinite(n) && n > 0 ? n + (n === 1 ? ' day. ' : ' days. ') : '';
     }
     if (start && end) {
-        start.addEventListener('change', countDays);
-        end.addEventListener('change', countDays);
-        countDays();
+        start.addEventListener('change', keepOrder);
+        end.addEventListener('change', keepOrder);
     }
 })();

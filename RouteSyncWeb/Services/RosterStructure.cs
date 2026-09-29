@@ -81,6 +81,43 @@ namespace FleetWise.Services
                 .Count(g => crewed.Contains((g.RouteId, g.VehicleId.ToUpperInvariant(), g.Shift.ToUpperInvariant())));
         }
 
+        /// <summary>
+        /// Crew rest days left uncovered in the first week of the real month, where it meets the
+        /// month before.
+        /// </summary>
+        /// <remarks>
+        /// <para>The clean month above cannot see this week. A driver whose rest day moved at the
+        /// turn of the month can reach a seventh day running on the first days of the new one,
+        /// and a floater who covers for them is then not free the next morning. Only the real
+        /// month knows what the last days of the month before booked.</para>
+        ///
+        /// <para>Leave is left out, as it is from the clean month: a rest day is not moved to
+        /// work around somebody's leave. Slots kept empty on purpose stay empty.</para>
+        /// </remarks>
+        /// <param name="month">The real month as a publish would plan it.</param>
+        public static int OpeningGapCount(IReadOnlyList<RosterSeat> seats, RosterWorld month)
+        {
+            var plan = RosterGenerator.Plan(new RosterWorld
+            {
+                Month = month.Month,
+                OperationalDay = month.OperationalDay,
+                Now = month.Now,
+                Seats = seats,
+                Trips = month.Trips,
+                Marks = month.Marks,
+                Drivers = month.Drivers,
+                Vehicles = month.Vehicles,
+                Leave = Array.Empty<LeaveRequest>(),
+                Skips = month.Skips,
+                RouteNames = month.RouteNames,
+            });
+
+            var crewed = Crewed(seats);
+            var lastDay = plan.From.AddDays(6);
+            return plan.Gaps.Count(g => g.Date <= lastDay
+                && crewed.Contains((g.RouteId, g.VehicleId.ToUpperInvariant(), g.Shift.ToUpperInvariant())));
+        }
+
         /// <summary>The pattern's gaps, one per bus shift and weekday however many weeks it repeats.</summary>
         public static IReadOnlyList<WeeklyGap> WeeklyGaps(
             IReadOnlyList<RosterSeat> seats,

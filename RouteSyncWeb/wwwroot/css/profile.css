@@ -15,7 +15,20 @@
     .pf-title {
         font-size: 1.6rem;
         color: var(--pf-text);
-        margin-bottom: 20px;
+        margin-bottom: 16px;
+    }
+
+    /* The heading and the name, held under the top bar while the rest scrolls. Pulled a
+       little past its own edges so the cards passing beneath, shadows included, are
+       covered, and a little up into the page's padding so it sits clear of the bar once
+       held. */
+    .pf-sticky {
+        position: sticky;
+        top: var(--rs-bar, 0px);
+        z-index: 20;
+        margin: -16px -8px 18px;
+        padding: 16px 8px 12px;
+        background: var(--pf-bg);
     }
 
     .pf-flash {
@@ -62,12 +75,13 @@
 
     /* Who this is: initials, name, role and standing, then what they have done lately. */
     .pf-hero {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        display: flex;
         align-items: center;
-        gap: 18px 22px;
-        margin-bottom: 18px;
+        gap: 18px;
+        padding: 16px 22px;
     }
+
+    .pf-hero-text { min-width: 0; }
 
     .pf-avatar {
         display: grid;
@@ -100,24 +114,30 @@
         color: var(--pf-muted);
     }
 
+    /* Each figure on a card of its own. */
     .pf-stats {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, auto));
-        border: 1px solid var(--pf-border);
-        border-radius: 12px;
-        overflow: hidden;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 18px;
     }
 
     .pf-stat {
         display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 120px;
-        padding: 10px 18px;
-        background: var(--pf-bg);
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
     }
 
-    .pf-stat + .pf-stat { border-left: 1px solid var(--pf-border); }
+    .pf-stat .pf-ico { width: 42px; height: 42px; flex-basis: 42px; border-radius: 12px; }
+    .pf-stat .pf-ico svg { width: 21px; height: 21px; }
+
+    .pf-stat-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
 
     .pf-stat-n {
         font-size: 1.3rem;
@@ -127,9 +147,28 @@
     }
 
     .pf-stat-l {
-        font-size: .74rem;
+        font-size: .78rem;
         color: var(--pf-muted);
     }
+
+    /* A tinted square holding a line icon, as the driver app draws them. */
+    .pf-ico {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+    }
+
+    .pf-ico svg { width: 17px; height: 17px; }
+
+    .pf-ico--blue  { background: #EAF1FB; color: #3B82C4; }
+    .pf-ico--green { background: #EAFAF1; color: #2FAE74; }
+    .pf-ico--amber { background: #FDF4E5; color: #F5A623; }
+    .pf-ico--teal  { background: #E8F5F1; color: #2E9E8F; }
+    .pf-ico--navy  { background: #ECEFF7; color: #1B2A56; }
 
     .pf-badge {
         display: inline-block;
@@ -160,19 +199,30 @@
         min-width: 0;
     }
 
-    .pf-dl {
-        display: grid;
-        grid-template-columns: max-content minmax(0, 1fr);
-        gap: 10px 22px;
-        margin: 0;
+    /* Account details: an icon, what it is, and its value on the right. */
+    .pf-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid #F1F3F6;
         font-size: .88rem;
     }
 
-    .pf-dl dt { font-weight: 600; color: var(--pf-soft); }
-    .pf-dl dd { margin: 0; font-weight: 600; color: var(--pf-dark); overflow-wrap: anywhere; }
+    .pf-row:first-child { padding-top: 0; }
+    .pf-row:last-child { border-bottom: none; padding-bottom: 0; }
 
-    .pf-note,
-    .pf-hint,
+    .pf-k { flex: 0 0 auto; color: var(--pf-soft); }
+
+    .pf-v {
+        flex: 1;
+        min-width: 0;
+        text-align: right;
+        font-weight: 600;
+        color: var(--pf-dark);
+        overflow-wrap: anywhere;
+    }
+
     .pf-empty {
         margin: 12px 0 0;
         font-size: .78rem;
@@ -449,9 +499,7 @@
     .pf-activity-when { flex-shrink: 0; color: var(--pf-muted); font-size: .78rem; }
 
     @media (max-width: 1100px) {
-        .pf-hero { grid-template-columns: auto minmax(0, 1fr); }
-        .pf-stats { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .pf-stat { min-width: 0; }
+        .pf-stat { flex-direction: column; align-items: flex-start; gap: 10px; }
     }
 
     @media (max-width: 900px) {
@@ -459,13 +507,20 @@
     }
 
     @media (max-width: 599px) {
-        .pf-title { font-size: 1.3rem; margin-bottom: 14px; }
+        .pf-sticky { margin-bottom: 14px; padding-bottom: 10px; }
         .pf-card { padding: 14px 16px 16px; }
-        .pf-hero { gap: 12px 14px; }
-        .pf-avatar { width: 52px; height: 52px; font-size: 1.1rem; }
-        .pf-hero-name { font-size: 1.1rem; }
-        .pf-stat { padding: 8px 10px; }
+        /* Kept short while it is held at the top, so the page still has room below it. */
+        .pf-hero { gap: 12px; padding: 10px 14px; }
+        .pf-avatar { width: 44px; height: 44px; font-size: 1rem; }
+        .pf-hero-name { font-size: 1.05rem; }
+        .pf-hero-tags { margin: 4px 0 0; }
+        .pf-hero-since { display: none; }
+        .pf-stats { gap: 10px; margin-bottom: 14px; }
+        .pf-stat { padding: 12px; }
+        .pf-stat .pf-ico { width: 34px; height: 34px; flex-basis: 34px; }
+        .pf-stat .pf-ico svg { width: 18px; height: 18px; }
         .pf-stat-n { font-size: 1.1rem; }
+        .pf-stat-l { font-size: .72rem; }
         .pf-row2, .pf-row3 { grid-template-columns: minmax(0, 1fr); }
         .pf-credit { padding: 10px; }
         .pf-credit-n { font-size: 1.2rem; }
