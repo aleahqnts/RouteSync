@@ -33,8 +33,9 @@
         <!-- App Identifier -->
         <ApplicationId>com.companyname.fleetwisemobile</ApplicationId>
 
-        <!-- Versions -->
-        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <!-- Versions: set from the git tag by SetVersionFromTag below. These stand only
+             for a build that has no tag to read. -->
+        <ApplicationDisplayVersion>0.0.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
         <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
@@ -112,5 +113,23 @@
         <PackageReference Include="supabase-csharp" Version="0.16.2" />
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
     </ItemGroup>
+
+    <!--
+      The suite's version, from the git tag read by MinVer (see Directory.Build.props).
+
+      Android shows the display version, 1.2.0, and orders installs by the version code, which
+      has to rise with every release for a phone to accept the update. The code is major,
+      minor and patch in two digits each, so 1.2.0 is 10200 and 1.10.3 is 11003. A preview
+      build between releases carries the code of the release it leads to.
+
+      Android reads both into the manifest early, in _GetAndroidPackageName, well before
+      MinVer would otherwise run, so MinVer is asked for first and this runs ahead of it.
+    -->
+    <Target Name="SetVersionFromTag" DependsOnTargets="MinVer" BeforeTargets="_GetAndroidPackageName">
+        <PropertyGroup>
+            <ApplicationDisplayVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch)</ApplicationDisplayVersion>
+            <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(MinVerMajor), 10000)), $([MSBuild]::Multiply($(MinVerMinor), 100)))), $(MinVerPatch)))</ApplicationVersion>
+        </PropertyGroup>
+    </Target>
 
 </Project>

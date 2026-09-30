@@ -204,7 +204,7 @@ else
 
         <button class="plogout" @onclick="@(() => showLogoutConfirm = true)">Log out</button>
 
-        <p class="pver">RouteSync Driver</p>
+        <p class="pver">RouteSync Driver @AppVersion.Text</p>
     </div>
 
     @if (showLogoutConfirm)

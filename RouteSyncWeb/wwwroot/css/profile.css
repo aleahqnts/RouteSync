@@ -232,6 +232,15 @@
 
     .pf-empty { margin: 0; font-size: .86rem; }
 
+    /* The release, at the foot of the page. */
+    .pf-version {
+        margin: 24px 0 8px;
+        text-align: center;
+        font-size: .74rem;
+        color: var(--pf-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
     /* Forms. */
     .pf-form { display: flex; flex-direction: column; }
 

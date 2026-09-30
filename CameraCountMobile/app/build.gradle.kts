@@ -5,6 +5,32 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// The RouteSync suite's version, from the nearest git tag, read the same way the .NET apps
+// read it (see Directory.Build.props at the repository root). A commit tagged v1.2.0 is
+// release 1.2.0. A commit after it is a preview of the next minor release, 1.3.0, named with
+// the commit it was built from. Android orders installs by the version code, major, minor
+// and patch in two digits each, so 1.2.0 is 10200 and a phone accepts each release as an
+// update. With no tag to read, the build is 0.0.0.
+data class SuiteVersion(val major: Int, val minor: Int, val patch: Int, val preview: Boolean, val commit: String) {
+    val code get() = major * 10000 + minor * 100 + patch
+    val name get() = "$major.$minor.$patch" + if (preview) "-preview+$commit" else ""
+    val label get() = "$major.$minor.$patch" + if (preview) " preview · $commit" else ""
+}
+
+val suiteVersion: SuiteVersion = run {
+    val described = providers.exec {
+        commandLine("git", "describe", "--tags", "--match", "v[0-9]*", "--long", "--abbrev=7")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+    val m = Regex("""^v(\d+)\.(\d+)\.(\d+)-(\d+)-g([0-9a-f]+)$""").find(described)
+    if (m == null) SuiteVersion(0, 0, 0, true, "unknown")
+    else {
+        val (major, minor, patch, height, commit) = m.destructured
+        if (height == "0") SuiteVersion(major.toInt(), minor.toInt(), patch.toInt(), false, commit)
+        else SuiteVersion(major.toInt(), minor.toInt() + 1, 0, true, commit)
+    }
+}
+
 android {
     namespace = "com.routesync.cameracount"
     compileSdk = 35
@@ -13,8 +39,9 @@ android {
         applicationId = "com.routesync.cameracount"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = suiteVersion.code
+        versionName = suiteVersion.name
+        buildConfigField("String", "SUITE_VERSION", "\"${suiteVersion.label}\"")
     }
 
     buildTypes {
@@ -31,6 +58,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     androidResources {
         noCompress += "tflite"

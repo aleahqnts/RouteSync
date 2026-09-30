@@ -402,9 +402,10 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
     }
     // The device identifier shown here matches counter_device_id on the trips and
     // vehicles rows, which an admin needs in order to identify or clear this phone's lock.
+    // The release beside it says which build is counting.
     if (deviceId.isNotBlank()) {
         Spacer(Modifier.height(14.dp))
-        Text("RouteSync Sentinel · $deviceId", color = RsColor.Muted, fontSize = 11.sp)
+        Text("RouteSync Sentinel ${BuildConfig.SUITE_VERSION} · $deviceId", color = RsColor.Muted, fontSize = 11.sp)
     }
 }
 

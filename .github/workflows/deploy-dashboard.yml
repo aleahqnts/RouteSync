@@ -37,6 +37,7 @@ on:
     paths:
       - 'RouteSyncWeb/**'
       - 'RouteSyncWeb.Tests/**'
+      - 'Directory.Build.props'
       - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 
@@ -57,7 +58,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # The whole history, tags included. The build reads its version from the nearest
+      # release tag, and a shallow checkout has none, so it would build as 0.0.0.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v6
         with:
