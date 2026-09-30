@@ -41,6 +41,10 @@ namespace FleetWise.Services
         public static DateTime FromWall(DateTime fromDb) =>
             DateTime.SpecifyKind(Stored(fromDb), DateTimeKind.Unspecified);
 
+        /// <summary>A column written in Philippine clock time, as the UTC instant it names.</summary>
+        public static DateTime WallAsUtc(DateTime fromDb) =>
+            new DateTimeOffset(FromWall(fromDb), TimeSpan.FromHours(8)).UtcDateTime;
+
         /// <summary>A column written in true UTC, moved to Philippine time.</summary>
         public static DateTime FromUtc(DateTime fromDb) =>
             PhClock.ToPh(new DateTimeOffset(DateTime.SpecifyKind(Stored(fromDb), DateTimeKind.Utc)));
