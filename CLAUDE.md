@@ -34,7 +34,9 @@
 3. Annotated tag on `main`'s tip: `git tag -a vX.Y.Z -m "RouteSync X.Y.Z" -m "<what changed>"`.
 4. Fast-forward `master` to it: `git checkout master && git merge --ff-only vX.Y.Z`. Never
    a merge commit, so the deployed commit is exactly the tagged one and builds as X.Y.Z.
-5. `git push --atomic origin main master vX.Y.Z`, so the deploy build finds the tag.
+5. `git push --atomic origin main master vX.Y.Z`, so the deploy build finds the tag. The
+   tag push also publishes the GitHub Release (`.github/workflows/release.yml`); preview its
+   notes first with `bash .github/scripts/release-notes.sh vX.Y.Z`.
 6. Rebuild the driver app and the camera app from the tag and install them.
 
 ## Hotfix

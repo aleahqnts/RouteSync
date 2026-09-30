@@ -1,0 +1,79 @@
+# Publishes a GitHub Release for each RouteSync release tag.
+#
+# A release is made by pushing an annotated tag vX.Y.Z (see "Releasing" in CLAUDE.md). This
+# turns the tag into a Release page: its message, the database scripts it brought, the
+# version code the phone apps carry, and every change since the release before it. The
+# notes are written by .github/scripts/release-notes.sh, which can be run locally to preview
+# them.
+#
+# Any earlier release tag that has no Release yet is published in the same run, oldest first,
+# so tags made before this workflow existed get their pages on the next release. Tags below
+# 1.0.0 are the history before production and are left as tags only.
+#
+# The newest release tag is marked latest; one published afterwards for an older tag is not.
+#
+# It can also be run by hand from the Actions tab for one existing tag, once this file is on
+# the default branch.
+
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'An existing release tag, such as v1.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # The whole history with the tags as they were pushed, annotated, since the notes are
+      # read from each tag's message and the commits since the tag before it.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch the annotated tags
+        run: git fetch --force --tags origin
+
+      - name: Publish releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "No tag $TAG"; exit 1; }
+
+          newest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)"
+
+          # This tag, and every earlier release tag from 1.0.0 on that has no page yet.
+          for t in $(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=v:refname); do
+            [ "$(printf '%s\n%s\n' "$t" "$TAG" | sort -V | tail -1)" = "$TAG" ] || continue
+            case "$t" in v0.*) continue ;; esac
+            if gh release view "$t" >/dev/null 2>&1; then
+              [ "$t" = "$TAG" ] || continue
+            fi
+
+            bash .github/scripts/release-notes.sh "$t" > notes.md
+            latest=false; [ "$t" = "$newest" ] && latest=true
+
+            if gh release view "$t" >/dev/null 2>&1; then
+              gh release edit "$t" --notes-file notes.md --latest="$latest"
+              echo "Updated $t"
+            else
+              gh release create "$t" --verify-tag --title "RouteSync ${t#v}" --notes-file notes.md --latest="$latest"
+              echo "Published $t"
+            fi
+          done
