@@ -155,12 +155,23 @@ namespace FleetWise.Controllers
         /// so the markers, tooltips and side panel all show the same numbers.</remarks>
         public async Task<IActionResult> Positions(int? routeId, string? status)
         {
-            var tripsResponse = await _supabase
-                .From<Trip>()
-                .Filter("trip_status", Postgrest.Constants.Operator.Equals, "Active")
-                .Get();
+            // What changes from one poll to the next, in one request: the active trips, the
+            // recent readings of those on the map, and the fare. The map asks every two
+            // seconds and the API logs each request it answers, so these are read together.
+            //
+            // The readings are bounded to the trips shown, within the recent window, newest
+            // first and no more than a thousand, rather than fetching the table and filtering
+            // in memory on every poll. The cutoff is taken from the UTC clock.
+            var recentCutoff = DateTime.UtcNow.AddMinutes(-RecentTelemetryMinutes);
+            var liveResponse = await _supabase.Rpc("fleetmap_live", new Dictionary<string, object?>
+            {
+                ["p_op_day"] = PhClock.OperationalDay.ToString("yyyy-MM-dd"),
+                ["p_route_id"] = routeId,
+                ["p_since"] = recentCutoff.ToString("yyyy-MM-dd HH:mm:ss"),
+            });
+            var live = ReadBundle.Parse(liveResponse.Content);
 
-            var activeTrips = tripsResponse.Models;
+            var activeTrips = live.Rows<Trip>("trips");
             if (routeId.HasValue)
                 activeTrips = activeTrips.Where(t => t.RouteId == routeId.Value).ToList();
 
@@ -209,35 +220,16 @@ namespace FleetWise.Controllers
                 .Select(l => l.VehicleId)
                 .ToHashSet();
 
-            // The telemetry read is bounded to rows belonging to currently active trips
-            // within the recent window, rather than fetching the table and filtering in
-            // memory on every poll. Ordered newest first, so the grouping below takes the
-            // most recent reading per trip. Skipped when nothing is active, which would
-            // otherwise build a filter against an empty set.
-            var readingsByTrip = new Dictionary<string, List<TelemetryData>>();
-            var latestByTrip = new Dictionary<string, TelemetryData>();
-            if (activeTripIds.Count > 0)
-            {
-                // The cutoff has to be UTC. These timestamps are real UTC instants and the
-                // filter string is read as UTC, so a Philippine wall-clock value would sit
-                // eight hours ahead and exclude every row.
-                var recentCutoff = DateTime.UtcNow.AddMinutes(-RecentTelemetryMinutes);
-                var telemetryResponse = await _supabase
-                    .From<TelemetryData>()
-                    .Filter("trip_id", Postgrest.Constants.Operator.In, activeTripIds.Cast<object>().ToList())
-                    .Filter("timestamp", Postgrest.Constants.Operator.GreaterThanOrEqual,
-                            recentCutoff.ToString("yyyy-MM-dd HH:mm:ss"))
-                    .Order("timestamp", Postgrest.Constants.Ordering.Descending)
-                    .Get();
-
-                // Every reading in the window goes to the snapper, which uses each once and in
-                // order. The newest is still what the marker's details are read from.
-                readingsByTrip = telemetryResponse.Models
-                    .GroupBy(t => t.TripId)
-                    .ToDictionary(g => g.Key, g => g.ToList());
-                latestByTrip = readingsByTrip
-                    .ToDictionary(g => g.Key, g => g.Value.OrderByDescending(t => t.Timestamp).First());
-            }
+            // Readings of the trips shown, newest first, so the grouping below takes the most
+            // recent reading per trip. Every reading in the window goes to the snapper, which
+            // uses each once and in order. The newest is still what the marker's details are
+            // read from.
+            var readingsByTrip = live.Rows<TelemetryData>("telemetry")
+                .Where(t => activeTripIds.Contains(t.TripId))
+                .GroupBy(t => t.TripId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            var latestByTrip = readingsByTrip
+                .ToDictionary(g => g.Key, g => g.Value.OrderByDescending(t => t.Timestamp).First());
 
             var vehiclesById = vehicles
                 .ToDictionary(v => v.VehicleId, v => v);
@@ -246,8 +238,8 @@ namespace FleetWise.Controllers
             var usersById = users
                 .ToDictionary(u => u.UserId, u => u);
 
-            // One fare lookup per poll, shared across every bus below.
-            var fareRate = await _fareCalculator.GetRateAsync();
+            // One fare per poll, shared across every bus below.
+            var fareRate = _fareCalculator.RateFrom(live.Rows<FareConfig>("fare"));
 
             var positions = new List<BusPositionDto>();
             var movingVehicleIds = new HashSet<string>();

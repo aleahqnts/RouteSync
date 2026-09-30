@@ -31,6 +31,7 @@ namespace FleetWise.Controllers
         /// <summary>
         /// The trip columns the dashboard reads. The page asks every few seconds, so each
         /// read carries only what the figures and the chart are worked out from.
+        /// dashboard_figures reads the same columns for the cards.
         /// </summary>
         private const string TripColumns =
             "trip_id,date,route_id,vehicle_id,shift_type,shift_start_time,shift_end_time," +
@@ -166,47 +167,42 @@ namespace FleetWise.Controllers
             // morning, rather than the calendar day. A trip is dated by the day it starts,
             // so a cycle's trips are exactly those dated today.
             var today = PhClock.OperationalDay;
-            var yesterday = today.AddDays(-1);
+
+            // Every row the cards are worked out from, in one request, since the API logs each
+            // request it answers and the page asks every few seconds. dashboard_figures holds
+            // the open maintenance logs, the trip columns the figures use for today and
+            // yesterday, and each route's name without its path for the map.
+            var response = await _supabase.Rpc("dashboard_figures", new Dictionary<string, object?>
+            {
+                ["p_today"] = today.ToString("yyyy-MM-dd"),
+            });
+            var read = ReadBundle.Parse(response.Content);
 
             // Flagged vehicles, which the page filters do not affect, are buses with an
             // unresolved maintenance log. Counting the vehicle_status column instead reads
             // zero, because the next shift overwrites it. This matches how the dispatch
             // board and the vehicle registry define the same figure. Only open logs are read,
             // since the table keeps every log ever raised and grows with the fleet's age.
-            var maintResponse = await _supabase.From<MaintenanceLog>()
-                .Select("log_id,vehicle_id")
-                .Filter<object>("resolved_at", Postgrest.Constants.Operator.Is, null)
-                .Get();
-            int flaggedVehicles = maintResponse.Models
+            int flaggedVehicles = read.Rows<MaintenanceLog>("open_logs")
                 .Where(l => l.VehicleId != null)
                 .Select(l => l.VehicleId)
                 .Distinct()
                 .Count();
 
-            // Base queries for today's and yesterday's trips.
-            var todayTripsResponse = await _supabase
-                .From<Trip>()
-                .Select(TripColumns)
-                .Filter("date", Postgrest.Constants.Operator.Equals, today.ToString("yyyy-MM-dd"))
-                .Get();
-
-            var yesterdayTripsResponse = await _supabase
-                .From<Trip>()
-                .Select(TripColumns)
-                .Filter("date", Postgrest.Constants.Operator.Equals, yesterday.ToString("yyyy-MM-dd"))
-                .Get();
+            var todayTripRows = read.Rows<Trip>("today_trips");
+            var yesterdayTripRows = read.Rows<Trip>("yesterday_trips");
 
             // Trips dated today already cover the whole cycle, since a night shift carries
             // its start day's date. Any trip dated yesterday that is still active is folded
             // in as well, so an overnight run that has not been ended does not disappear
             // when the cycle rolls over.
-            var todayTrips = todayTripsResponse.Models
-                .Concat(yesterdayTripsResponse.Models.Where(t => t.TripStatus == "Active"))
+            var todayTrips = todayTripRows
+                .Concat(yesterdayTripRows.Where(t => t.TripStatus == "Active"))
                 .Where(t => !routeId.HasValue || t.RouteId == routeId.Value)
                 .GroupBy(t => t.TripId).Select(g => g.First())   // de-dupe
                 .ToList();
 
-            var yesterdayTrips = yesterdayTripsResponse.Models
+            var yesterdayTrips = yesterdayTripRows
                 .Where(t => !routeId.HasValue || t.RouteId == routeId.Value)
                 .ToList();
 
@@ -224,16 +220,11 @@ namespace FleetWise.Controllers
             int todayPassengers = todayTrips.Sum(t => t.TotalBoarded);
             int yesterdayPassengers = yesterdayTrips.Sum(t => t.TotalBoarded);
 
-            // Routes dropdown. Names only: a route's row also holds its path for the map,
-            // which is most of its size.
-            var routesResponse = await _supabase
-                .From<BusRoute>()
-                .Select("route_id,route_name")
-                .Order("route_name", Postgrest.Constants.Ordering.Ascending)
-                .Get();
+            // Routes dropdown, in name order.
+            var routeRows = read.Rows<BusRoute>("routes");
 
             // Passenger breakdown across every trip this cycle, for the totals modal.
-            var routeNames = routesResponse.Models.ToDictionary(r => r.RouteId, r => r.RouteName);
+            var routeNames = routeRows.ToDictionary(r => r.RouteId, r => r.RouteName);
             var tripBreakdown = todayTrips
                 .OrderByDescending(t => t.TotalBoarded)
                 .Select(t => new ActiveTripRow
@@ -249,7 +240,7 @@ namespace FleetWise.Controllers
 
             return new Figures(today, todayTrips, activeTrips, flaggedVehicles,
                 todayPassengers, yesterdayPassengers, todayRevenue, yesterdayRevenue,
-                routesResponse.Models, tripBreakdown);
+                routeRows, tripBreakdown);
         }
 
         /// <summary>
