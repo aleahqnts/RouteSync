@@ -29,7 +29,7 @@ echo
 echo "## Database"
 echo
 migrations="$(git log --diff-filter=A --name-only --format= "$range" -- backend/schema/migrations \
-  | grep -v -e '-test\.sql$' -e '-rollback\.sql$' | sort -u || true)"
+  | grep '\.sql$' | grep -v -e '-test\.sql$' -e '-rollback\.sql$' | sort -u || true)"
 if [ -n "$migrations" ]; then
   echo "Apply these to the live database before this release's code runs, in date order:"
   echo
