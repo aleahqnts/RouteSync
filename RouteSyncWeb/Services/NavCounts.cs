@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Caching.Memory;
-using static Postgrest.Constants;
+using Newtonsoft.Json;
 
 namespace FleetWise.Services
 {
@@ -89,7 +89,6 @@ namespace FleetWise.Services
         private readonly Supabase.Client _supabase;
         private readonly IMemoryCache _cache;
         private readonly IConfiguration _config;
-        private readonly SecurityIncidents _incidents;
         private readonly RosterPublisher _roster;
 
         private const string Key = "nav_badges";
@@ -138,14 +137,19 @@ namespace FleetWise.Services
         public static readonly TimeSpan UrgentWithin = TimeSpan.FromHours(4);
 
         public NavCounts(
-            Supabase.Client supabase, IMemoryCache cache, IConfiguration config, SecurityIncidents incidents,
-            RosterPublisher roster)
+            Supabase.Client supabase, IMemoryCache cache, IConfiguration config, RosterPublisher roster)
         {
             _supabase = supabase;
             _cache = cache;
             _config = config;
-            _incidents = incidents;
             _roster = roster;
+        }
+
+        /// <summary>A security incident's severity, as nav_badge_inputs lists those needing review.</summary>
+        private sealed class IncidentRow
+        {
+            [JsonProperty("severity")]
+            public string? Severity { get; set; }
         }
 
         /// <summary>Drops the standing count, so the next reading is worked out again.</summary>
@@ -191,72 +195,28 @@ namespace FleetWise.Services
             var today = PhClock.OperationalDay;
             var now = PhClock.Now;
 
-            // Today and tomorrow. A shift more than a day out cannot be inside the urgent
-            // window, and the board itself only ever covers one operational day.
-            var tripsTask = _supabase.From<Trip>()
-                .Select("trip_id,date,vehicle_id,driver_id,trip_status,shift_start_time,shift_end_time")
-                .Filter("date", Operator.GreaterThanOrEqual, today.ToString("yyyy-MM-dd"))
-                .Filter("date", Operator.LessThanOrEqual, today.AddDays(1).ToString("yyyy-MM-dd"))
-                .Get();
-
-            // Both of these are one row per bus and one per driver, so the whole of each is
-            // the size of the fleet and the roster.
+            // Every row the badges are counted from, in one request. The rail is drawn on every
+            // page and read again every few seconds, and the API logs each request it answers,
+            // so the reads are made together rather than one at a time.
             //
-            // Every query here names its columns. Counting reads a handful of fields and
-            // throws the rest of each row away, and the rail is drawn on every page and
-            // read again every few seconds, so whatever travels does so all day. Naming
-            // them also keeps things off the wire that have no business on it: the whole
-            // of a user row carries a password hash nothing here has any use for.
-            var vehiclesTask = _supabase.From<Vehicle>()
-                .Select("vehicle_id,out_of_service,retired_at")
-                .Get();
-            var availabilityTask = _supabase.From<DriverAvailability>()
-                .Select("user_id,availability_status")
-                .Get();
+            // Each list is what its own read used to fetch, and nav_badge_inputs says which
+            // rows and columns: trips for today and tomorrow, since a shift further out cannot
+            // be inside the urgent window; every bus and every driver's availability, the size
+            // of the fleet and the roster; and only the open incidents and the leave that is
+            // waiting, asked back, or taking somebody off today, since those two tables grow
+            // with the age of the fleet. The roster's rows and the security incidents come in
+            // sections of their own, read and failing apart from the rest.
+            var response = await _supabase.Rpc("nav_badge_inputs", new Dictionary<string, object?>
+            {
+                ["p_today"] = today.ToString("yyyy-MM-dd"),
+                ["p_this_month"] = RosterPublisher.FirstOf(today).ToString("yyyy-MM-dd"),
+                ["p_next_month"] = RosterPublisher.FirstOf(today).AddMonths(1).ToString("yyyy-MM-dd"),
+                ["p_open_statuses"] = LeaveEntitlement.OpenStatuses.ToList(),
+            });
+            var read = ReadBundle.Parse(response.Content);
 
-            // The two tables below are not like that. They keep every incident ever raised
-            // and every request ever filed, so they grow with the age of the fleet, and
-            // reading either of them whole to work out a number about today would cost more
-            // every month it ran. Each is asked only for the rows it is counting.
-
-            // A resolved incident is a record rather than a job.
-            var maintTask = _supabase.From<MaintenanceLog>()
-                .Select("log_id,vehicle_id")
-                .Filter<object>("resolved_at", Operator.Is, null)
-                .Get();
-
-            // Requests still waiting on an answer. Not bounded by date: one needs answering
-            // whatever days it names, and how many are waiting is the badge.
-            var leaveOpenTask = _supabase.From<LeaveRequest>()
-                .Select("request_id,user_id,status,leave_type,start_date,end_date,revoked_dates")
-                .Filter("status", Operator.In, LeaveEntitlement.OpenStatuses.Cast<object>().ToList())
-                .Get();
-
-            // Granted leave a driver has asked to hand back and has not been answered on.
-            // Asked for separately because the row itself is Approved: what is open about it
-            // is the asking, and no filter on the status would find it. Leave revoked outright
-            // is left out: nothing is left to cancel, so its asking needs no answer.
-            var leaveAskedTask = _supabase.From<LeaveRequest>()
-                .Select("request_id")
-                .Filter<object>("withdraw_requested_at", Operator.Not, null)
-                .Filter<object>("withdraw_answered_at", Operator.Is, null)
-                .Filter("status", Operator.Equals, "Approved")
-                .Get();
-
-            // Leave that takes a driver off today, which is what makes one of today's trips
-            // unrunnable. A day either side is not wanted: the board is one operational day.
-            var leaveTodayTask = _supabase.From<LeaveRequest>()
-                .Select("request_id,user_id,status,start_date,end_date,revoked_dates")
-                .Filter("status", Operator.Equals, "Approved")
-                .Filter("start_date", Operator.LessThanOrEqual, today.ToString("yyyy-MM-dd"))
-                .Filter("end_date", Operator.GreaterThanOrEqual, today.ToString("yyyy-MM-dd"))
-                .Get();
-
-            await Task.WhenAll(tripsTask, vehiclesTask, availabilityTask, maintTask,
-                               leaveOpenTask, leaveAskedTask, leaveTodayTask);
-
-            var trips = tripsTask.Result.Models;
-            var vehicles = vehiclesTask.Result.Models;
+            var trips = read.Rows<Trip>("trips");
+            var vehicles = read.Rows<Vehicle>("vehicles");
 
             var todayTrips = trips.Where(t => t.Date.Date == today).ToList();
 
@@ -274,7 +234,7 @@ namespace FleetWise.Services
                 .Select(v => v.VehicleId)
                 .ToHashSet();
 
-            var cannotDrive = availabilityTask.Result.Models
+            var cannotDrive = read.Rows<DriverAvailability>("availability")
                 .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable",
                                           StringComparison.OrdinalIgnoreCase))
                 .Select(a => a.UserId)
@@ -282,7 +242,7 @@ namespace FleetWise.Services
 
             // Asked again of each row rather than left to the dates the query matched on,
             // because a day inside an approved span can have been handed back since.
-            var offToday = leaveTodayTask.Result.Models
+            var offToday = read.Rows<LeaveRequest>("leave_today")
                 .Where(l => LeaveEntitlement.CoversDay(l, today))
                 .Select(l => l.UserId)
                 .ToHashSet();
@@ -297,14 +257,14 @@ namespace FleetWise.Services
                      || offToday.Contains(t.DriverId)))
                 || TripStatus.LateBy(t, now) is not null);
 
-            var waiting = leaveOpenTask.Result.Models;
+            var waiting = read.Rows<LeaveRequest>("leave_open");
 
             // Counted once each. A request can be waiting on an answer and carry an
             // unanswered asking at the same time, and it is one thing on the queue either
             // way.
             var openCount = waiting
                 .Select(l => l.RequestId)
-                .Concat(leaveAskedTask.Result.Models.Select(l => l.RequestId))
+                .Concat(read.Rows<LeaveRequest>("leave_asked").Select(l => l.RequestId))
                 .Distinct()
                 .Count();
 
@@ -325,7 +285,7 @@ namespace FleetWise.Services
 
             // A bus nobody can send. An open fault or a grounding is the same job either
             // way, and neither stops the day the way a trip that cannot run does.
-            var flagged = maintTask.Result.Models
+            var flagged = read.Rows<MaintenanceLog>("open_logs")
                 .Where(l => l.VehicleId != null)
                 .Select(l => l.VehicleId)
                 .ToHashSet();
@@ -343,8 +303,8 @@ namespace FleetWise.Services
                 new NavBadge(dispatch, dispatch > 0),
                 new NavBadge(openCount, urgent),
                 new NavBadge(flagged.Count, false),
-                await CountRosterAsync(today),
-                await CountAuditAsync());
+                await CountRosterAsync(today, read.Section("roster")),
+                CountAudit(read));
         }
 
         /// <summary>Security incidents waiting for somebody to look at them.</summary>
@@ -357,13 +317,13 @@ namespace FleetWise.Services
         /// Counted on its own and failing on its own, like the roster, so a table that
         /// cannot be read takes this badge down and leaves the rest of the rail standing.
         /// </remarks>
-        private async Task<NavBadge> CountAuditAsync()
+        private static NavBadge CountAudit(ReadBundle read)
         {
-            var waiting = await _incidents.NeedsReviewAsync();
-            if (waiting is null) return NavBadge.None;
+            if (!read.Has("incidents")) return NavBadge.None;
 
-            var (count, urgent) = waiting.Value;
-            return new NavBadge(count, urgent,
+            var waiting = read.Rows<IncidentRow>("incidents");
+            var urgent = waiting.Any(r => r.Severity == "high");
+            return new NavBadge(waiting.Count, urgent,
                 urgent ? "A sign-in succeeded after failed attempts" : null);
         }
 
@@ -374,7 +334,8 @@ namespace FleetWise.Services
         /// </summary>
         /// <remarks>
         /// Counted on its own and failing on its own, so a roster table that cannot be read
-        /// takes down the roster badge rather than every badge on the rail.
+        /// takes down the roster badge rather than every badge on the rail. The database
+        /// sends the section as null when it could not read it.
         ///
         /// Urgent when a slot is empty within the next two days: that is a bus with nobody to
         /// drive it, and time is short to find somebody.
@@ -384,43 +345,23 @@ namespace FleetWise.Services
         /// the Roster page, where Auto-fill and Publish changes move the trips and tell the
         /// drivers.
         /// </remarks>
-        private async Task<NavBadge> CountRosterAsync(DateTime today)
+        private async Task<NavBadge> CountRosterAsync(DateTime today, ReadBundle? roster)
         {
+            if (roster is null) return NavBadge.None;
+
             try
             {
                 var thisMonth = RosterPublisher.FirstOf(today);
                 var nextMonth = thisMonth.AddMonths(1);
-                var from = today.AddDays(1).ToString("yyyy-MM-dd");
 
-                var monthsTask = _supabase.From<RosterMonth>()
-                    .Select("month,status")
-                    .Filter("month", Operator.In, new List<object> { thisMonth.ToString("yyyy-MM-dd"), nextMonth.ToString("yyyy-MM-dd") })
-                    .Get();
-                var gapsTask = _supabase.From<RosterGap>()
-                    .Select("date,vehicle_id,shift")
-                    .Filter("date", Operator.GreaterThanOrEqual, from)
-                    .Get();
-                var skipsTask = _supabase.From<RosterSkip>()
-                    .Select("date,vehicle_id,shift")
-                    .Filter("date", Operator.GreaterThanOrEqual, from)
-                    .Get();
-                var slotsTask = _supabase.From<RosterSlot>()
-                    .Select("month,driver_id,vehicle_id,route_id,shift,suggested")
-                    .Filter("month", Operator.In, new List<object> { thisMonth.ToString("yyyy-MM-dd"), nextMonth.ToString("yyyy-MM-dd") })
-                    .Get();
-
-                await Task.WhenAll(monthsTask, gapsTask, skipsTask, slotsTask);
-
-                var gaps = gapsTask.Result.Models;
+                // Slots nobody is on from tomorrow, less those a trip or a skip already fills.
+                var gaps = roster.Rows<RosterGap>("gaps");
                 var open = new List<RosterGap>();
                 if (gaps.Count > 0)
                 {
-                    var taken = (await _supabase.From<Trip>()
-                        .Select("date,vehicle_id,shift_type")
-                        .Filter("date", Operator.In, gaps.Select(g => (object)g.Date.ToString("yyyy-MM-dd")).Distinct().ToList())
-                        .Get()).Models
+                    var taken = roster.Rows<Trip>("gap_trips")
                         .Select(t => (t.Date.Date, t.VehicleId.ToUpperInvariant(), t.ShiftType))
-                        .Concat(skipsTask.Result.Models.Select(s => (s.Date.Date, s.VehicleId.ToUpperInvariant(), s.Shift)))
+                        .Concat(roster.Rows<RosterSkip>("skips").Select(s => (s.Date.Date, s.VehicleId.ToUpperInvariant(), s.Shift)))
                         .ToHashSet();
                     open = gaps.Where(g => !taken.Contains((g.Date.Date, g.VehicleId.ToUpperInvariant(), g.Shift))).ToList();
                 }
@@ -429,19 +370,20 @@ namespace FleetWise.Services
                 if (open.Count > 0)
                     notes.Add(open.Count == 1 ? "1 roster slot has nobody on it" : $"{open.Count} roster slots have nobody on them");
 
-                var slots = slotsTask.Result.Models;
-                var current = monthsTask.Result.Models.FirstOrDefault(m => m.Month.Date == thisMonth);
+                var slots = roster.Rows<RosterSlot>("slots");
+                var months = roster.Rows<RosterMonth>("months");
+                var current = months.FirstOrDefault(m => m.Month.Date == thisMonth);
                 var broken = 0;
                 if (current?.Status == "Published")
                 {
                     var live = slots.Where(s => s.Month.Date == thisMonth).ToList();
-                    broken = await CountBrokenPlacesAsync(live);
+                    broken = CountBrokenPlaces(live, roster);
                     if (broken > 0)
                         notes.Add($"The {thisMonth:MMMM} roster has {(broken == 1 ? "1 place" : $"{broken} places")} "
                             + "with a driver no longer active or a bus no longer running. Auto-fill it and publish the changes");
                 }
 
-                var next = monthsTask.Result.Models.FirstOrDefault(m => m.Month.Date == nextMonth);
+                var next = months.FirstOrDefault(m => m.Month.Date == nextMonth);
                 var waiting = today.Day >= RosterCycleService.DraftDay(_config) && next?.Status != "Published";
                 var projected = 0;
                 if (waiting)
@@ -497,31 +439,17 @@ namespace FleetWise.Services
         }
 
         /// <summary>Places on a roster whose driver is no longer active, or whose bus is retired, unrouted or moved route.</summary>
-        private async Task<int> CountBrokenPlacesAsync(IReadOnlyList<RosterSlot> slots)
+        /// <param name="slots">This month's places.</param>
+        /// <param name="roster">The roster section, holding the drivers and buses those places name.</param>
+        private static int CountBrokenPlaces(IReadOnlyList<RosterSlot> slots, ReadBundle roster)
         {
             if (slots.Count == 0) return 0;
 
-            var driverIds = slots.Where(s => s.DriverId is not null).Select(s => (object)s.DriverId!.Value.ToString()).Distinct().ToList();
-            var busIds = slots.Where(s => s.VehicleId != null).Select(s => (object)s.VehicleId).Distinct().ToList();
-
-            var driversTask = driverIds.Count == 0
-                ? Task.FromResult(new List<UserModel>())
-                : _supabase.From<UserModel>()
-                    .Select("user_id,account_status")
-                    .Filter("user_id", Operator.In, driverIds).Get().ContinueWith(t => t.Result.Models);
-            var busesTask = busIds.Count == 0
-                ? Task.FromResult(new List<Vehicle>())
-                : _supabase.From<Vehicle>()
-                    .Select("vehicle_id,retired_at,route_id")
-                    .Filter("vehicle_id", Operator.In, busIds).Get().ContinueWith(t => t.Result.Models);
-
-            await Task.WhenAll(driversTask, busesTask);
-
-            var active = driversTask.Result
+            var active = roster.Rows<UserModel>("slot_drivers")
                 .Where(d => string.Equals(d.AccountStatus, "Activated", StringComparison.OrdinalIgnoreCase))
                 .Select(d => d.UserId)
                 .ToHashSet();
-            var buses = busesTask.Result.ToDictionary(v => v.VehicleId, StringComparer.OrdinalIgnoreCase);
+            var buses = roster.Rows<Vehicle>("slot_buses").ToDictionary(v => v.VehicleId, StringComparer.OrdinalIgnoreCase);
 
             return slots.Count(s =>
                 (s.DriverId is int id && !active.Contains(id))
