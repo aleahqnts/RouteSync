@@ -11,7 +11,7 @@ shapes the database they talk to. All three clients (`RouteSyncWeb`, `RouteSyncM
 | `supabase/functions/` | Deno edge functions, deployed to Supabase |
 | `supabase/functions/_shared/` | JWT signing and verification, audit writer, mail, password rules |
 | `schema/` | A dump of the live database: its tables, policies, grants, and roles |
-| `schema/migrations/` | The change scripts applied by hand, so the dump can be explained |
+| `schema/migrations/` | The change scripts applied by hand since the last release |
 
 The `supabase/` directory keeps that exact name because the CLI looks for it by
 convention. Everything else sits beside it.
@@ -42,11 +42,15 @@ the database rather than drive it. Refresh them after a schema change.
 |------|-------|
 | `schema.sql` | Tables, enums, functions, triggers, row-level security policies, grants |
 | `roles.sql` | The `app_driver` and `app_camera` roles |
-| `migrations/` | One script per change, with a test and a rollback beside it |
+| `migrations/` | One script per change since the last release, with a test and a rollback beside it |
 
 A dump says what the database looks like, not why. `migrations/` holds the script for
-each change that was applied, dated, so a column with a rule behind it can be traced to
-the reasoning that put it there. Apply the script, then refresh the dump.
+each change made since the last release, dated, so a column with a rule behind it can be
+traced to the reasoning that put it there. Apply the script, then refresh the dump.
+
+Each release takes a fresh dump and clears `migrations/`, so the dump is the database as
+of that release tag. A script from an earlier release is still in the history at that
+release's tag.
 
 Two dump files, because a schema dump does not include roles. Restoring `schema.sql` alone
 would recreate policies that name roles nothing had created, so `roles.sql` runs first.
