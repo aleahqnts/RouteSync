@@ -34,6 +34,18 @@ public class StoredTimesTests
     }
 
     [Fact]
+    public void A_Philippine_clock_column_names_the_instant_eight_hours_earlier_wherever_the_app_runs()
+    {
+        // A GPS reading taken at 13:58 on the phone's Philippine clock was taken at 05:58 UTC.
+        var expected = new DateTime(2026, 9, 25, 5, 58, 0, DateTimeKind.Utc);
+
+        Assert.Equal(expected, StoredTimes.WallAsUtc(StoredUtc));
+        Assert.Equal(expected, StoredTimes.WallAsUtc(StoredLocal));
+        Assert.Equal(expected, StoredTimes.WallAsUtc(StoredUnmarked));
+        Assert.Equal(DateTimeKind.Utc, StoredTimes.WallAsUtc(StoredUnmarked).Kind);
+    }
+
+    [Fact]
     public void A_submitted_inspection_is_UTC_and_a_skipped_one_is_Philippine_time()
     {
         var submitted = new BusChecklist { ChecklistStatus = "Passed with Defects", SubmittedAt = StoredUtc };

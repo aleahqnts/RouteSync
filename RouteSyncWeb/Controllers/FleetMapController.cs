@@ -58,6 +58,12 @@ namespace FleetWise.Controllers
             _snaps = snaps;
         }
 
+        /// <summary>
+        /// A UTC instant as the map's scripts read it: the UTC digits with no zone marked,
+        /// to which they add the "Z" themselves.
+        /// </summary>
+        private static DateTime ForMap(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
+
         /// <summary>Reads a reference list, reusing the last one for <see cref="ReferenceLifetime"/>.</summary>
         private async Task<List<T>> ReferenceAsync<T>(string key, Func<Task<List<T>>> read)
             where T : Postgrest.Models.BaseModel, new()
@@ -161,8 +167,11 @@ namespace FleetWise.Controllers
             //
             // The readings are bounded to the trips shown, within the recent window, newest
             // first and no more than a thousand, rather than fetching the table and filtering
-            // in memory on every poll. The cutoff is taken from the UTC clock.
-            var recentCutoff = DateTime.UtcNow.AddMinutes(-RecentTelemetryMinutes);
+            // in memory on every poll. A reading is stamped with the driver's phone clock in
+            // Philippine time and stored with those digits as though they were UTC, so the
+            // cutoff is taken the same way. A cutoff from the UTC clock would sit eight hours
+            // earlier and read eight and a half hours of readings rather than thirty minutes.
+            var recentCutoff = PhClock.NowForDb.AddMinutes(-RecentTelemetryMinutes);
             var liveResponse = await _supabase.Rpc("fleetmap_live", new Dictionary<string, object?>
             {
                 ["p_op_day"] = PhClock.OperationalDay.ToString("yyyy-MM-dd"),
@@ -257,8 +266,10 @@ namespace FleetWise.Controllers
 
                 vehiclesById.TryGetValue(trip.VehicleId, out var vehicle);
 
+                // Readings are stamped with the phone's Philippine clock.
+                var readingAt = ForMap(StoredTimes.WallAsUtc(telemetry.Timestamp));
                 if (movingByVehicle.TryGetValue(trip.VehicleId, out var existing) &&
-                    existing.Timestamp >= telemetry.Timestamp)
+                    existing.Timestamp >= readingAt)
                     continue; // an earlier trip already gave a newer position for this bus
 
                 routesById.TryGetValue(trip.RouteId, out var route);
@@ -304,7 +315,7 @@ namespace FleetWise.Controllers
                     Passengers = passengers,
                     Capacity = capacity,
                     EstimatedRevenue = _fareCalculator.Estimate(passengers, fareRate),
-                    Timestamp = telemetry.Timestamp,
+                    Timestamp = readingAt,
                     OnBreakUntil = BreakSlots.IsOnBreak(trip, PhClock.Now) && BreakSlots.WindowOf(trip) is { } breakWindow
                         ? BreakSlots.Clock(breakWindow.End.TimeOfDay)
                         : null
@@ -370,9 +381,8 @@ namespace FleetWise.Controllers
                     Passengers = 0,
                     Capacity = vehicle.Capacity,
                     EstimatedRevenue = 0,
-                    // A real UTC instant like a reading's, so the panel's clock reads the
-                    // moment the board was drawn rather than eight hours ahead of it.
-                    Timestamp = DateTime.UtcNow
+                    // The moment the board was drawn, written the way a reading's is.
+                    Timestamp = ForMap(DateTime.UtcNow)
                 });
             }
 

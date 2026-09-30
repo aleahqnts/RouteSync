@@ -78,10 +78,11 @@ public class TelemetryRetentionService : BackgroundService
 
     private async Task SweepAsync()
     {
-        // Cutoff MUST be UTC: stored timestamps are true UTC instants and PostgREST reads a
-        // naive filter string as UTC. PhClock.Now (PH wall-clock digits) would land 8h ahead
-        // and delete rows still inside the retention window.
-        var cutoff = DateTime.UtcNow.AddMinutes(-_retentionMinutes);
+        // A reading is stamped with the driver's phone clock in Philippine time and stored
+        // with those digits as though they were UTC, and PostgREST reads a naive filter string
+        // as UTC, so the cutoff is taken on the same clock. A cutoff from the UTC clock would
+        // sit eight hours earlier and keep every row eight hours past the window.
+        var cutoff = PhClock.NowForDb.AddMinutes(-_retentionMinutes);
 
         // The timestamp filter is required: PostgREST rejects an unfiltered delete, and it
         // also keeps the cut strictly to rows past the retention window.
