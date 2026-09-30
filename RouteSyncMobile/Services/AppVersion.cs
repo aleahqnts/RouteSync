@@ -4,7 +4,7 @@ namespace FleetWiseMobile.Services
 {
     /// <summary>The RouteSync release this build was made from, as the driver app shows it.</summary>
     /// <remarks>
-    /// The number comes from the git tag at build time (see Directory.Build.props). A release
+    /// The number comes from the git tag at build time, read by MinVer (see the project file). A release
     /// reads as its number alone. A build between releases reads as a preview of the next one
     /// with the commit it was made from, so a screenshot says exactly which code it shows.
     /// </remarks>

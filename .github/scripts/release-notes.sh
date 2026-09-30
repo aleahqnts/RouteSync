@@ -41,7 +41,7 @@ echo
 
 # Releases from before the apps read their version from the tag carry the fixed numbers
 # they were built with, so nothing is said about a code they did not have.
-if git cat-file -e "$tag:Directory.Build.props" 2>/dev/null; then
+if git show "$tag:RouteSyncMobile/FleetWiseMobile.csproj" 2>/dev/null | grep -q SetVersionFromTag; then
   echo "## Phone apps"
   echo
   echo "Build the driver app and the camera app from this tag. Both carry version code"

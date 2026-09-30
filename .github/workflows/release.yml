@@ -1,6 +1,6 @@
 # Publishes a GitHub Release for each RouteSync release tag.
 #
-# A release is made by pushing an annotated tag vX.Y.Z (see "Releasing" in CLAUDE.md). This
+# A release is made by pushing an annotated tag vX.Y.Z (see "Releasing" in CONTRIBUTING.md). This
 # turns the tag into a Release page: its message, the database scripts it brought, the
 # version code the phone apps carry, and every change since the release before it. The
 # notes are written by .github/scripts/release-notes.sh, which can be run locally to preview

@@ -5,8 +5,8 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// The RouteSync suite's version, from the nearest git tag, read the same way the .NET apps
-// read it (see Directory.Build.props at the repository root). A commit tagged v1.2.0 is
+// The RouteSync suite's version, from the nearest git tag, read the same way MinVer reads it
+// for the web dashboard and the driver app. A commit tagged v1.2.0 is
 // release 1.2.0. A commit after it is a preview of the next minor release, 1.3.0, named with
 // the commit it was built from. Android orders installs by the version code, major, minor
 // and patch in two digits each, so 1.2.0 is 10200 and a phone accepts each release as an

@@ -37,7 +37,6 @@ on:
     paths:
       - 'RouteSyncWeb/**'
       - 'RouteSyncWeb.Tests/**'
-      - 'Directory.Build.props'
       - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 

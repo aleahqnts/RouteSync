@@ -112,10 +112,22 @@
         <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
         <PackageReference Include="supabase-csharp" Version="0.16.2" />
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
+        <PackageReference Include="MinVer" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
     <!--
-      The suite's version, from the git tag read by MinVer (see Directory.Build.props).
+      The RouteSync suite's version, read from the nearest vX.Y.Z git tag at build time
+      by MinVer. A tagged commit builds as its release; a commit after it builds as a preview of
+      the next minor release, such as 1.3.0-alpha.0.4, carrying the commit it was built from.
+      The tag has to be in the checkout: a shallow clone has none and builds as 0.0.0.
+    -->
+    <PropertyGroup>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>minor</MinVerAutoIncrement>
+    </PropertyGroup>
+
+    <!--
+      The version MinVer read, set as Android's two version numbers.
 
       Android shows the display version, 1.2.0, and orders installs by the version code, which
       has to rise with every release for a phone to accept the update. The code is major,

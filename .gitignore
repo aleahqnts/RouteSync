@@ -363,7 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 PLAN.md
-.claude
 # tooling
 /d
 skills-lock.json
@@ -377,7 +376,6 @@ skills-lock.json
 /d
 skills-lock.json
 .agents/
-/.claude/skills
 /PLAN.md
 
 # Phase 7: Supabase service key override (never commit)
