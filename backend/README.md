@@ -10,7 +10,7 @@ shapes the database they talk to. All three clients (`RouteSyncWeb`, `RouteSyncM
 |------|-------|
 | `supabase/functions/` | Deno edge functions, deployed to Supabase |
 | `supabase/functions/_shared/` | JWT signing and verification, audit writer, mail, password rules |
-| `schema/` | A dump of the live database: its tables, policies, grants, and roles |
+| `schema/` | A dump of the live database: its tables, policies, grants, roles, and storage buckets |
 | `schema/migrations/` | The change scripts applied by hand since the last release |
 
 The `supabase/` directory keeps that exact name because the CLI looks for it by
@@ -42,7 +42,10 @@ the database rather than drive it. Refresh them after a schema change.
 |------|-------|
 | `schema.sql` | Tables, enums, functions, triggers, row-level security policies, grants |
 | `roles.sql` | The `app_driver` and `app_camera` roles |
+| `storage.sql` | The storage buckets, and the grants and policies on them |
+| `storage-snapshot.sql` | The query that writes `storage.sql` |
 | `migrations/` | One script per change since the last release, with a test and a rollback beside it |
+| `sweeps/` | Clean-up queries run by hand when needed, not migrations |
 
 A dump says what the database looks like, not why. `migrations/` holds the script for
 each change made since the last release, dated, so a column with a rule behind it can be
@@ -52,8 +55,9 @@ Each release takes a fresh dump and clears `migrations/`, so the dump is the dat
 of that release tag. A script from an earlier release is still in the history at that
 release's tag.
 
-Two dump files, because a schema dump does not include roles. Restoring `schema.sql` alone
-would recreate policies that name roles nothing had created, so `roles.sql` runs first.
+Three files, because a schema dump leaves out roles and the storage schema. Restoring
+`schema.sql` alone would recreate policies that name roles nothing had created, so
+`roles.sql` runs first, then `schema.sql`, then `storage.sql`.
 
 ### Refreshing
 
@@ -65,5 +69,12 @@ npx supabase@latest db dump --project-ref vrtluruqaxutecydbrsq --workdir backend
 ```
 
 Add `--role-only` for the second file. The printed script carries a freshly minted
-database password, so keep it out of the repository. One correction is needed: it
-abbreviates `--quote-all-identifiers`, which some builds reject.
+database password, so keep it out of the repository and out of anything shared. Each run
+mints a new one and retires the last, so run a script straight after printing it. One
+correction is needed: it abbreviates `--quote-all-identifiers`, which some builds reject.
+
+For `storage.sql`, set the same connection variables the printed script exports, then:
+
+```
+psql -X -At -f backend/schema/storage-snapshot.sql > backend/schema/storage.sql
+```
