@@ -187,16 +187,6 @@ public sealed class SecurityIncidents
                 ["reviewed_event_count"] = seenCount,
             });
 
-    /// <summary>
-    /// How many incidents need review, and whether any of them is a possible break-in.
-    /// </summary>
-    public async Task<(int Count, bool Urgent)?> NeedsReviewAsync()
-    {
-        var rows = await GetAsync("security_incidents?select=severity&needs_review=is.true&limit=1000");
-        if (rows is null) return null;
-        return (rows.Count, rows.Any(r => Str(r, "severity") == "high"));
-    }
-
     private HttpRequestMessage Request(HttpMethod method, string pathAndQuery)
     {
         var url = _config["Supabase:Url"];
