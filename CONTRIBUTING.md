@@ -29,7 +29,10 @@
 5. `git push --atomic origin main master vX.Y.Z`, so the deploy build finds the tag. The
    tag push also publishes the GitHub Release (`.github/workflows/release.yml`); preview its
    notes first with `bash .github/scripts/release-notes.sh vX.Y.Z`.
-6. Rebuild the driver app and the camera app from the tag and install them.
+6. Build the driver app and the camera app from the tag and attach both APKs to the
+   tag's GitHub Release, named `RouteSync-Driver-X.Y.Z.apk` and `RouteSync-Sentinel-X.Y.Z.apk`.
+   Build them on the same machine as before: a phone only updates an app signed with the
+   key it was first installed with. The APKs never go into the repository.
 
 ## Hotfix
 
