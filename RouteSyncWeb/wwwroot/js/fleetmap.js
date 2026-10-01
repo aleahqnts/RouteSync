@@ -608,22 +608,32 @@
         fetchPositions();
     }
 
-    // Recenter the map on the live (moving) buses — the fix for testing far from the BGC
-    // routes, where a real GPS pin sits outside the route-fitted view. Prefers moving buses
-    // (a phone on a trip); falls back to every visible bus marker if none are moving yet.
+    // Recenter the map on the live (moving) buses, which matters when testing far from the
+    // BGC routes, where a real GPS pin sits outside the route-fitted view. Prefers moving
+    // buses (a phone on a trip); falls back to every visible bus if none are moving yet.
+    //
+    // Each bus counts at the position it reported, not where its marker is drawn. Buses
+    // parked at a terminal are fanned out a fixed number of pixels apart, which covers
+    // more ground the further out the map is, so fitting to the drawn markers zoomed out
+    // a little more on every press. The padding is a share of the map rather than a fixed
+    // eighty pixels a side, which on a phone left almost no map to fit into.
     function fitToBuses() {
         var moving = [], all = [];
         Object.keys(busMarkers).forEach(function (id) {
             var m = busMarkers[id];
             if (!m || !busLayer.hasLayer(m)) return;        // skip hidden (search-filtered)
-            all.push(m.getLatLng());
+            var at = m._bus ? L.latLng(m._bus.lat, m._bus.lng) : m.getLatLng();
+            all.push(at);
             if (m._bus && (m._bus.status === 'On Trip' || m._bus.status === 'Active'))
-                moving.push(m.getLatLng());
+                moving.push(at);
         });
         var pts = moving.length ? moving : all;
         if (!pts.length) return;
-        if (pts.length === 1) map.setView(pts[0], 16);
-        else map.fitBounds(L.latLngBounds(pts), { padding: [80, 80], maxZoom: 16 });
+        var size = map.getSize();
+        var pad = Math.round(Math.min(80, size.x * 0.12, size.y * 0.12));
+        var bounds = L.latLngBounds(pts);
+        if (pts.length === 1 || bounds.getNorthEast().equals(bounds.getSouthWest())) map.setView(bounds.getCenter(), 16);
+        else map.fitBounds(bounds, { padding: [pad, pad], maxZoom: 16 });
     }
     if (fitBtn) fitBtn.addEventListener('click', fitToBuses);
 

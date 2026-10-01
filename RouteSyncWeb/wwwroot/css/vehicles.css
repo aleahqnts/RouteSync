@@ -1810,3 +1810,23 @@
         transform: none;
     }
 }
+
+/* A photograph on a phone opens in the middle of the screen rather than rising from
+   the bottom like the vehicle sheet under it. A sheet on a sheet read as one more
+   panel; this reads as a picture being looked at. */
+@media (max-width: 599px) {
+    .modal-dialog.vh-modal-photo {
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        min-height: calc(100% - 32px);
+        margin: 16px;
+        align-items: center;
+    }
+
+        .vh-modal-photo .modal-content {
+            border-radius: 16px;
+            max-height: 86vh;
+            max-height: 86dvh;
+        }
+}
