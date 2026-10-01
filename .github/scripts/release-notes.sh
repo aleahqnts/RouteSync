@@ -8,8 +8,8 @@
 #
 #   - what the release is, from the tag's own message;
 #   - the database scripts it brought, which must be applied before its code runs;
-#   - the version code each phone app carries, which is how a phone orders its installs,
-#     for releases built since the apps read their version from the tag;
+#   - where to get the phone apps: the APKs on this release, or, when neither app changed
+#     since the release before, the newest release that has them;
 #   - every change since the release before it, from the commit subjects.
 #
 # The release before it is the nearest earlier vX.Y.Z tag in the tag's history.
@@ -44,8 +44,13 @@ echo
 if git show "$tag:RouteSyncMobile/FleetWiseMobile.csproj" 2>/dev/null | grep -q SetVersionFromTag; then
   echo "## Phone apps"
   echo
-  echo "Install the driver app and the camera app from the APKs attached below. Both are"
-  echo "version $major.$minor.$patch and install over an earlier version without uninstalling it."
+  if [ -n "$previous" ] && git diff --quiet "$previous" "$tag" -- RouteSyncMobile CameraCountMobile; then
+    echo "The driver app and the camera app are unchanged since $previous, so this release"
+    echo "has no APKs. Install them from the newest release that has."
+  else
+    echo "Install the driver app and the camera app from the APKs attached below. Both are"
+    echo "version $major.$minor.$patch and install over an earlier version without uninstalling it."
+  fi
   echo
 fi
 
