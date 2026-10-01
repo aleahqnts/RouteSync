@@ -230,7 +230,8 @@
                                the kind of account follow on one quiet line. *@
                             <td data-label="Filed by" class="rq-c-who">
                                 <span class="rq-driver">@r.DriverName</span>
-                                <span class="rq-who-meta">@r.DriverId &middot; @(r.IsStaff ? "Staff" : "Driver")</span>
+                                <span class="rq-who-meta">@r.DriverId &middot; @(r.IsStaff ? "Staff" : "Driver")@if (r.IsOwn)
+                                    {<span class="rq-own" title="Another administrator decides this one"> &middot; Your request</span>}</span>
                             </td>
 
                             <td data-label="Type">
@@ -292,22 +293,20 @@
                                 }
                             </td>
 
-                            <td data-label="Actions">
+                            @* Placed by class: its column has no heading, so the script that
+                               names cells after their headings leaves it unnamed. *@
+                            <td data-label="Actions" class="rq-c-actions">
                                 <div class="rq-actions">
-                                    @if (r.IsOwn)
-                                    {
-                                        @* The server refuses these too. Shown as a note rather
-                                           than as buttons that could only fail. *@
-                                        <span class="rq-own" title="Another administrator decides this one">Your request</span>
-                                    }
-                                    else if (pending)
+                                    @* The reader's own request offers no decision: the server
+                                       refuses those too. It is marked beside the ID instead. *@
+                                    @if (!r.IsOwn && pending)
                                     {
                                         <button type="button" class="rq-btn rq-btn--approve"
                                                 data-request-id="@r.RequestId" data-on="click:rqApprove">Approve</button>
                                         <button type="button" class="rq-btn rq-btn--reject"
                                                 data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
                                     }
-                                    else if (held)
+                                    else if (!r.IsOwn && held)
                                     {
                                         @* The approval was begun. This runs the check again
                                            against the schedule as it now stands. *@

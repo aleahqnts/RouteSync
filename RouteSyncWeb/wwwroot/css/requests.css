@@ -284,12 +284,9 @@
         white-space: nowrap;
     }
 
-    /* The reader's own request, in place of the controls they may not use on it. */
-    .rq-own {
-        font-size: .78rem;
-        color: var(--rq-muted);
-        font-style: italic;
-    }
+    /* The reader's own request, marked beside its ID: the controls they may not use on
+       it are not offered. */
+    .rq-own { font-style: italic; }
 
     .rq-date,
     .rq-filed { display: block; white-space: nowrap; }
@@ -1105,7 +1102,7 @@
         .rq-table.rs-cards td[data-label="Type"] { grid-area: type; }
         .rq-table.rs-cards td[data-label="Reason"] { grid-area: reason; }
         .rq-table.rs-cards td.rq-c-balance { grid-area: balance; }
-        .rq-table.rs-cards td[data-label="Actions"] { grid-area: actions; }
+        .rq-table.rs-cards td.rq-c-actions { grid-area: actions; }
 
         /* Said by the phrase on the type line. */
         .rq-table.rs-cards td[data-label="Start"],
@@ -1125,7 +1122,7 @@
         .rq-table.rs-cards td[data-label="Status"]::before,
         .rq-table.rs-cards td[data-label="Type"]::before,
         .rq-table.rs-cards td[data-label="Reason"]::before,
-        .rq-table.rs-cards td[data-label="Actions"]::before {
+        .rq-table.rs-cards td.rq-c-actions::before {
             content: none;
         }
 
@@ -1193,7 +1190,7 @@
                 white-space: nowrap;
             }
 
-        .rq-table.rs-cards td[data-label="Actions"] { margin-top: 6px; }
+        .rq-table.rs-cards td.rq-c-actions { margin-top: 6px; }
 
         /* A request already decided has one thing left to offer, and was giving a band
            across the card to it. It goes on the end of the allowance line, which is the
@@ -1206,27 +1203,11 @@
                 "balance actions";
         }
 
-        .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) {
+        .rq-table.rs-cards td.rq-c-actions:not(:has(.rq-btn--approve)) {
             margin-top: 0;
         }
 
-        /* The reader's own request carries a note as well as History, too much to share
-           the allowance line. They take a line of their own: the note at the start, the
-           button at the end. */
-        .rq-table.rs-cards tbody tr[data-request]:has(.rq-own) {
-            grid-template-areas:
-                "driver  status"
-                "type    type"
-                "reason  reason"
-                "balance balance"
-                "actions actions";
-        }
-
-            .rq-table.rs-cards tbody tr[data-request]:has(.rq-own) .rq-actions {
-                justify-content: space-between;
-            }
-
-            .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) .rq-actions {
+            .rq-table.rs-cards td.rq-c-actions:not(:has(.rq-btn--approve)) .rq-actions {
                 justify-content: flex-end;
                 /* The shared card treatment holds an actions cell open to the height of
                    a thumb target, and a row of buttons stretches to fill it. One quiet
@@ -1235,7 +1216,7 @@
                 align-items: center;
             }
 
-            .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) .rq-btn {
+            .rq-table.rs-cards td.rq-c-actions:not(:has(.rq-btn--approve)) .rq-btn {
                 flex: 0 0 auto;
                 min-height: 32px;
                 padding: 4px 14px;

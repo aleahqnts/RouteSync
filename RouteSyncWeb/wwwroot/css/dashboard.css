@@ -836,6 +836,10 @@
         background: none;
     }
 
+    /* The cells are named after their headings for the card layout; this row says
+       what each is by its place, so the names are not printed. */
+    .db-breakdown-table.rs-cards td::before { content: none; }
+
     .db-breakdown-table.rs-cards td {
         display: block;
         width: auto;
