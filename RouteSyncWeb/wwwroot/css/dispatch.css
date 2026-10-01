@@ -1197,31 +1197,46 @@
 
     /* Accordion */
     .tdm-accordion {
-        margin-top: 14px;
+        margin-top: 12px;
         border: 1px solid #E8ECF0;
         border-radius: 10px;
         overflow: hidden;
     }
 
+    /* One compact row: an icon in the accent colour, the name, and the chevron. */
     .tdm-accordion-btn {
         width: 100%;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 11px 16px;
-        background: #F8F9FA;
+        gap: 10px;
+        padding: 7px 12px 7px 8px;
+        background: #fff;
         border: none;
         cursor: pointer;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 600;
         color: #2D3748;
         font-family: 'Segoe UI',sans-serif;
+        text-align: left;
         transition: background 150ms;
     }
 
         .tdm-accordion-btn:hover {
-            background: #EFF1F4;
+            background: #F4FAF9;
         }
+
+    .tdm-accordion-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: #E6F4F2;
+        color: var(--rp-teal, #4AADA8);
+    }
+
+    .tdm-accordion-label { flex: 1 1 auto; }
 
     .tdm-accordion-chevron {
         transition: transform 200ms;
@@ -2869,7 +2884,15 @@
         flex: 0 0 auto;
     }
 
-    .dp-trip-row {
+    /* A card laid out on a grid: the shift and trip ID across the top, the bus with the
+       status badge beside it, the driver, then anything that needs a decision and the
+       buttons. Placed by grid rather than nudged up by margins, so the badge stays on
+       the bus line however many lines sit under it. */
+    .dp-table tr.dp-trip-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 10px;
+        align-items: center;
         margin: 10px 12px;
         padding: 10px 14px;
         border: 1px solid var(--rp-border);
@@ -2880,6 +2903,8 @@
     /* The shift, carried on the row because its own cell spans every trip in it. */
     .dp-trip-row[data-shift-label]::before {
         content: attr(data-shift-label);
+        grid-column: 1 / -1;
+        grid-row: 1;
         display: block;
         margin-bottom: 6px;
         color: var(--rp-muted);
@@ -2898,10 +2923,17 @@
     /* Up on the shift line, at the other end, so the card is headed by when the
        trip runs and which trip it is. */
     .dp-table td[data-label="Trip ID"] {
-        margin-top: -21px;
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+        position: relative;
         padding: 0;
         text-align: right;
     }
+
+    .dp-table td[data-label="Bus"] { grid-column: 1; grid-row: 2; }
+    .dp-table td[data-label="Driver"] { grid-column: 1 / -1; grid-row: 3; }
+    .dp-table td[data-label="Actions"] { grid-column: 1 / -1; }
 
     .dp-trip-id {
         font-size: .72rem;
@@ -2915,21 +2947,19 @@
         content: none;
     }
 
-    /* The badge rides up beside the bus, where the eye already is. */
-    .dp-table td[data-label="Status"] {
-        margin-top: -44px;
-        text-align: right;
-        pointer-events: none;
+    /* The cell steps aside so its pieces can be placed on their own: the badge beside
+       the bus, where the eye already is, and a best match across the card under the
+       driver, reading from the left like the rest of it. */
+    .dp-table td[data-label="Status"] { display: contents; }
+
+    .dp-table td[data-label="Status"] > .dp-badge {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
     }
 
-    .dp-table td[data-label="Status"] .dp-badge {
-        pointer-events: auto;
-    }
-
-    /* A best match reads from the left like the rest of the card, and its buttons take taps
-       the cell around it lets through. */
-    .dp-table td[data-label="Status"] .dp-suggest {
-        pointer-events: auto;
+    .dp-table td[data-label="Status"] > .dp-suggest {
+        grid-column: 1 / -1;
         text-align: left;
     }
 
@@ -2950,13 +2980,15 @@
     .dp-status-wrap {
         flex-wrap: wrap;
         row-gap: 1px;
-        max-width: 72%;
     }
 
-    /* Only what is wrong gets words. A green or blue dot means nothing is, and
-       naming it costs a line on every card while hiding the ones that matter. */
+    /* Only what is wrong gets words. A green or blue dot means nothing is, and a
+       finished or missed trip has the badge beside it saying so. Naming those costs
+       a line on every card while hiding the ones that matter. */
     .dp-status-wrap:has(.dp-dot--green) .dp-tooltip,
-    .dp-status-wrap:has(.dp-dot--blue) .dp-tooltip {
+    .dp-status-wrap:has(.dp-dot--blue) .dp-tooltip,
+    .dp-status-wrap:has(.dp-dot--slate) .dp-tooltip,
+    .dp-status-wrap:has(.dp-dot--missed) .dp-tooltip {
         display: none;
     }
 
@@ -3085,9 +3117,10 @@
         color: #4C3FBF;
     }
 
-    /* The number sits on that strip, so it comes down with it. */
+    /* The number sits on that strip: the same margins, so the same box, centred in it. */
     .dp-table td[data-label="Trip ID"] {
-        margin-top: -29px;
+        align-self: center;
+        margin: -10px 0 8px;
     }
 }
 
