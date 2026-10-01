@@ -220,6 +220,7 @@ namespace FleetWise.Controllers
             var openLogs = await ReferenceAsync("fleetmap:openlogs", async () =>
                 (await _supabase.From<MaintenanceLog>()
                     .Select("log_id,vehicle_id,resolved_at")
+                    .Filter<object>("resolved_at", Postgrest.Constants.Operator.Is, null)
                     .Get()).Models);
 
             // Flagged means an open incident, the same definition the dashboard, dispatch

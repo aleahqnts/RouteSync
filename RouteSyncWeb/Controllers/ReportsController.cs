@@ -112,8 +112,20 @@ namespace FleetWise.Controllers
             var vehiclesResp = await _supabase.From<Vehicle>().Get();
             var vehiclesById = vehiclesResp.Models.ToDictionary(v => v.VehicleId, v => v);
 
-            var tripsResp = await _supabase.From<Trip>().Get();
-            var allTrips = tripsResp.Models;
+            // A chosen day needs only the days its cards and summaries compare; with no day
+            // chosen, the table lists every completed trip.
+            List<Trip> allTrips;
+            if (date.HasValue)
+            {
+                var spans = new[] { GetRange(anchor, passengerPeriod), GetRange(anchor, revenuePeriod) };
+                var earliest = spans.Select(r => r.prevStart).Append(anchor.AddDays(-1)).Min();
+                var latest = spans.Select(r => r.end).Append(anchor).Max();
+                allTrips = await TripsAsync(earliest, latest);
+            }
+            else
+            {
+                allTrips = await TripsAsync();
+            }
 
             int Passengers(Trip t) => t.TotalBoarded;
 
@@ -324,6 +336,41 @@ namespace FleetWise.Controllers
             };
         }
 
+        /// <summary>
+        /// Trips dated from <paramref name="from"/> to <paramref name="to"/>, either end
+        /// optional, with every column or only <paramref name="columns"/>.
+        /// </summary>
+        /// <remarks>
+        /// The database answers at most a thousand rows per request, so a plain read of the
+        /// table drops the rest without saying so once there are more trips than that, and
+        /// the newest are the ones lost. The dates are filtered in the database, and the
+        /// rows are read a thousand at a time, in trip order, until a page comes back short.
+        /// </remarks>
+        private async Task<List<Trip>> TripsAsync(DateTime? from = null, DateTime? to = null, string? columns = null)
+        {
+            const int PageRows = 1000;
+            var trips = new List<Trip>();
+            for (var offset = 0; ; offset += PageRows)
+            {
+                Postgrest.Interfaces.IPostgrestTable<Trip> query = _supabase.From<Trip>();
+                if (columns is not null)
+                    query = query.Select(columns);
+                if (from.HasValue)
+                    query = query.Filter("date", Operator.GreaterThanOrEqual, from.Value.ToString("yyyy-MM-dd"));
+                if (to.HasValue)
+                    query = query.Filter("date", Operator.LessThanOrEqual, to.Value.ToString("yyyy-MM-dd"));
+
+                var page = (await query
+                    .Order("trip_id", Ordering.Ascending)
+                    .Range(offset, offset + PageRows - 1)
+                    .Get()).Models;
+
+                trips.AddRange(page);
+                if (page.Count < PageRows)
+                    return trips;
+            }
+        }
+
         private static (DateTime start, DateTime end, DateTime prevStart, DateTime prevEnd) GetRange(DateTime anchor, string period)
         {
             switch (period)
@@ -379,9 +426,7 @@ namespace FleetWise.Controllers
             var vehiclesResp = await _supabase.From<Vehicle>().Get();
             var plates = vehiclesResp.Models.ToDictionary(v => v.VehicleId, v => v.PlateNumber);
 
-            var tripsResp = await _supabase.From<Trip>().Get();
-
-            var day = tripsResp.Models
+            var day = (await TripsAsync(anchor, anchor))
                 .Where(t => t.Date.Date == anchor)
                 .Where(t => !routeId.HasValue || routeId.Value == 0 || t.RouteId == routeId.Value)
                 .OrderBy(t => t.RouteId)
@@ -548,7 +593,8 @@ namespace FleetWise.Controllers
             var routesResp = await _supabase.From<BusRoute>().Order("route_name", Postgrest.Constants.Ordering.Ascending).Get();
             var usersResp = await _supabase.From<UserModel>().Get();
             var vehiclesResp = await _supabase.From<Vehicle>().Get();
-            var tripsResp = await _supabase.From<Trip>().Get();
+            // Every trip, but only the columns that tie a driver or a bus to a route.
+            var tripRoutes = await TripsAsync(columns: "trip_id,driver_id,vehicle_id,route_id");
 
             // Role 2 is the driver role.
             var driverIds = usersResp.Models
@@ -557,13 +603,13 @@ namespace FleetWise.Controllers
                 .ToHashSet();
 
             // Routes each driver has driven, taken from their trips.
-            var driverRoutes = tripsResp.Models
+            var driverRoutes = tripRoutes
                 .Where(t => driverIds.Contains(t.DriverId))
                 .GroupBy(t => t.DriverId)
                 .ToDictionary(g => g.Key, g => g.Select(t => t.RouteId).Distinct().ToList());
 
             // Routes each vehicle has run, taken from its trips.
-            var vehicleRoutes = tripsResp.Models
+            var vehicleRoutes = tripRoutes
                 .GroupBy(t => t.VehicleId)
                 .ToDictionary(g => g.Key, g => g.Select(t => t.RouteId).Distinct().ToList());
 
@@ -616,8 +662,7 @@ namespace FleetWise.Controllers
             var vehiclesResp = await _supabase.From<Vehicle>().Get();
             var vehiclesById = vehiclesResp.Models.ToDictionary(v => v.VehicleId, v => v);
 
-            var tripsResp = await _supabase.From<Trip>().Get();
-            var allTrips = tripsResp.Models;
+            var allTrips = await TripsAsync(from, to);
 
             int Passengers(Trip t) => t.TotalBoarded;
 
@@ -819,11 +864,11 @@ namespace FleetWise.Controllers
             var vehiclesResp = await _supabase.From<Vehicle>().Get();
             var vehiclesById = vehiclesResp.Models.ToDictionary(v => v.VehicleId, v => v);
 
-            var tripsResp = await _supabase.From<Trip>().Get();
+            var trips = await TripsAsync(from, to);
 
             int Passengers(Trip t) => t.TotalBoarded;
 
-            var filtered = ReportableTrips(tripsResp.Models, from, to, routeId, driverId, vehicleId);
+            var filtered = ReportableTrips(trips, from, to, routeId, driverId, vehicleId);
 
             // Build report data.
             string reportTitle = reportType switch
@@ -1063,11 +1108,11 @@ namespace FleetWise.Controllers
             var vehiclesResp = await _supabase.From<Vehicle>().Get();
             var vehiclesById = vehiclesResp.Models.ToDictionary(v => v.VehicleId, v => v);
 
-            var tripsResp = await _supabase.From<Trip>().Get();
+            var trips = await TripsAsync(from, to);
 
             int Passengers(Trip t) => t.TotalBoarded;
 
-            var filtered = ReportableTrips(tripsResp.Models, from, to, routeId, driverId, vehicleId);
+            var filtered = ReportableTrips(trips, from, to, routeId, driverId, vehicleId);
 
             string CsvEscape(string s) =>
                 s != null && (s.Contains(',') || s.Contains('"') || s.Contains('\n'))

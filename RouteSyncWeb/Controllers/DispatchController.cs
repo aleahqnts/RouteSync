@@ -99,10 +99,13 @@ namespace FleetWise.Controllers
                                        .Filter("role_id", Operator.Equals, "2")
                                        .Get();
             var availabilityTask = _supabase.From<DriverAvailability>().Get();
-            var checklistsTask = _supabase.From<BusChecklist>().Get();
-            var maintTask = _supabase.From<MaintenanceLog>().Get();
+            // Open incidents only. Every log ever written would pass the database's
+            // thousand-row cap in time, and the newest would be the ones cut off.
+            var maintTask = _supabase.From<MaintenanceLog>()
+                                     .Filter<object>("resolved_at", Operator.Is, null)
+                                     .Get();
 
-            await Task.WhenAll(tripsTask, vehiclesTask, routesTask, driversTask, availabilityTask, checklistsTask, maintTask);
+            await Task.WhenAll(tripsTask, vehiclesTask, routesTask, driversTask, availabilityTask, maintTask);
 
             // Trips for this operational day, including overnight ones, which carry today's date.
             var trips = tripsTask.Result.Models
@@ -111,7 +114,15 @@ namespace FleetWise.Controllers
             var vehicles = vehiclesTask.Result.Models;
             var routes = routesTask.Result.Models;
             var drivers = driversTask.Result.Models;
-            var checklists = checklistsTask.Result.Models;
+
+            // The checklists of the trips on this board, not every checklist ever submitted,
+            // for the same reason.
+            var tripIds = trips.Select(t => (object)t.TripId).ToList();
+            var checklists = tripIds.Count == 0
+                ? new List<BusChecklist>()
+                : (await _supabase.From<BusChecklist>()
+                                  .Filter("trip_id", Operator.In, tripIds)
+                                  .Get()).Models;
 
             // The availability flag carries no date, so it speaks for the operational day it
             // is read on and no other. Applied to a later board, one sick call would turn

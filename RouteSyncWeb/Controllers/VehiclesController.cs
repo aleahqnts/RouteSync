@@ -1105,7 +1105,11 @@ namespace FleetWise.Controllers
                 .From<BusRoute>()
                 .Order("route_name", Postgrest.Constants.Ordering.Ascending)
                 .Get();
-            var logsResponse = await _supabase.From<MaintenanceLog>().Get();
+            // The badge reads open logs only, so only those are fetched: every log ever
+            // written would in time pass the database's thousand-row cap.
+            var logsResponse = await _supabase.From<MaintenanceLog>()
+                .Filter<object>("resolved_at", Postgrest.Constants.Operator.Is, null)
+                .Get();
 
             var logsByVehicle = logsResponse.Models
                 .Where(l => l.VehicleId != null)
