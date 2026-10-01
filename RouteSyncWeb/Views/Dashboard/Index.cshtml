@@ -138,11 +138,11 @@
                         @foreach (var row in boardedRows)
                         {
                             <tr>
-                                <td>@row.TripId</td>
-                                <td>@row.RouteName</td>
-                                <td>@row.VehicleId</td>
-                                <td>@row.ShiftType</td>
-                                <td>@row.Status</td>
+                                <td class="db-bk-trip">@row.TripId</td>
+                                <td class="db-bk-meta">@row.RouteName</td>
+                                <td class="db-bk-meta">@row.VehicleId</td>
+                                <td class="db-bk-meta">@row.ShiftType</td>
+                                <td class="db-bk-meta">@row.Status</td>
                                 <td class="db-num"><strong>@row.Passengers</strong></td>
                             </tr>
                         }
@@ -294,8 +294,17 @@
 
         const dbFirst = dbReadHourly();
         const ctx = document.getElementById('demandChart').getContext('2d');
+        // An hour still to come has no figure for today, and with the average hidden it
+        // has nothing to show at all. The tooltip is then left undrawn rather than drawn
+        // empty; reading a title from no items threw, and left the last tooltip frozen
+        // on the chart.
+        const dbNoEmptyTipPlugin = {
+            id: 'dbNoEmptyTip',
+            beforeTooltipDraw: (chart, args) => args.tooltip.dataPoints.length > 0
+        };
+
         window.demandChart = new Chart(ctx, {
-            plugins: [dbShiftBandPlugin],
+            plugins: [dbShiftBandPlugin, dbNoEmptyTipPlugin],
             data: {
                 labels: chartLabels,
                 datasets: [{
@@ -335,6 +344,7 @@
                         filter: item => item.raw != null,
                         callbacks: {
                             title: items => {
+                                if (!items.length) return '';
                                 const i = items[0].dataIndex;
                                 return chartLabels[i] + ' to ' + chartLabels[(i + 1) % chartLabels.length];
                             },
@@ -447,8 +457,9 @@
                 body.innerHTML = '<div class="db-breakdown-empty">No boarded trips this service day yet.</div>';
                 return;
             }
-            const cells = r => [r.tripId, r.routeName, r.vehicleId, r.shiftType, r.status]
-                .map(v => '<td>' + dbEscape(v) + '</td>').join('') +
+            const cells = r => '<td class="db-bk-trip">' + dbEscape(r.tripId) + '</td>' +
+                [r.routeName, r.vehicleId, r.shiftType, r.status]
+                    .map(v => '<td class="db-bk-meta">' + dbEscape(v) + '</td>').join('') +
                 '<td class="db-num"><strong>' + r.passengers + '</strong></td>';
             body.innerHTML =
                 '<table class="db-breakdown-table rs-cards" data-sort><thead><tr>' +

@@ -818,3 +818,59 @@
         padding: 12px 14px 18px;
     }
 }
+
+/* The boarded breakdown on a phone: one compact row per trip rather than a card with a
+   line per column. The trip and its count lead; the route, bus, shift and status follow
+   as one muted line. */
+@media (max-width: 599px) {
+    .db-breakdown-table.rs-cards tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: 6px;
+        margin: 0;
+        padding: 10px 2px;
+        border: none;
+        border-bottom: 1px solid var(--db-border);
+        border-radius: 0;
+        background: none;
+    }
+
+    .db-breakdown-table.rs-cards td {
+        display: block;
+        width: auto;
+        padding: 0;
+        border: none;
+        text-align: left;
+    }
+
+    .db-breakdown-table.rs-cards .db-bk-trip {
+        flex: 1 1 auto;
+        order: 1;
+        font-weight: 700;
+    }
+
+    .db-breakdown-table.rs-cards .db-num {
+        order: 2;
+        font-size: 1rem;
+    }
+
+    .db-breakdown-table.rs-cards .db-bk-meta {
+        order: 3;
+        color: var(--db-muted);
+        font-size: .76rem;
+    }
+
+        .db-breakdown-table.rs-cards .db-bk-meta + .db-bk-meta::before {
+            content: "\00B7";
+            margin-right: 6px;
+        }
+
+    /* Breaks the line after the count, so the details wrap under the trip. */
+    .db-breakdown-table.rs-cards tr::after {
+        content: "";
+        order: 2;
+        flex-basis: 100%;
+        height: 2px;
+    }
+}
