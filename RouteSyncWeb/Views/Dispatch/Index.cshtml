@@ -735,7 +735,7 @@
     }
 
     function dpStamp() {
-        const at = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const at = rsTime.now();
         const el = document.getElementById('dpUpdated');
         if (el) el.textContent = 'Updated ' + at;
 

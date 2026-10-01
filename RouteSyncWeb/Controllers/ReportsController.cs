@@ -561,7 +561,7 @@ namespace FleetWise.Controllers
             {
                 tripId = tripResponse.TripId,
                 shiftType = tripResponse.ShiftType,
-                shiftStart = ShiftStartAt(tripResponse).ToString("hh:mm tt"),
+                shiftStart = ShiftStartAt(tripResponse).ToString("h:mm tt"),
                 shiftEnd = ShiftEndLabel(tripResponse),
                 // When the driver actually started and ended it, beside the scheduled
                 // window, as the driver app's trip report shows them.
@@ -569,7 +569,7 @@ namespace FleetWise.Controllers
                 actualEnd = FmtActual(tripResponse.ActualEndTime),
                 duration = TripDuration(tripResponse),
                 checklistStatus = checklist?.ChecklistStatus,
-                checklistSubmitted = checklist is null ? null : StoredTimes.Inspected(checklist).ToString("hh:mm tt"),
+                checklistSubmitted = checklist is null ? null : StoredTimes.Inspected(checklist).ToString("h:mm tt"),
                 routeName = routeResponse?.RouteName ?? "N/A",
                 vehicleType = "Bus", // the vehicle_type column was dropped; every unit is a bus
                 vehicleId = vehicleResponse?.VehicleId ?? "N/A",
@@ -979,7 +979,7 @@ namespace FleetWise.Controllers
                                     .Bold().FontSize(8).FontColor("#9AA5B4").LetterSpacing(0.06f);
                                 inner.Item().Text(PeriodLabel(from, to))
                                     .Bold().FontSize(9.5f).FontColor("#2D3748");
-                                inner.Item().Text($"Generated: {PhClock.Now:MMM dd, yyyy hh:mm tt}")
+                                inner.Item().Text($"Generated: {PhClock.Now:MMM d, yyyy h:mm tt}")
                                     .FontSize(8).FontColor("#9AA5B4");
                             });
                         });
@@ -1231,19 +1231,18 @@ namespace FleetWise.Controllers
         /// The end time alone, without a date or a next-day marker. The operational-day
         /// header already establishes the window the report covers.
         /// </summary>
-        private static string ShiftEndLabel(Trip t) => ShiftEndAt(t).ToString("hh:mm tt");
+        private static string ShiftEndLabel(Trip t) => ShiftEndAt(t).ToString("h:mm tt");
 
         /// <summary>The full shift window, for example "10:00 PM - 06:00 AM".</summary>
         private static string ShiftRange(Trip t, string dash = "–") =>
-            $"{ShiftStartAt(t):hh:mm tt} {dash} {ShiftEndLabel(t)}";
+            $"{ShiftStartAt(t):h:mm tt} {dash} {ShiftEndLabel(t)}";
 
         /// <summary>
         /// The logged start or end time, or a placeholder when the trip never recorded one.
         /// </summary>
-        /// <remarks>The stored value returns as a local-kind timestamp shifted eight hours
-        /// ahead, so it is normalized back to recover the digits as written.</remarks>
+        /// <remarks>Written in Philippine clock time.</remarks>
         private static string FmtActual(DateTime? dt) =>
-            dt.HasValue ? dt.Value.ToUniversalTime().ToString("hh:mm tt") : "—";
+            dt.HasValue ? StoredTimes.FromWall(dt.Value).ToString("h:mm tt") : "—";
 
         /// <summary>How long the trip ran, start to end, or a placeholder until it has both.</summary>
         /// <remarks>Both ends are stored the same way, so the difference needs no correction.</remarks>

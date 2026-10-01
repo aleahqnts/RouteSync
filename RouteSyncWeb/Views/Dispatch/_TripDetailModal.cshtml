@@ -504,8 +504,9 @@
                 applyInspectionBadge(inspBadge, status);
 
                 inspReporter.textContent = d.driverName ?? '—';
-                inspTime.textContent = new Date(d.checklist.submittedAt).toLocaleString('en-PH',
-                    { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+                // Sent as Philippine clock digits, so written as they read rather than
+                // moved by the browser's own zone.
+                inspTime.textContent = rsTime.wall(d.checklist.submittedAt);
 
                 const remarks = [];
                 if (d.checklist.notes) remarks.push(d.checklist.notes);

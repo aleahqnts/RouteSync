@@ -1153,7 +1153,7 @@
     }
     function rpStamp() {
         const e = document.getElementById('rpUpdated');
-        if (e) e.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (e) e.textContent = 'Updated ' + rsTime.now();
     }
     async function rpRefresh(manual) {
         if (rpBusy) return;

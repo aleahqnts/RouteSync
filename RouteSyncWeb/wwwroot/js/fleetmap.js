@@ -229,10 +229,11 @@
         return hrs === 1 ? '1 hour ago' : hrs + ' hours ago';
     }
 
-    // The moment itself, on the Philippine clock to the second, whatever zone the
-    // browser is in. The date is said too once it is not today's.
+    // The moment itself, on the Philippine clock to the minute, whatever zone the
+    // browser is in. Seconds would tick on every poll and say nothing more. The date is
+    // said too once it is not today's.
     var phTimeFmt = new Intl.DateTimeFormat('en-PH', {
-        timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+        timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', hour12: true
     });
     var phDateFmt = new Intl.DateTimeFormat('en-PH', {
         timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric'

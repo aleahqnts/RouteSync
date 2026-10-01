@@ -498,7 +498,7 @@
 
     function auStamp() {
         const el = document.getElementById('auUpdated');
-        if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (el) el.textContent = 'Updated ' + rsTime.now();
     }
 
     async function auRefresh(manual) {

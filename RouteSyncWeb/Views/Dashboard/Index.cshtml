@@ -414,7 +414,7 @@
         // AJAX refresh (manual button + silent 30s poll).
         let dbBusy = false;
         function dbStamp() {
-        const at = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const at = rsTime.now();
         const el = document.getElementById('dbUpdated');
         if (el) el.textContent = 'Updated ' + at;
 

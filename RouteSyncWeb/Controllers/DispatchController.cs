@@ -473,8 +473,8 @@ namespace FleetWise.Controllers
                 // deserializes the "+00:00" value as a local-kind DateTime, so formatting
                 // it directly adds eight hours. Normalizing back to UTC prints the digits
                 // as stored.
-                ActualStartTime = trip.ActualStartTime?.ToUniversalTime().ToString("h:mm tt"),
-                ActualEndTime = trip.ActualEndTime?.ToUniversalTime().ToString("h:mm tt"),
+                ActualStartTime = trip.ActualStartTime is DateTime started ? StoredTimes.FromWall(started).ToString("h:mm tt") : null,
+                ActualEndTime = trip.ActualEndTime is DateTime ended ? StoredTimes.FromWall(ended).ToString("h:mm tt") : null,
 
                 Checklist = checklist != null ? new TripChecklistViewModel
                 {
