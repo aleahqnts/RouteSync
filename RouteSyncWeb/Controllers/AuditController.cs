@@ -56,7 +56,7 @@ namespace FleetWise.Controllers
             return View(new SecurityIncidentsViewModel
             {
                 Rows = incidents is null ? null : await RowsForAsync(incidents),
-                ScannedThrough = await _incidents.ScannedThroughAsync(),
+                ScannedThrough = SecurityDetector.ScannedThrough,
                 ScanMessage = TempData["ScanMessage"] as string,
             });
         }

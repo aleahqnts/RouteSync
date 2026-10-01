@@ -30,7 +30,7 @@ public sealed record SecurityIncident(
 }
 
 /// <summary>
-/// Reads and writes security incidents and how far the detector has got.
+/// Reads and writes security incidents.
 /// </summary>
 /// <remarks>
 /// Talks to the database directly, as the audit trail does, and reads every time as an
@@ -53,17 +53,6 @@ public sealed class SecurityIncidents
     /// <summary>A time as the database's filters and columns take it.</summary>
     public static string Stamp(DateTimeOffset t) =>
         t.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'", CultureInfo.InvariantCulture);
-
-    public async Task<DateTimeOffset?> ScannedThroughAsync()
-    {
-        var rows = await GetAsync("security_detector_state?select=scanned_through&id=eq.1");
-        if (rows is null || rows.Count == 0) return null;
-        return Time(rows[0], "scanned_through");
-    }
-
-    public async Task<bool> SetScannedThroughAsync(DateTimeOffset through) =>
-        await SendAsync(HttpMethod.Patch, "security_detector_state?id=eq.1",
-            new Dictionary<string, object?> { ["scanned_through"] = Stamp(through) });
 
     /// <summary>Incidents whose activity reaches back to or past a point.</summary>
     public async Task<List<SecurityIncident>?> TouchingAsync(DateTimeOffset since)

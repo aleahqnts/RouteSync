@@ -9,10 +9,10 @@ namespace FleetWise.Services;
 /// table's uniqueness would stop the second copy, but only after both had done the work.
 ///
 /// Reads from where the last scan reached, less the longest window any rule uses, so a
-/// threshold ending now is always seen whole. The dashboard's host sleeps when nobody is
-/// using it, while drivers' sign-ins go on being recorded by the edge functions, and
-/// starting from the last scan rather than from a fixed distance back means a long sleep
-/// delays an incident rather than losing it.
+/// threshold ending now is always seen whole. Where the last scan reached is held in
+/// memory. After a restart, which drops it, the first scan reads the last two days, so
+/// a deploy or a recycle of the host delays an incident rather than losing it, while
+/// drivers' sign-ins go on being recorded by the edge functions.
 ///
 /// Every step is safe to repeat. A burst already on record is recognised and extended
 /// rather than raised again, and a count is worked out from the entries rather than added
@@ -35,6 +35,14 @@ public sealed class SecurityDetector
     /// not ask for the whole trail in one go.
     /// </summary>
     private static readonly TimeSpan MaxCatchUp = TimeSpan.FromDays(30);
+
+    /// <summary>How far back the first scan after a restart reads.</summary>
+    private static readonly TimeSpan AfterRestart = TimeSpan.FromDays(2);
+
+    private static DateTimeOffset? _scannedThrough;
+
+    /// <summary>When the last complete scan started, or null before the first one.</summary>
+    public static DateTimeOffset? ScannedThrough => _scannedThrough;
 
     private const int PageSize = 1000;
 
@@ -65,10 +73,9 @@ public sealed class SecurityDetector
     {
         var startedAt = DateTimeOffset.UtcNow;
 
-        var through = await _incidents.ScannedThroughAsync();
-        if (through is null) return new(false, 0, 0);
+        var through = _scannedThrough ?? startedAt - AfterRestart;
 
-        var from = through.Value - SecurityRules.LongestWindow - Overlap;
+        var from = through - SecurityRules.LongestWindow - Overlap;
         if (from < startedAt - MaxCatchUp) from = startedAt - MaxCatchUp;
 
         var events = await ReadEventsAsync(from);
@@ -139,7 +146,7 @@ public sealed class SecurityDetector
 
         // Moved on only after everything above was read. A scan that failed part way is
         // repeated in full next time, which the idempotence above makes harmless.
-        await _incidents.SetScannedThroughAsync(startedAt);
+        _scannedThrough = startedAt;
 
         return new(true, raised, extended);
     }
