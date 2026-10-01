@@ -250,6 +250,7 @@
 
     .rq-table th {
         padding: 10px 14px;
+        vertical-align: bottom;
         text-align: left;
         font-size: .78rem;
         font-weight: 700;
@@ -672,7 +673,34 @@
 
     /* --- Buttons --------------------------------------------------------- */
 
-    .rq-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    /* At most two tidy rows, right-aligned: Approve and Reject together, and on a held
+       request Back to queue and History under them. Left free to wrap, the cell shrank
+       to its widest button and stacked every one of them. */
+    .rq-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+        width: 260px;
+        margin-left: auto;
+    }
+
+    .rq-actions .rq-btn {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: .78rem;
+    }
+
+    /* History as a clock beside the other buttons. */
+    .rq-btn--history {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .rq-actions .rq-btn--history { padding: 6px 8px; }
+
+    .rq-history-text { display: none; }
 
     .rq-btn {
         padding: 8px 16px;
@@ -1227,8 +1255,14 @@
        of a card. */
     .rq-actions {
         width: 100%;
+        margin-left: 0;
         gap: 8px;
     }
+
+    .rq-actions .rq-btn { padding: 8px 14px; border-radius: 10px; font-size: .82rem; }
+
+    .rq-history-icon { display: none; }
+    .rq-history-text { display: inline; }
 
         /* Approve and Reject share what is left after History, which is read rarely
            and sized for its own word. Given an equal third each, the three of them
@@ -1244,6 +1278,12 @@
                 flex: 0 0 auto;
                 padding-inline: 14px;
             }
+
+        /* A held request has four: each keeps the width of its own words, and they
+           wrap to a second line rather than all four being cut short on one. */
+        .rq-actions:has(.rq-btn--outline) .rq-btn {
+            flex: 1 1 auto;
+        }
 
     /* A dialog on a phone rises from the bottom edge, and measures against the height
        actually on screen rather than a viewport that does not shrink when the browser

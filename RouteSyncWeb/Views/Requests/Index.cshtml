@@ -335,8 +335,17 @@
                                         <button type="button" class="rq-btn rq-btn--reject"
                                                 data-request-id="@r.RequestId" data-on="click:rqRevoke">Revoke</button>
                                     }
+                                    @* A clock on a desk, where the row has the width for nothing more;
+                                       the word on a phone, where it has a line of its own. *@
                                     <button type="button" class="rq-btn rq-btn--history"
-                                            data-request-id="@r.RequestId" data-on="click:rqHistory">History</button>
+                                            data-request-id="@r.RequestId" data-on="click:rqHistory"
+                                            title="History" aria-label="History">
+                                        <svg class="rq-history-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><polyline points="3 3 3 8 8 8" /><polyline points="12 7 12 12 15 14" />
+                                        </svg>
+                                        <span class="rq-history-text">History</span>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -648,7 +657,7 @@
 
         function rqStamp() {
             const el = document.getElementById('rqUpdated');
-            if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (el) el.textContent = 'Updated ' + rsTime.now();
         }
 
         window.rqRefresh = async function (manual) {
@@ -880,7 +889,9 @@
             rqToastTimer = setTimeout(function () { el.hidden = true; }, 4000);
         };
 
-        function rqShowBlocking(message, shifts) {
+        // Fills the notice of shifts in the way. Kept out of sight when the cover picker is
+        // about to replace it, which otherwise flashed this plain list for a moment first.
+        function rqShowBlocking(message, shifts, quietly) {
             err.style.display = 'none';
             document.getElementById('rqBlockingLeadText').textContent = message;
 
@@ -903,7 +914,7 @@
                 list.appendChild(li);
             });
 
-            box.style.display = 'block';
+            if (!quietly) box.style.display = 'block';
         }
 
         // ---- Covering the shifts in the way ------------------------------------------
@@ -1310,8 +1321,11 @@
                     const covered = said.covered || 0;
 
                     rqShowBlocking((covered ? covered + (covered === 1 ? ' shift was covered. ' : ' shifts were covered. ') : '')
-                        + said.message, said.blocking || []);
-                    if (!await rqShowCovers(id)) go.textContent = 'Approve';
+                        + said.message, said.blocking || [], true);
+                    if (!await rqShowCovers(id)) {
+                        blockingBox.style.display = 'block';
+                        go.textContent = 'Approve';
+                    }
 
                     // A cover that could not be saved is a failure and reads as one. What is
                     // still in the way is said by the notice above the shifts.
@@ -1504,8 +1518,8 @@
                 // here rather than left for the dispatcher to go looking for.
                 if (res.status === 409) {
                     const said = await res.json();
-                    rqShowBlocking(said.message, said.blocking || []);
-                    await rqShowCovers(id);
+                    rqShowBlocking(said.message, said.blocking || [], true);
+                    if (!await rqShowCovers(id)) blockingBox.style.display = 'block';
                     go.disabled = false;
                     // The row now reads as held, so the list is brought up to date.
                     await rqRefresh(true);
