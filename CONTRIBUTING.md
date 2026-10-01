@@ -21,7 +21,7 @@
 ## Releasing vX.Y.Z
 
 1. Every script in `backend/schema/migrations/` has been applied to the live database.
-2. Refresh `backend/schema/schema.sql` from the live database (see
+2. Refresh `backend/schema/schema.sql` and `roles.sql` from the live database (see
    `backend/README.md`), delete the applied scripts from `migrations/`, commit on `main`.
 3. Annotated tag on `main`'s tip: `git tag -a vX.Y.Z -m "RouteSync X.Y.Z" -m "<what changed>"`.
 4. Fast-forward `master` to it: `git checkout master && git merge --ff-only vX.Y.Z`. Never

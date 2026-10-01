@@ -36,11 +36,13 @@ through `Deno.env.get`.
 
 `schema/` is a snapshot of the live database, taken with `pg_dump`, not a migration
 runner. Changes are made by hand through the Supabase SQL editor, so these files follow
-the database rather than drive it. Refresh it after a schema change.
+the database rather than drive it. Refresh them after a schema change.
 
 | File | Holds |
 |------|-------|
 | `schema.sql` | Tables, enums, functions, triggers, row-level security policies, grants |
+| `roles.sql` | The `app_driver` and `app_camera` roles |
+| `storage.sql` | The storage buckets, and the grants and policies on them |
 | `migrations/` | One script per change since the last release, with a test and a rollback beside it |
 
 A dump says what the database looks like, not why. `migrations/` holds the script for
@@ -51,11 +53,9 @@ Each release takes a fresh dump and clears `migrations/`, so the dump is the dat
 of that release tag. A script from an earlier release is still in the history at that
 release's tag.
 
-The dump leaves out two things the live project has: the `app_driver` and `app_camera`
-roles, and the storage buckets (`camera-snapshots`, `inspection-photos`) with their
-policies. Restoring into a new project means creating those first, or the policies that
-name the roles fail. Both are in the history at the v1.2.1 tag, as `roles.sql` and
-`storage.sql`.
+Three files, because a schema dump leaves out roles and the storage schema. Restoring
+`schema.sql` alone would recreate policies that name roles nothing had created, so
+`roles.sql` runs first, then `schema.sql`, then `storage.sql`.
 
 ### Refreshing
 
@@ -66,8 +66,11 @@ would have run and run that instead, against a local `pg_dump` of version 17 or 
 npx supabase@latest db dump --project-ref vrtluruqaxutecydbrsq --workdir backend --dry-run
 ```
 
-The printed script carries a freshly minted database password, so keep it out of the
-repository and out of anything shared. Each run mints a new one and retires the last, so
-run a script straight after printing it. One correction is needed: it abbreviates
-`--quote-all-identifiers`, which some builds reject.
+Add `--role-only` for `roles.sql`. The printed script carries a freshly minted database
+password, so keep it out of the repository and out of anything shared. Each run mints a
+new one and retires the last, so run a script straight after printing it. One correction
+is needed: it abbreviates `--quote-all-identifiers`, which some builds reject.
+
+`storage.sql` is kept by hand: the dump cannot see storage, and buckets change rarely.
+Update it in the same change that adds or alters a bucket or a storage policy.
 
