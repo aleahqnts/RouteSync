@@ -124,7 +124,7 @@
                         </svg>
                     </span>
                     <input type="search" id="rqSearch" class="rq-input rq-search-input" autocomplete="off"
-                           placeholder="Search driver, ID or reason" aria-label="Search requests" />
+                           placeholder="Search name, ID or reason" aria-label="Search requests" />
                 </span>
             </div>
 
@@ -140,9 +140,9 @@
             </div>
 
             <div class="rq-filter">
-                <label for="rqDriver">Driver</label>
+                <label for="rqDriver">Filed by</label>
                 <select id="rqDriver" class="rq-input">
-                    <option value="">All drivers</option>
+                    <option value="">Everyone</option>
                     @foreach (var d in driversShown)
                     {
                         <option value="@d.Id">@d.Name</option>
@@ -191,7 +191,7 @@
         <table class="rq-table rs-cards rs-list" data-sort>
             <thead>
                 <tr>
-                    <th>Driver</th>
+                    <th>Filed by</th>
                     <th>Type</th>
                     <th>Start</th>
                     <th>End</th>
@@ -226,13 +226,11 @@
                             data-type="@r.LeaveType"
                             data-find="@($"{r.DriverName} {r.DriverId} {r.LeaveType} {r.Status} {r.Reason}".ToLowerInvariant())">
 
-                            <td data-label="Driver">
+                            @* Drivers and staff both file leave. The name leads; the ID and
+                               the kind of account follow on one quiet line. *@
+                            <td data-label="Filed by" class="rq-c-who">
                                 <span class="rq-driver">@r.DriverName</span>
-                                <span class="rq-driver-id">@r.DriverId</span>
-                                @if (r.IsStaff)
-                                {
-                                    <span class="rq-staff" title="Filed by a member of staff from their profile">Staff</span>
-                                }
+                                <span class="rq-who-meta">@r.DriverId &middot; @(r.IsStaff ? "Staff" : "Driver")</span>
                             </td>
 
                             <td data-label="Type">
@@ -300,7 +298,7 @@
                                     {
                                         @* The server refuses these too. Shown as a note rather
                                            than as buttons that could only fail. *@
-                                        <span class="rq-own">Your request &middot; decided by someone else</span>
+                                        <span class="rq-own" title="Another administrator decides this one">Your request</span>
                                     }
                                     else if (pending)
                                     {
@@ -614,7 +612,7 @@
 
             const all = document.createElement('option');
             all.value = '';
-            all.textContent = 'All drivers';
+            all.textContent = 'Everyone';
             driverSel.appendChild(all);
 
             options.forEach(function (pair) {
@@ -749,7 +747,7 @@
 
         window.rqDecide = function (id, decision) {
             const row = document.querySelector('[data-request="' + id + '"]');
-            const who = row ? row.querySelector('.rq-driver').textContent : 'this driver';
+            const who = row ? row.querySelector('.rq-driver').textContent : 'this person';
             const span = row
                 ? row.querySelector('[data-label="Start"]').textContent.trim()
                     + ' to ' + row.querySelector('[data-label="End"]').textContent.trim()
@@ -1366,7 +1364,7 @@
 
         window.rqWithdrawal = function (id, accept) {
             const row = document.querySelector('[data-request="' + id + '"]');
-            const who = row ? row.querySelector('.rq-driver').textContent : 'this driver';
+            const who = row ? row.querySelector('.rq-driver').textContent : 'this person';
             const chip = row ? row.querySelector('.rq-asked') : null;
             const span = row
                 ? ' · ' + row.querySelector('[data-label="Start"]').textContent.trim()

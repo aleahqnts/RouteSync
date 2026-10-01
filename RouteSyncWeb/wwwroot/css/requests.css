@@ -274,20 +274,14 @@
 
     /* --- Cell contents --------------------------------------------------- */
 
-    .rq-driver { display: block; font-weight: 700; }
-    .rq-driver-id { display: block; font-size: .74rem; color: var(--rq-muted); }
-
-    /* Leave filed by staff from their profile, told apart from a driver's at a glance. */
-    .rq-staff {
-        display: inline-block;
-        margin-top: 3px;
-        padding: 1px 8px;
-        border-radius: 999px;
-        background: #EEF2F9;
-        color: #4A5B7A;
-        font-size: .68rem;
-        font-weight: 700;
-        letter-spacing: .03em;
+    /* Who filed it: the name, then the ID and the kind of account on one quiet line. */
+    .rq-driver { display: block; font-weight: 700; white-space: nowrap; }
+    .rq-who-meta {
+        display: block;
+        margin-top: 2px;
+        font-size: .74rem;
+        color: var(--rq-muted);
+        white-space: nowrap;
     }
 
     /* The reader's own request, in place of the controls they may not use on it. */
@@ -1106,7 +1100,7 @@
             border-bottom: none;
         }
 
-        .rq-table.rs-cards td[data-label="Driver"] { grid-area: driver; }
+        .rq-table.rs-cards td.rq-c-who { grid-area: driver; }
         .rq-table.rs-cards td[data-label="Status"] { grid-area: status; }
         .rq-table.rs-cards td[data-label="Type"] { grid-area: type; }
         .rq-table.rs-cards td[data-label="Reason"] { grid-area: reason; }
@@ -1127,7 +1121,7 @@
 
         /* Only the small print is named. Everything above it says what it is by the
            way it is written: a name, a badge, a date, a sentence. */
-        .rq-table.rs-cards td[data-label="Driver"]::before,
+        .rq-table.rs-cards td.rq-c-who::before,
         .rq-table.rs-cards td[data-label="Status"]::before,
         .rq-table.rs-cards td[data-label="Type"]::before,
         .rq-table.rs-cards td[data-label="Reason"]::before,
@@ -1135,26 +1129,22 @@
             content: none;
         }
 
-        /* The name leads, and the identifier sits beside it rather than under it. A
-           long name is cut short rather than broken over two lines, which pushed the
-           badge beside it out of line and left every card a different height. */
-        .rq-table.rs-cards td[data-label="Driver"] {
-            justify-content: flex-start;
-            gap: 8px;
+        /* The name leads, with the ID and kind of account under it, beside the status.
+           A long name is cut short rather than broken over two lines, so every card's
+           first row is the same height. */
+        .rq-table.rs-cards td.rq-c-who {
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 0;
             text-align: left;
         }
 
-            .rq-table.rs-cards td[data-label="Driver"] .rq-driver {
-                display: inline;
-                min-width: 0;
+            .rq-table.rs-cards td.rq-c-who .rq-driver {
+                max-width: 100%;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-            }
-
-            .rq-table.rs-cards td[data-label="Driver"] .rq-driver-id {
-                display: inline;
-                flex: 0 0 auto;
             }
 
         .rq-table.rs-cards td[data-label="Status"] { justify-content: flex-end; }
@@ -1200,6 +1190,7 @@
             .rq-table.rs-cards td.rq-c-balance::before {
                 font-size: .74rem;
                 font-weight: 500;
+                white-space: nowrap;
             }
 
         .rq-table.rs-cards td[data-label="Actions"] { margin-top: 6px; }
@@ -1218,6 +1209,22 @@
         .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) {
             margin-top: 0;
         }
+
+        /* The reader's own request carries a note as well as History, too much to share
+           the allowance line. They take a line of their own: the note at the start, the
+           button at the end. */
+        .rq-table.rs-cards tbody tr[data-request]:has(.rq-own) {
+            grid-template-areas:
+                "driver  status"
+                "type    type"
+                "reason  reason"
+                "balance balance"
+                "actions actions";
+        }
+
+            .rq-table.rs-cards tbody tr[data-request]:has(.rq-own) .rq-actions {
+                justify-content: space-between;
+            }
 
             .rq-table.rs-cards td[data-label="Actions"]:not(:has(.rq-btn--approve)) .rq-actions {
                 justify-content: flex-end;
