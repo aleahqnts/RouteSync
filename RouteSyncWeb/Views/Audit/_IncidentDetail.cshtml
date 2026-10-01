@@ -10,17 +10,17 @@
     var why = i.Rule switch
     {
         "failed_signins_address" =>
-            "Ten or more failed sign-ins from one address within fifteen minutes. Many drivers can share one address on mobile data, so check whether the attempts name one account or many.",
+            "10 or more failed sign-ins from this address within 15 minutes. Check whether one account or several were tried.",
         "failed_signins_account" =>
-            "More failed sign-ins against this account than the sign-in lock allows in an hour, or twenty within a day. Somebody may be spacing out guesses to stay under the lock.",
+            "Failed sign-ins on this account passed the hourly lock limit, or reached 20 in a day. Possible slow password guessing.",
         "signin_after_failures" =>
-            "Three or more failed sign-ins for this account, then a successful one within the hour. Compare the addresses: a success from somewhere the failures did not come from, or that the owner does not use, may mean the password was guessed.",
+            "3 or more failed sign-ins, then a successful one within an hour. A success from an unfamiliar address may mean the password is compromised.",
         "pages_refused" =>
-            "This user was turned away from pages their role cannot open ten or more times within ten minutes.",
+            "10 or more attempts to open pages outside this user's role within 10 minutes.",
         "counter_refused" =>
-            "A counter phone was refused its passcode five or more times within fifteen minutes. Usually a phone set up with the wrong passcode; otherwise, somebody guessing it.",
+            "5 or more wrong counter passcodes within 15 minutes. Usually a misconfigured phone; otherwise possible guessing.",
         "reset_codes_failing" =>
-            "Five or more wrong or already used password reset codes for this account within an hour.",
+            "5 or more invalid or used password reset codes on this account within an hour.",
         _ => "",
     };
 
@@ -60,7 +60,7 @@
                     <tr>
                         <th style="width:150px">When</th>
                         <th style="width:130px">Address</th>
-                        <th>What happened</th>
+                        <th>Event</th>
                         <th style="width:90px">Result</th>
                     </tr>
                 </thead>
@@ -70,8 +70,8 @@
                         <tr>
                             <td class="au-when">@When(e.OccurredAt)</td>
                             <td class="si-ip">@(e.Ip ?? "Not recorded")</td>
-                            <td>@(e.Summary ?? e.Action)</td>
-                            <td>
+                            <td class="si-event">@(e.Summary ?? e.Action)</td>
+                            <td class="si-result">
                                 <span class="au-pill @(e.Outcome == "denied" ? "au-pill--denied" : "au-pill--ok")">
                                     @(e.Outcome == "denied" ? "Refused" : "Allowed")
                                 </span>
@@ -84,13 +84,12 @@
 
         @if (entries.Count < i.EventCount)
         {
-            <p class="si-note">Showing the first @entries.Count of @i.EventCount entries.</p>
+            <p class="si-note">First @entries.Count of @i.EventCount entries.</p>
         }
     }
 
     <p class="si-note">
-        <a href="@Model.SearchUrl">Search the audit log around this</a>.
-        A wider search by text, so it can include entries that are not part of this incident.
+        <a href="@Model.SearchUrl">Search the audit log around this time</a>
     </p>
 </div>
 
@@ -108,7 +107,7 @@
     else if (!row.CanReview)
     {
         <p class="si-reviewed-note">
-            This incident is about your own account, so somebody else has to review it.
+            This incident concerns your account. Another administrator must review it.
         </p>
     }
     else
@@ -123,13 +122,13 @@
             @if (i.ReviewedAt is not null)
             {
                 <p class="si-reviewed-note">
-                    Reviewed by @i.ReviewedBy on @When(i.ReviewedAt.Value), and has had new activity since.
+                    Reviewed by @i.ReviewedBy on @When(i.ReviewedAt.Value). New activity since.
                 </p>
             }
 
             <label for="siNote" class="si-note-label">Note (optional)</label>
             <textarea id="siNote" name="note" maxlength="500" rows="2" class="au-input si-note-input"
-                      placeholder="What you checked, or what you did about it"></textarea>
+                      placeholder="What was checked or done"></textarea>
 
             <div class="si-review-actions">
                 <button type="button" class="au-btn au-btn--outline" data-bs-dismiss="modal">Close</button>

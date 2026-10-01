@@ -929,4 +929,25 @@
     .si-table tbody tr.si-row td:nth-child(5) { grid-column: 1 / -1; grid-row: 4; }
 
     .si-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* The entries behind an incident, as a stacked list instead of a table wider than
+       the screen: when and the result on top, the event, then the address. */
+    .si-entries-wrap { overflow-x: visible; }
+
+    .si-entries thead { display: none; }
+
+    .si-entries tbody tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 2px 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--au-border);
+    }
+
+    .si-entries tbody td { display: block; padding: 0; border: none; min-width: 0; }
+
+    .si-entries .au-when { grid-column: 1; grid-row: 1; font-weight: 600; }
+    .si-entries .si-result { grid-column: 2; grid-row: 1; }
+    .si-entries .si-event { grid-column: 1 / -1; grid-row: 2; overflow-wrap: anywhere; }
+    .si-entries .si-ip { grid-column: 1 / -1; grid-row: 3; color: var(--au-muted); }
 }
