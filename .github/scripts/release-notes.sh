@@ -44,8 +44,8 @@ echo
 if git show "$tag:RouteSyncMobile/FleetWiseMobile.csproj" 2>/dev/null | grep -q SetVersionFromTag; then
   echo "## Phone apps"
   echo
-  echo "Install the driver app and the camera app from the APKs attached below. Both carry"
-  echo "version code $(( major * 10000 + minor * 100 + patch )), so a phone accepts them as an update to the release before."
+  echo "Install the driver app and the camera app from the APKs attached below. Both are"
+  echo "version $major.$minor.$patch and install over an earlier version without uninstalling it."
   echo
 fi
 
