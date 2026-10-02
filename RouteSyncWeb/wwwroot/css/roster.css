@@ -1,12 +1,12 @@
 /* Roster/Index.cshtml */
     :root {
         --ro-teal: #4AADA8;
-        --ro-text: light-dark(#2D3748, #C1C9D6);
-        --ro-muted: light-dark(#9AA5B4, #9099A5);
-        --ro-soft: light-dark(#5A6473, #AFB7C4);
-        --ro-border: light-dark(#E8ECF0, #484E56);
-        --ro-bg: light-dark(#F8F9FA, #2D343B);
-        --ro-white: light-dark(#FFFFFF, #30363E);
+        --ro-text: light-dark(#2D3748, #DEE1E7);
+        --ro-muted: light-dark(#9AA5B4, #A1A5A9);
+        --ro-soft: light-dark(#5A6473, #C0C3C9);
+        --ro-border: light-dark(#E8ECF0, #434343);
+        --ro-bg: light-dark(#F8F9FA, #2D2D2D);
+        --ro-white: light-dark(#FFFFFF, #2F2F2F);
         --ro-red: #E53E3E;
         --ro-amber: #B7791F;
     }
@@ -38,7 +38,7 @@
     .ro-title {
         margin: 0;
         font-size: 1.6rem;
-        color: light-dark(#1a2a4a, #C4CCD9);
+        color: light-dark(#1a2a4a, #E1E4E9);
     }
 
     /* The month, set like the planner's week beside its heading. */
@@ -46,7 +46,7 @@
         margin-left: auto;
         font-size: .95rem;
         font-weight: 700;
-        color: light-dark(#1a2a4a, #C4CCD9);
+        color: light-dark(#1a2a4a, #E1E4E9);
     }
 
     .ro-chip {
@@ -56,9 +56,9 @@
         font-weight: 700;
     }
 
-    .ro-chip--none { background: light-dark(#EEF1F5, #2B3139); color: light-dark(#6B7280, #A9B0BD); }
-    .ro-chip--draft { background: light-dark(#FEF9E7, #4B452E); color: light-dark(#7A6412, #CDB66C); }
-    .ro-chip--published { background: light-dark(#E6F4F3, #324A49); color: light-dark(#2E7D72, #7CC8BC); }
+    .ro-chip--none { background: light-dark(#EEF1F5, #2A2A2A); color: light-dark(#6B7280, #B9BCC1); }
+    .ro-chip--draft { background: light-dark(#FEF9E7, #433D27); color: light-dark(#7A6412, #D4BC72); }
+    .ro-chip--published { background: light-dark(#E6F4F3, #2A4241); color: light-dark(#2E7D72, #82CFC2); }
 
     .ro-saved {
         font-size: .78rem;
@@ -164,18 +164,18 @@
     .ro-banner[hidden] { display: none; }
 
     .ro-banner--moved {
-        border: 1px solid light-dark(#F3C4C4, #745050);
-        background: light-dark(#FDECEC, #543F3F);
-        color: light-dark(#9B2C2C, #FB9890);
+        border: 1px solid light-dark(#F3C4C4, #6C4748);
+        background: light-dark(#FDECEC, #4C3737);
+        color: light-dark(#9B2C2C, #FFA099);
     }
 
     .ro-problems {
         margin: 0 0 14px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#F3C4C4, #745050);
+        border: 1px solid light-dark(#F3C4C4, #6C4748);
         border-radius: 10px;
-        background: light-dark(#FDECEC, #543F3F);
-        color: light-dark(#9B2C2C, #FB9890);
+        background: light-dark(#FDECEC, #4C3737);
+        color: light-dark(#9B2C2C, #FFA099);
         font-size: .84rem;
     }
 
@@ -186,10 +186,10 @@
     .ro-wouldleave {
         margin: 0 0 14px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#E6D6A8, #655A3A);
+        border: 1px solid light-dark(#E6D6A8, #5D5232);
         border-radius: 10px;
-        background: light-dark(#FEF9E7, #4B452E);
-        color: light-dark(#7A6412, #CDB66C);
+        background: light-dark(#FEF9E7, #433D27);
+        color: light-dark(#7A6412, #D4BC72);
         font-size: .84rem;
     }
 
@@ -227,10 +227,10 @@
         z-index: 3;
         margin: -16px -18px 0;
         padding: 12px 18px;
-        border-bottom: 1px solid light-dark(#CDE9E4, #48615D);
+        border-bottom: 1px solid light-dark(#CDE9E4, #405854);
         border-radius: 13px 13px 0 0;
-        background: var(--fw-teal-light, light-dark(#E8F6F5, #324A49));
-        color: light-dark(#1a2a4a, #C4CCD9);
+        background: var(--fw-teal-light, light-dark(#E8F6F5, #2A4241));
+        color: light-dark(#1a2a4a, #E1E4E9);
         box-shadow: 0 2px 6px light-dark(rgba(13, 28, 40, .08), rgba(0, 0, 0, .152));
     }
 
@@ -298,22 +298,22 @@
     .ro-day {
         padding: 2px 8px;
         border-radius: 999px;
-        background: light-dark(#E6F4F3, #324A49);
-        color: light-dark(#2E7D72, #7CC8BC);
+        background: light-dark(#E6F4F3, #2A4241);
+        color: light-dark(#2E7D72, #82CFC2);
         font-size: .74rem;
         font-weight: 600;
         white-space: nowrap;
     }
 
-    .ro-day--short { background: light-dark(#FDECEC, #543F3F); color: var(--ro-red); }
+    .ro-day--short { background: light-dark(#FDECEC, #4C3737); color: var(--ro-red); }
 
     .ro-short {
         margin: 10px 0 0;
         padding: 8px 12px;
-        border: 1px solid light-dark(#E6D6A8, #655A3A);
+        border: 1px solid light-dark(#E6D6A8, #5D5232);
         border-radius: 8px;
-        background: light-dark(#FEF9E7, #4B452E);
-        color: light-dark(#7A6412, #CDB66C);
+        background: light-dark(#FEF9E7, #433D27);
+        color: light-dark(#7A6412, #D4BC72);
         font-size: .82rem;
     }
 
@@ -368,8 +368,8 @@
     /* A place auto-fill filled or emptied, until a person changes it or the roster is published. */
     .ro-suggested {
         border-radius: 8px;
-        box-shadow: 0 0 0 4px light-dark(#EAF6F5, #464D55);
-        background: light-dark(#EAF6F5, #324A49);
+        box-shadow: 0 0 0 4px light-dark(#EAF6F5, #414141);
+        background: light-dark(#EAF6F5, #2A4241);
     }
 
     /* The mark on a place auto-fill chose. Opens See changes at its line. */
@@ -379,10 +379,10 @@
         align-items: center;
         min-height: 24px;
         padding: 1px 9px;
-        border: 1px solid light-dark(#B7DDD9, #40625F);
+        border: 1px solid light-dark(#B7DDD9, #385A57);
         border-radius: 999px;
         background: var(--ro-white);
-        color: light-dark(#2E7D72, #7CC8BC);
+        color: light-dark(#2E7D72, #82CFC2);
         font: inherit;
         font-size: .7rem;
         font-weight: 700;
@@ -429,14 +429,14 @@
             padding: 3px 10px;
             border: 1px solid transparent;
             border-radius: 999px;
-            background: light-dark(#EEF1F5, #2B3139);
+            background: light-dark(#EEF1F5, #2A2A2A);
             color: var(--ro-text);
             font: inherit;
             font-size: .8rem;
             cursor: pointer;
         }
 
-            .ro-unplaced-chip:hover:not(:disabled) { border-color: light-dark(#C9D1DE, #4D545C); }
+            .ro-unplaced-chip:hover:not(:disabled) { border-color: light-dark(#C9D1DE, #484848); }
             .ro-unplaced-chip:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 2px; }
             .ro-unplaced-chip:disabled { cursor: default; }
 
@@ -453,7 +453,7 @@
         margin-left: 6px;
         padding: 1px 8px;
         border-radius: 999px;
-        background: light-dark(#FDECEC, #543F3F);
+        background: light-dark(#FDECEC, #4C3737);
         color: var(--ro-red);
         font-size: .75rem;
         vertical-align: middle;
@@ -502,7 +502,7 @@
         margin: 12px 0 0;
         padding: 8px 12px;
         border-radius: 8px;
-        background: light-dark(#FDECEC, #543F3F);
+        background: light-dark(#FDECEC, #4C3737);
         color: var(--ro-red);
         font-size: .82rem;
     }
@@ -547,7 +547,7 @@
         .ro-change:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: -2px; }
 
     /* The line a mark was pressed to see. */
-    .ro-change--here { background: light-dark(#EAF6F5, #324A49); }
+    .ro-change--here { background: light-dark(#EAF6F5, #2A4241); }
 
     .ro-change--none {
         font-size: .85rem;
@@ -572,7 +572,7 @@
         cursor: pointer;
     }
 
-        .ro-change-main:hover { background: light-dark(#F4F8FB, #2D333B); }
+        .ro-change-main:hover { background: light-dark(#F4F8FB, #2C2C2C); }
         .ro-change-main:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 0; }
 
     /* The place a line was pressed to find, lit where it stands on the roster for a moment. */
@@ -603,7 +603,7 @@
     .ro-change-why {
         font-size: .8rem;
         line-height: 1.4;
-        color: light-dark(#5F6F85, #A9B2BE);
+        color: light-dark(#5F6F85, #BBBEC3);
     }
 
     .ro-change-clear { flex: 0 0 auto; }
@@ -629,8 +629,8 @@
         min-width: 18px;
         padding: 0 6px;
         border-radius: 999px;
-        background: light-dark(#EAF6F5, #324A49);
-        color: light-dark(#2E7D72, #7CC8BC);
+        background: light-dark(#EAF6F5, #2A4241);
+        color: light-dark(#2E7D72, #82CFC2);
         font-size: .72rem;
         font-weight: 700;
         line-height: 18px;
@@ -658,7 +658,7 @@
         margin: 10px 0 0;
         font-size: .82rem;
         line-height: 1.4;
-        color: light-dark(#94560A, #EBA767);
+        color: light-dark(#94560A, #F2AD6E);
     }
 
         .ro-fill-cost i { flex: none; margin-top: 2px; }
@@ -696,7 +696,7 @@
 
     .ro-box-grab {
         margin-left: auto;
-        color: light-dark(#B6C2CF, #838D98);
+        color: light-dark(#B6C2CF, #94989D);
         font-size: 1.1rem;
         letter-spacing: -3px;
         line-height: 1;

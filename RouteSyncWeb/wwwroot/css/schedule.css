@@ -15,18 +15,18 @@
 
     /* Spaced the way every other board spaces its heading. The face, the capitals and the
        weight come from the shared rule in site.css. */
-    .sch-title { font-size:1.6rem; font-weight:700; color:light-dark(#1a2a4a, #C4CCD9); font-family:'Segoe UI', sans-serif; margin:0; }
+    .sch-title { font-size:1.6rem; font-weight:700; color:light-dark(#1a2a4a, #E1E4E9); font-family:'Segoe UI', sans-serif; margin:0; }
 
     .sch-toolbar { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:10px; }
     .sch-week-nav { display:flex; align-items:center; gap:10px; }
 
     /* No width held in reserve. Sitting beside the heading it has the row to itself, and
        the toolbar is free to fit its controls to the window. */
-    .sch-week-label { margin-left:auto; font-weight:700; color:light-dark(#1a2a4a, #C4CCD9); font-size:.95rem; }
-    .sch-pick { display:flex; align-items:center; gap:8px; font-size:.85rem; color:light-dark(#4A5568, #BAC1CE); }
-    .sch-pick input[type=date] { padding:7px 10px; border:1.5px solid light-dark(#E2E8F0, #484F57); border-radius:8px; font-size:.85rem; }
-    .sch-btn-ghost { padding:7px 14px; border:1.5px solid light-dark(#E2E8F0, #484F57); border-radius:8px; background:light-dark(#fff, #30363E); color:light-dark(#2D3748, #C1C9D6); font-weight:600; font-size:.85rem; cursor:pointer; text-decoration:none; }
-    .sch-btn-ghost:hover { border-color:#4AADA8; color:light-dark(#4AADA8, #69CAC5); }
+    .sch-week-label { margin-left:auto; font-weight:700; color:light-dark(#1a2a4a, #E1E4E9); font-size:.95rem; }
+    .sch-pick { display:flex; align-items:center; gap:8px; font-size:.85rem; color:light-dark(#4A5568, #D9DCE1); }
+    .sch-pick input[type=date] { padding:7px 10px; border:1.5px solid light-dark(#E2E8F0, #444444); border-radius:8px; font-size:.85rem; }
+    .sch-btn-ghost { padding:7px 14px; border:1.5px solid light-dark(#E2E8F0, #444444); border-radius:8px; background:light-dark(#fff, #2F2F2F); color:light-dark(#2D3748, #DEE1E7); font-weight:600; font-size:.85rem; cursor:pointer; text-decoration:none; }
+    .sch-btn-ghost:hover { border-color:#4AADA8; color:light-dark(#4AADA8, #70D1CC); }
 
     /* The way to the Roster page, carrying what the roster needs from a person. */
     .sch-roster-link { display:inline-flex; align-items:center; gap:7px; }
@@ -36,7 +36,7 @@
     .sch-btn-save { margin-left:auto; padding:9px 22px; border:none; border-radius:9px; background:#4AADA8; color:#fff; font-weight:700; font-size:.88rem; cursor:pointer; }
     .sch-btn-save:hover { background:#3d9490; }
     .sch-btn-save:disabled { background:#9AA5B4; cursor:not-allowed; }
-    .sch-hint { font-size:.8rem; color:light-dark(#9AA5B4, #9099A5); margin:0 0 18px; }
+    .sch-hint { font-size:.8rem; color:light-dark(#9AA5B4, #A1A5A9); margin:0 0 18px; }
 
     /* Which days a roster covers, and what editing them means. Kept on a phone, unlike
        the hint above: it is about this week, not about how the page works. */
@@ -45,7 +45,7 @@
        heading held inside one is held against that box rather than against the page, which
        is the whole of what makes it stick. The corners it was rounding are rounded by the
        two children instead. */
-    .sch-card { background:light-dark(#fff, #30363E); border:1px solid light-dark(#E8ECF0, #484E56); border-radius:14px; margin-bottom:20px; }
+    .sch-card { background:light-dark(#fff, #2F2F2F); border:1px solid light-dark(#E8ECF0, #434343); border-radius:14px; margin-bottom:20px; }
 
     /* Each route's name stays while its own shifts are read, and is pushed off by the next
        route's as that card arrives. Nothing here counts the routes or names them, so a
@@ -63,9 +63,9 @@
 
            The suite's own teal, not a colour brought in for this. A dark slab separates
            just as well and belongs to nothing else on the page. */
-        background: var(--fw-teal-light, light-dark(#E8F6F5, #324A49));
-        border-bottom: 1px solid light-dark(#CDE9E4, #48615D);
-        color: light-dark(#1a2a4a, #C4CCD9);
+        background: var(--fw-teal-light, light-dark(#E8F6F5, #2A4241));
+        border-bottom: 1px solid light-dark(#CDE9E4, #405854);
+        color: light-dark(#1a2a4a, #E1E4E9);
         font-weight: 700;
         letter-spacing: .01em;
         /* Reads as a divider at rest and as a lift once it is holding. */
@@ -107,50 +107,50 @@
         border-bottom-right-radius: 13px;
     }
     .sch-table { width:100%; border-collapse:collapse; min-width:900px; }
-    .sch-table th, .sch-table td { border:1px solid light-dark(#EEF1F4, #464D55); padding:8px; text-align:center; vertical-align:top; }
-    .sch-table thead th { background:light-dark(#FBFCFD, #2E353C); font-size:.78rem; color:light-dark(#4A5568, #BAC1CE); }
-    .sch-shift-body { border-top:2px solid light-dark(#E8ECF0, #484E56); }
-    .sch-day-name { font-weight:700; color:light-dark(#2D3748, #C1C9D6); }
-    .sch-day-num { font-size:.72rem; color:light-dark(#9AA5B4, #9099A5); }
-    .sch-today { background:light-dark(#EAF7F5, #324A47) !important; }
+    .sch-table th, .sch-table td { border:1px solid light-dark(#EEF1F4, #424242); padding:8px; text-align:center; vertical-align:top; }
+    .sch-table thead th { background:light-dark(#FBFCFD, #2E2E2E); font-size:.78rem; color:light-dark(#4A5568, #D9DCE1); }
+    .sch-shift-body { border-top:2px solid light-dark(#E8ECF0, #434343); }
+    .sch-day-name { font-weight:700; color:light-dark(#2D3748, #DEE1E7); }
+    .sch-day-num { font-size:.72rem; color:light-dark(#9AA5B4, #A1A5A9); }
+    .sch-today { background:light-dark(#EAF7F5, #2B423F) !important; }
     /* Above the conflict figures, which are drawn on the cells and would otherwise pass
        over the top of this column as the grid is scrolled sideways: both stood at the same
        level, and the figures come later in the row, so they won. */
-    .sch-shift-col { background:light-dark(#FBFCFD, #2E353C); font-weight:700; color:light-dark(#2D3748, #C1C9D6); font-size:.82rem; text-align:left; width:104px; position:sticky; left:0; z-index:4; vertical-align:middle; }
+    .sch-shift-col { background:light-dark(#FBFCFD, #2E2E2E); font-weight:700; color:light-dark(#2D3748, #DEE1E7); font-size:.82rem; text-align:left; width:104px; position:sticky; left:0; z-index:4; vertical-align:middle; }
     .sch-shift-name { margin-bottom:8px; }
-    .sch-add-bus { display:inline-block; padding:4px 9px; border:1px dashed light-dark(#B7D9D5, #43625E); border-radius:7px; background:light-dark(#F2FAF9, #2D343B); color:light-dark(#3d9490, #74C9C4); font-size:.72rem; font-weight:700; cursor:pointer; }
-    .sch-add-bus:hover { background:light-dark(#E4F3F1, #324A48); border-color:#4AADA8; }
+    .sch-add-bus { display:inline-block; padding:4px 9px; border:1px dashed light-dark(#B7D9D5, #3B5956); border-radius:7px; background:light-dark(#F2FAF9, #2D2D2D); color:light-dark(#3d9490, #7ACFCA); font-size:.72rem; font-weight:700; cursor:pointer; }
+    .sch-add-bus:hover { background:light-dark(#E4F3F1, #2A4240); border-color:#4AADA8; }
     .sch-cell-td { min-width:120px; }
     .sch-cell { display:flex; flex-direction:column; gap:5px; position:relative; }
-    .sch-sel { width:100%; padding:6px 8px; border:1.5px solid light-dark(#E2E8F0, #484F57); border-radius:7px; font-size:.78rem; color:light-dark(#2D3748, #C1C9D6); background:light-dark(#fff, #30363E); cursor:pointer; }
+    .sch-sel { width:100%; padding:6px 8px; border:1.5px solid light-dark(#E2E8F0, #444444); border-radius:7px; font-size:.78rem; color:light-dark(#2D3748, #DEE1E7); background:light-dark(#fff, #2F2F2F); cursor:pointer; }
     .sch-sel:focus { outline:none; border-color:#4AADA8; }
     .sch-cell.sch-dirty .sch-sel { border-color:#4AADA8; }
 
     /* A bus the roster runs on this shift and day with nobody on it: an empty lane of its own,
        dashed and amber because it is still a hole. Kept above the away and conflict rules, so
        those still read on a cell that is also a gap. */
-    .sch-cell.sch-cell--gap .sch-sel { border-style:dashed; border-color:light-dark(#E0A84E, #6B573A); background:light-dark(#FFF8EC, #4D4433); }
-    .sch-cell.sch-cell--gap .sch-veh { color:light-dark(#94560A, #EBA767); font-weight:700; }
-    .sch-cell.sch-cell--gap { --rs-pick-bg:light-dark(#FFF8EC, #4D4433); }
+    .sch-cell.sch-cell--gap .sch-sel { border-style:dashed; border-color:light-dark(#E0A84E, #624F32); background:light-dark(#FFF8EC, #453C2B); }
+    .sch-cell.sch-cell--gap .sch-veh { color:light-dark(#94560A, #F2AD6E); font-weight:700; }
+    .sch-cell.sch-cell--gap { --rs-pick-bg:light-dark(#FFF8EC, #453C2B); }
 
     /* Suggest on a gap lane, and the ranked drivers it opens beside the cell. */
-    .sch-suggest { align-self:flex-start; min-height:24px; padding:2px 0; border:0; background:none; font-size:.74rem; font-weight:600; color:light-dark(#2e7d72, #7CC8BC); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+    .sch-suggest { align-self:flex-start; min-height:24px; padding:2px 0; border:0; background:none; font-size:.74rem; font-weight:600; color:light-dark(#2e7d72, #82CFC2); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
     .sch-suggest[hidden] { display:none; }
-    .sch-suggest:hover { color:light-dark(#1f5e56, #B4C6C3); }
+    .sch-suggest:hover { color:light-dark(#1f5e56, #D7DEDC); }
     .sch-suggest:focus-visible { outline:2px solid #4AADA8; outline-offset:2px; }
 
-    .sch-suggest-pop { position:fixed; z-index:2100; flex-direction:column; min-height:0; background:light-dark(#fff, #30363E); border:1px solid light-dark(#E2E8F0, #484F57); border-radius:12px; box-shadow:0 12px 36px light-dark(rgba(13,28,40,.22), rgba(0, 0, 0, .348)); overflow:hidden; }
+    .sch-suggest-pop { position:fixed; z-index:2100; flex-direction:column; min-height:0; background:light-dark(#fff, #2F2F2F); border:1px solid light-dark(#E2E8F0, #444444); border-radius:12px; box-shadow:0 12px 36px light-dark(rgba(13,28,40,.22), rgba(0, 0, 0, .348)); overflow:hidden; }
     .sch-suggest-head { padding:14px 16px 4px; }
-    .sch-suggest-title { margin:0; font-size:.95rem; font-weight:700; color:light-dark(#1a2a4a, #C4CCD9); }
-    .sch-suggest-slot { margin:2px 0 0; font-size:.8rem; color:light-dark(#5F6F85, #A9B2BE); }
-    .sch-suggest-why { margin:4px 0 0; font-size:.78rem; line-height:1.4; color:light-dark(#94560A, #EBA767); }
+    .sch-suggest-title { margin:0; font-size:.95rem; font-weight:700; color:light-dark(#1a2a4a, #E1E4E9); }
+    .sch-suggest-slot { margin:2px 0 0; font-size:.8rem; color:light-dark(#5F6F85, #BBBEC3); }
+    .sch-suggest-why { margin:4px 0 0; font-size:.78rem; line-height:1.4; color:light-dark(#94560A, #F2AD6E); }
     .sch-suggest-why[hidden] { display:none; }
     .sch-suggest-body { flex:1 1 auto; min-height:0; overflow-y:auto; padding:6px 16px 4px; }
-    .sch-suggest-wait { margin:6px 0; font-size:.82rem; color:light-dark(#5F6F85, #A9B2BE); }
+    .sch-suggest-wait { margin:6px 0; font-size:.82rem; color:light-dark(#5F6F85, #BBBEC3); }
     .sch-suggest-wait[hidden] { display:none; }
-    .sch-suggest-cost { display:flex; align-items:flex-start; gap:6px; margin:4px 16px 0; font-size:.8rem; line-height:1.4; color:light-dark(#94560A, #EBA767); }
+    .sch-suggest-cost { display:flex; align-items:flex-start; gap:6px; margin:4px 16px 0; font-size:.8rem; line-height:1.4; color:light-dark(#94560A, #F2AD6E); }
     .sch-suggest-cost i { flex:none; margin-top:2px; }
-    .sch-suggest-error { margin:4px 16px 0; font-size:.8rem; color:light-dark(#C0392B, #FB998A); }
+    .sch-suggest-error { margin:4px 16px 0; font-size:.8rem; color:light-dark(#C0392B, #FFA192); }
     .sch-suggest-cost[hidden], .sch-suggest-error[hidden] { display:none; }
     .sch-suggest-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px 14px; }
     .sch-suggest-use { border:none; border-radius:8px; padding:7px 18px; font-size:.85rem; font-weight:700; color:#fff; background:#4AADA8; cursor:pointer; }
@@ -160,15 +160,15 @@
 
     /* Set on the wrapper, so the face laid over the closed control inherits the type the
        control itself is set in. */
-    .sch-cell .rs-pick { font-size:.78rem; color:light-dark(#2D3748, #C1C9D6); }
+    .sch-cell .rs-pick { font-size:.78rem; color:light-dark(#2D3748, #DEE1E7); }
 
     /* A driver away on the day this cell sits in. The list itself says which, and this
        is what finds the cell in a week of them. Kept above the conflict rule, so a cell
        reported on save still reads as one. */
-    .sch-cell.sch-away .sch-drv { border-color:#D69E2E; background:light-dark(#FFFAF0, #4D4433); }
-    .sch-cell.sch-away { --rs-pick-bg:light-dark(#FFFAF0, #4D4433); }
-    .sch-cell.sch-conflict .sch-sel { border-color:#E74C3C; background:light-dark(#FEECEC, #543F3F); }
-    .sch-cell.sch-conflict { --rs-pick-bg:light-dark(#FEECEC, #543F3F); }
+    .sch-cell.sch-away .sch-drv { border-color:#D69E2E; background:light-dark(#FFFAF0, #443C2B); }
+    .sch-cell.sch-away { --rs-pick-bg:light-dark(#FFFAF0, #443C2B); }
+    .sch-cell.sch-conflict .sch-sel { border-color:#E74C3C; background:light-dark(#FEECEC, #4C3737); }
+    .sch-cell.sch-conflict { --rs-pick-bg:light-dark(#FEECEC, #4C3737); }
 
     /* An edit that has not been written yet.
      *
@@ -185,13 +185,13 @@
         height: 9px;
         border-radius: 50%;
         background: #4AADA8;
-        box-shadow: 0 0 0 2px light-dark(#fff, #30363E);
+        box-shadow: 0 0 0 2px light-dark(#fff, #2F2F2F);
     }
 
     .sch-cell.sch-dirty--found::before { transform: scale(1.6); }
     .sch-locked { display:flex; flex-direction:column; gap:4px; align-items:center; padding:6px; }
-    .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:light-dark(#F0F2F5, #2B3239); color:light-dark(#6B7C93, #A3ACB8); }
-    .sch-lock-txt { font-size:.72rem; color:light-dark(#6B7C93, #A3ACB8); }
+    .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:light-dark(#F0F2F5, #2B2B2B); color:light-dark(#6B7C93, #B4B8BD); }
+    .sch-lock-txt { font-size:.72rem; color:light-dark(#6B7C93, #B4B8BD); }
 
     /* A slot on a shift that finished with nothing rostered on it. Held apart from a blank
        cell that can still be filled, which is drawn with pickers, and quieter than a slot
@@ -205,8 +205,8 @@
         margin-left:auto;
         font-size:.82rem;
         font-weight:600;
-        color:light-dark(#6B7C93, #A3ACB8);
-        background:light-dark(#F0F2F5, #2B3239);
+        color:light-dark(#6B7C93, #B4B8BD);
+        background:light-dark(#F0F2F5, #2B2B2B);
         border-radius:8px;
         padding:8px 14px;
     }
@@ -271,21 +271,21 @@
         .sch-modal-overlay--free .sch-modal-grab {
             display: block;
             margin-left: auto;
-            color: light-dark(#B6C2CF, #838D98);
+            color: light-dark(#B6C2CF, #94989D);
             font-size: 1.1rem;
             letter-spacing: -3px;
             line-height: 1;
         }
     }
-    .sch-modal { background:light-dark(#fff, #30363E); border-radius:16px; width:100%; max-width:440px; padding:24px; box-shadow:0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .432)); }
+    .sch-modal { background:light-dark(#fff, #2F2F2F); border-radius:16px; width:100%; max-width:440px; padding:24px; box-shadow:0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .432)); }
     .sch-modal-head { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
-    .sch-modal-ico { font-size:1.4rem; color:light-dark(#E74C3C, #FB998A); }
-    .sch-modal-head h3 { margin:0; font-size:1.1rem; color:light-dark(#1a2a4a, #C4CCD9); font-weight:800; }
-    .sch-modal-sub { margin:0 0 12px; font-size:.85rem; color:light-dark(#6B7C93, #A3ACB8); }
+    .sch-modal-ico { font-size:1.4rem; color:light-dark(#E74C3C, #FFA193); }
+    .sch-modal-head h3 { margin:0; font-size:1.1rem; color:light-dark(#1a2a4a, #E1E4E9); font-weight:800; }
+    .sch-modal-sub { margin:0 0 12px; font-size:.85rem; color:light-dark(#6B7C93, #B4B8BD); }
     /* Numbered rather than bulleted, and the figure is drawn rather than counted by the
        list, so the same one can be printed on the cells the line is about. */
     .sch-modal-list { margin:0 0 18px; padding:0; list-style:none; display:flex; flex-direction:column; gap:9px; }
-    .sch-modal-list li { display:flex; align-items:flex-start; gap:9px; font-size:.85rem; color:light-dark(#41505e, #B9C4CF); line-height:1.4; }
+    .sch-modal-list li { display:flex; align-items:flex-start; gap:9px; font-size:.85rem; color:light-dark(#41505e, #D9DDE2); line-height:1.4; }
 
     .sch-modal-n {
         flex: 0 0 auto;
@@ -303,7 +303,7 @@
 
     /* A line that has cells to show is worth pressing. */
     .sch-modal-item--go { cursor: pointer; border-radius: 8px; }
-    .sch-modal-item--go:hover { background: light-dark(#FDF3F2, #2C333A); }
+    .sch-modal-item--go:hover { background: light-dark(#FDF3F2, #2C2C2C); }
 
     /* The figures, on the cell. They sit over the corner of the box rather than inside
        it, which would move the selects apart. */
@@ -326,7 +326,7 @@
         font-weight: 700;
         line-height: 18px;
         text-align: center;
-        box-shadow: 0 0 0 2px light-dark(#fff, #30363E);
+        box-shadow: 0 0 0 2px light-dark(#fff, #2F2F2F);
     }
 
     /* Held for a moment after its line is pressed, so the eye lands on it. */
@@ -336,8 +336,8 @@
     .sch-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
     .sch-modal-btn { border:none; border-radius:8px; padding:9px 18px; font-size:.85rem; font-weight:700; color:#fff; background:#E74C3C; cursor:pointer; white-space:nowrap; }
     .sch-modal-btn:hover { background:#cf3d2e; }
-    .sch-modal-btn-override { background:light-dark(#fff, #30363E); color:light-dark(#B7791F, #E8A95C); border:1.5px solid light-dark(#E6B800, #655A3A); }
-    .sch-modal-btn-override:hover { background:light-dark(#FFF8E6, #4D442E); }
+    .sch-modal-btn-override { background:light-dark(#fff, #2F2F2F); color:light-dark(#B7791F, #EFB062); border:1.5px solid light-dark(#E6B800, #5D5232); }
+    .sch-modal-btn-override:hover { background:light-dark(#FFF8E6, #453C26); }
 
     /* The mark that says the panel can be taken hold of. Drawn only where it can be:
        on a phone the panel is the bottom sheet every other dialog is, with nowhere to be
@@ -353,10 +353,10 @@
         gap: 10px;
         margin: 0 0 10px;
         padding: 9px 14px;
-        border: 1px solid light-dark(#E6D6A8, #655A3A);
+        border: 1px solid light-dark(#E6D6A8, #5D5232);
         border-radius: 10px;
-        background: light-dark(#FEF9E7, #4B452E);
-        color: light-dark(#7a6412, #CDB66C);
+        background: light-dark(#FEF9E7, #433D27);
+        color: light-dark(#7a6412, #D4BC72);
         font-size: .84rem;
     }
 
@@ -383,11 +383,11 @@
     /* Both sit at the end of the bar, the finding one before the losing one. */
     .sch-draft-go,
     .sch-draft-drop {
-        border: 1px solid light-dark(#E6D6A8, #655A3A);
+        border: 1px solid light-dark(#E6D6A8, #5D5232);
         border-radius: 8px;
         padding: 5px 12px;
-        background: light-dark(#fff, #30363E);
-        color: light-dark(#7a6412, #CDB66C);
+        background: light-dark(#fff, #2F2F2F);
+        color: light-dark(#7a6412, #D4BC72);
         font-size: .8rem;
         font-weight: 700;
         cursor: pointer;
@@ -397,7 +397,7 @@
     .sch-draft-go { margin-left: auto; }
 
     .sch-draft-go:hover,
-    .sch-draft-drop:hover { background: light-dark(#FFF3D0, #4F4424); }
+    .sch-draft-drop:hover { background: light-dark(#FFF3D0, #473C1C); }
 
     /* Other weeks are links rather than a count, because reaching one is the whole of
        what can be done about it, and each has to be opened to be saved. */
@@ -405,7 +405,7 @@
     .sch-draft-other[hidden] { display: none; }
 
     .sch-draft-other a {
-        color: light-dark(#7a6412, #CDB66C);
+        color: light-dark(#7a6412, #D4BC72);
         font-weight: 700;
         text-decoration: underline;
     }
@@ -413,17 +413,17 @@
     /* The week has moved under the grid. Red rather than amber: the bar above says work
        is waiting to be written, and this one says writing it would take something away. */
     .sch-draft--moved {
-        border-color: light-dark(#F0B4AE, #75504C);
-        background: light-dark(#FEECEC, #543F3F);
-        color: light-dark(#9B2C2C, #FB9890);
+        border-color: light-dark(#F0B4AE, #6C4844);
+        background: light-dark(#FEECEC, #4C3737);
+        color: light-dark(#9B2C2C, #FFA099);
     }
 
     .sch-draft--moved .sch-draft-go {
-        border-color: light-dark(#F0B4AE, #75504C);
-        color: light-dark(#9B2C2C, #FB9890);
+        border-color: light-dark(#F0B4AE, #6C4844);
+        color: light-dark(#9B2C2C, #FFA099);
     }
 
-    .sch-draft--moved .sch-draft-go:hover { background: light-dark(#FDDCD8, #5D3A37); }
+    .sch-draft--moved .sch-draft-go:hover { background: light-dark(#FDDCD8, #55332F); }
 
     .sch-toast {
         position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -433,7 +433,7 @@
         opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
     }
     .sch-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-    .sch-toast-ico { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:light-dark(rgba(255,255,255,.22), rgba(48, 54, 62, .22)); font-size:.8rem; }
+    .sch-toast-ico { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:light-dark(rgba(255,255,255,.22), rgba(47, 47, 47, .22)); font-size:.8rem; }
 
     /* The day picker is only a control on a phone. A wide screen shows the whole
        week, so choosing a day there would hide six columns that already fit. */
@@ -502,17 +502,17 @@
             min-width: 56px;
             min-height: 46px;
             padding: 6px 8px;
-            border: 1.5px solid light-dark(#E2E8F0, #484F57);
+            border: 1.5px solid light-dark(#E2E8F0, #444444);
             border-radius: 10px;
-            background: light-dark(#fff, #30363E);
-            color: light-dark(#2D3748, #C1C9D6);
+            background: light-dark(#fff, #2F2F2F);
+            color: light-dark(#2D3748, #DEE1E7);
             font-family: 'Segoe UI', sans-serif;
         }
 
-        .sch-day-chip--on { border-color: #4AADA8; background: light-dark(#EAF7F5, #324A47); color: light-dark(#26706c, #7FC7C1); }
+        .sch-day-chip--on { border-color: #4AADA8; background: light-dark(#EAF7F5, #2B423F); color: light-dark(#26706c, #86CDC8); }
         .sch-chip-name { font-size: .76rem; font-weight: 700; }
-        .sch-chip-num { font-size: .64rem; color: light-dark(#9AA5B4, #9099A5); }
-        .sch-day-chip--on .sch-chip-num { color: light-dark(#4d8a86, #9CAEAC); }
+        .sch-chip-num { font-size: .64rem; color: light-dark(#9AA5B4, #A1A5A9); }
+        .sch-day-chip--on .sch-chip-num { color: light-dark(#4d8a86, #B1B8B7); }
         .sch-day-chip--all { justify-content: center; font-size: .76rem; font-weight: 700; }
 
         /* Hidden from view only. Every cell stays in the page, so a save still
@@ -538,13 +538,13 @@
             width: 92px;
             min-width: 92px;
             max-width: 92px;
-            background: light-dark(#FBFCFD, #2E353C);
+            background: light-dark(#FBFCFD, #2E2E2E);
             /* Two shadows, both standing in for borders a collapsed table will not
                paint on a cell lifted out of the flow. The first is the rule down its
                right edge. The second fills the sliver to its left, where the table's
                own border holds the first cell a pixel off the scroller and the day
                columns could be seen sliding past underneath. */
-            box-shadow: 1px 0 0 light-dark(#EEF1F4, #464D55), -6px 0 0 light-dark(#FBFCFD, #30363E);
+            box-shadow: 1px 0 0 light-dark(#EEF1F4, #424242), -6px 0 0 light-dark(#FBFCFD, #2F2F2F);
         }
 
         .sch-table thead .sch-shift-col { z-index: 5; }
@@ -555,7 +555,7 @@
            with nothing clipping them they paint out over the card. */
         .sch-card--fits .sch-table .sch-shift-col {
             left: 0;
-            box-shadow: 1px 0 0 light-dark(#EEF1F4, #464D55);
+            box-shadow: 1px 0 0 light-dark(#EEF1F4, #424242);
         }
 
         .sch-modal-overlay { padding: 0; align-items: flex-end; }
@@ -578,11 +578,11 @@
 
     .sch-suggest-head {
         padding-top: 18px;
-        border-bottom: 1px solid light-dark(#EDF0F3, #474E56);
+        border-bottom: 1px solid light-dark(#EDF0F3, #424242);
     }
 
     .sch-suggest-actions {
-        border-top: 1px solid light-dark(#EDF0F3, #474E56);
+        border-top: 1px solid light-dark(#EDF0F3, #424242);
         padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     }
 

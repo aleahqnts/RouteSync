@@ -17,7 +17,7 @@
 :root {
     color-scheme: light dark;
     /* The ground of the content column, behind every card. */
-    --rs-page: light-dark(#f8f9fa, #232A31);
+    --rs-page: light-dark(#f8f9fa, #232323);
 }
 
     :root[data-theme="light"] { color-scheme: light; }
@@ -25,17 +25,17 @@
 
     /* Bootstrap's own parts, the body included, in the same ground and ink. */
     :root[data-theme="dark"] {
-        --bs-body-bg: #232A31;
-        --bs-body-color: #C3CAD3;
+        --bs-body-bg: #232323;
+        --bs-body-color: #DEE1E7;
     }
 
 /* Fields that set no colours of their own. Left to the browser, a dark page draws them
    in its own flat grey. :where() adds nothing to the weight of the selector, so any field
    a page has styled keeps what it was given. */
 :where(:root[data-theme="dark"]) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), textarea, select) {
-    background-color: #293037;
-    color: #C3CAD3;
-    border-color: #4A5159;
+    background-color: #282828;
+    color: #DEE1E7;
+    border-color: #4A4A4A;
 }
 
 /* The map stays as it is in either theme: streets are read against the colours they were
@@ -49,19 +49,20 @@
 }
 
 /* The light and dark switch: a sun and a moon in a pill, with a knob that slides under
-   whichever is in use. */
+   whichever is in use. Wide, it names them as well. */
 .rs-theme-pill {
     position: relative;
     display: inline-flex;
     align-items: center;
     flex: none;
     width: 58px;
-    height: 30px;
+    height: 32px;
     padding: 3px;
     border: 0;
     border-radius: 999px;
-    background: light-dark(#EEF2F6, #1B2128);
+    background: light-dark(#EEF2F6, #1C1C1C);
     cursor: pointer;
+    transition: width var(--fw-transition, 220ms ease);
 }
 
     .rs-theme-pill:focus-visible {
@@ -69,31 +70,57 @@
         outline-offset: 2px;
     }
 
-    .rs-theme-pill svg {
-        position: relative;
-        z-index: 1;
-        flex: 1;
-        color: light-dark(#9AA5B4, #6E7781);
-        transition: color .25s ease;
+    .rs-theme-pill--wide { width: 168px; }
+
+.rs-theme-pill__opt {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: light-dark(#9AA5B4, #8A8A8A);
+    font-size: .8rem;
+    font-weight: 600;
+    transition: color .25s ease;
+}
+
+    .rs-theme-pill:not([aria-pressed="true"]) .rs-theme-pill__opt--light,
+    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__opt--dark {
+        color: light-dark(#2D3748, #F2F2F2);
     }
 
-    .rs-theme-pill:not([aria-pressed="true"]) .rs-theme-pill__sun,
-    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__moon {
-        color: light-dark(#2D3748, #E6EBF1);
+    .rs-theme-pill__opt svg { flex: none; }
+
+/* Folded away on the compact pill, so the icons sit centred in their halves. */
+.rs-theme-pill__label {
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    white-space: nowrap;
+    transition: max-width var(--fw-transition, 220ms ease), opacity var(--fw-transition, 220ms ease);
+}
+
+    .rs-theme-pill--wide .rs-theme-pill__label {
+        max-width: 60px;
+        opacity: 1;
     }
 
 .rs-theme-pill__knob {
     position: absolute;
     top: 3px;
+    bottom: 3px;
     left: 3px;
-    width: 26px;
-    height: 24px;
+    width: calc(50% - 3px);
     border-radius: 999px;
-    background: light-dark(#D9E1EA, #3A4350);
+    background: light-dark(#DCE3EB, #4A4A4A);
     transition: transform .25s ease;
 }
 
-    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__knob { transform: translateX(26px); }
+    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__knob { transform: translateX(100%); }
 
 /* For a moment after the switch, colours ease across instead of jumping. */
 html.rs-theme-fade,
@@ -133,8 +160,8 @@ html.rs-theme-fade *::after {
     height: 80px;
     display: flex;
     align-items: center;
-    background: light-dark(#fff, #30363E);
-    border-bottom: 1px solid light-dark(#ddd, #4A5159);
+    background: light-dark(#fff, #2F2F2F);
+    border-bottom: 1px solid light-dark(#ddd, #464646);
     padding: 0 70px;
     position: sticky;
     top: 0;
@@ -304,8 +331,8 @@ html.rs-theme-fade *::after {
     max-width: 560px;
     margin: 40px auto;
     padding: 32px 34px;
-    background: light-dark(#fff, #30363E);
-    border: 1px solid light-dark(#e2e8f0, #484F57);
+    background: light-dark(#fff, #2F2F2F);
+    border: 1px solid light-dark(#e2e8f0, #444444);
     border-radius: 16px;
     font-family: 'Segoe UI', sans-serif;
 }
@@ -314,33 +341,33 @@ html.rs-theme-fade *::after {
     margin: 0 0 10px;
     font-size: 24px;
     font-weight: 600;
-    color: light-dark(#0f172a, #CAD1DE);
+    color: light-dark(#0f172a, #E5E7ED);
 }
 
 .err-lead {
     margin: 0 0 22px;
     font-size: 15px;
-    color: light-dark(#475569, #B9C2CE);
+    color: light-dark(#475569, #D8DCE1);
 }
 
 .err-ref {
     margin: 0 0 6px;
     font-size: 14px;
-    color: light-dark(#0f172a, #CAD1DE);
+    color: light-dark(#0f172a, #E5E7ED);
 }
 
 .err-ref code {
     padding: 3px 8px;
-    background: light-dark(#f1f5f9, #2C323A);
+    background: light-dark(#f1f5f9, #2B2B2B);
     border-radius: 6px;
     font-size: 13px;
-    color: light-dark(#334155, #BEC7D3);
+    color: light-dark(#334155, #DCE0E5);
 }
 
 .err-note {
     margin: 0 0 24px;
     font-size: 13px;
-    color: light-dark(#64748b, #A7B0BC);
+    color: light-dark(#64748b, #B8BCC1);
 }
 
 .err-back {
@@ -390,9 +417,9 @@ html.rs-theme-fade *::after {
     .rs-cards tr {
         margin-bottom: 10px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#e2e8f0, #484F57);
+        border: 1px solid light-dark(#e2e8f0, #444444);
         border-radius: 12px;
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
     }
 
     .rs-cards td {
@@ -406,14 +433,14 @@ html.rs-theme-fade *::after {
     }
 
     .rs-cards td + td {
-        border-top: 1px solid light-dark(#f1f5f9, #464D55);
+        border-top: 1px solid light-dark(#f1f5f9, #414141);
     }
 
     .rs-cards td[data-label]::before {
         content: attr(data-label);
         flex: 0 0 auto;
         max-width: 45%;
-        color: light-dark(#64748b, #A7B0BC);
+        color: light-dark(#64748b, #B8BCC1);
         font-size: .74rem;
         font-weight: 600;
         text-align: left;
@@ -526,18 +553,19 @@ html.rs-theme-fade *::after {
    The page behind a dialog.
 
    Written on the root element by dialog-stack.js while anything covers the page.
-   Both boxes are named because which one scrolls depends on the width: the document
-   on a phone, the content column on a desk. Bootstrap locks the body, which is
-   neither of them here.
+   Only the document scrolls, at every width, so only the document is locked. Locking
+   the body or the content column as well made each of them a scroll container, and
+   every sticky heading inside then measured itself against that box instead of the
+   window: the page title dropped by the height of the app bar and table headings slid
+   over the first row, for as long as the dialog was open.
+
+   The scrollbar's room is kept while it is gone, so nothing under the dialog widens
+   and shifts sideways.
    =========================================================================== */
 
-html.rs-dialog-open,
-html.rs-dialog-open body {
+html.rs-dialog-open {
     overflow: hidden;
-}
-
-html.rs-dialog-open .main-content {
-    overflow: hidden;
+    scrollbar-gutter: stable;
 }
 
 /* ===========================================================================
@@ -565,10 +593,10 @@ html.rs-dialog-open .main-content {
         flex-shrink: 0;
         min-height: 40px;
         padding: 0 12px;
-        border: 1px solid light-dark(#E2E8F0, #484F57);
+        border: 1px solid light-dark(#E2E8F0, #444444);
         border-radius: 10px;
-        background: light-dark(#fff, #30363E);
-        color: light-dark(#2D3748, #C1C9D6);
+        background: light-dark(#fff, #2F2F2F);
+        color: light-dark(#2D3748, #DEE1E7);
         font-size: .8rem;
         font-weight: 600;
         font-family: 'Segoe UI', sans-serif;
@@ -592,8 +620,8 @@ html.rs-dialog-open .main-content {
         align-items: stretch;
         gap: 12px;
         padding: 14px 16px 16px;
-        background: light-dark(#fff, #30363E);
-        border-bottom: 1px solid light-dark(#E2E8F0, #484F57);
+        background: light-dark(#fff, #2F2F2F);
+        border-bottom: 1px solid light-dark(#E2E8F0, #444444);
         box-shadow: 0 10px 24px light-dark(rgba(0, 0, 0, .14), rgba(0, 0, 0, .236));
     }
 
@@ -725,7 +753,7 @@ html.rs-dialog-open .main-content {
        where the placeholder it replaces sat. */
     padding: 0 var(--rs-pick-pad, 6.5px);
     border-radius: 6px;
-    background: var(--rs-pick-bg, light-dark(#fff, #30363E));
+    background: var(--rs-pick-bg, light-dark(#fff, #2F2F2F));
     color: inherit;
     font: inherit;
     /* Clipped rather than ellipsised. The text is the flex box's own, not a child, so
@@ -750,7 +778,7 @@ html.rs-dialog-open .main-content {
 }
 
 .rs-pick > select option {
-    -webkit-text-fill-color: light-dark(#2D3748, #C1C9D6);
+    -webkit-text-fill-color: light-dark(#2D3748, #DEE1E7);
 }
 
 /* ===========================================================================
@@ -814,7 +842,7 @@ html.rs-dialog-open .main-content {
         white-space: nowrap;
         font-size: 1.02rem;
         font-weight: 800;
-        color: light-dark(#1a2a4a, #C4CCD9);
+        color: light-dark(#1a2a4a, #E1E4E9);
     }
 
     /* The heading is in the bar now, where it costs no height at all. */
@@ -878,10 +906,10 @@ html.rs-dialog-open .main-content {
         z-index: 2;
         /* Lifted out of the flow, so it needs a ground of its own or the rows
            travel through it. */
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
         /* A collapsed table will not paint a border on a cell that has been lifted
            out of it, so the rule under the headings is drawn as a shadow. */
-        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #484E56);
+        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #434343);
         /* Headings held on one line are what made these tables wider than the card
            they sit in. Allowed to wrap, the table compresses instead of needing a
            scrollbar of its own. */
@@ -947,12 +975,12 @@ html.rs-dialog-open .main-content {
         padding-top: calc(var(--rs-card-inset) - 1px);
         padding-left: calc(var(--rs-card-inset-x) - 1px);
         padding-right: calc(var(--rs-card-inset-x) - 1px);
-        border: 1px solid light-dark(#E8ECF0, #484E56);
+        border: 1px solid light-dark(#E8ECF0, #434343);
         /* Whatever rule the heading draws under itself is its own; a card without
            one keeps none. */
         border-bottom: 0;
         border-radius: 14px 14px 0 0;
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
         box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 var(--rs-page);
     }
 
@@ -964,9 +992,9 @@ html.rs-dialog-open .main-content {
         left: -1px;
         right: -1px;
         height: var(--rs-card-gap, 0px);
-        background: light-dark(#fff, #30363E);
-        border-left: 1px solid light-dark(#E8ECF0, #484E56);
-        border-right: 1px solid light-dark(#E8ECF0, #484E56);
+        background: light-dark(#fff, #2F2F2F);
+        border-left: 1px solid light-dark(#E8ECF0, #434343);
+        border-right: 1px solid light-dark(#E8ECF0, #434343);
     }
 }
 

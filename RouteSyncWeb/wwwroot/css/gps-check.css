@@ -2,11 +2,11 @@
    buttons, card and table. */
 :root {
     --gc-teal: #4AADA8;
-    --gc-text: light-dark(#2D3748, #C1C9D6);
-    --gc-muted: light-dark(#9AA5B4, #9099A5);
-    --gc-border: light-dark(#E8ECF0, #484E56);
-    --gc-bg: light-dark(#F8F9FA, #2D343B);
-    --gc-white: light-dark(#FFFFFF, #30363E);
+    --gc-text: light-dark(#2D3748, #DEE1E7);
+    --gc-muted: light-dark(#9AA5B4, #A1A5A9);
+    --gc-border: light-dark(#E8ECF0, #434343);
+    --gc-bg: light-dark(#F8F9FA, #2D2D2D);
+    --gc-white: light-dark(#FFFFFF, #2F2F2F);
 }
 
 /* Heading. */

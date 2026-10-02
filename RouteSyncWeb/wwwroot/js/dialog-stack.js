@@ -64,11 +64,6 @@
        top of it.
        --------------------------------------------------------------------------- */
 
-    /** The box whose scrollbar disappears when the lock goes on. */
-    function scroller() {
-        return document.documentElement;
-    }
-
     function anythingOpen() {
         var found = document.querySelectorAll(COVERS);
         for (var i = 0; i < found.length; i++) {
@@ -77,24 +72,11 @@
         return false;
     }
 
+    // The scrollbar's room is kept by the stylesheet while the lock is on (see "The
+    // page behind a dialog" in site.css), so nothing here measures it.
     function setLock(locked) {
         var root = document.documentElement;
         if (root.classList.contains('rs-dialog-open') === locked) return;
-
-        var box = scroller();
-        if (locked && box) {
-            // Taking the scrollbar away widens the content by its width and shifts
-            // every line under the dialog. Its room is kept until the lock is lifted,
-            // added to the padding the column already has rather than replacing it.
-            var bar = box.offsetWidth - box.clientWidth;
-            if (bar > 0) {
-                var pad = parseFloat(getComputedStyle(box).paddingRight) || 0;
-                box.style.paddingRight = (pad + bar) + 'px';
-            }
-        } else if (box) {
-            box.style.paddingRight = '';
-        }
-
         root.classList.toggle('rs-dialog-open', locked);
     }
 

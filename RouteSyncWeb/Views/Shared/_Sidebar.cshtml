@@ -196,15 +196,21 @@
         <button type="button" class="rs-theme-pill" data-theme-toggle aria-pressed="false"
                 aria-label="Dark mode" title="Light or dark">
             <span class="rs-theme-pill__knob" aria-hidden="true"></span>
-            <svg class="rs-theme-pill__sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="4" />
-                <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
-            </svg>
-            <svg class="rs-theme-pill__moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
-            </svg>
+            <span class="rs-theme-pill__opt rs-theme-pill__opt--light" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+                </svg>
+                <span class="rs-theme-pill__label">Light</span>
+            </span>
+            <span class="rs-theme-pill__opt rs-theme-pill__opt--dark" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
+                </svg>
+                <span class="rs-theme-pill__label">Dark</span>
+            </span>
         </button>
     </div>
 
@@ -348,18 +354,24 @@
     @* Light or dark, the same switch as on the rail. *@
     <div class="fw-sheet__theme">
         <span class="fw-sheet__theme-label">Appearance</span>
-        <button type="button" class="rs-theme-pill" data-theme-toggle aria-pressed="false"
+        <button type="button" class="rs-theme-pill rs-theme-pill--wide" data-theme-toggle aria-pressed="false"
                 aria-label="Dark mode" title="Light or dark" tabindex="-1">
             <span class="rs-theme-pill__knob" aria-hidden="true"></span>
-            <svg class="rs-theme-pill__sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="4" />
-                <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
-            </svg>
-            <svg class="rs-theme-pill__moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
-            </svg>
+            <span class="rs-theme-pill__opt rs-theme-pill__opt--light" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+                </svg>
+                <span class="rs-theme-pill__label">Light</span>
+            </span>
+            <span class="rs-theme-pill__opt rs-theme-pill__opt--dark" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
+                </svg>
+                <span class="rs-theme-pill__label">Dark</span>
+            </span>
         </button>
     </div>
 

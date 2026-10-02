@@ -1,13 +1,13 @@
 ﻿/* Profile/Index.cshtml */
     :root {
         --pf-teal: #4AADA8;
-        --pf-teal-light: light-dark(#E8F6F5, #324A49);
-        --pf-text: light-dark(#2D3748, #C1C9D6);
-        --pf-dark: light-dark(#1A2B4A, #C4CBD9);
-        --pf-muted: light-dark(#9AA5B4, #9099A5);
-        --pf-soft: light-dark(#5A6778, #ADB6C2);
-        --pf-border: light-dark(#E8ECF0, #484E56);
-        --pf-bg: light-dark(#F8F9FA, #2D343B);
+        --pf-teal-light: light-dark(#E8F6F5, #2A4241);
+        --pf-text: light-dark(#2D3748, #DEE1E7);
+        --pf-dark: light-dark(#1A2B4A, #E0E3E9);
+        --pf-muted: light-dark(#9AA5B4, #A1A5A9);
+        --pf-soft: light-dark(#5A6778, #BFC2C7);
+        --pf-border: light-dark(#E8ECF0, #434343);
+        --pf-bg: light-dark(#F8F9FA, #2D2D2D);
         --pf-radius: 14px;
         --pf-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .124));
     }
@@ -35,13 +35,13 @@
         margin-bottom: 16px;
         padding: 10px 14px;
         border-radius: 10px;
-        background: light-dark(#E8F8EE, #364A3F);
-        color: light-dark(#1E8449, #77CE92);
+        background: light-dark(#E8F8EE, #2F4237);
+        color: light-dark(#1E8449, #7ED498);
         font: 600 .88rem 'Segoe UI', sans-serif;
     }
 
     .pf-card {
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
         border: 1px solid var(--pf-border);
         border-radius: var(--pf-radius);
         box-shadow: var(--pf-shadow);
@@ -165,11 +165,11 @@
 
     .pf-ico svg { width: 17px; height: 17px; }
 
-    .pf-ico--blue  { background: light-dark(#EAF1FB, #3B4655); color: light-dark(#3B82C4, #7BBDFF); }
-    .pf-ico--green { background: light-dark(#EAFAF1, #364A40); color: light-dark(#2FAE74, #6DCF9B); }
-    .pf-ico--amber { background: light-dark(#FDF4E5, #4E4331); color: #F5A623; }
-    .pf-ico--teal  { background: light-dark(#E8F5F1, #344A44); color: light-dark(#2E9E8F, #64CDBC); }
-    .pf-ico--navy  { background: light-dark(#ECEFF7, #2A3138); color: light-dark(#1B2A56, #A0B6ED); }
+    .pf-ico--blue  { background: light-dark(#EAF1FB, #333E4D); color: light-dark(#3B82C4, #88C3FE); }
+    .pf-ico--green { background: light-dark(#EAFAF1, #2F4238); color: light-dark(#2FAE74, #74D5A1); }
+    .pf-ico--amber { background: light-dark(#FDF4E5, #463B29); color: #F5A623; }
+    .pf-ico--teal  { background: light-dark(#E8F5F1, #2C423C); color: light-dark(#2E9E8F, #6BD3C3); }
+    .pf-ico--navy  { background: light-dark(#ECEFF7, #2A2A2A); color: light-dark(#1B2A56, #A6BDF3); }
 
     .pf-badge {
         display: inline-block;
@@ -180,11 +180,11 @@
         white-space: nowrap;
     }
 
-    .pf-badge--role { background: light-dark(#EAF3FF, #3A4655); color: light-dark(#2F6FD6, #8DB8FF); text-transform: uppercase; letter-spacing: .03em; }
-    .pf-badge--ok { background: light-dark(#E8F8EE, #364A3F); color: light-dark(#27AE60, #78CE92); }
-    .pf-badge--wait { background: light-dark(#FFF8E1, #4E4527); color: light-dark(#D48806, #E8A95C); }
-    .pf-badge--bad { background: light-dark(#FDECEC, #543F3F); color: light-dark(#D14343, #FB9891); }
-    .pf-badge--idle { background: light-dark(#F1F3F6, #2B3239); color: light-dark(#6B7280, #A9B0BD); }
+    .pf-badge--role { background: light-dark(#EAF3FF, #333E4D); color: light-dark(#2F6FD6, #98BFFE); text-transform: uppercase; letter-spacing: .03em; }
+    .pf-badge--ok { background: light-dark(#E8F8EE, #2F4237); color: light-dark(#27AE60, #7ED498); }
+    .pf-badge--wait { background: light-dark(#FFF8E1, #453D1F); color: light-dark(#D48806, #EFB062); }
+    .pf-badge--bad { background: light-dark(#FDECEC, #4C3737); color: light-dark(#D14343, #FFA099); }
+    .pf-badge--idle { background: light-dark(#F1F3F6, #2B2B2B); color: light-dark(#6B7280, #B9BCC1); }
 
     .pf-cols {
         display: grid;
@@ -206,7 +206,7 @@
         align-items: center;
         gap: 12px;
         padding: 11px 0;
-        border-bottom: 1px solid light-dark(#F1F3F6, #464D55);
+        border-bottom: 1px solid light-dark(#F1F3F6, #414141);
         font-size: .88rem;
     }
 
@@ -281,7 +281,7 @@
         padding: 8px 12px;
         border: 1px solid var(--pf-border);
         border-radius: 10px;
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
         color: var(--pf-text);
         font: inherit;
         font-size: .88rem;
@@ -302,7 +302,7 @@
     .pf-field--bad textarea,
     .pf-field--bad input:focus {
         border-color: #E74C3C;
-        box-shadow: 0 0 0 3px light-dark(#FDECEC, #464D55);
+        box-shadow: 0 0 0 3px light-dark(#FDECEC, #424242);
     }
 
     /* A password field with its reveal toggle inside it, as on the sign-in pages. */
@@ -326,11 +326,11 @@
         padding: 0 12px;
         border: none;
         background: none;
-        color: light-dark(#aaa, #959595);
+        color: light-dark(#aaa, #A1A1A1);
         cursor: pointer;
     }
 
-    .pf-pw .eye:hover { color: light-dark(#3ab5a4, #58CEBD); }
+    .pf-pw .eye:hover { color: light-dark(#3ab5a4, #5FD5C3); }
     .pf-pw .eye svg { width: 18px; height: 18px; display: block; }
 
     /* The icon reports the state of the field: slashed while hidden, open while readable. */
@@ -354,7 +354,7 @@
         align-items: center;
         gap: 7px;
         font-size: 12px;
-        color: light-dark(#9aa3b2, #9299A6);
+        color: light-dark(#9aa3b2, #A2A5AA);
         transition: color .15s ease;
     }
 
@@ -362,16 +362,16 @@
         width: 9px;
         height: 9px;
         border-radius: 50%;
-        border: 1.5px solid light-dark(#cfd6e0, #4C535B);
+        border: 1.5px solid light-dark(#cfd6e0, #474747);
         background: transparent;
         flex: none;
         transition: background .15s ease, border-color .15s ease;
     }
 
-    .pw-rules li.met { color: light-dark(#2f8d7e, #71CBBA); }
+    .pw-rules li.met { color: light-dark(#2f8d7e, #78D1C0); }
     .pw-rules li.met .dot { background: #3ab5a4; border-color: #3ab5a4; }
 
-    .pf-err { color: light-dark(#C0392B, #FB998A); font-size: .76rem; }
+    .pf-err { color: light-dark(#C0392B, #FFA192); font-size: .76rem; }
     .pf-err:empty { display: none; }
     .pf-err--form { margin: 0 0 8px; }
 
@@ -395,9 +395,9 @@
     .pf-btn--sm { min-height: 32px; padding: 0 12px; font-size: .8rem; }
     .pf-btn--primary { background: var(--pf-teal); color: #fff; }
     .pf-btn--primary:hover { background: #3E9A95; }
-    .pf-btn--ghost { background: light-dark(#fff, #30363E); border-color: var(--pf-border); color: var(--pf-text); }
+    .pf-btn--ghost { background: light-dark(#fff, #2F2F2F); border-color: var(--pf-border); color: var(--pf-text); }
     .pf-btn--ghost:hover { background: var(--pf-bg); }
-    .pf-btn--armed { border-color: #E74C3C; color: light-dark(#C0392B, #FB998A); }
+    .pf-btn--armed { border-color: #E74C3C; color: light-dark(#C0392B, #FFA192); }
     .pf-btn:disabled { opacity: .6; cursor: default; }
 
     /* Leave. */
@@ -425,7 +425,7 @@
 
     .pf-credit-of { font-size: .86rem; font-weight: 600; color: var(--pf-muted); }
     .pf-credit-l { font-size: .8rem; font-weight: 600; color: var(--pf-soft); }
-    .pf-credit-p { font-size: .74rem; font-weight: 600; color: light-dark(#D48806, #E8A95C); }
+    .pf-credit-p { font-size: .74rem; font-weight: 600; color: light-dark(#D48806, #EFB062); }
 
     .pf-leave-form {
         margin-bottom: 16px;
@@ -446,7 +446,7 @@
         justify-content: space-between;
         gap: 12px;
         padding: 12px 0;
-        border-bottom: 1px solid light-dark(#F1F3F6, #464D55);
+        border-bottom: 1px solid light-dark(#F1F3F6, #414141);
     }
 
     .pf-leave:last-child { border-bottom: none; padding-bottom: 0; }
@@ -500,7 +500,7 @@
         justify-content: space-between;
         gap: 14px;
         padding: 8px 0;
-        border-bottom: 1px solid light-dark(#F1F3F6, #464D55);
+        border-bottom: 1px solid light-dark(#F1F3F6, #414141);
         font-size: .84rem;
     }
 

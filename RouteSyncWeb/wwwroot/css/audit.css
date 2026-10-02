@@ -1,11 +1,11 @@
 ﻿/* Audit/Index.cshtml */
     :root {
         --au-teal: #4AADA8;
-        --au-text: light-dark(#2D3748, #C1C9D6);
-        --au-muted: light-dark(#9AA5B4, #9099A5);
-        --au-border: light-dark(#E8ECF0, #484E56);
-        --au-bg: light-dark(#F8F9FA, #2D343B);
-        --au-white: light-dark(#FFFFFF, #30363E);
+        --au-text: light-dark(#2D3748, #DEE1E7);
+        --au-muted: light-dark(#9AA5B4, #A1A5A9);
+        --au-border: light-dark(#E8ECF0, #434343);
+        --au-bg: light-dark(#F8F9FA, #2D2D2D);
+        --au-white: light-dark(#FFFFFF, #2F2F2F);
     }
 
     /* Heading. */
@@ -106,11 +106,11 @@
 
     /* The reload control is the same teal as the one on every other board. */
     .au-btn--icon.au-refresh {
-        border-color: light-dark(#CDE9E4, #48615D);
-        color: light-dark(#2e7d72, #7CC8BC);
+        border-color: light-dark(#CDE9E4, #405854);
+        color: light-dark(#2e7d72, #82CFC2);
     }
 
-    .au-btn--icon.au-refresh:hover { background: light-dark(#EAF7F5, #324A47); }
+    .au-btn--icon.au-refresh:hover { background: light-dark(#EAF7F5, #2B423F); }
 
     @keyframes auSpin { to { transform: rotate(360deg); } }
 
@@ -197,8 +197,8 @@
     }
 
     .au-row--clickable { cursor: pointer; }
-    .au-row--clickable:hover { background: light-dark(#FAFBFC, #2E353C); }
-    .au-row--open { background: light-dark(#FAFBFC, #2E353C); }
+    .au-row--clickable:hover { background: light-dark(#FAFBFC, #2E2E2E); }
+    .au-row--open { background: light-dark(#FAFBFC, #2E2E2E); }
 
     .au-empty {
         text-align: center;
@@ -241,8 +241,8 @@
         display: inline-block;
         padding: 2px 9px;
         border-radius: 20px;
-        background: light-dark(#EEF2F6, #2B3139);
-        color: light-dark(#5A6B7F, #ABB5C0);
+        background: light-dark(#EEF2F6, #2A2A2A);
+        color: light-dark(#5A6B7F, #BDC1C5);
         font-size: 0.72rem;
         font-weight: 600;
     }
@@ -262,9 +262,9 @@
         white-space: nowrap;
     }
 
-    .au-pill--ok { background: light-dark(#E8F8EE, #364A3F); color: light-dark(#27AE60, #78CE92); }
-    .au-pill--denied { background: light-dark(#FDECEC, #543F3F); color: light-dark(#C0392B, #FB998A); }
-    .au-pill--error { background: light-dark(#FEF3E2, #50432E); color: light-dark(#B7791F, #E8A95C); }
+    .au-pill--ok { background: light-dark(#E8F8EE, #2F4237); color: light-dark(#27AE60, #7ED498); }
+    .au-pill--denied { background: light-dark(#FDECEC, #4C3737); color: light-dark(#C0392B, #FFA192); }
+    .au-pill--error { background: light-dark(#FEF3E2, #483B26); color: light-dark(#B7791F, #EFB062); }
 
     /* Expand toggle. */
     .au-toggle-cell { text-align: center; }
@@ -285,7 +285,7 @@
 
     /* Detail drawer. */
     .au-detail-row td {
-        background: light-dark(#FAFBFC, #2E353C);
+        background: light-dark(#FAFBFC, #2E2E2E);
         padding-top: 0;
     }
 
@@ -342,7 +342,7 @@
 
         .au-diff td {
             padding: 6px 8px 6px 0;
-            color: light-dark(#2D3748, #C1C9D6);
+            color: light-dark(#2D3748, #DEE1E7);
             vertical-align: top;
             word-break: break-word;
         }
@@ -610,7 +610,7 @@
         padding: 10px 12px;
         border: 1px solid var(--au-border);
         border-radius: 12px;
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
     }
 
     .au-table.rs-cards td {
@@ -700,7 +700,7 @@
         border: 1px solid var(--au-border);
         border-top: none;
         border-radius: 0 0 12px 12px;
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
     }
 
         .au-table.rs-cards tr.au-detail-row > td {
@@ -743,7 +743,7 @@
 
     .au-row--open:hover,
     .au-row--open {
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
     }
 }
 
@@ -799,15 +799,15 @@
         min-width: 20px;
         padding: 1px 7px;
         border-radius: 999px;
-        background: light-dark(#EEF2F6, #2B3139);
-        color: light-dark(#5A6B7F, #ABB5C0);
+        background: light-dark(#EEF2F6, #2A2A2A);
+        color: light-dark(#5A6B7F, #BDC1C5);
         font-size: 0.72rem;
         font-weight: 700;
         text-align: center;
     }
 
     /* Only for a sign-in that succeeded after failures, matching the rail. */
-    .au-tab-count--urgent { background: light-dark(#FDECEC, #543F3F); color: light-dark(#C0392B, #FB998A); }
+    .au-tab-count--urgent { background: light-dark(#FDECEC, #4C3737); color: light-dark(#C0392B, #FFA192); }
 
     .si-scan { display: inline; margin: 0; }
 
@@ -815,8 +815,8 @@
         margin: 0 0 12px;
         padding: 9px 14px;
         border-radius: 10px;
-        background: light-dark(#EAF7F5, #324A47);
-        color: light-dark(#2C6E6A, #AABCBA);
+        background: light-dark(#EAF7F5, #2B423F);
+        color: light-dark(#2C6E6A, #BFC6C5);
         font-size: 0.84rem;
     }
 
@@ -840,11 +840,11 @@
         font-weight: 700;
     }
 
-    .si-sev--high { background: light-dark(#FDECEC, #543F3F); color: light-dark(#C0392B, #FB998A); }
-    .si-sev--medium { background: light-dark(#FEF3E2, #50432E); color: light-dark(#B7791F, #E8A95C); }
-    .si-sev--low { background: light-dark(#EEF2F6, #2B3139); color: light-dark(#5A6B7F, #ABB5C0); }
+    .si-sev--high { background: light-dark(#FDECEC, #4C3737); color: light-dark(#C0392B, #FFA192); }
+    .si-sev--medium { background: light-dark(#FEF3E2, #483B26); color: light-dark(#B7791F, #EFB062); }
+    .si-sev--low { background: light-dark(#EEF2F6, #2A2A2A); color: light-dark(#5A6B7F, #BDC1C5); }
 
-    .si-pill--waiting { background: light-dark(#FEF3E2, #50432E); color: light-dark(#B7791F, #E8A95C); }
+    .si-pill--waiting { background: light-dark(#FEF3E2, #483B26); color: light-dark(#B7791F, #EFB062); }
 
     .si-reviewed { font-size: 0.78rem; color: var(--au-muted); }
 
@@ -917,7 +917,7 @@
         padding: 10px 12px;
         border: 1px solid var(--au-border);
         border-radius: 12px;
-        background: light-dark(#fff, #30363E);
+        background: light-dark(#fff, #2F2F2F);
     }
 
     .si-table tbody tr.si-row td { display: block; padding: 0; border: none; }
