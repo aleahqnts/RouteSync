@@ -635,9 +635,9 @@
     }
     .vh-card-icon--amber { background: #FEF6E0; color: #D69E2E; }
 
-    /* Clickable flagged KPI -> filters the table to flagged vehicles. */
+    /* A KPI that filters the table. Lifts on hover with the same blue as the dashboard's cards. */
     .vh-card--click { cursor: pointer; text-decoration: none; transition: box-shadow .15s, transform .15s; }
-    .vh-card--click:hover { box-shadow: 0 6px 18px rgba(229,62,62,.18); transform: translateY(-2px); }
+    .vh-card--click:hover { box-shadow: 0 6px 18px rgba(59,130,246,.18); transform: translateY(-2px); }
     .vh-card--active { border-color: #3AB5A4; box-shadow: 0 0 0 2px rgba(58,181,164,.18); }
 
     .vh-card-text {
