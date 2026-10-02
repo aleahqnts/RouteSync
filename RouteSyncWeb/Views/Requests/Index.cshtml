@@ -1018,11 +1018,18 @@
             const s = row.s;
             row.who.replaceChildren();
 
+            // A driver chosen is drawn as a card with their initials, so who is about to
+            // take the shift is the first thing read in the row.
+            row.line.classList.toggle('rq-cover-line--picked', row.choice > 0);
+            row.avatar.hidden = !(row.choice > 0);
+
             if (row.choice > 0) {
                 const c = rqCandidateOf(row, row.choice);
+                const name = c ? c.name : (coverNames.get(row.choice) || 'Driver ' + row.choice);
+                row.avatar.textContent = rqInitials(name);
+                row.who.appendChild(rqEl('span', 'rq-cover-eyebrow', 'Covers this shift'));
                 const line = rqEl('span', 'rq-cover-nameline');
-                line.appendChild(rqEl('span', 'rq-cover-name',
-                    c ? c.name : (coverNames.get(row.choice) || 'Driver ' + row.choice)));
+                line.appendChild(rqEl('span', 'rq-cover-name', name));
                 if (c && s.candidates[0] === c) line.appendChild(rqEl('span', 'rsc-best', 'Best match'));
                 row.who.appendChild(line);
 
@@ -1052,6 +1059,15 @@
             row.change.textContent = row.open ? 'Done' : row.choice === 0 ? 'Choose' : 'Change';
             row.change.setAttribute('aria-expanded', row.open ? 'true' : 'false');
             row.leave.hidden = row.choice === 0;
+        }
+
+        // "Maria Santos" as "MS": the first and last words of a name.
+        function rqInitials(name) {
+            const words = name.trim().split(/\s+/).filter(Boolean);
+            if (!words.length) return '?';
+            const first = words[0][0];
+            const last = words.length > 1 ? words[words.length - 1][0] : '';
+            return (first + last).toUpperCase();
         }
 
         function rqOpenCover(row, moveFocus) {
@@ -1222,6 +1238,10 @@
             head.append(when, where);
 
             const line = rqEl('div', 'rq-cover-line');
+            row.line = line;
+            row.avatar = rqEl('span', 'rq-cover-avatar');
+            row.avatar.setAttribute('aria-hidden', 'true');
+            row.avatar.hidden = true;
             row.who = rqEl('div', 'rq-cover-who');
             row.change = rqEl('button', 'rq-cover-change');
             row.change.type = 'button';
@@ -1231,7 +1251,7 @@
                 if (row.open) rqCloseCover(row, true);
                 else rqOpenCover(row, true);
             });
-            line.append(row.who, row.change);
+            line.append(row.avatar, row.who, row.change);
 
             row.listWrap = rqEl('div', 'rq-cover-list');
             row.listWrap.id = 'rqCoverList-' + s.tripId;

@@ -578,6 +578,40 @@
         gap: 12px;
     }
 
+    /* The driver about to take the shift, as a card: the decision this dialog is for. */
+    .rq-cover-line--picked {
+        align-items: center;
+        margin-top: 6px;
+        padding: 12px 14px;
+        border: 1px solid #BFE3DF;
+        border-radius: 12px;
+        background: #F0F9F8;
+    }
+
+    .rq-cover-avatar {
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #2C9C96;
+        color: #fff;
+        font-size: .85rem;
+        font-weight: 700;
+        letter-spacing: .02em;
+    }
+
+        .rq-cover-avatar[hidden] { display: none; }
+
+    .rq-cover-eyebrow {
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: #2C9C96;
+    }
+
     .rq-cover-who {
         flex: 1;
         min-width: 0;
@@ -597,6 +631,15 @@
         font-size: .88rem;
         font-weight: 700;
         color: var(--rq-text);
+    }
+
+    .rq-cover-line--picked .rq-cover-name { font-size: 1rem; }
+
+    .rq-cover-line--picked .rsc-best {
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: #D6EFEB;
+        font-size: .72rem;
     }
 
     .rq-cover-name--none {
@@ -642,6 +685,18 @@
     }
 
     .rq-cover-change { flex: none; }
+
+    /* Beside a chosen driver, Change is a button of its own rather than a link. */
+    .rq-cover-line--picked .rq-cover-change {
+        align-self: center;
+        padding: 6px 14px;
+        border: 1px solid #BFE3DF;
+        border-radius: 8px;
+        background: #fff;
+        text-decoration: none;
+    }
+
+        .rq-cover-line--picked .rq-cover-change:hover { background: #E3F4F1; }
 
     .rq-cover-leave {
         margin-top: 4px;
