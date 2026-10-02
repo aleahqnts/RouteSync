@@ -268,7 +268,7 @@ $$;
 ALTER FUNCTION "public"."camera_vehicle"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."dashboard_figures"("p_today" "date") RETURNS json
+CREATE OR REPLACE FUNCTION "public"."dashboard_figures"("p_today" "date", "p_yesterday_active_only" boolean DEFAULT false) RETURNS json
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
     AS $$
@@ -283,16 +283,18 @@ CREATE OR REPLACE FUNCTION "public"."dashboard_figures"("p_today" "date") RETURN
     'yesterday_trips', coalesce((select json_agg(x) from (
         select trip_id, date, route_id, vehicle_id, shift_type, shift_start_time, shift_end_time,
                trip_status, estimated_revenue, total_boarded, actual_end_time
-        from trips where date = p_today - 1) x), '[]'),
+        from trips
+        where date = p_today - 1
+          and (not p_yesterday_active_only or trip_status = 'Active')) x), '[]'),
     'routes', coalesce((select json_agg(x order by x.route_name) from (
         select route_id, route_name from routes) x), '[]'))
 $$;
 
 
-ALTER FUNCTION "public"."dashboard_figures"("p_today" "date") OWNER TO "postgres";
+ALTER FUNCTION "public"."dashboard_figures"("p_today" "date", "p_yesterday_active_only" boolean) OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."dashboard_figures"("p_today" "date") IS 'The rows the dashboard''s cards are worked out from, in one request.';
+COMMENT ON FUNCTION "public"."dashboard_figures"("p_today" "date", "p_yesterday_active_only" boolean) IS 'The rows the dashboard''s cards are worked out from, in one request. With p_yesterday_active_only, only yesterday''s trips still running.';
 
 
 
@@ -332,7 +334,9 @@ CREATE OR REPLACE FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_
     SET "search_path" TO 'public'
     AS $$
   with active as (
-    select * from trips where trip_status = 'Active'
+    select trip_id, date, route_id, vehicle_id, driver_id, shift_start_time, shift_end_time,
+           trip_status, actual_start_time, total_boarded
+    from trips where trip_status = 'Active'
   ), shown as (
     select a.trip_id from active a
     where (p_route_id is null or a.route_id = p_route_id)
@@ -341,7 +345,9 @@ CREATE OR REPLACE FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_
   select json_build_object(
     'trips', coalesce((select json_agg(a) from active a), '[]'),
     'telemetry', coalesce((select json_agg(x order by x."timestamp" desc) from (
-        select t.* from telemetry_data t
+        select t.telemetry_id, t.trip_id, t.latitude, t.longitude, t.total_passengers,
+               t.speed, t.heading, t.accuracy, t."timestamp"
+        from telemetry_data t
         where t.trip_id in (select trip_id from shown)
           and t."timestamp" >= p_since
           and t.telemetry_id >= coalesce((p_seen ->> t.trip_id)::bigint, 0)
@@ -3131,8 +3137,8 @@ GRANT ALL ON FUNCTION "public"."camera_vehicle"() TO "app_camera";
 
 
 
-REVOKE ALL ON FUNCTION "public"."dashboard_figures"("p_today" "date") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."dashboard_figures"("p_today" "date") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."dashboard_figures"("p_today" "date", "p_yesterday_active_only" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."dashboard_figures"("p_today" "date", "p_yesterday_active_only" boolean) TO "service_role";
 
 
 
