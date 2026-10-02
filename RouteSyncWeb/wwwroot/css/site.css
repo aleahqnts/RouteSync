@@ -88,8 +88,11 @@
     transition: color .25s ease;
 }
 
-    .rs-theme-pill:not([aria-pressed="true"]) .rs-theme-pill__opt--light,
-    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__opt--dark {
+    /* Read from the page's theme, which is set before anything is drawn, rather than from
+       aria-pressed, which is only set once the page has loaded. Otherwise every page opened
+       in dark mode showed the switch on light and then slid it across. */
+    :root:not([data-theme="dark"]) .rs-theme-pill__opt--light,
+    :root[data-theme="dark"] .rs-theme-pill__opt--dark {
         color: light-dark(#2D3748, #DEE1E7);
     }
 
@@ -120,7 +123,7 @@
     transition: transform .25s ease;
 }
 
-    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__knob { transform: translateX(100%); }
+    :root[data-theme="dark"] .rs-theme-pill__knob { transform: translateX(100%); }
 
 /* The switch between themes, as one cross-fade of the whole page (see theme.js), with
    every element's own transitions held off until it has landed. */
