@@ -9,7 +9,7 @@
 
     var button = document.getElementById('fwMoreBtn');
     var backdrop = document.getElementById('fwSheetBackdrop');
-    var links = sheet.querySelectorAll('.fw-sheet__link, .fw-sheet__logout');
+    var links = sheet.querySelectorAll('.fw-sheet__who, .fw-sheet__link, .fw-sheet__logout');
 
     function isOpen() { return sheet.classList.contains('fw-sheet--open'); }
 

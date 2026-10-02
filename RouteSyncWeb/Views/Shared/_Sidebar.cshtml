@@ -287,14 +287,23 @@
 <div class="fw-sheet" id="fwSheet" role="dialog" aria-modal="true" aria-label="More">
     <div class="fw-sheet__grip"></div>
 
-    @* Who is signed in, as a heading rather than a card. The button that ends the
-       session used to sit here, which put the one destructive control in the sheet
-       under the thumb that opened it. *@
+    @* Who is signed in. The whole row opens their profile, and says so at its end.
+       The button that ends the session used to sit here, which put the one
+       destructive control in the sheet under the thumb that opened it. *@
     <div class="fw-sheet__account">
-        <a class="fw-sheet__who" asp-controller="Profile" asp-action="Index">
-            <span class="fw-sheet__name">@User.Identity?.Name</span>
-            <span class="fw-sheet__role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
-            <span class="fw-sheet__edit">My profile</span>
+        <a class="fw-sheet__who" asp-controller="Profile" asp-action="Index" tabindex="-1">
+            <img src="~/images/user-avatar.png" alt="" class="fw-sheet__avatar" />
+            <span class="fw-sheet__who-text">
+                <span class="fw-sheet__name">@User.Identity?.Name</span>
+                <span class="fw-sheet__role">@User.FindFirst(ClaimTypes.Role)?.Value</span>
+            </span>
+            <span class="fw-sheet__edit">
+                Profile
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 6 15 12 9 18" />
+                </svg>
+            </span>
         </a>
     </div>
 

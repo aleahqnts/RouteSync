@@ -601,37 +601,58 @@
         background: var(--fw-divider);
     }
 
-    /* A heading, not a card. Filled and inset it competed with the links under it,
-       and gave the sheet two different gutters to read. */
+    /* The account sits above the links behind a rule, in the same gutter. */
     .fw-sheet__account {
-        display: flex;
-        align-items: center;
-        gap: 12px;
         margin: 0 16px 10px;
-        padding: 0 6px 12px;
+        padding-bottom: 10px;
         border-bottom: 1px solid var(--fw-divider);
     }
 
+    /* One row, all of it a link to the profile: the person on the left, where to go
+       on the right, so the line is weighted at both ends. */
     .fw-sheet__who {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        min-width: 0;
-        padding: 0;
-        border: none;
-        background: none;
-        text-align: left;
-        font: inherit;
+        align-items: center;
+        gap: 12px;
+        min-height: 60px;
+        padding: 8px 12px;
+        border-radius: 14px;
+        background: #F4FAF9;
         color: inherit;
         text-decoration: none;
         cursor: pointer;
+        transition: background 150ms;
+    }
+
+    .fw-sheet__who:active { background: #E3F3F1; }
+
+    .fw-sheet__avatar {
+        flex: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .fw-sheet__who-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1 1 auto;
     }
 
     .fw-sheet__edit {
-        margin-top: 3px;
-        font-size: .74rem;
-        font-weight: 600;
-        color: var(--fw-teal);
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 6px 8px 6px 12px;
+        border-radius: 20px;
+        background: #fff;
+        border: 1px solid #CDE9E4;
+        font-size: .78rem;
+        font-weight: 700;
+        color: #2E7D72;
     }
 
     .fw-sheet__name {
