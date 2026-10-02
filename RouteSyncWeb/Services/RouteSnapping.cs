@@ -403,6 +403,20 @@ namespace FleetWise.Services
         }
 
         /// <summary>
+        /// The ID of the last reading used for each trip, so a poll can ask for that reading
+        /// and the ones after it rather than the whole recent window.
+        /// </summary>
+        public Dictionary<string, long> LastUsed()
+        {
+            var used = new Dictionary<string, long>();
+            foreach (var pair in _trips)
+                lock (pair.Value.Gate)
+                    if (pair.Value.LastId != long.MinValue)
+                        used[pair.Key] = pair.Value.LastId;
+            return used;
+        }
+
+        /// <summary>
         /// Feeds a trip's readings to the snapper and returns where to draw the bus, or null
         /// when the trip has no reading yet.
         /// </summary>

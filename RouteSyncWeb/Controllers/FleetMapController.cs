@@ -49,6 +49,9 @@ namespace FleetWise.Controllers
 
         private readonly RouteSnapTracker _snaps;
 
+        /// <summary>Set once the database is found to have no fleetmap_live that takes p_seen.</summary>
+        private static volatile bool _seenUnsupported;
+
         public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache,
             RouteSnapTracker snaps)
         {
@@ -171,13 +174,34 @@ namespace FleetWise.Controllers
             // Philippine time and stored with those digits as though they were UTC, so the
             // cutoff is taken the same way. A cutoff from the UTC clock would sit eight hours
             // earlier and read eight and a half hours of readings rather than thirty minutes.
+            //
+            // Each trip the snapper has seen asks only for the last reading it used and the
+            // ones after it. That reading is the marker's newest when nothing has arrived
+            // since, so a poll carries one or two rows a bus rather than its whole window.
             var recentCutoff = PhClock.NowForDb.AddMinutes(-RecentTelemetryMinutes);
-            var liveResponse = await _supabase.Rpc("fleetmap_live", new Dictionary<string, object?>
+            var args = new Dictionary<string, object?>
             {
                 ["p_op_day"] = PhClock.OperationalDay.ToString("yyyy-MM-dd"),
                 ["p_route_id"] = routeId,
                 ["p_since"] = recentCutoff.ToString("yyyy-MM-dd HH:mm:ss"),
-            });
+            };
+            if (!_seenUnsupported)
+                args["p_seen"] = _snaps.LastUsed();
+
+            Postgrest.Responses.BaseResponse liveResponse;
+            try
+            {
+                liveResponse = await _supabase.Rpc("fleetmap_live", args);
+            }
+            catch (Postgrest.Exceptions.PostgrestException ex)
+                when (args.ContainsKey("p_seen") && RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+            {
+                // A database without the p_seen version of the function: read the whole
+                // window, as before, and stop offering it until the dashboard restarts.
+                _seenUnsupported = true;
+                args.Remove("p_seen");
+                liveResponse = await _supabase.Rpc("fleetmap_live", args);
+            }
             var live = ReadBundle.Parse(liveResponse.Content);
 
             var activeTrips = live.Rows<Trip>("trips");

@@ -330,6 +330,27 @@ public class RouteSnappingTests
     }
 
     [Fact]
+    public void Last_used_names_the_newest_reading_taken_and_skips_late_ones()
+    {
+        var tracker = new RouteSnapTracker();
+        var road = EastRoad();
+        Assert.Empty(tracker.LastUsed());
+
+        tracker.Advance("TRIP1", road, new[]
+        {
+            At(1, 0, Moving(Offset(Origin, 5, 300), 90)),
+            At(2, 5, Moving(Offset(Origin, 5, 500), 90)),
+        });
+        // Delivered late with an earlier time: not used, so it does not move the cursor.
+        tracker.Advance("TRIP1", road, new[] { At(3, 1, Moving(Offset(Origin, 5, 350), 90)) });
+        tracker.Advance("TRIP2", road, new[] { At(7, 0, Moving(Offset(Origin, 5, 100), 90)) });
+
+        var used = tracker.LastUsed();
+        Assert.Equal(2, used["TRIP1"]);
+        Assert.Equal(7, used["TRIP2"]);
+    }
+
+    [Fact]
     public void A_trip_with_no_reading_yet_has_nowhere_to_be_drawn()
     {
         var tracker = new RouteSnapTracker();
