@@ -261,14 +261,14 @@
                     ctx.font = '600 11px Segoe UI';
                     ctx.textBaseline = 'top';
                     ctx.textAlign = 'center';
-                    ctx.fillStyle = '#9AA5B4';
+                    ctx.fillStyle = rsTheme.pick('#9AA5B4', '#7D8794');
                     ctx.fillText(s.name, (left(s.from) + right(s.to)) / 2, area.top + 4);
                 });
 
                 const now = dbReadHourly().now;
                 if (now >= 0 && now < chartLabels.length - 1) {
                     const from = left(now + 1);
-                    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                    ctx.fillStyle = rsTheme.pick('rgba(255,255,255,0.55)', 'rgba(26,30,36,0.55)');
                     ctx.fillRect(from, area.top + 20, area.right - from, area.bottom - area.top - 20);
                 }
                 ctx.restore();
@@ -363,7 +363,7 @@
                         suggestedMax: dbYMax(dbFirst),
                         title: { display: true, text: 'Passengers', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
                         ticks: { precision: 0, font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' },
-                        grid: { color: '#F0F0F0' }
+                        grid: { color: () => rsTheme.pick('#F0F0F0', '#2A3038') }
                     }
                 }
             }

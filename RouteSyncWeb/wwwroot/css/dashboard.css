@@ -2,14 +2,14 @@
         /* Variables (inherit from sidebar). */
         :root {
         --db-teal: #4AADA8;
-        --db-teal-light: #E8F6F5;
-        --db-text: #2D3748;
-        --db-muted: #9AA5B4;
-        --db-border: #E8ECF0;
-        --db-bg: #F8F9FA;
-        --db-white: #FFFFFF;
+        --db-teal-light: light-dark(#E8F6F5, #172F2E);
+        --db-text: light-dark(#2D3748, #D2DAE7);
+        --db-muted: light-dark(#9AA5B4, #969FAB);
+        --db-border: light-dark(#E8ECF0, #2F343A);
+        --db-bg: light-dark(#F8F9FA, #181C22);
+        --db-white: light-dark(#FFFFFF, #1A1E24);
         --db-radius: 14px;
-        --db-shadow: 0 1px 4px rgba(0,0,0,.06);
+        --db-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
         }
 
         /* Top bar. */
@@ -44,7 +44,7 @@
         appearance: none;
         padding: 7px 14px 7px 14px;
         font-size: 0.82rem;
-        background: #f8f9fa;
+        background: light-dark(#f8f9fa, #181C22);
         border: 1.5px solid var(--db-border);
         border-radius: 10px;
         font-family: 'Segoe UI', sans-serif;
@@ -99,12 +99,12 @@
         gap: 8px;
         padding: 8px 16px;
         border-radius: 30px;
-        background: #EAF7F5;
-        color: #2e7d72;
+        background: light-dark(#EAF7F5, #182F2C);
+        color: light-dark(#2e7d72, #75C2B5);
         font-size: .86rem;
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
-        border: 1px solid #CDE9E4;
+        border: 1px solid light-dark(#CDE9E4, #354D49);
         white-space: nowrap;
         }
 
@@ -114,16 +114,16 @@
         gap: 6px;
         padding: 9px 16px;
         border-radius: 8px;
-        background: #fff;
-        color: #2e7d72;
-        border: 1px solid #CDE9E4;
+        background: light-dark(#fff, #1A1E24);
+        color: light-dark(#2e7d72, #75C2B5);
+        border: 1px solid light-dark(#CDE9E4, #354D49);
         font-weight: 700;
         font-size: .86rem;
         font-family: 'Segoe UI', sans-serif;
         cursor: pointer;
         }
 
-        .db-btn-refresh:hover { background: #EAF7F5; }
+        .db-btn-refresh:hover { background: light-dark(#EAF7F5, #182F2C); }
         .db-btn-refresh.spinning .db-refresh-ico { animation: dbSpin .7s linear infinite; }
         .db-refresh-ico { display: flex; align-items: center; font-size: 1rem; line-height: 1; }
         @keyframes dbSpin { to { transform: rotate(360deg); } }
@@ -154,7 +154,7 @@
         max-height: 80dvh;
         display: flex;
         flex-direction: column;
-        box-shadow: 0 14px 44px rgba(0,0,0,.28);
+        box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .554));
         font-family: 'Segoe UI', sans-serif;
         }
 
@@ -203,7 +203,7 @@
         .db-breakdown-table td {
         color: var(--db-text);
         padding: 8px 10px;
-        border-bottom: 1px solid #F2F4F7;
+        border-bottom: 1px solid light-dark(#F2F4F7, #2E3238);
         }
 
         .db-breakdown-table .db-num { text-align: right; }
@@ -242,23 +242,23 @@
         }
 
         .db-stat-icon--green {
-        background: #E8F8EE;
-        color: #27AE60;
+        background: light-dark(#E8F8EE, #1B2F24);
+        color: light-dark(#27AE60, #5ACC81);
         }
 
         .db-stat-icon--red {
-        background: #FEECEC;
-        color: #E74C3C;
+        background: light-dark(#FEECEC, #382424);
+        color: light-dark(#E74C3C, #FE8C7B);
         }
 
         .db-stat-icon--blue {
-        background: #EAF3FF;
-        color: #3B82F6;
+        background: light-dark(#EAF3FF, #202B39);
+        color: light-dark(#3B82F6, #83B2FE);
         }
 
         .db-stat-icon--pink {
-        background: #FDF0F8;
-        color: #D63384;
+        background: light-dark(#FDF0F8, #34242F);
+        color: light-dark(#D63384, #FA86B5);
         }
 
         .db-stat-label {
@@ -285,11 +285,11 @@
         }
 
         .db-stat-delta--up {
-        color: #27AE60;
+        color: light-dark(#27AE60, #5ACC81);
         }
 
         .db-stat-delta--down {
-        color: #E74C3C;
+        color: light-dark(#E74C3C, #FE8C7B);
         }
 
         /* Middle row. */
@@ -333,18 +333,18 @@
         }
 
         .db-card-icon--green {
-        background: #E8F8EE;
-        color: #27AE60;
+        background: light-dark(#E8F8EE, #1B2F24);
+        color: light-dark(#27AE60, #5ACC81);
         }
 
         .db-card-icon--red {
-        background: #FEECEC;
-        color: #E74C3C;
+        background: light-dark(#FEECEC, #382424);
+        color: light-dark(#E74C3C, #FE8C7B);
         }
 
         .db-card-icon--orange {
-        background: #FEF3E8;
-        color: #F4723B;
+        background: light-dark(#FEF3E8, #34271A);
+        color: light-dark(#F4723B, #FE8E62);
         }
 
         .db-card-title {
@@ -388,7 +388,7 @@
         transition: background .15s ease, opacity .15s ease;
         }
 
-        .db-legend-item:hover:not(:disabled) { background: #F1F5F9; }
+        .db-legend-item:hover:not(:disabled) { background: light-dark(#F1F5F9, #171B20); }
         .db-legend-item:focus-visible { outline: 2px solid #4AADA8; outline-offset: 1px; }
 
         .db-legend-item[aria-pressed="false"] { opacity: .45; }
@@ -445,7 +445,7 @@
         .db-map-leaflet {
         position: absolute;
         inset: 0;
-        background: #E8EFF7;
+        background: light-dark(#E8EFF7, #1F2B39);
         }
 
         .db-card--map .db-map-legend {
@@ -481,7 +481,7 @@
         font-weight: 600;
         padding: 9px 18px;
         border-radius: 20px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, .2);
+        box-shadow: 0 2px 10px light-dark(rgba(0, 0, 0, .2), rgba(0, 0, 0, .41));
         }
 
         /* Bus pill markers (same look as the Fleet Map page) */
@@ -502,7 +502,7 @@
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
         letter-spacing: 0.03em;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .374));
         white-space: nowrap;
         }
 
@@ -527,14 +527,14 @@
         }
 
         .fm-bus-marker--off span {
-        border: 2px dashed rgba(255, 255, 255, .95);
+        border: 2px dashed light-dark(rgba(255, 255, 255, .95), rgba(26, 30, 36, .95));
         padding: 2px 8px;
         }
 
         .db-map-placeholder {
         position: relative;
         height: 280px;
-        background: #E8EFF7;
+        background: light-dark(#E8EFF7, #1F2B39);
         border-radius: 10px;
         overflow: hidden;
         }
@@ -542,7 +542,7 @@
         .db-map-grid {
         position: absolute;
         inset: 0;
-        background-image: linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px);
+        background-image: linear-gradient(light-dark(rgba(255,255,255,.35), rgba(26, 30, 36, .35)) 1px, transparent 1px), linear-gradient(90deg, light-dark(rgba(255,255,255,.35), rgba(26, 30, 36, .35)) 1px, transparent 1px);
         background-size: 40px 40px;
         }
 
@@ -571,7 +571,7 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        border: 3px solid #fff;
+        border: 3px solid light-dark(#fff, #1A1E24);
         transform: translate(-50%, -50%);
         box-shadow: 0 0 0 3px rgba(74,173,168,.3);
         }
@@ -580,10 +580,10 @@
         position: absolute;
         top: 12px;
         right: 12px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
         border-radius: 8px;
         padding: 10px 14px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.1);
+        box-shadow: 0 2px 8px light-dark(rgba(0,0,0,.1), rgba(0, 0, 0, .23));
         font-family: 'Segoe UI', sans-serif;
         }
 

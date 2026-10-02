@@ -659,7 +659,7 @@
                 L.circle(raw, { radius: bus.accuracy, color: color, weight: 1, opacity: .5, fillOpacity: .08, interactive: false })
                     .addTo(rawLayer);
             }
-            L.polyline([raw, [bus.lat, bus.lng]], { color: '#374151', weight: 1.5, dashArray: '3 4', opacity: .7, interactive: false })
+            L.polyline([raw, [bus.lat, bus.lng]], { color: rsTheme.pick('#374151', '#CBD5E0'), weight: 1.5, dashArray: '3 4', opacity: .7, interactive: false })
                 .addTo(rawLayer);
             L.circleMarker(raw, { radius: 4, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 1, interactive: false })
                 .addTo(rawLayer);

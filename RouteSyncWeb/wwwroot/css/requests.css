@@ -1,13 +1,13 @@
 ﻿/* Requests/Index.cshtml */
     :root {
         --rq-teal: #4AADA8;
-        --rq-text: #2D3748;
-        --rq-muted: #9AA5B4;
-        --rq-border: #E8ECF0;
-        --rq-bg: #F8F9FA;
-        --rq-white: #FFFFFF;
+        --rq-text: light-dark(#2D3748, #D2DAE7);
+        --rq-muted: light-dark(#9AA5B4, #969FAB);
+        --rq-border: light-dark(#E8ECF0, #2F343A);
+        --rq-bg: light-dark(#F8F9FA, #181C22);
+        --rq-white: light-dark(#FFFFFF, #1A1E24);
         --rq-radius: 14px;
-        --rq-shadow: 0 1px 4px rgba(0,0,0,.06);
+        --rq-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
     }
 
     /* --- Page head ------------------------------------------------------- */
@@ -66,9 +66,9 @@
         align-items: center;
         padding: 6px 14px;
         border-radius: 30px;
-        background: #FEF9E7;
-        color: #B7950B;
-        border: 1px solid #F5E6B8;
+        background: light-dark(#FEF9E7, #302A12);
+        color: light-dark(#B7950B, #D0AE37);
+        border: 1px solid light-dark(#F5E6B8, #53471E);
         font-size: .8rem;
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
@@ -96,11 +96,11 @@
     @keyframes rqSpin { to { transform: rotate(360deg); } }
 
     .rq-btn--icon.rq-refresh {
-        border-color: #CDE9E4;
-        color: #2E7D72;
+        border-color: light-dark(#CDE9E4, #354D49);
+        color: light-dark(#2E7D72, #75C2B5);
     }
 
-    .rq-btn--icon.rq-refresh:hover { background: #EAF7F5; }
+    .rq-btn--icon.rq-refresh:hover { background: light-dark(#EAF7F5, #182F2C); }
 
     /* The count that belongs to the card heading rather than the title row, and the
        reload that belongs to the app bar. Only a phone has a use for either. */
@@ -310,10 +310,10 @@
         margin-left: 6px;
         padding: 2px 7px;
         border-radius: 20px;
-        background: #FEF9E7;
+        background: light-dark(#FEF9E7, #302A12);
         font-size: .7rem;
         font-weight: 700;
-        color: #B7950B;
+        color: light-dark(#B7950B, #D0AE37);
         white-space: nowrap;
     }
 
@@ -339,26 +339,26 @@
         white-space: nowrap;
     }
 
-    .rq-badge--vacation  { background: #E8F6F5; color: #2C9C96; }
-    .rq-badge--sick      { background: #E3F2FD; color: #2B6CB0; }
-    .rq-badge--emergency { background: #FDECEC; color: #E53E3E; }
-    .rq-badge--default   { background: #E4E7EC; color: #4B5563; }
+    .rq-badge--vacation  { background: light-dark(#E8F6F5, #172F2E); color: light-dark(#2C9C96, #5CC5BE); }
+    .rq-badge--sick      { background: light-dark(#E3F2FD, #192D3A); color: light-dark(#2B6CB0, #74B5FF); }
+    .rq-badge--emergency { background: light-dark(#FDECEC, #382425); color: light-dark(#E53E3E, #FF8B82); }
+    .rq-badge--default   { background: light-dark(#E4E7EC, #12161B); color: light-dark(#4B5563, #C8D1DE); }
 
-    .rq-badge--pending   { background: #FEF9E7; color: #B7950B; }
-    .rq-badge--approved  { background: #E8F8EE; color: #27AE60; }
-    .rq-badge--rejected  { background: #FDECEC; color: #E53E3E; }
-    .rq-badge--cancelled { background: #E4E7EC; color: #4B5563; }
+    .rq-badge--pending   { background: light-dark(#FEF9E7, #302A12); color: light-dark(#B7950B, #D0AE37); }
+    .rq-badge--approved  { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
+    .rq-badge--rejected  { background: light-dark(#FDECEC, #382425); color: light-dark(#E53E3E, #FF8B82); }
+    .rq-badge--cancelled { background: light-dark(#E4E7EC, #12161B); color: light-dark(#4B5563, #C8D1DE); }
 
     /* An approval begun and not finished. Neither the amber of a request nobody has
        looked at nor the green of one that has been granted, because it is neither. */
-    .rq-badge--held { background: #EAF0FB; color: #3A5BA0; }
+    .rq-badge--held { background: light-dark(#EAF0FB, #222A39); color: light-dark(#3A5BA0, #8AB0FC); }
 
     /* Something the driver wrote, shown as theirs. */
     .rq-quote {
         margin: 10px 0;
         padding: 10px 12px;
-        border-left: 3px solid #CDE9E4;
-        background: #F7FAFA;
+        border-left: 3px solid light-dark(#CDE9E4, #354D49);
+        background: light-dark(#F7FAFA, #181C22);
         border-radius: 0 8px 8px 0;
     }
 
@@ -368,7 +368,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .04em;
-        color: #7C8B99;
+        color: light-dark(#7C8B99, #A5B0BB);
     }
 
     .rq-quote-t {
@@ -392,8 +392,8 @@
         margin: 10px 0 0;
         padding: 8px 12px;
         border-radius: 8px;
-        background: #FEF9E7;
-        color: #7a6412;
+        background: light-dark(#FEF9E7, #302A12);
+        color: light-dark(#7a6412, #C7B065);
         font-size: .78rem;
         line-height: 1.45;
     }
@@ -405,8 +405,8 @@
         margin-left: 6px;
         padding: 2px 8px;
         border-radius: 999px;
-        background: #EAF0FB;
-        color: #3A5BA0;
+        background: light-dark(#EAF0FB, #222A39);
+        color: light-dark(#3A5BA0, #8AB0FC);
         font-size: .7rem;
         font-weight: 700;
         white-space: nowrap;
@@ -420,8 +420,8 @@
         margin-left: 6px;
         padding: 2px 8px;
         border-radius: 999px;
-        background: #FDECEC;
-        color: #C0392B;
+        background: light-dark(#FDECEC, #382425);
+        color: light-dark(#C0392B, #FE8C7B);
         font-size: .7rem;
         font-weight: 700;
         white-space: nowrap;
@@ -457,7 +457,7 @@
         cursor: pointer;
     }
 
-        .rq-day:hover { background: #F8FAFB; }
+        .rq-day:hover { background: light-dark(#F8FAFB, #181D22); }
 
         .rq-day input { width: 16px; height: 16px; accent-color: #C0392B; }
 
@@ -466,9 +466,9 @@
     .rq-blocking {
         margin-top: 10px;
         padding: 10px 12px;
-        border: 1px solid #E6D6A8;
+        border: 1px solid light-dark(#E6D6A8, #54461E);
         border-radius: 8px;
-        background: #FEF9E7;
+        background: light-dark(#FEF9E7, #302A12);
     }
 
     .rq-blocking-lead {
@@ -479,7 +479,7 @@
         font-size: .84rem;
         font-weight: 600;
         line-height: 1.4;
-        color: #94560A;
+        color: light-dark(#94560A, #E4A061);
     }
 
         .rq-blocking-lead i {
@@ -491,27 +491,27 @@
         margin: 0 0 6px;
         font-size: .8rem;
         font-weight: 700;
-        color: #7a6412;
+        color: light-dark(#7a6412, #C7B065);
     }
 
     .rq-blocking-list {
         margin: 0;
         padding-left: 18px;
         font-size: .8rem;
-        color: #7a6412;
+        color: light-dark(#7a6412, #C7B065);
     }
 
         .rq-blocking-list li { margin-bottom: 2px; }
 
         .rq-blocking-list a {
-            color: #7a6412;
+            color: light-dark(#7a6412, #C7B065);
             text-decoration: underline;
         }
 
     .rq-blocking-s {
         margin: 8px 0 0;
         font-size: .75rem;
-        color: #9a8434;
+        color: light-dark(#9a8434, #C7B061);
     }
 
     /* With covers to choose, the box is a plain section of the dialog rather than a
@@ -528,7 +528,7 @@
             color: var(--rq-text);
         }
 
-        .rq-blocking--covers .rq-blocking-s { color: #5F6F85; }
+        .rq-blocking--covers .rq-blocking-s { color: light-dark(#5F6F85, #B8C1CD); }
 
     /* Room for a list's figures beside the names. Two classes, to outrank the dialog's own
        width further down. */
@@ -546,15 +546,15 @@
     /* A cover for each shift in the way, one row each, divided by a hairline. The dialog
        scrolls as a whole rather than this list inside it. */
     .rq-covers {
-        border-top: 1px solid #E8ECF0;
-        border-bottom: 1px solid #E8ECF0;
+        border-top: 1px solid light-dark(#E8ECF0, #2F343A);
+        border-bottom: 1px solid light-dark(#E8ECF0, #2F343A);
     }
 
         .rq-covers[hidden] { display: none; }
 
     .rq-cover { padding: 10px 2px; }
 
-        .rq-cover + .rq-cover { border-top: 1px solid #E8ECF0; }
+        .rq-cover + .rq-cover { border-top: 1px solid light-dark(#E8ECF0, #2F343A); }
 
     .rq-cover-head {
         display: flex;
@@ -568,7 +568,7 @@
     .rq-cover-when { font-weight: 700; color: var(--rq-text); }
 
     .rq-cover-where {
-        color: #5A6473;
+        color: light-dark(#5A6473, #BFC8D5);
         text-decoration: underline;
     }
 
@@ -583,9 +583,9 @@
         align-items: center;
         margin-top: 6px;
         padding: 12px 14px;
-        border: 1px solid #BFE3DF;
+        border: 1px solid light-dark(#BFE3DF, #2F4E4C);
         border-radius: 12px;
-        background: #F0F9F8;
+        background: light-dark(#F0F9F8, #171C21);
     }
 
     .rq-cover-avatar {
@@ -609,7 +609,7 @@
         font-weight: 700;
         letter-spacing: .06em;
         text-transform: uppercase;
-        color: #2C9C96;
+        color: light-dark(#2C9C96, #5CC5BE);
     }
 
     .rq-cover-who {
@@ -638,20 +638,20 @@
     .rq-cover-line--picked .rsc-best {
         padding: 2px 9px;
         border-radius: 999px;
-        background: #D6EFEB;
+        background: light-dark(#D6EFEB, #0B312D);
         font-size: .72rem;
     }
 
     .rq-cover-name--none {
         font-weight: 600;
-        color: #5F6F85;
+        color: light-dark(#5F6F85, #B8C1CD);
     }
 
     .rq-cover-why,
     .rq-cover-updated {
         font-size: .78rem;
         line-height: 1.4;
-        color: #5F6F85;
+        color: light-dark(#5F6F85, #B8C1CD);
     }
 
     .rq-cover-cost {
@@ -660,7 +660,7 @@
         gap: 5px;
         font-size: .78rem;
         line-height: 1.4;
-        color: #94560A;
+        color: light-dark(#94560A, #E4A061);
     }
 
         .rq-cover-cost i {
@@ -678,7 +678,7 @@
         background: none;
         font-size: .8rem;
         font-weight: 600;
-        color: #2e7d72;
+        color: light-dark(#2e7d72, #75C2B5);
         text-decoration: underline;
         text-underline-offset: 2px;
         cursor: pointer;
@@ -690,17 +690,17 @@
     .rq-cover-line--picked .rq-cover-change {
         align-self: center;
         padding: 6px 14px;
-        border: 1px solid #BFE3DF;
+        border: 1px solid light-dark(#BFE3DF, #2F4E4C);
         border-radius: 8px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
         text-decoration: none;
     }
 
-        .rq-cover-line--picked .rq-cover-change:hover { background: #E3F4F1; }
+        .rq-cover-line--picked .rq-cover-change:hover { background: light-dark(#E3F4F1, #182F2C); }
 
     .rq-cover-leave {
         margin-top: 4px;
-        color: #5F6F85;
+        color: light-dark(#5F6F85, #B8C1CD);
     }
 
         .rq-cover-planner:focus-visible,
@@ -726,7 +726,7 @@
         background: #1F2937;
         color: #fff;
         font-size: .85rem;
-        box-shadow: 0 8px 24px rgba(13, 28, 40, .22);
+        box-shadow: 0 8px 24px light-dark(rgba(13, 28, 40, .22), rgba(0, 0, 0, .446));
     }
 
         .rq-toast[hidden] { display: none; }
@@ -792,12 +792,12 @@
     .rq-btn--approve:hover { background: #219653; border-color: #219653; }
 
     .rq-btn--reject {
-        background: #FDECEC;
-        border-color: #F3B7B7;
-        color: #C0392B;
+        background: light-dark(#FDECEC, #382425);
+        border-color: light-dark(#F3B7B7, #643A3B);
+        color: light-dark(#C0392B, #FE8C7B);
     }
 
-    .rq-btn--reject:hover { background: #FADBD8; border-color: #E53E3E; color: #E53E3E; }
+    .rq-btn--reject:hover { background: light-dark(#FADBD8, #411E1C); border-color: #E53E3E; color: light-dark(#E53E3E, #FF8B82); }
 
     .rq-btn--primary {
         background: var(--rq-teal);
@@ -815,11 +815,11 @@
        read as a label that happened to be clickable. */
     .rq-btn--history {
         background: var(--rq-white);
-        border-color: #CDE9E4;
-        color: #2E7D72;
+        border-color: light-dark(#CDE9E4, #354D49);
+        color: light-dark(#2E7D72, #75C2B5);
     }
 
-    .rq-btn--history:hover { background: #EAF7F5; border-color: var(--rq-teal); }
+    .rq-btn--history:hover { background: light-dark(#EAF7F5, #182F2C); border-color: var(--rq-teal); }
 
     /* --- History --------------------------------------------------------- */
 
@@ -927,12 +927,12 @@
     }
 
     .rq-box {
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
         border-radius: 14px;
         width: 100%;
         max-width: 440px;
         padding: 22px;
-        box-shadow: 0 14px 44px rgba(0,0,0,.28);
+        box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .554));
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -948,8 +948,8 @@
         margin-top: 10px;
         padding: 8px 12px;
         border-radius: 8px;
-        background: #FDECEC;
-        color: #E53E3E;
+        background: light-dark(#FDECEC, #382425);
+        color: light-dark(#E53E3E, #FF8B82);
         font-size: .8rem;
     }
 
@@ -992,7 +992,7 @@
 @media (min-width: 600px) {
 
     .rq-sticky-head {
-        background: var(--rq-bg);
+        background: var(--rs-page);
         padding-bottom: 18px;
     }
 
@@ -1090,13 +1090,13 @@
         width: 44px;
         height: 44px;
         padding: 0;
-        border: 1px solid #CDE9E4;
+        border: 1px solid light-dark(#CDE9E4, #354D49);
         border-radius: 10px;
         background: var(--rq-white);
-        color: #2E7D72;
+        color: light-dark(#2E7D72, #75C2B5);
     }
 
-        .rq-refresh--pills:active { background: #EAF7F5; }
+        .rq-refresh--pills:active { background: light-dark(#EAF7F5, #182F2C); }
 
         .rq-refresh--pills .rq-refresh-ico { display: flex; align-items: center; }
 

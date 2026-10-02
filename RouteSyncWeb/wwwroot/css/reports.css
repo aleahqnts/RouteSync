@@ -1,13 +1,13 @@
 ﻿/* Reports/Index.cshtml */
     :root {
-    --rp-text: #2D3748;
-    --rp-muted: #9AA5B4;
-    --rp-border: #E8ECF0;
-    --rp-bg: #F8F9FA;
-    --rp-white: #FFFFFF;
+    --rp-text: light-dark(#2D3748, #D2DAE7);
+    --rp-muted: light-dark(#9AA5B4, #969FAB);
+    --rp-border: light-dark(#E8ECF0, #2F343A);
+    --rp-bg: light-dark(#F8F9FA, #181C22);
+    --rp-white: light-dark(#FFFFFF, #1A1E24);
     --rp-teal: #4AADA8;
     --rp-radius: 14px;
-    --rp-shadow: 0 1px 4px rgba(0,0,0,.06);
+    --rp-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
     }
 
     /* Topbar filters. */
@@ -87,18 +87,18 @@
     .rp-title-row .rp-title { margin-bottom:0; }
     .rp-toolbar-right { display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .rp-date-nav { display:inline-flex; align-items:center; gap:8px; }
-    .rp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:#EAF7F5; color:#2e7d72; border:1px solid #CDE9E4; cursor:pointer; font-size:1.1rem; transition:background .15s, transform .15s; }
+    .rp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #182F2C); color:light-dark(#2e7d72, #75C2B5); border:1px solid light-dark(#CDE9E4, #354D49); cursor:pointer; font-size:1.1rem; transition:background .15s, transform .15s; }
     .rp-date-arrow:hover { background:#2e7d72; color:#fff; transform:translateY(-1px); }
-    .rp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:#EAF7F5; color:#2e7d72; font-size:.86rem; font-weight:700; border:1px solid #CDE9E4; cursor:pointer; white-space:nowrap; }
+    .rp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #182F2C); color:light-dark(#2e7d72, #75C2B5); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #354D49); cursor:pointer; white-space:nowrap; }
     .rp-date-badge i { font-size:1rem; }
-    .rp-date-today { display:inline-flex; align-items:center; padding:7px 14px; border-radius:30px; background:#fff; color:#2e7d72; border:1px solid #CDE9E4; font-size:.82rem; font-weight:700; cursor:pointer; }
+    .rp-date-today { display:inline-flex; align-items:center; padding:7px 14px; border-radius:30px; background:light-dark(#fff, #1A1E24); color:light-dark(#2e7d72, #75C2B5); border:1px solid light-dark(#CDE9E4, #354D49); font-size:.82rem; font-weight:700; cursor:pointer; }
     .rp-date-today:hover { background:#2e7d72; color:#fff; }
-    .rp-btn-refresh { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; background:#fff; color:#2e7d72; border:1px solid #CDE9E4; font-weight:700; font-size:.86rem; cursor:pointer; }
-    .rp-btn-refresh:hover { background:#EAF7F5; }
+    .rp-btn-refresh { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; background:light-dark(#fff, #1A1E24); color:light-dark(#2e7d72, #75C2B5); border:1px solid light-dark(#CDE9E4, #354D49); font-weight:700; font-size:.86rem; cursor:pointer; }
+    .rp-btn-refresh:hover { background:light-dark(#EAF7F5, #182F2C); }
     .rp-refresh-ico { display: flex; align-items: center; font-size: 1rem; line-height: 1; }
     .rp-btn-refresh.spinning .rp-refresh-ico { animation:rpSpin .7s linear infinite; }
     @keyframes rpSpin { to { transform:rotate(360deg); } }
-    .rp-updated { font-size:.78rem; color:#8a98a3; }
+    .rp-updated { font-size:.78rem; color:light-dark(#8a98a3, #9CA9B2); }
     .rp-hidden-date { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 
     /* Stat grid. */
@@ -135,23 +135,23 @@
     }
 
     .rp-stat-icon--green {
-    background: #E8F8EE;
-    color: #27AE60;
+    background: light-dark(#E8F8EE, #1B2F24);
+    color: light-dark(#27AE60, #5ACC81);
     }
 
     .rp-stat-icon--red {
-    background: #FEECEC;
-    color: #E74C3C;
+    background: light-dark(#FEECEC, #382424);
+    color: light-dark(#E74C3C, #FE8C7B);
     }
 
     .rp-stat-icon--blue {
-    background: #EAF3FF;
-    color: #3B82F6;
+    background: light-dark(#EAF3FF, #202B39);
+    color: light-dark(#3B82F6, #83B2FE);
     }
 
     .rp-stat-icon--pink {
-    background: #FDF0F8;
-    color: #D63384;
+    background: light-dark(#FDF0F8, #34242F);
+    color: light-dark(#D63384, #FA86B5);
     }
 
     .rp-stat-label {
@@ -186,15 +186,15 @@
     }
 
     .rp-delta--up {
-    color: #27AE60;
+    color: light-dark(#27AE60, #5ACC81);
     }
 
     .rp-delta--down {
-    color: #E74C3C;
+    color: light-dark(#E74C3C, #FE8C7B);
     }
 
     .rp-skeleton {
-    color: #D0D5DD;
+    color: light-dark(#D0D5DD, #7E838A);
     animation: rp-pulse 1.2s ease-in-out infinite;
     }
 
@@ -237,13 +237,13 @@
     }
 
     .rp-card-icon--purple {
-    background: #F0EEFF;
-    color: #7C6FE0;
+    background: light-dark(#F0EEFF, #2A273B);
+    color: light-dark(#7C6FE0, #AAA4FF);
     }
 
     .rp-card-icon--green {
-    background: #E8F8EE;
-    color: #27AE60;
+    background: light-dark(#E8F8EE, #1B2F24);
+    color: light-dark(#27AE60, #5ACC81);
     }
 
     .rp-card-title {
@@ -290,7 +290,7 @@
     }
 
     .rp-table tbody tr:hover {
-    background: #FAFBFC;
+    background: light-dark(#FAFBFC, #191D22);
     }
 
     .rp-plate {
@@ -310,18 +310,18 @@
     }
 
     .rp-shift--morning {
-    background: #FFF8E1;
+    background: light-dark(#FFF8E1, #332909);
     color: #F59E0B;
     }
 
     .rp-shift--afternoon {
-    background: #E8F8EE;
-    color: #27AE60;
+    background: light-dark(#E8F8EE, #1B2F24);
+    color: light-dark(#27AE60, #5ACC81);
     }
 
     .rp-shift--evening {
-    background: #EAF3FF;
-    color: #3B82F6;
+    background: light-dark(#EAF3FF, #202B39);
+    color: light-dark(#3B82F6, #83B2FE);
     }
 
     /* View button. */
@@ -413,7 +413,7 @@
     .rp-suggest-month {
     margin-right: 10px;
     font-size: 0.8rem;
-    color: #8a98a3;
+    color: light-dark(#8a98a3, #9CA9B2);
     }
 
     /* The span's figures on the left, the screens that make them up on the right. */
@@ -458,7 +458,7 @@
     height: 8px;
     margin-top: 10px;
     border-radius: 999px;
-    background: #EDF1F4;
+    background: light-dark(#EDF1F4, #15191F);
     overflow: hidden;
     }
 
@@ -491,7 +491,7 @@
     align-items: center;
     gap: 12px;
     padding: 9px 0;
-    border-bottom: 1px solid #F1F3F6;
+    border-bottom: 1px solid light-dark(#F1F3F6, #2E3238);
     font-size: 0.84rem;
     }
 
@@ -663,7 +663,7 @@
 
     .rp-progress-wrap {
     height: 8px;
-    background: #F0F0F0;
+    background: light-dark(#F0F0F0, #15191E);
     border-radius: 4px;
     overflow: hidden;
     }
@@ -756,21 +756,21 @@
     }
 
     .rp-template-btn--green {
-    color: #27AE60;
+    color: light-dark(#27AE60, #5ACC81);
     }
 
     .rp-template-btn--blue {
-    color: #3B82F6;
+    color: light-dark(#3B82F6, #83B2FE);
     }
 
     .rp-template-btn--pink {
-    color: #D63384;
+    color: light-dark(#D63384, #FA86B5);
     }
 
     .rp-template-btn:hover {
     background: var(--rp-bg);
     transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(0,0,0,.08);
+    box-shadow: 0 3px 10px light-dark(rgba(0,0,0,.08), rgba(0, 0, 0, .194));
     }
 
     /* Nine columns at desk spacing need more width than a laptop has, and the last
@@ -820,7 +820,7 @@
     }
 
     .rp-stat-card--click:hover {
-    box-shadow: 0 6px 20px rgba(0,0,0,.09);
+    box-shadow: 0 6px 20px light-dark(rgba(0,0,0,.09), rgba(0, 0, 0, .212));
     transform: translateY(-1px);
     }
 
@@ -857,14 +857,14 @@
     }
 
     .tr-modal {
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     border-radius: 16px;
     width: 100%;
     max-width: 700px;
     max-height: 90vh;
     max-height: 90dvh;
     overflow-y: auto;
-    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    box-shadow: 0 8px 40px light-dark(rgba(0,0,0,.18), rgba(0, 0, 0, .374));
     display: flex;
     flex-direction: column;
     }
@@ -877,7 +877,7 @@
     border-bottom: 1px solid var(--rp-border);
     position: sticky;
     top: 0;
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     z-index: 1;
     border-radius: 16px 16px 0 0;
     }
@@ -885,7 +885,7 @@
     .tr-modal-title {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #1A2B4A;
+    color: light-dark(#1A2B4A, #D6DDEB);
     font-family: 'Segoe UI', sans-serif;
     margin: 0;
     }
@@ -942,7 +942,7 @@
     .trd-id {
     font-size: 1.15rem;
     font-weight: 700;
-    color: #1A2B4A;
+    color: light-dark(#1A2B4A, #D6DDEB);
     letter-spacing: .01em;
     }
 
@@ -953,10 +953,10 @@
     gap: 4px 8px;
     margin-top: 6px;
     font-size: 0.86rem;
-    color: #5A6778;
+    color: light-dark(#5A6778, #BDC6D3);
     }
 
-    .trd-sep { color: #C5CDD8; }
+    .trd-sep { color: light-dark(#C5CDD8, #808892); }
 
     /* Status, for the trip and its checklist alike. */
     .trd-badge {
@@ -969,10 +969,10 @@
     }
 
     .trd-badge[hidden] { display: none; }
-    .trd-badge--ok { background: #E8F8EE; color: #27AE60; }
-    .trd-badge--warn { background: #FFF8E1; color: #D48806; }
-    .trd-badge--bad { background: #FDECEC; color: #D14343; }
-    .trd-badge--idle { background: #F1F3F6; color: #6B7280; }
+    .trd-badge--ok { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
+    .trd-badge--warn { background: light-dark(#FFF8E1, #332909); color: light-dark(#D48806, #EC9E32); }
+    .trd-badge--bad { background: light-dark(#FDECEC, #382425); color: light-dark(#D14343, #FF8A83); }
+    .trd-badge--idle { background: light-dark(#F1F3F6, #161A1F); color: light-dark(#6B7280, #B7BECB); }
 
     .trd-label {
     font-size: 0.7rem;
@@ -985,7 +985,7 @@
     .trd-figures {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    background: #F8FAFB;
+    background: light-dark(#F8FAFB, #181D22);
     border-bottom: 1px solid var(--rp-border);
     }
 
@@ -1002,7 +1002,7 @@
     .trd-fig-n {
     font-size: 1.3rem;
     font-weight: 700;
-    color: #1A2B4A;
+    color: light-dark(#1A2B4A, #D6DDEB);
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
     }
@@ -1052,7 +1052,7 @@
     .trd-times td {
     padding: 8px 10px;
     text-align: left;
-    border-bottom: 1px solid #EEF1F4;
+    border-bottom: 1px solid light-dark(#EEF1F4, #2E3338);
     }
 
     .trd-times thead th {
@@ -1067,7 +1067,7 @@
     .trd-times tbody th {
     padding-left: 0;
     font-weight: 600;
-    color: #5A6778;
+    color: light-dark(#5A6778, #BDC6D3);
     width: 34%;
     }
 
@@ -1076,7 +1076,7 @@
 
     .trd-times-actual td {
     font-weight: 700;
-    color: #1A2B4A;
+    color: light-dark(#1A2B4A, #D6DDEB);
     }
 
     .trd-dl {
@@ -1089,13 +1089,13 @@
 
     .trd-dl dt {
     font-weight: 600;
-    color: #5A6778;
+    color: light-dark(#5A6778, #BDC6D3);
     }
 
     .trd-dl dd {
     margin: 0;
     font-weight: 600;
-    color: #1A2B4A;
+    color: light-dark(#1A2B4A, #D6DDEB);
     min-width: 0;
     overflow-wrap: anywhere;
     }
@@ -1141,7 +1141,7 @@
     }
 
     .rg-modal {
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     border-radius: 20px;
     width: 100%;
     max-width: min(1240px, 96vw);
@@ -1149,7 +1149,7 @@
     max-height: 92dvh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 12px 48px rgba(0,0,0,.2);
+    box-shadow: 0 12px 48px light-dark(rgba(0,0,0,.2), rgba(0, 0, 0, .41));
     overflow: hidden;
     }
 
@@ -1171,19 +1171,19 @@
     .rg-modal-icon {
     width: 34px;
     height: 34px;
-    background: #F0FDF4;
+    background: light-dark(#F0FDF4, #1E2F24);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #27AE60;
+    color: light-dark(#27AE60, #5ACC81);
     flex-shrink: 0;
     }
 
     .rg-title {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #1A2B4A;
+    color: light-dark(#1A2B4A, #D6DDEB);
     font-family: 'Segoe UI', sans-serif;
     margin: 0;
     }
@@ -1214,7 +1214,7 @@
     .rg-filters {
     padding: 20px 18px;
     border-right: 1px solid var(--rp-border);
-    background: #FAFBFC;
+    background: light-dark(#FAFBFC, #191D22);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -1270,7 +1270,7 @@
     border: 1.5px solid var(--rp-border);
     border-radius: 9px;
     color: var(--rp-text);
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     outline: none;
     transition: border-color 180ms;
     }
@@ -1294,7 +1294,7 @@
     border: 1.5px solid var(--rp-border);
     border-radius: 9px;
     color: var(--rp-text);
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     cursor: pointer;
     outline: none;
     transition: border-color 180ms;
@@ -1316,16 +1316,16 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 20px;
-    background: #F0F2F5;
+    background: light-dark(#F0F2F5, #161A1F);
     min-width: 0;
     }
 
     .rg-preview-sheet {
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     border-radius: 10px;
     padding: 20px;
     min-height: 340px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    box-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
     overflow-x: auto;
     }
 
@@ -1344,7 +1344,7 @@
     padding: 60px 0;
     text-align: center;
     font-size: 0.88rem;
-    color: #E74C3C;
+    color: light-dark(#E74C3C, #FE8C7B);
     font-family: 'Segoe UI', sans-serif;
     }
 
@@ -1399,7 +1399,7 @@
     }
 
     .rg-preview-table th {
-    background: #F8F9FA;
+    background: light-dark(#F8F9FA, #181C22);
     color: var(--rp-muted);
     font-weight: 600;
     text-align: left;
@@ -1436,7 +1436,7 @@
     margin-top: 14px;
     padding: 12px 14px;
     border-top: 2px solid var(--rp-teal);
-    background: #F4FBFA;
+    background: light-dark(#F4FBFA, #181C22);
     border-radius: 0 0 8px 8px;
     font-family: 'Segoe UI', sans-serif;
     }
@@ -1462,7 +1462,7 @@
     padding: 16px 24px;
     border-top: 1px solid var(--rp-border);
     flex-shrink: 0;
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     }
 
     .rg-format-toggle {
@@ -1495,7 +1495,7 @@
     font-family: 'Segoe UI', sans-serif;
     font-weight: 600;
     border: none;
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     color: var(--rp-muted);
     cursor: pointer;
     transition: background 150ms, color 150ms;
@@ -1511,7 +1511,7 @@
     }
 
     .rg-toggle-btn:not(.rg-toggle-btn--active):hover {
-    background: #F8F9FA;
+    background: light-dark(#F8F9FA, #181C22);
     color: var(--rp-text);
     }
 
@@ -1519,7 +1519,7 @@
     padding: 10px 24px;
     border-radius: 10px;
     border: 1.5px solid var(--rp-border);
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     font-size: 0.88rem;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 600;
@@ -1529,7 +1529,7 @@
     }
 
     .rg-btn-cancel:hover {
-    background: #F8F9FA;
+    background: light-dark(#F8F9FA, #181C22);
     }
 
     .rg-btn-download {
@@ -1723,7 +1723,7 @@
         padding: 10px 12px;
         border: 1px solid var(--rp-border);
         border-radius: 12px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
     }
 
     /* Desk cell padding indents every value inside a card that is padded already,
@@ -2211,7 +2211,7 @@
             padding: 12px 14px;
             border: 1px solid var(--rp-border);
             border-radius: 12px;
-            background: #F7FAFA;
+            background: light-dark(#F7FAFA, #181C22);
         }
 
         .rg-glance-head {
@@ -2261,7 +2261,7 @@
 
         /* Nothing to download is the one thing worth interrupting for. */
         .rg-glance-note--empty {
-            color: #E74C3C;
+            color: light-dark(#E74C3C, #FE8C7B);
             font-weight: 600;
         }
 
@@ -2271,7 +2271,7 @@
             padding: 14px;
             gap: 12px;
             border-right: none;
-            background: #fff;
+            background: light-dark(#fff, #1A1E24);
         }
 
         .rg-modal-header {

@@ -3,13 +3,18 @@
     --fw-sidebar-collapsed: 72px;
     --fw-sidebar-expanded: 220px;
     --fw-teal: #4AADA8;
-    --fw-teal-light: #E8F6F5;
-    --fw-text-dark: #2D3748;
-    --fw-text-muted: #9AA5B4;
-    --fw-bg: #FFFFFF;
-    --fw-divider: #E8ECF0;
+    --fw-teal-light: light-dark(#E8F6F5, #172F2E);
+    --fw-text-dark: light-dark(#2D3748, #D2DAE7);
+    --fw-text-muted: light-dark(#9AA5B4, #969FAB);
+    --fw-bg: light-dark(#FFFFFF, #1A1E24);
+    --fw-divider: light-dark(#E8ECF0, #2F343A);
     --fw-transition: 220ms ease;
+    /* Light or dark as the dashboard is: see site.css and wwwroot/js/theme.js. */
+    color-scheme: light dark;
 }
+
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
 
 * {
     margin: 0;
@@ -38,20 +43,28 @@ body {
     padding: 16px;
 }
 
+    /* The picture is light, so on a dark page it is laid under a dark wash: the swirl
+       still shows, without a bright frame around the dark card. */
+    :root[data-theme="dark"] .bg-wrapper {
+        background: linear-gradient(rgba(12, 16, 21, .88), rgba(12, 16, 21, .88)),
+                    url('/images/login-bg.png') no-repeat center center;
+        background-size: cover;
+    }
+
 .card {
     display: flex;
     width: min(820px, 100%);
     min-height: 460px;
-    background: #ffffff;
+    background: light-dark(#ffffff, #1A1E24);
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 20px 60px light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, .266));
 }
 
 /* Left Panel */
 .left-panel {
     width: 45%;
-    background: white;
+    background: light-dark(white, #1A1E24);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -70,7 +83,7 @@ body {
 .tagline {
     font-size: 15px;
     font-weight: 600;
-    color: #1e3a5f;
+    color: light-dark(#1e3a5f, #93B3E0);
     letter-spacing: 0.3px;
 }
 
@@ -87,7 +100,7 @@ body {
 .sign-in-title {
     font-size: 32px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: light-dark(#1e3a5f, #93B3E0);
     margin-bottom: 35px;
     text-align: center;
 }
@@ -95,11 +108,11 @@ body {
 .input-group {
     display: flex;
     align-items: center;
-    border: 1px solid #d0d0d0;
+    border: 1px solid light-dark(#d0d0d0, #363A40);
     border-radius: 8px;
     padding: 12px 15px;
     margin-bottom: 8px;
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
 }
 
     .input-group:focus-within {
@@ -109,7 +122,7 @@ body {
 
 .input-icon {
     margin-right: 10px;
-    color: #aaa;
+    color: light-dark(#aaa, #9A9A9A);
     font-size: 16px;
 }
 
@@ -118,24 +131,24 @@ body {
     outline: none;
     width: 100%;
     font-size: 14px;
-    color: #333;
+    color: light-dark(#333, #DADADA);
     background: transparent;
 }
 
     .input-field::placeholder {
-        color: #aaa;
+        color: light-dark(#aaa, #9A9A9A);
     }
 
 .field-error {
-    color: #e74c3c;
+    color: light-dark(#e74c3c, #FE8C7B);
     font-size: 12px;
     margin-bottom: 8px;
     display: block;
 }
 
 .error-message {
-    background: #fdecea;
-    color: #e74c3c;
+    background: light-dark(#fdecea, #382422);
+    color: light-dark(#e74c3c, #FE8C7B);
     padding: 10px 14px;
     border-radius: 8px;
     font-size: 13px;
@@ -150,7 +163,7 @@ body {
 
     .forgot-password a {
         font-size: 13px;
-        color: #3ab5a4;
+        color: light-dark(#3ab5a4, #51C8B6);
         text-decoration: none;
     }
 
@@ -183,16 +196,16 @@ body {
 }
 
 .brand-fleet {
-    color: #1e3a5f;
+    color: light-dark(#1e3a5f, #93B3E0);
 }
 
 .brand-wise {
-    color: #3ab5a4;
+    color: light-dark(#3ab5a4, #51C8B6);
 }
 
 .brand-sub {
     font-size: 20px;
-    color: #888;
+    color: light-dark(#888, #AFAFAF);
     margin-bottom: 130px;
     font-weight: 400;
 }
@@ -201,8 +214,8 @@ body {
     border-right: 2px solid #3ab5a4;
 }
 .success-message {
-    background: #e8f7f4;
-    color: #1f7a6c;
+    background: light-dark(#e8f7f4, #182F2B);
+    color: light-dark(#1f7a6c, #70C3B3);
     padding: 10px 14px;
     border-radius: 8px;
     font-size: 13px;
@@ -216,7 +229,7 @@ body {
     padding: 0;
     font-size: 13px;
     font-family: inherit;
-    color: #3ab5a4;
+    color: light-dark(#3ab5a4, #51C8B6);
     cursor: pointer;
 }
 
@@ -225,7 +238,7 @@ body {
     }
 
 .field-hint {
-    color: #8a94a6;
+    color: light-dark(#8a94a6, #A1A8B5);
     font-size: 12px;
     margin: -4px 0 12px;
 }
@@ -235,14 +248,14 @@ body {
 .step-title {
     font-size: 24px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: light-dark(#1e3a5f, #93B3E0);
     margin-bottom: 6px;
     text-align: center;
 }
 
 .step-hint {
     font-size: 14px;
-    color: #7b8494;
+    color: light-dark(#7b8494, #ABB2BF);
     text-align: center;
     margin-bottom: 22px;
 }
@@ -258,13 +271,13 @@ body {
 .code-box {
     width: 46px;
     height: 56px;
-    border: 1px solid #d9dee6;
+    border: 1px solid light-dark(#d9dee6, #33373D);
     border-radius: 10px;
     text-align: center;
     font-size: 24px;
     font-weight: 600;
-    color: #1e3a5f;
-    background: #fff;
+    color: light-dark(#1e3a5f, #93B3E0);
+    background: light-dark(#fff, #1A1E24);
 }
 
     .code-box:focus {
@@ -289,7 +302,7 @@ body {
     border: none;
     background: none;
     padding: 0 0 0 8px;
-    color: #aaa;
+    color: light-dark(#aaa, #9A9A9A);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -302,7 +315,7 @@ body {
     }
 
     .eye:hover {
-        color: #3ab5a4;
+        color: light-dark(#3ab5a4, #51C8B6);
     }
 
     /* The icon reports the state of the field rather than the action on offer: a slashed
@@ -335,7 +348,7 @@ body {
         align-items: center;
         gap: 7px;
         font-size: 12px;
-        color: #9aa3b2;
+        color: light-dark(#9aa3b2, #98A0AC);
         transition: color .15s ease;
     }
 
@@ -343,14 +356,14 @@ body {
         width: 9px;
         height: 9px;
         border-radius: 50%;
-        border: 1.5px solid #cfd6e0;
+        border: 1.5px solid light-dark(#cfd6e0, #35393F);
         background: transparent;
         flex: none;
         transition: background .15s ease, border-color .15s ease;
     }
 
     .pw-rules li.met {
-        color: #2f8d7e;
+        color: light-dark(#2f8d7e, #6BC4B4);
     }
 
         .pw-rules li.met .dot {
@@ -359,7 +372,7 @@ body {
         }
 
 .link-button:disabled {
-    color: #9aa3b2;
+    color: light-dark(#9aa3b2, #98A0AC);
     cursor: default;
     text-decoration: none;
 }

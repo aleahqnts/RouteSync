@@ -5,6 +5,73 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ===========================================================================
+   Light and dark.
+
+   Every colour in these stylesheets is written light-dark(light, dark), and which of
+   the two is drawn follows color-scheme, set here from data-theme on <html> (see
+   wwwroot/js/theme.js). A colour added later is written the same way, or it stays the
+   same in both and stands out in one of them.
+   =========================================================================== */
+
+:root {
+    color-scheme: light dark;
+    /* The ground of the content column, behind every card. */
+    --rs-page: light-dark(#f8f9fa, #0F1318);
+}
+
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
+
+    /* Bootstrap's own parts, the body included, in the same ground and ink. */
+    :root[data-theme="dark"] {
+        --bs-body-bg: #0F1318;
+        --bs-body-color: #D2DAE7;
+    }
+
+/* Fields that set no colours of their own. Left to the browser, a dark page draws them
+   in its own flat grey. :where() adds nothing to the weight of the selector, so any field
+   a page has styled keeps what it was given. */
+:where(:root[data-theme="dark"]) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), textarea, select) {
+    background-color: #12161B;
+    color: #D2DAE7;
+    border-color: #2F343A;
+}
+
+/* The map's streets are pictures, so they are turned dark rather than recoloured: the
+   tiles inverted and their hues turned back, so water stays blue and parks green. The
+   markers and lines drawn over them are in a pane of their own and keep their colours. */
+:root[data-theme="dark"] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.7);
+}
+
+:root[data-theme="dark"] .leaflet-container { background: #1B2027; }
+
+:root[data-theme="dark"] .leaflet-popup-content-wrapper,
+:root[data-theme="dark"] .leaflet-popup-tip,
+:root[data-theme="dark"] .leaflet-bar a,
+:root[data-theme="dark"] .leaflet-bar a:hover {
+    background: #232932;
+    color: #D2DAE7;
+    border-color: #2F343A;
+}
+
+:root[data-theme="dark"] .leaflet-control-attribution {
+    background: rgba(26, 30, 36, .8);
+    color: #969FAB;
+}
+
+    :root[data-theme="dark"] .leaflet-control-attribution a { color: #8EC9C5; }
+
+/* For a moment after the switch, colours ease across instead of jumping. */
+html.rs-theme-fade,
+html.rs-theme-fade *,
+html.rs-theme-fade *::before,
+html.rs-theme-fade *::after {
+    transition: background-color .3s ease, color .3s ease, border-color .3s ease,
+                box-shadow .3s ease, fill .3s ease !important;
+}
+
 
 .app-layout {
     display: flex;
@@ -34,8 +101,8 @@
     height: 80px;
     display: flex;
     align-items: center;
-    background: #fff;
-    border-bottom: 1px solid #ddd;
+    background: light-dark(#fff, #1A1E24);
+    border-bottom: 1px solid light-dark(#ddd, #33373D);
     padding: 0 70px;
     position: sticky;
     top: 0;
@@ -49,7 +116,7 @@
        sticky in this column has to stop. */
     --rs-bar: 80px;
     padding: 40px 90px;
-    background: #f8f9fa;
+    background: var(--rs-page);
     /* Deliberately not a scroll container. Nothing above this has a height, so it
        could never scroll anyway, and being one made every sticky heading inside it
        measure against a box that never moves. */
@@ -205,8 +272,8 @@
     max-width: 560px;
     margin: 40px auto;
     padding: 32px 34px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: light-dark(#fff, #1A1E24);
+    border: 1px solid light-dark(#e2e8f0, #30353B);
     border-radius: 16px;
     font-family: 'Segoe UI', sans-serif;
 }
@@ -215,33 +282,33 @@
     margin: 0 0 10px;
     font-size: 24px;
     font-weight: 600;
-    color: #0f172a;
+    color: light-dark(#0f172a, #DEE4F2);
 }
 
 .err-lead {
     margin: 0 0 22px;
     font-size: 15px;
-    color: #475569;
+    color: light-dark(#475569, #C8D1DE);
 }
 
 .err-ref {
     margin: 0 0 6px;
     font-size: 14px;
-    color: #0f172a;
+    color: light-dark(#0f172a, #DEE4F2);
 }
 
 .err-ref code {
     padding: 3px 8px;
-    background: #f1f5f9;
+    background: light-dark(#f1f5f9, #171B20);
     border-radius: 6px;
     font-size: 13px;
-    color: #334155;
+    color: light-dark(#334155, #CED7E4);
 }
 
 .err-note {
     margin: 0 0 24px;
     font-size: 13px;
-    color: #64748b;
+    color: light-dark(#64748b, #B5BECA);
 }
 
 .err-back {
@@ -291,9 +358,9 @@
     .rs-cards tr {
         margin-bottom: 10px;
         padding: 10px 14px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid light-dark(#e2e8f0, #30353B);
         border-radius: 12px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
     }
 
     .rs-cards td {
@@ -307,14 +374,14 @@
     }
 
     .rs-cards td + td {
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid light-dark(#f1f5f9, #2D3238);
     }
 
     .rs-cards td[data-label]::before {
         content: attr(data-label);
         flex: 0 0 auto;
         max-width: 45%;
-        color: #64748b;
+        color: light-dark(#64748b, #B5BECA);
         font-size: .74rem;
         font-weight: 600;
         text-align: left;
@@ -466,10 +533,10 @@ html.rs-dialog-open .main-content {
         flex-shrink: 0;
         min-height: 40px;
         padding: 0 12px;
-        border: 1px solid #E2E8F0;
+        border: 1px solid light-dark(#E2E8F0, #30353B);
         border-radius: 10px;
-        background: #fff;
-        color: #2D3748;
+        background: light-dark(#fff, #1A1E24);
+        color: light-dark(#2D3748, #D2DAE7);
         font-size: .8rem;
         font-weight: 600;
         font-family: 'Segoe UI', sans-serif;
@@ -493,9 +560,9 @@ html.rs-dialog-open .main-content {
         align-items: stretch;
         gap: 12px;
         padding: 14px 16px 16px;
-        background: #fff;
-        border-bottom: 1px solid #E2E8F0;
-        box-shadow: 0 10px 24px rgba(0, 0, 0, .14);
+        background: light-dark(#fff, #1A1E24);
+        border-bottom: 1px solid light-dark(#E2E8F0, #30353B);
+        box-shadow: 0 10px 24px light-dark(rgba(0, 0, 0, .14), rgba(0, 0, 0, .302));
     }
 
     .rs-filters.rs-filters--open {
@@ -626,7 +693,7 @@ html.rs-dialog-open .main-content {
        where the placeholder it replaces sat. */
     padding: 0 var(--rs-pick-pad, 6.5px);
     border-radius: 6px;
-    background: var(--rs-pick-bg, #fff);
+    background: var(--rs-pick-bg, light-dark(#fff, #1A1E24));
     color: inherit;
     font: inherit;
     /* Clipped rather than ellipsised. The text is the flex box's own, not a child, so
@@ -651,7 +718,7 @@ html.rs-dialog-open .main-content {
 }
 
 .rs-pick > select option {
-    -webkit-text-fill-color: #2D3748;
+    -webkit-text-fill-color: light-dark(#2D3748, #D2DAE7);
 }
 
 /* ===========================================================================
@@ -715,7 +782,7 @@ html.rs-dialog-open .main-content {
         white-space: nowrap;
         font-size: 1.02rem;
         font-weight: 800;
-        color: #1a2a4a;
+        color: light-dark(#1a2a4a, #D6DEEB);
     }
 
     /* The heading is in the bar now, where it costs no height at all. */
@@ -779,10 +846,10 @@ html.rs-dialog-open .main-content {
         z-index: 2;
         /* Lifted out of the flow, so it needs a ground of its own or the rows
            travel through it. */
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
         /* A collapsed table will not paint a border on a cell that has been lifted
            out of it, so the rule under the headings is drawn as a shadow. */
-        box-shadow: inset 0 -1.5px 0 #E8ECF0;
+        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #2F343A);
         /* Headings held on one line are what made these tables wider than the card
            they sit in. Allowed to wrap, the table compresses instead of needing a
            scrollbar of its own. */
@@ -819,13 +886,13 @@ html.rs-dialog-open .main-content {
         top: calc(var(--rs-bar, 0px) + var(--rs-lead, 0px));
         z-index: 4;
         /* The ground of the content column, or what is above passes through it. */
-        background: #f8f9fa;
+        background: var(--rs-page);
         /* Neither the air above nor the gap below is part of the box, and neither
            paints anything, so rows would show in both. Repeated above and below in
            the same colour they are covered, and nothing has to move to do it. Both
            are measured with the block. */
-        box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 #f8f9fa,
-                    0 var(--rs-head-gap, 0px) 0 #f8f9fa;
+        box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 var(--rs-page),
+                    0 var(--rs-head-gap, 0px) 0 var(--rs-page);
     }
 
     [data-sticky-card] {
@@ -848,13 +915,13 @@ html.rs-dialog-open .main-content {
         padding-top: calc(var(--rs-card-inset) - 1px);
         padding-left: calc(var(--rs-card-inset-x) - 1px);
         padding-right: calc(var(--rs-card-inset-x) - 1px);
-        border: 1px solid #E8ECF0;
+        border: 1px solid light-dark(#E8ECF0, #2F343A);
         /* Whatever rule the heading draws under itself is its own; a card without
            one keeps none. */
         border-bottom: 0;
         border-radius: 14px 14px 0 0;
-        background: #fff;
-        box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 #f8f9fa;
+        background: light-dark(#fff, #1A1E24);
+        box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 var(--rs-page);
     }
 
     /* The gap below the heading, carrying the card's sides through it. */
@@ -865,9 +932,9 @@ html.rs-dialog-open .main-content {
         left: -1px;
         right: -1px;
         height: var(--rs-card-gap, 0px);
-        background: #fff;
-        border-left: 1px solid #E8ECF0;
-        border-right: 1px solid #E8ECF0;
+        background: light-dark(#fff, #1A1E24);
+        border-left: 1px solid light-dark(#E8ECF0, #2F343A);
+        border-right: 1px solid light-dark(#E8ECF0, #2F343A);
     }
 }
 

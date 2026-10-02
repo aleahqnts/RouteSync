@@ -1,11 +1,11 @@
 ﻿/* Audit/Index.cshtml */
     :root {
         --au-teal: #4AADA8;
-        --au-text: #2D3748;
-        --au-muted: #9AA5B4;
-        --au-border: #E8ECF0;
-        --au-bg: #F8F9FA;
-        --au-white: #FFFFFF;
+        --au-text: light-dark(#2D3748, #D2DAE7);
+        --au-muted: light-dark(#9AA5B4, #969FAB);
+        --au-border: light-dark(#E8ECF0, #2F343A);
+        --au-bg: light-dark(#F8F9FA, #181C22);
+        --au-white: light-dark(#FFFFFF, #1A1E24);
     }
 
     /* Heading. */
@@ -106,11 +106,11 @@
 
     /* The reload control is the same teal as the one on every other board. */
     .au-btn--icon.au-refresh {
-        border-color: #CDE9E4;
-        color: #2e7d72;
+        border-color: light-dark(#CDE9E4, #354D49);
+        color: light-dark(#2e7d72, #75C2B5);
     }
 
-    .au-btn--icon.au-refresh:hover { background: #EAF7F5; }
+    .au-btn--icon.au-refresh:hover { background: light-dark(#EAF7F5, #182F2C); }
 
     @keyframes auSpin { to { transform: rotate(360deg); } }
 
@@ -143,7 +143,7 @@
         border: 1px solid var(--au-border);
         border-radius: 14px;
         padding: 20px 22px;
-        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        box-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
     }
 
     .au-card-header {
@@ -197,8 +197,8 @@
     }
 
     .au-row--clickable { cursor: pointer; }
-    .au-row--clickable:hover { background: #FAFBFC; }
-    .au-row--open { background: #FAFBFC; }
+    .au-row--clickable:hover { background: light-dark(#FAFBFC, #191D22); }
+    .au-row--open { background: light-dark(#FAFBFC, #191D22); }
 
     .au-empty {
         text-align: center;
@@ -241,8 +241,8 @@
         display: inline-block;
         padding: 2px 9px;
         border-radius: 20px;
-        background: #EEF2F6;
-        color: #5A6B7F;
+        background: light-dark(#EEF2F6, #161A1F);
+        color: light-dark(#5A6B7F, #BAC4D0);
         font-size: 0.72rem;
         font-weight: 600;
     }
@@ -262,9 +262,9 @@
         white-space: nowrap;
     }
 
-    .au-pill--ok { background: #E8F8EE; color: #27AE60; }
-    .au-pill--denied { background: #FDECEC; color: #C0392B; }
-    .au-pill--error { background: #FEF3E2; color: #B7791F; }
+    .au-pill--ok { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
+    .au-pill--denied { background: light-dark(#FDECEC, #382425); color: light-dark(#C0392B, #FE8C7B); }
+    .au-pill--error { background: light-dark(#FEF3E2, #352811); color: light-dark(#B7791F, #E3A250); }
 
     /* Expand toggle. */
     .au-toggle-cell { text-align: center; }
@@ -285,7 +285,7 @@
 
     /* Detail drawer. */
     .au-detail-row td {
-        background: #FAFBFC;
+        background: light-dark(#FAFBFC, #191D22);
         padding-top: 0;
     }
 
@@ -342,7 +342,7 @@
 
         .au-diff td {
             padding: 6px 8px 6px 0;
-            color: #2D3748;
+            color: light-dark(#2D3748, #D2DAE7);
             vertical-align: top;
             word-break: break-word;
         }
@@ -456,7 +456,7 @@
 @media (min-width: 600px) {
 
     .au-sticky-head {
-        background: var(--au-bg);
+        background: var(--rs-page);
         padding-bottom: 18px;
     }
 
@@ -610,7 +610,7 @@
         padding: 10px 12px;
         border: 1px solid var(--au-border);
         border-radius: 12px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
     }
 
     .au-table.rs-cards td {
@@ -700,7 +700,7 @@
         border: 1px solid var(--au-border);
         border-top: none;
         border-radius: 0 0 12px 12px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
     }
 
         .au-table.rs-cards tr.au-detail-row > td {
@@ -743,7 +743,7 @@
 
     .au-row--open:hover,
     .au-row--open {
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
     }
 }
 
@@ -799,15 +799,15 @@
         min-width: 20px;
         padding: 1px 7px;
         border-radius: 999px;
-        background: #EEF2F6;
-        color: #5A6B7F;
+        background: light-dark(#EEF2F6, #161A1F);
+        color: light-dark(#5A6B7F, #BAC4D0);
         font-size: 0.72rem;
         font-weight: 700;
         text-align: center;
     }
 
     /* Only for a sign-in that succeeded after failures, matching the rail. */
-    .au-tab-count--urgent { background: #FDECEC; color: #C0392B; }
+    .au-tab-count--urgent { background: light-dark(#FDECEC, #382425); color: light-dark(#C0392B, #FE8C7B); }
 
     .si-scan { display: inline; margin: 0; }
 
@@ -815,8 +815,8 @@
         margin: 0 0 12px;
         padding: 9px 14px;
         border-radius: 10px;
-        background: #EAF7F5;
-        color: #2C6E6A;
+        background: light-dark(#EAF7F5, #182F2C);
+        color: light-dark(#2C6E6A, #BACDCB);
         font-size: 0.84rem;
     }
 
@@ -840,11 +840,11 @@
         font-weight: 700;
     }
 
-    .si-sev--high { background: #FDECEC; color: #C0392B; }
-    .si-sev--medium { background: #FEF3E2; color: #B7791F; }
-    .si-sev--low { background: #EEF2F6; color: #5A6B7F; }
+    .si-sev--high { background: light-dark(#FDECEC, #382425); color: light-dark(#C0392B, #FE8C7B); }
+    .si-sev--medium { background: light-dark(#FEF3E2, #352811); color: light-dark(#B7791F, #E3A250); }
+    .si-sev--low { background: light-dark(#EEF2F6, #161A1F); color: light-dark(#5A6B7F, #BAC4D0); }
 
-    .si-pill--waiting { background: #FEF3E2; color: #B7791F; }
+    .si-pill--waiting { background: light-dark(#FEF3E2, #352811); color: light-dark(#B7791F, #E3A250); }
 
     .si-reviewed { font-size: 0.78rem; color: var(--au-muted); }
 
@@ -917,7 +917,7 @@
         padding: 10px 12px;
         border: 1px solid var(--au-border);
         border-radius: 12px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
     }
 
     .si-table tbody tr.si-row td { display: block; padding: 0; border: none; }

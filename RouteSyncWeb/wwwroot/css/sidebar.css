@@ -4,12 +4,12 @@
         --fw-sidebar-collapsed: 72px;
         --fw-sidebar-expanded:  220px;
         --fw-teal:              #4AADA8;
-        --fw-teal-light:        #E8F6F5;
-        --fw-text-dark:         #2D3748;
-        --fw-text-muted:        #9AA5B4;
-        --fw-bg:                #FFFFFF;
-        --fw-divider:           #E8ECF0;
-        --fw-bar-edge:          #DDE3EA;
+        --fw-teal-light:        light-dark(#E8F6F5, #172F2E);
+        --fw-text-dark:         light-dark(#2D3748, #D2DAE7);
+        --fw-text-muted:        light-dark(#9AA5B4, #969FAB);
+        --fw-bg:                light-dark(#FFFFFF, #1A1E24);
+        --fw-divider:           light-dark(#E8ECF0, #2F343A);
+        --fw-bar-edge:          light-dark(#DDE3EA, #32363C);
         --fw-transition:        220ms ease;
     }
 
@@ -22,7 +22,7 @@
         height: 100dvh;
         width: var(--fw-sidebar-collapsed);
         background: var(--fw-bg);
-        box-shadow: 2px 0 12px rgba(0, 0, 0, .08);
+        box-shadow: 2px 0 12px light-dark(rgba(0, 0, 0, .08), rgba(0, 0, 0, .194));
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -178,7 +178,7 @@
            it will not keep. A third shade would have to be read rather than glanced at. */
         background: #64748B;
         color: #fff;
-        box-shadow: 0 0 0 2px var(--fw-bg, #fff);
+        box-shadow: 0 0 0 2px var(--fw-bg, light-dark(#fff, #1A1E24));
     }
 
     .fw-sidebar__badge--urgent,
@@ -215,6 +215,62 @@
         transform: translateX(0);
     }
 
+    /* Light and dark, a row of the rail like the destinations above it. */
+    .fw-sidebar__theme { padding: 3px 12px 10px; margin-left: 2px; }
+
+    .fw-theme-btn {
+        width: 100%;
+        border: 0;
+        background: none;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+        .fw-theme-btn .fw-sidebar__label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+    /* A switch, on when the page is dark. */
+    .fw-switch {
+        position: relative;
+        flex: none;
+        width: 32px;
+        height: 18px;
+        border-radius: 999px;
+        background: light-dark(#CBD5E0, #3A414B);
+        transition: background-color .2s ease;
+    }
+
+        .fw-switch::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+            transition: transform .2s ease;
+        }
+
+        [aria-pressed="true"] > .fw-switch,
+        [aria-pressed="true"] .fw-switch { background: #4AADA8; }
+
+            [aria-pressed="true"] > .fw-switch::after,
+            [aria-pressed="true"] .fw-switch::after { transform: translateX(14px); }
+
+    /* The moon when the page is light, the sun when it is dark: the icon is what the
+       page looks like now. */
+    .fw-theme-sun { display: none; }
+    :root[data-theme="dark"] .fw-theme-sun { display: inline; }
+    :root[data-theme="dark"] .fw-theme-moon { display: none; }
+
     /* Profile block. */
     .fw-sidebar__profile {
         display: flex;
@@ -222,7 +278,7 @@
         gap: 10px;
         padding: 20px 12px 30px;
         flex-shrink: 0;
-        border-top: 1px solid #d9d9d9;
+        border-top: 1px solid light-dark(#d9d9d9, #34383E);
         white-space: nowrap;
         overflow: hidden;
         margin-left: 2px;
@@ -439,7 +495,8 @@
            a pixel down so the line drawn along it has room inside the image.
 
            The colours are --fw-bg and --fw-bar-edge written out, because a data URI
-           cannot read a custom property. Change one and change the other. */
+           cannot read a custom property. Change one and change the other, here and in
+           the dark copy below. */
         --fw-scoop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96V40H0Z' fill='%23FFFFFF'/%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96' fill='none' stroke='%23DDE3EA' stroke-width='1'/%3E%3C/svg%3E");
         /* The bar either side of the scoop: its edge, then its surface. */
         --fw-edge: linear-gradient(to bottom, var(--fw-bar-edge) 0 1px, var(--fw-bg) 1px);
@@ -457,6 +514,12 @@
                          calc(var(--fw-scoop-side) + 1px) var(--fw-scoop-h),
                          100% calc(100% - var(--fw-scoop-h) + 1px);
         background-position: top center, top left, top right, bottom left;
+    }
+
+    /* The same shape in the dark surface and edge, which the data URI cannot take from
+       --fw-bg and --fw-bar-edge either. */
+    :root[data-theme="dark"] .fw-bar::before {
+        --fw-scoop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96V40H0Z' fill='%231A1E24'/%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96' fill='none' stroke='%2332363C' stroke-width='1'/%3E%3C/svg%3E");
     }
 
     /* A sheet that ends at the top of the bar turns the scoop into a hole: two white
@@ -533,8 +596,8 @@
         /* Only a shadow under it. A ring in a solid colour reads as a disc laid on
            whatever is behind, which over the map was a pale circle punched through
            the streets; a shadow alone lets the page run under the button. */
-        box-shadow: 0 4px 12px rgba(15, 23, 42, .18),
-                    0 2px 4px rgba(15, 23, 42, .10);
+        box-shadow: 0 4px 12px light-dark(rgba(15, 23, 42, .18), rgba(0, 0, 0, .374)),
+                    0 2px 4px light-dark(rgba(15, 23, 42, .10), rgba(0, 0, 0, .23));
     }
 
     .fw-bar__more:active {
@@ -577,7 +640,7 @@
         padding: 8px 0 calc(16px + env(safe-area-inset-bottom, 0));
         background: var(--fw-bg);
         border-radius: 16px 16px 0 0;
-        box-shadow: 0 -8px 30px rgba(15, 23, 42, .22);
+        box-shadow: 0 -8px 30px light-dark(rgba(15, 23, 42, .22), rgba(0, 0, 0, .446));
         transform: translateY(100%);
         transition: transform 220ms cubic-bezier(.2, .8, .3, 1);
     }
@@ -617,14 +680,14 @@
         min-height: 60px;
         padding: 8px 12px;
         border-radius: 14px;
-        background: #F4FAF9;
+        background: light-dark(#F4FAF9, #181C21);
         color: inherit;
         text-decoration: none;
         cursor: pointer;
         transition: background 150ms;
     }
 
-    .fw-sheet__who:active { background: #E3F3F1; }
+    .fw-sheet__who:active { background: light-dark(#E3F3F1, #172F2D); }
 
     .fw-sheet__avatar {
         flex: none;
@@ -648,11 +711,11 @@
         gap: 2px;
         padding: 6px 8px 6px 12px;
         border-radius: 20px;
-        background: #fff;
-        border: 1px solid #CDE9E4;
+        background: light-dark(#fff, #1A1E24);
+        border: 1px solid light-dark(#CDE9E4, #354D49);
         font-size: .78rem;
         font-weight: 700;
-        color: #2E7D72;
+        color: light-dark(#2E7D72, #75C2B5);
     }
 
     .fw-sheet__name {
@@ -683,14 +746,14 @@
         border: none;
         border-radius: 12px;
         background: none;
-        color: #C0392B;
+        color: light-dark(#C0392B, #FE8C7B);
         font-size: .88rem;
         font-weight: 600;
         white-space: nowrap;
     }
 
     .fw-sheet__logout:active {
-        background: #FDECEC;
+        background: light-dark(#FDECEC, #382425);
     }
 
     /* The rows share the gutter the heading above them uses, rather than running to
@@ -700,6 +763,10 @@
         margin: 0;
         padding: 0 16px;
     }
+
+    .fw-sheet__link.fw-theme-btn { width: 100%; }
+
+        .fw-sheet__link.fw-theme-btn .fw-switch { margin-left: auto; }
 
     .fw-sheet__link {
         display: flex;
@@ -784,8 +851,8 @@
     max-width: 340px;
     padding: 22px 22px 18px;
     border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 18px 50px rgba(15, 23, 42, .28);
+    background: light-dark(#fff, #1A1E24);
+    box-shadow: 0 18px 50px light-dark(rgba(15, 23, 42, .28), rgba(0, 0, 0, .554));
 }
 
 .fw-confirm__title {
@@ -826,7 +893,7 @@
 
 .fw-confirm__cancel {
     border: 1px solid var(--fw-divider);
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     color: var(--fw-text-dark);
 }
 

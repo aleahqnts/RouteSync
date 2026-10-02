@@ -7,7 +7,7 @@
 
 .rsc {
     font-size: 0.88rem;
-    color: #2D3748;
+    color: light-dark(#2D3748, #D2DAE7);
 }
 
 /* Why nobody is free without a cost. Said once, above the rows it explains. */
@@ -18,8 +18,8 @@
     margin: 0 0 10px;
     padding: 8px 10px;
     border-radius: 8px;
-    background: #FFF8EC;
-    color: #94560A;
+    background: light-dark(#FFF8EC, #322919);
+    color: light-dark(#94560A, #E4A061);
     font-size: 0.84rem;
     line-height: 1.4;
 }
@@ -38,10 +38,10 @@
     top: var(--rsc-stick, 0px);
     z-index: 1;
     padding: 4px 10px;
-    background: #fff;
+    background: light-dark(#fff, #1A1E24);
     font-size: 0.72rem;
     font-weight: 600;
-    color: #5F6F85;
+    color: light-dark(#5F6F85, #B8C1CD);
 }
 
     .rsc-head[hidden] {
@@ -56,12 +56,12 @@
     padding: 12px 10px 4px;
     font-size: 0.78rem;
     font-weight: 600;
-    color: #4A5568;
+    color: light-dark(#4A5568, #C9D1DE);
 }
 
 .rsc-row {
     padding: 9px 10px;
-    border-top: 1px solid #EDF0F3;
+    border-top: 1px solid light-dark(#EDF0F3, #2F3339);
     cursor: pointer;
 }
 
@@ -70,12 +70,12 @@
 }
 
     .rsc-row:hover {
-        background: #F7FAFB;
+        background: light-dark(#F7FAFB, #181C22);
     }
 
 .rsc-row--selected,
 .rsc-row--selected:hover {
-    background: #EAF6F5;
+    background: light-dark(#EAF6F5, #172F2E);
 }
 
 /* The ring sits on the whole row, since the whole row is what is being chosen. */
@@ -110,26 +110,26 @@
 
 .rsc-name {
     font-weight: 600;
-    color: #1a2a4a;
+    color: light-dark(#1a2a4a, #D6DEEB);
     overflow-wrap: anywhere;
 }
 
 .rsc-sub {
     font-size: 0.8rem;
-    color: #5F6F85;
+    color: light-dark(#5F6F85, #B8C1CD);
 }
 
 .rsc-best {
     font-size: 0.76rem;
     font-weight: 700;
-    color: #237A75;
+    color: light-dark(#237A75, #71C2BC);
 }
 
 .rsc-note {
     display: block;
     margin-top: 2px;
     font-size: 0.8rem;
-    color: #5F6F85;
+    color: light-dark(#5F6F85, #B8C1CD);
 }
 
 .rsc-cost {
@@ -138,7 +138,7 @@
     gap: 5px;
     margin-top: 3px;
     font-size: 0.8rem;
-    color: #94560A;
+    color: light-dark(#94560A, #E4A061);
 }
 
     .rsc-cost .ti,
@@ -151,7 +151,7 @@
     padding-top: 1px;
     text-align: right;
     font-variant-numeric: tabular-nums;
-    color: #2D3748;
+    color: light-dark(#2D3748, #D2DAE7);
 }
 
 /* What Best match means, said once under the list that shows one. */
@@ -159,7 +159,7 @@
     margin: 6px 10px 0;
     font-size: 0.76rem;
     line-height: 1.4;
-    color: #5F6F85;
+    color: light-dark(#5F6F85, #B8C1CD);
 }
 
     .rsc-foot[hidden] {
@@ -172,7 +172,7 @@
     border: none;
     border-radius: 6px;
     background: none;
-    color: #237A75;
+    color: light-dark(#237A75, #71C2BC);
     font-size: 0.84rem;
     font-weight: 600;
     cursor: pointer;
@@ -243,7 +243,7 @@
             clip: auto;
             white-space: normal;
             font-size: 0.8rem;
-            color: #4A5568;
+            color: light-dark(#4A5568, #C9D1DE);
         }
 
         .rsc-row .rsc-note {

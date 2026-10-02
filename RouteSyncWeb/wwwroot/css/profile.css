@@ -1,15 +1,15 @@
 ﻿/* Profile/Index.cshtml */
     :root {
         --pf-teal: #4AADA8;
-        --pf-teal-light: #E8F6F5;
-        --pf-text: #2D3748;
-        --pf-dark: #1A2B4A;
-        --pf-muted: #9AA5B4;
-        --pf-soft: #5A6778;
-        --pf-border: #E8ECF0;
-        --pf-bg: #F8F9FA;
+        --pf-teal-light: light-dark(#E8F6F5, #172F2E);
+        --pf-text: light-dark(#2D3748, #D2DAE7);
+        --pf-dark: light-dark(#1A2B4A, #D6DDEB);
+        --pf-muted: light-dark(#9AA5B4, #969FAB);
+        --pf-soft: light-dark(#5A6778, #BDC6D3);
+        --pf-border: light-dark(#E8ECF0, #2F343A);
+        --pf-bg: light-dark(#F8F9FA, #181C22);
         --pf-radius: 14px;
-        --pf-shadow: 0 1px 4px rgba(0,0,0,.06);
+        --pf-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
     }
 
     .pf-title {
@@ -28,20 +28,20 @@
         z-index: 20;
         margin: -16px -8px 18px;
         padding: 16px 8px 12px;
-        background: var(--pf-bg);
+        background: var(--rs-page);
     }
 
     .pf-flash {
         margin-bottom: 16px;
         padding: 10px 14px;
         border-radius: 10px;
-        background: #E8F8EE;
-        color: #1E8449;
+        background: light-dark(#E8F8EE, #1B2F24);
+        color: light-dark(#1E8449, #6BC989);
         font: 600 .88rem 'Segoe UI', sans-serif;
     }
 
     .pf-card {
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
         border: 1px solid var(--pf-border);
         border-radius: var(--pf-radius);
         box-shadow: var(--pf-shadow);
@@ -165,11 +165,11 @@
 
     .pf-ico svg { width: 17px; height: 17px; }
 
-    .pf-ico--blue  { background: #EAF1FB; color: #3B82C4; }
-    .pf-ico--green { background: #EAFAF1; color: #2FAE74; }
-    .pf-ico--amber { background: #FDF4E5; color: #F5A623; }
-    .pf-ico--teal  { background: #E8F5F1; color: #2E9E8F; }
-    .pf-ico--navy  { background: #ECEFF7; color: #1B2A56; }
+    .pf-ico--blue  { background: light-dark(#EAF1FB, #212B39); color: light-dark(#3B82C4, #70B7FC); }
+    .pf-ico--green { background: light-dark(#EAFAF1, #1B2F25); color: light-dark(#2FAE74, #53CC90); }
+    .pf-ico--amber { background: light-dark(#FDF4E5, #332815); color: #F5A623; }
+    .pf-ico--teal  { background: light-dark(#E8F5F1, #192F29); color: light-dark(#2E9E8F, #5DC6B6); }
+    .pf-ico--navy  { background: light-dark(#ECEFF7, #15191E); color: light-dark(#1B2A56, #9AB0E6); }
 
     .pf-badge {
         display: inline-block;
@@ -180,11 +180,11 @@
         white-space: nowrap;
     }
 
-    .pf-badge--role { background: #EAF3FF; color: #2F6FD6; text-transform: uppercase; letter-spacing: .03em; }
-    .pf-badge--ok { background: #E8F8EE; color: #27AE60; }
-    .pf-badge--wait { background: #FFF8E1; color: #D48806; }
-    .pf-badge--bad { background: #FDECEC; color: #D14343; }
-    .pf-badge--idle { background: #F1F3F6; color: #6B7280; }
+    .pf-badge--role { background: light-dark(#EAF3FF, #202B39); color: light-dark(#2F6FD6, #82B2FE); text-transform: uppercase; letter-spacing: .03em; }
+    .pf-badge--ok { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
+    .pf-badge--wait { background: light-dark(#FFF8E1, #332909); color: light-dark(#D48806, #EC9E32); }
+    .pf-badge--bad { background: light-dark(#FDECEC, #382425); color: light-dark(#D14343, #FF8A83); }
+    .pf-badge--idle { background: light-dark(#F1F3F6, #161A1F); color: light-dark(#6B7280, #B7BECB); }
 
     .pf-cols {
         display: grid;
@@ -206,7 +206,7 @@
         align-items: center;
         gap: 12px;
         padding: 11px 0;
-        border-bottom: 1px solid #F1F3F6;
+        border-bottom: 1px solid light-dark(#F1F3F6, #2E3238);
         font-size: .88rem;
     }
 
@@ -281,7 +281,7 @@
         padding: 8px 12px;
         border: 1px solid var(--pf-border);
         border-radius: 10px;
-        background: #fff;
+        background: light-dark(#fff, #1A1E24);
         color: var(--pf-text);
         font: inherit;
         font-size: .88rem;
@@ -302,7 +302,7 @@
     .pf-field--bad textarea,
     .pf-field--bad input:focus {
         border-color: #E74C3C;
-        box-shadow: 0 0 0 3px #FDECEC;
+        box-shadow: 0 0 0 3px light-dark(#FDECEC, #2E3339);
     }
 
     /* A password field with its reveal toggle inside it, as on the sign-in pages. */
@@ -326,11 +326,11 @@
         padding: 0 12px;
         border: none;
         background: none;
-        color: #aaa;
+        color: light-dark(#aaa, #9A9A9A);
         cursor: pointer;
     }
 
-    .pf-pw .eye:hover { color: #3ab5a4; }
+    .pf-pw .eye:hover { color: light-dark(#3ab5a4, #51C8B6); }
     .pf-pw .eye svg { width: 18px; height: 18px; display: block; }
 
     /* The icon reports the state of the field: slashed while hidden, open while readable. */
@@ -354,7 +354,7 @@
         align-items: center;
         gap: 7px;
         font-size: 12px;
-        color: #9aa3b2;
+        color: light-dark(#9aa3b2, #98A0AC);
         transition: color .15s ease;
     }
 
@@ -362,16 +362,16 @@
         width: 9px;
         height: 9px;
         border-radius: 50%;
-        border: 1.5px solid #cfd6e0;
+        border: 1.5px solid light-dark(#cfd6e0, #35393F);
         background: transparent;
         flex: none;
         transition: background .15s ease, border-color .15s ease;
     }
 
-    .pw-rules li.met { color: #2f8d7e; }
+    .pw-rules li.met { color: light-dark(#2f8d7e, #6BC4B4); }
     .pw-rules li.met .dot { background: #3ab5a4; border-color: #3ab5a4; }
 
-    .pf-err { color: #C0392B; font-size: .76rem; }
+    .pf-err { color: light-dark(#C0392B, #FE8C7B); font-size: .76rem; }
     .pf-err:empty { display: none; }
     .pf-err--form { margin: 0 0 8px; }
 
@@ -395,9 +395,9 @@
     .pf-btn--sm { min-height: 32px; padding: 0 12px; font-size: .8rem; }
     .pf-btn--primary { background: var(--pf-teal); color: #fff; }
     .pf-btn--primary:hover { background: #3E9A95; }
-    .pf-btn--ghost { background: #fff; border-color: var(--pf-border); color: var(--pf-text); }
+    .pf-btn--ghost { background: light-dark(#fff, #1A1E24); border-color: var(--pf-border); color: var(--pf-text); }
     .pf-btn--ghost:hover { background: var(--pf-bg); }
-    .pf-btn--armed { border-color: #E74C3C; color: #C0392B; }
+    .pf-btn--armed { border-color: #E74C3C; color: light-dark(#C0392B, #FE8C7B); }
     .pf-btn:disabled { opacity: .6; cursor: default; }
 
     /* Leave. */
@@ -425,7 +425,7 @@
 
     .pf-credit-of { font-size: .86rem; font-weight: 600; color: var(--pf-muted); }
     .pf-credit-l { font-size: .8rem; font-weight: 600; color: var(--pf-soft); }
-    .pf-credit-p { font-size: .74rem; font-weight: 600; color: #D48806; }
+    .pf-credit-p { font-size: .74rem; font-weight: 600; color: light-dark(#D48806, #EC9E32); }
 
     .pf-leave-form {
         margin-bottom: 16px;
@@ -446,7 +446,7 @@
         justify-content: space-between;
         gap: 12px;
         padding: 12px 0;
-        border-bottom: 1px solid #F1F3F6;
+        border-bottom: 1px solid light-dark(#F1F3F6, #2E3238);
     }
 
     .pf-leave:last-child { border-bottom: none; padding-bottom: 0; }
@@ -500,7 +500,7 @@
         justify-content: space-between;
         gap: 14px;
         padding: 8px 0;
-        border-bottom: 1px solid #F1F3F6;
+        border-bottom: 1px solid light-dark(#F1F3F6, #2E3238);
         font-size: .84rem;
     }
 
