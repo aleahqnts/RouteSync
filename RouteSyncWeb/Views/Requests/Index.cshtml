@@ -256,7 +256,11 @@
                                 }
                             </td>
 
-                            <td data-label="Filed"><span class="rq-filed">@r.Filed</span></td>
+                            @* The day over the time, so the column is as wide as a date. *@
+                            <td data-label="Filed" data-sort-value="@r.Filed">
+                                <span class="rq-filed">@r.FiledDay</span>
+                                <span class="rq-filed-time">@r.FiledTime</span>
+                            </td>
 
                             @* What the allowance stands at once this request is counted.
                                Days on other requests still undecided are marked beside it,

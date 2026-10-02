@@ -917,6 +917,8 @@ namespace FleetWise.Controllers
                 Reason = r.Reason,
                 Status = r.Status,
                 Filed = StoredTimes.FromUtc(r.FiledAt).ToString("MMM d, yyyy h:mm tt"),
+                FiledDay = StoredTimes.FromUtc(r.FiledAt).ToString("MMM d, yyyy"),
+                FiledTime = StoredTimes.FromUtc(r.FiledAt).ToString("h:mm tt"),
                 BalanceAfter = Math.Max(0, entitlement - granted - (spends ? LeaveEntitlement.EffectiveDays(r) : 0)),
                 EntitlementOfType = entitlement,
                 OtherPendingDays = Math.Max(0, used.Pending - LeaveEntitlement.Days(r)),

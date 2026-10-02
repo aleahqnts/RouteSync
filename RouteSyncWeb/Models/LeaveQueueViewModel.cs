@@ -42,6 +42,10 @@
         public string Status { get; set; } = "";
         public string Filed { get; set; } = "";
 
+        /// <summary>The day it was filed, and the time on the line under it.</summary>
+        public string FiledDay { get; set; } = "";
+        public string FiledTime { get; set; } = "";
+
         /// <summary>Filed by a member of staff from their profile rather than by a driver.</summary>
         public bool IsStaff { get; set; }
 

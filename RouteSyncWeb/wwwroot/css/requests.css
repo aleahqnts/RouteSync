@@ -249,7 +249,7 @@
     .rq-table thead tr { border-bottom: 1.5px solid var(--rq-border); }
 
     .rq-table th {
-        padding: 10px 14px;
+        padding: 10px;
         vertical-align: bottom;
         text-align: left;
         font-size: .78rem;
@@ -259,7 +259,7 @@
     }
 
     .rq-table td {
-        padding: 13px 14px;
+        padding: 13px 10px;
         color: var(--rq-text);
         border-bottom: 1px solid var(--rq-border);
         vertical-align: middle;
@@ -291,6 +291,13 @@
 
     .rq-date,
     .rq-filed { display: block; white-space: nowrap; }
+
+    .rq-filed-time {
+        display: block;
+        font-size: .78rem;
+        color: var(--rq-muted);
+        white-space: nowrap;
+    }
 
     .rq-days-n { font-weight: 600; }
 
@@ -681,8 +688,19 @@
         flex-wrap: wrap;
         justify-content: flex-end;
         gap: 6px;
-        width: 260px;
+        width: 200px;
         margin-left: auto;
+    }
+
+    /* The longest status, "Awaiting schedule change", takes two lines rather than the
+       width of three columns. */
+    @media (min-width: 600px) {
+        .rq-table td[data-label="Status"] > .rq-badge {
+            max-width: 15ch;
+            white-space: normal;
+            border-radius: 12px;
+            line-height: 1.3;
+        }
     }
 
     .rq-actions .rq-btn {
