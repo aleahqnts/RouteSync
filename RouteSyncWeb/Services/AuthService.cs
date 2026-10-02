@@ -73,6 +73,27 @@ namespace FleetWise.Services
                 permissions), user.UserId, null);
         }
 
+        /// <summary>Records a dashboard sign-in as the account's last sign-in.</summary>
+        /// <remarks>
+        /// Written in Philippine clock time, as the driver app writes it. Only the one
+        /// column is sent, which the users audit trigger ignores, so a sign-in adds no
+        /// account-change row beside its own login entry. Best effort: a sign-in never
+        /// fails because the stamp could not be written.
+        /// </remarks>
+        public async Task StampSignInAsync(int userId)
+        {
+            try
+            {
+                await _supabase.From<UserModel>()
+                    .Filter("user_id", Postgrest.Constants.Operator.Equals, userId.ToString())
+                    .Set(u => u.LastLogin,PhClock.NowForDb)
+                    .Update();
+            }
+            catch
+            {
+            }
+        }
+
         /// <summary>Hashes and stores a new password, used by the forced first-sign-in
         /// change.</summary>
         public async Task UpdatePasswordAsync(int userId, string newPassword)

@@ -114,6 +114,7 @@ namespace FleetWise.Controllers
 
             var mustChange = model.Password == PasswordPolicy.TemporaryPassword;
             await SignInUserAsync(user, mustChange);
+            await _authService.StampSignInAsync(user.UserId);
 
             await _audit.WriteSignInAsync("login",
                 $"{user.FullName} ({user.Email}) signed in to the dashboard as {user.RoleName}"
