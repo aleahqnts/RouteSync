@@ -50,10 +50,23 @@
     // The elements' own colour transitions are held off while it happens, or a button
     // that eases its background would still be easing after the rest had landed.
     var still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
+    // Switches under way. Quick presses can overlap, so each one counts itself out.
+    var switching = 0;
+
     function fade() {
+        switching++;
         root.classList.add('rs-theme-switching');
+        var landed = false;
         var settle = function () {
-            setTimeout(function () { root.classList.remove('rs-theme-switching'); }, 30);
+            if (landed) return;
+            landed = true;
+            setTimeout(function () {
+                switching--;
+                if (switching > 0) return;
+                root.classList.remove('rs-theme-switching');
+                releaseRail();
+            }, 30);
         };
         if (document.startViewTransition && !(still && still.matches)) {
             var shift = document.startViewTransition(apply);
@@ -81,20 +94,46 @@
 
     // The rail opens while the pointer is over it. For the moment of the cross-fade the
     // page under the pointer is a picture of itself, so the rail would lose its hover,
-    // fold, and open again. It is held open instead, until the pointer really leaves.
+    // fold, and open again. It is held open instead.
+    //
+    // The browser also reports the pointer leaving the rail when the picture goes over
+    // it, though it has not moved, so a leave is not believed while a switch is under
+    // way. Once the switch lands the rail is let go only if the pointer is really
+    // outside it, judged from where the pointer last was.
+    var held = null;
+    var pointerX = -1, pointerY = -1;
+
+    function notePointer(e) { pointerX = e.clientX; pointerY = e.clientY; }
+    document.addEventListener('pointermove', notePointer, { passive: true });
+    document.addEventListener('pointerdown', notePointer, { passive: true });
+
+    function letGo() {
+        if (!held) return;
+        held.classList.remove('fw-sidebar--held');
+        held.removeEventListener('mouseleave', onLeave);
+        held = null;
+    }
+
+    function onLeave() {
+        if (switching > 0) return;
+        letGo();
+    }
+
+    function releaseRail() {
+        if (!held) return;
+        var box = held.getBoundingClientRect();
+        var inside = pointerX >= box.left && pointerX <= box.right
+                  && pointerY >= box.top && pointerY <= box.bottom;
+        if (!inside) letGo();
+    }
+
     function holdRail(toggle) {
         var rail = toggle.closest('.fw-sidebar');
-        if (!rail) return;
+        if (!rail || held === rail) return;
+        letGo();
+        held = rail;
         rail.classList.add('fw-sidebar--held');
-        setTimeout(function () {
-            if (rail.matches(':hover')) {
-                rail.addEventListener('mouseleave', function () {
-                    rail.classList.remove('fw-sidebar--held');
-                }, { once: true });
-            } else {
-                rail.classList.remove('fw-sidebar--held');
-            }
-        }, 600);
+        rail.addEventListener('mouseleave', onLeave);
     }
 
     document.addEventListener('click', function (e) {
