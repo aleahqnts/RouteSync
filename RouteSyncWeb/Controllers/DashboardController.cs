@@ -54,6 +54,19 @@ namespace FleetWise.Controllers
         /// </summary>
         private static readonly TimeSpan ChartShared = TimeSpan.FromSeconds(55);
 
+        /// <summary>
+        /// How long yesterday's trips are kept for the comparison with today.
+        /// </summary>
+        /// <remarks>
+        /// Yesterday's shifts have ended, so its figures do not move. The trips of yesterday
+        /// still running are read on every refresh regardless, since an overnight shift is
+        /// counted in today's figures.
+        /// </remarks>
+        private static readonly TimeSpan YesterdayShared = TimeSpan.FromMinutes(10);
+
+        /// <summary>Set once the database is found to have no dashboard_figures that takes p_yesterday_active_only.</summary>
+        private static volatile bool _yesterdayFlagUnsupported;
+
         /// <summary>The dashboard's figures at one moment, for everyone watching one route.</summary>
         private sealed record Figures(
             DateTime Today,
@@ -172,10 +185,30 @@ namespace FleetWise.Controllers
             // request it answers and the page asks every few seconds. dashboard_figures holds
             // the open maintenance logs, the trip columns the figures use for today and
             // yesterday, and each route's name without its path for the map.
-            var response = await _supabase.Rpc("dashboard_figures", new Dictionary<string, object?>
+            //
+            // Only yesterday's trips still running come back with it. The rest of yesterday is
+            // read on its own below and kept, since it no longer changes.
+            var args = new Dictionary<string, object?>
             {
                 ["p_today"] = today.ToString("yyyy-MM-dd"),
-            });
+            };
+            if (!_yesterdayFlagUnsupported)
+                args["p_yesterday_active_only"] = true;
+
+            Postgrest.Responses.BaseResponse response;
+            try
+            {
+                response = await _supabase.Rpc("dashboard_figures", args);
+            }
+            catch (Postgrest.Exceptions.PostgrestException ex)
+                when (args.ContainsKey("p_yesterday_active_only") && RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+            {
+                // A database without the flag returns all of yesterday here, which serves
+                // for both. Stop offering it until the dashboard restarts.
+                _yesterdayFlagUnsupported = true;
+                args.Remove("p_yesterday_active_only");
+                response = await _supabase.Rpc("dashboard_figures", args);
+            }
             var read = ReadBundle.Parse(response.Content);
 
             // Flagged vehicles, which the page filters do not affect, are buses with an
@@ -192,6 +225,15 @@ namespace FleetWise.Controllers
             var todayTripRows = read.Rows<Trip>("today_trips");
             var yesterdayTripRows = read.Rows<Trip>("yesterday_trips");
 
+            // All of yesterday, for the comparison. A trip still running is taken from the
+            // read above, which is newer.
+            var yesterdayAll = args.ContainsKey("p_yesterday_active_only")
+                ? (await YesterdayAsync(today.AddDays(-1)))
+                    .Where(t => yesterdayTripRows.All(r => r.TripId != t.TripId))
+                    .Concat(yesterdayTripRows)
+                    .ToList()
+                : yesterdayTripRows;
+
             // Trips dated today already cover the whole cycle, since a night shift carries
             // its start day's date. Any trip dated yesterday that is still active is folded
             // in as well, so an overnight run that has not been ended does not disappear
@@ -202,7 +244,7 @@ namespace FleetWise.Controllers
                 .GroupBy(t => t.TripId).Select(g => g.First())   // de-dupe
                 .ToList();
 
-            var yesterdayTrips = yesterdayTripRows
+            var yesterdayTrips = yesterdayAll
                 .Where(t => !routeId.HasValue || t.RouteId == routeId.Value)
                 .ToList();
 
@@ -242,6 +284,14 @@ namespace FleetWise.Controllers
                 todayPassengers, yesterdayPassengers, todayRevenue, yesterdayRevenue,
                 routeRows, tripBreakdown);
         }
+
+        /// <summary>Every trip of a past day, kept for <see cref="YesterdayShared"/>.</summary>
+        private Task<List<Trip>> YesterdayAsync(DateTime day) =>
+            SharedRead.GetAsync(_cache, $"dashboard:yesterday:{day:yyyy-MM-dd}", YesterdayShared,
+                () => PagedRead.AllAsync(() => _supabase.From<Trip>()
+                    .Select(TripColumns)
+                    .Filter("date", Postgrest.Constants.Operator.Equals, day.ToString("yyyy-MM-dd"))
+                    .Order("trip_id", Postgrest.Constants.Ordering.Ascending)));
 
         /// <summary>
         /// Boardings hour by hour across the service day, 06:00 to 05:59, with the usual day

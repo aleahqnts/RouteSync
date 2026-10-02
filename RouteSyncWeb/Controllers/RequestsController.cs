@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using FleetWise.Models;
 using FleetWise.Services;
 using Postgrest;
@@ -28,14 +29,23 @@ namespace FleetWise.Controllers
         private readonly AuditLog _audit;
         private readonly SchedulingData _scheduling;
         private readonly TripAssignments _assignments;
+        private readonly IMemoryCache _cache;
+
+        /// <summary>
+        /// How long the queue's fingerprint is shared between everyone watching it, just
+        /// under the page's five-second check.
+        /// </summary>
+        private static readonly TimeSpan PulseShared = TimeSpan.FromSeconds(4);
 
         public RequestsController(
-            Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments)
+            Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments,
+            IMemoryCache cache)
         {
             _supabase = supabase;
             _audit = audit;
             _scheduling = scheduling;
             _assignments = assignments;
+            _cache = cache;
         }
 
         /// <summary>A driver's asking that nobody has answered yet.</summary>
@@ -65,9 +75,29 @@ namespace FleetWise.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Pulse()
         {
+            var pulse = await SharedRead.GetAsync(_cache, "requests:pulse", PulseShared, ReadPulseAsync);
+            return Json(new { pulse });
+        }
+
+        /// <summary>The queue's fingerprint, read from the database.</summary>
+        /// <remarks>
+        /// Only requests that can still change are read: those awaiting a decision, and
+        /// any whose leave has not yet ended, which can still be revoked or given back. A
+        /// request settled and in the past stays as it is, so reading it on every check
+        /// would cost more each month for nothing. One leaving this set changes the
+        /// fingerprint as it goes, so a decision is still seen.
+        /// </remarks>
+        private async Task<string> ReadPulseAsync()
+        {
+            var since = PhClock.OperationalDay.AddDays(-1).ToString("yyyy-MM-dd");
             var requests = await _supabase.From<LeaveRequest>()
                 .Select("request_id,user_id,status,leave_type,start_date,end_date," +
                         "revoked_at,revoked_dates,withdraw_requested_at")
+                .Or(new List<Postgrest.Interfaces.IPostgrestQueryFilter>
+                {
+                    new QueryFilter("status", Constants.Operator.In, new List<object> { "Pending", "AwaitingChange" }),
+                    new QueryFilter("end_date", Constants.Operator.GreaterThanOrEqual, since),
+                })
                 .Get();
 
             // Ordered before it is joined: PostgREST makes no promise about the order rows
@@ -83,7 +113,7 @@ namespace FleetWise.Controllers
 
             using var sha = System.Security.Cryptography.SHA256.Create();
             var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));
-            return Json(new { pulse = Convert.ToHexString(hash) });
+            return Convert.ToHexString(hash);
         }
 
         public async Task<IActionResult> Index(string? status)

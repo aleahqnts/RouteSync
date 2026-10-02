@@ -3,6 +3,7 @@ using FleetWise.Services;
 using FleetWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using static Postgrest.Constants;
 
 
@@ -16,14 +17,26 @@ namespace FleetWise.Controllers
         private readonly AuditLog _audit;
         private readonly SchedulingData _scheduling;
         private readonly TripAssignments _assignments;
+        private readonly IMemoryCache _cache;
+
+        /// <summary>
+        /// How long a board's fingerprint is shared between everyone watching that day.
+        /// </summary>
+        /// <remarks>
+        /// Just under the board's five-second check, so one viewer is read for afresh on
+        /// every check and a room of them costs one read between them.
+        /// </remarks>
+        private static readonly TimeSpan PulseShared = TimeSpan.FromSeconds(4);
 
         public DispatchController(
-            Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments)
+            Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments,
+            IMemoryCache cache)
         {
             _supabase = supabase;
             _audit = audit;
             _scheduling = scheduling;
             _assignments = assignments;
+            _cache = cache;
         }
 
         /// <summary>A short summary of everything the board would show differently.</summary>
@@ -44,7 +57,14 @@ namespace FleetWise.Controllers
         public async Task<IActionResult> Pulse(string date)
         {
             var selected = DateTime.TryParse(date, out var d) ? d.Date : PhClock.OperationalDay;
+            var pulse = await SharedRead.GetAsync(_cache, $"dispatch:pulse:{selected:yyyy-MM-dd}", PulseShared,
+                () => ReadPulseAsync(selected));
+            return Json(new { pulse });
+        }
 
+        /// <summary>The fingerprint of one day's board, read from the database.</summary>
+        private async Task<string> ReadPulseAsync(DateTime selected)
+        {
             var tripsTask = _supabase.From<Trip>()
                 .Select("trip_id,trip_status,driver_id,vehicle_id,route_id,total_boarded")
                 .Filter("date", Operator.Equals, selected.ToString("yyyy-MM-dd"))
@@ -72,7 +92,7 @@ namespace FleetWise.Controllers
 
             using var sha = System.Security.Cryptography.SHA256.Create();
             var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));
-            return Json(new { pulse = Convert.ToHexString(hash) });
+            return Convert.ToHexString(hash);
         }
 
         public async Task<IActionResult> Index(string date)

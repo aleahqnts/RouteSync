@@ -49,6 +49,12 @@ namespace FleetWise.Controllers
 
         private readonly RouteSnapTracker _snaps;
 
+        /// <summary>
+        /// How long one read of the live positions is shared, just under the map's
+        /// two-second poll.
+        /// </summary>
+        private static readonly TimeSpan LiveShared = TimeSpan.FromMilliseconds(1500);
+
         /// <summary>Set once the database is found to have no fleetmap_live that takes p_seen.</summary>
         private static volatile bool _seenUnsupported;
 
@@ -59,6 +65,36 @@ namespace FleetWise.Controllers
             _fareCalculator = fareCalculator;
             _cache = cache;
             _snaps = snaps;
+        }
+
+        /// <summary>The active trips, their readings since the last one used, and the fare, as sent.</summary>
+        private async Task<string> ReadLiveAsync(int? routeId)
+        {
+            var recentCutoff = PhClock.NowForDb.AddMinutes(-RecentTelemetryMinutes);
+            var args = new Dictionary<string, object?>
+            {
+                ["p_op_day"] = PhClock.OperationalDay.ToString("yyyy-MM-dd"),
+                ["p_route_id"] = routeId,
+                ["p_since"] = recentCutoff.ToString("yyyy-MM-dd HH:mm:ss"),
+            };
+            if (!_seenUnsupported)
+                args["p_seen"] = _snaps.LastUsed();
+
+            Postgrest.Responses.BaseResponse liveResponse;
+            try
+            {
+                liveResponse = await _supabase.Rpc("fleetmap_live", args);
+            }
+            catch (Postgrest.Exceptions.PostgrestException ex)
+                when (args.ContainsKey("p_seen") && RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+            {
+                // A database without the p_seen version of the function: read the whole
+                // window, as before, and stop offering it until the dashboard restarts.
+                _seenUnsupported = true;
+                args.Remove("p_seen");
+                liveResponse = await _supabase.Rpc("fleetmap_live", args);
+            }
+            return liveResponse.Content ?? "";
         }
 
         /// <summary>
@@ -178,31 +214,11 @@ namespace FleetWise.Controllers
             // Each trip the snapper has seen asks only for the last reading it used and the
             // ones after it. That reading is the marker's newest when nothing has arrived
             // since, so a poll carries one or two rows a bus rather than its whole window.
-            var recentCutoff = PhClock.NowForDb.AddMinutes(-RecentTelemetryMinutes);
-            var args = new Dictionary<string, object?>
-            {
-                ["p_op_day"] = PhClock.OperationalDay.ToString("yyyy-MM-dd"),
-                ["p_route_id"] = routeId,
-                ["p_since"] = recentCutoff.ToString("yyyy-MM-dd HH:mm:ss"),
-            };
-            if (!_seenUnsupported)
-                args["p_seen"] = _snaps.LastUsed();
-
-            Postgrest.Responses.BaseResponse liveResponse;
-            try
-            {
-                liveResponse = await _supabase.Rpc("fleetmap_live", args);
-            }
-            catch (Postgrest.Exceptions.PostgrestException ex)
-                when (args.ContainsKey("p_seen") && RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
-            {
-                // A database without the p_seen version of the function: read the whole
-                // window, as before, and stop offering it until the dashboard restarts.
-                _seenUnsupported = true;
-                args.Remove("p_seen");
-                liveResponse = await _supabase.Rpc("fleetmap_live", args);
-            }
-            var live = ReadBundle.Parse(liveResponse.Content);
+            //
+            // Everyone watching the same route shares one read, so a second map open, on
+            // the dashboard or on another desk, costs nothing more.
+            var live = ReadBundle.Parse(await SharedRead.GetAsync(_cache,
+                $"fleetmap:live:{routeId?.ToString() ?? "all"}", LiveShared, () => ReadLiveAsync(routeId)));
 
             var activeTrips = live.Rows<Trip>("trips");
             if (routeId.HasValue)
