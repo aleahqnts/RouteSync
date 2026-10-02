@@ -60,6 +60,11 @@
         flex-shrink: 0;
     }
 
+        /* One logo per theme, only the one for the theme in use shown. */
+        .fw-sidebar__logo-img--dark { display: none; }
+        :root[data-theme="dark"] .fw-sidebar__logo-img--light { display: none; }
+        :root[data-theme="dark"] .fw-sidebar__logo-img--dark { display: block; }
+
     .fw-sidebar__logo-text {
         font-size: 1.15rem;
         color: var(--fw-text-dark);
