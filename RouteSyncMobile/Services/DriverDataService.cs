@@ -19,6 +19,28 @@ public class DriverDataService
 
     public DriverDataService(Supabase.Client supabase) => _supabase = supabase;
 
+    /// <summary>The most rows the server returns for one request.</summary>
+    private const int PageRows = 1000;
+
+    /// <summary>How long a route, and the routes a driver has run, are reused before being read again.</summary>
+    private static readonly TimeSpan HeldFor = TimeSpan.FromMinutes(10);
+
+    // Routes change rarely, and the home page asks for the assigned one on every refresh.
+    private static readonly Dictionary<int, (BusRoute Route, DateTime At)> _routes = new();
+
+    // When the account was made and the routes it has run, for matching messages. Both
+    // change rarely and the message check runs every few seconds.
+    private sealed record MessageScope(int UserId, DateTime CreatedAt, HashSet<string> Routes, DateTime At);
+    private volatile MessageScope? _messageScope;
+
+    /// <summary>The columns the trip list and the driver's figures read.</summary>
+    private const string TripListColumns =
+        "trip_id,date,shift_type,shift_start_time,shift_end_time,route_id,vehicle_id,driver_id," +
+        "trip_status,estimated_revenue,total_boarded";
+
+    /// <summary>How many finished trips the trip list shows, newest first.</summary>
+    public const int RecentTripCount = 100;
+
     // Twenty seconds, not the hundred a HttpClient starts with. A phone that has drifted
     // out of signal holds the socket open with nothing coming back, and every page that
     // waits on one of these shows a skeleton for as long as it waits.
@@ -252,12 +274,24 @@ public class DriverDataService
             .FirstOrDefault();
     }
 
+    /// <summary>
+    /// A route's name and ends. Its map line and stops are not read: the app shows
+    /// neither, and they are most of the row.
+    /// </summary>
     public async Task<BusRoute?> GetRouteAsync(int routeId)
     {
+        lock (_routes)
+            if (_routes.TryGetValue(routeId, out var held) && DateTime.UtcNow - held.At < HeldFor)
+                return held.Route;
+
         var r = await _supabase.From<BusRoute>()
+            .Select("route_id,route_name,origin,destination,created_at,updated_at")
             .Filter("route_id", Operator.Equals, routeId.ToString())
             .Get();
-        return r.Models.FirstOrDefault();
+        var route = r.Models.FirstOrDefault();
+        if (route is not null)
+            lock (_routes) _routes[routeId] = (route, DateTime.UtcNow);
+        return route;
     }
 
     public async Task<Vehicle?> GetVehicleAsync(string vehicleId)
@@ -339,13 +373,17 @@ public class DriverDataService
         });
     }
 
+    /// <summary>The driver's most recent finished trip, chosen by the server.</summary>
     public async Task<Trip?> GetLastCompletedTripAsync(int userId)
     {
         var r = await _supabase.From<Trip>()
             .Filter("driver_id", Operator.Equals, userId.ToString())
             .Filter("trip_status", Operator.Equals, "Completed")
+            .Order("date", Ordering.Descending)
+            .Order("trip_id", Ordering.Descending)
+            .Limit(1)
             .Get();
-        return r.Models.OrderByDescending(t => t.Date).FirstOrDefault();
+        return r.Models.FirstOrDefault();
     }
 
     public async Task<Trip?> GetTripAsync(string tripId)
@@ -356,14 +394,41 @@ public class DriverDataService
         return r.Models.FirstOrDefault();
     }
 
-    public async Task<List<Trip>> GetTripsForDriverAsync(int userId)
+    /// <summary>The driver's latest finished trips, newest first, at most <see cref="RecentTripCount"/>.</summary>
+    /// <remarks>More than a driver can run in a month, so the month's figures above the list are whole.</remarks>
+    public async Task<List<Trip>> GetRecentTripsAsync(int userId)
     {
         var r = await _supabase.From<Trip>()
+            .Select(TripListColumns)
             .Filter("driver_id", Operator.Equals, userId.ToString())
             .Filter("trip_status", Operator.Equals, "Completed")
             .Order("date", Ordering.Descending)
+            .Order("trip_id", Ordering.Descending)
+            .Limit(RecentTripCount)
             .Get();
         return r.Models;
+    }
+
+    /// <summary>
+    /// Every finished trip of the driver, with only the day and the passengers carried,
+    /// for the totals on the profile.
+    /// </summary>
+    /// <remarks>Read a page at a time, so a long record is counted whole rather than cut at the server's row limit.</remarks>
+    public async Task<List<Trip>> GetCompletedTripTotalsAsync(int userId)
+    {
+        var all = new List<Trip>();
+        for (var from = 0; ; from += PageRows)
+        {
+            var page = (await _supabase.From<Trip>()
+                .Select("trip_id,date,total_boarded,trip_status")
+                .Filter("driver_id", Operator.Equals, userId.ToString())
+                .Filter("trip_status", Operator.Equals, "Completed")
+                .Order("trip_id", Ordering.Ascending)
+                .Range(from, from + PageRows - 1)
+                .Get()).Models;
+            all.AddRange(page);
+            if (page.Count < PageRows) return all;
+        }
     }
 
     /// <summary>
@@ -381,16 +446,9 @@ public class DriverDataService
         // Messages sent before the account existed are never shown. Broadcasts match
         // every driver and route messages match any route they are assigned to, so
         // without this clamp a new driver would inherit the entire 14-day backlog.
-        var user = await GetUserAsync(userId);
-        if (user is not null && user.CreatedAt > cutoff) cutoff = user.CreatedAt;
-
-        // Route identifiers this driver has ever run. A small set.
-        var trips = await _supabase.From<Trip>()
-            .Filter("driver_id", Operator.Equals, userId.ToString())
-            .Get();
-        var myRoutes = trips.Models
-            .Select(t => t.RouteId.ToString())
-            .ToHashSet();
+        var scope = await MessageScopeAsync(userId);
+        if (scope.CreatedAt > cutoff) cutoff = scope.CreatedAt;
+        var myRoutes = scope.Routes;
 
         var r = await _supabase.From<MessageModel>()
             .Filter("created_at", Operator.GreaterThanOrEqual, cutoff.ToString("yyyy-MM-dd HH:mm:ss"))
@@ -405,6 +463,39 @@ public class DriverDataService
             "driver" => m.TargetId == me,
             _        => false
         }).ToList();
+    }
+
+    /// <summary>
+    /// When the account was made and the routes it has ever run, held for
+    /// <see cref="HeldFor"/>. Only the route column of the driver's trips is read, a page
+    /// at a time.
+    /// </summary>
+    private async Task<(DateTime CreatedAt, HashSet<string> Routes)> MessageScopeAsync(int userId)
+    {
+        if (_messageScope is { } held && held.UserId == userId && DateTime.UtcNow - held.At < HeldFor)
+            return (held.CreatedAt, held.Routes);
+
+        var user = (await _supabase.From<UserModel>()
+            .Select("user_id,created_at")
+            .Filter("user_id", Operator.Equals, userId.ToString())
+            .Get()).Models.FirstOrDefault();
+
+        var routes = new HashSet<string>();
+        for (var from = 0; ; from += PageRows)
+        {
+            var page = (await _supabase.From<Trip>()
+                .Select("trip_id,route_id")
+                .Filter("driver_id", Operator.Equals, userId.ToString())
+                .Order("trip_id", Ordering.Ascending)
+                .Range(from, from + PageRows - 1)
+                .Get()).Models;
+            foreach (var t in page) routes.Add(t.RouteId.ToString());
+            if (page.Count < PageRows) break;
+        }
+
+        var createdAt = user?.CreatedAt ?? DateTime.MinValue;
+        _messageScope = new MessageScope(userId, createdAt, routes, DateTime.UtcNow);
+        return (createdAt, routes);
     }
 
     /// <summary>Read state, which is meaningful only for messages addressed to a single
