@@ -26,24 +26,35 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>
-        /// How often a pick from a ranking took the Best match, over the month of the chosen
-        /// day, overall and screen by screen.
+        /// How often a pick from a ranking took the Best match, over a month or a year
+        /// around the chosen day, overall and screen by screen. Every member of staff's
+        /// picks are counted together.
         /// </summary>
         /// <remarks>
         /// Read from the audit trail, where every reassignment records where its choice sat
-        /// in the ranking. The month runs by operational day, from 06:00 on the 1st to
-        /// 06:00 on the 1st of the next. Philippine time keeps no daylight saving, so the
+        /// in the ranking. A span runs by operational day, from 06:00 on its first day to
+        /// 06:00 on the day after its last. Philippine time keeps no daylight saving, so the
         /// offset is fixed.
         /// </remarks>
+        /// <param name="range">"month", "lastMonth", "year" (the default) or "lastYear".</param>
         [HttpGet]
-        public async Task<IActionResult> SuggestionStats(DateTime? date)
+        public async Task<IActionResult> SuggestionStats(DateTime? date, string? range)
         {
             var anchor = (date ?? PhClock.OperationalDay).Date;
-            var monthStart = new DateTime(anchor.Year, anchor.Month, 1);
-            var offset = TimeSpan.FromHours(8);
+            var thisMonth = new DateTime(anchor.Year, anchor.Month, 1);
+            var thisYear = new DateTime(anchor.Year, 1, 1);
 
-            var from = new DateTimeOffset(monthStart.Add(PhClock.DayStartTime), offset);
-            var to = new DateTimeOffset(monthStart.AddMonths(1).Add(PhClock.DayStartTime), offset);
+            var (start, end, label) = range switch
+            {
+                "month" => (thisMonth, thisMonth.AddMonths(1), thisMonth.ToString("MMMM yyyy")),
+                "lastMonth" => (thisMonth.AddMonths(-1), thisMonth, thisMonth.AddMonths(-1).ToString("MMMM yyyy")),
+                "lastYear" => (thisYear.AddYears(-1), thisYear, thisYear.AddYears(-1).ToString("yyyy")),
+                _ => (thisYear, thisYear.AddYears(1), thisYear.ToString("yyyy")),
+            };
+
+            var offset = TimeSpan.FromHours(8);
+            var from = new DateTimeOffset(start.Add(PhClock.DayStartTime), offset);
+            var to = new DateTimeOffset(end.Add(PhClock.DayStartTime), offset);
 
             var picks = await _audit.ReassignmentPicksAsync(from, to);
             if (picks is null) return StatusCode(502, "The audit trail could not be read.");
@@ -52,7 +63,7 @@ namespace FleetWise.Controllers
 
             return Json(new
             {
-                month = monthStart.ToString("MMMM yyyy"),
+                label,
                 total = picks.Count,
                 tookTop = picks.Count(p => p.TookTopSuggestion),
                 issueTotal = issues.Count,

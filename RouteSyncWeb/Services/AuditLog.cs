@@ -181,58 +181,73 @@ namespace FleetWise.Services
         /// </returns>
         public async Task<List<ReassignmentPick>?> ReassignmentPicksAsync(DateTimeOffset from, DateTimeOffset to)
         {
+            // The server returns at most this many rows a request, so a year is read a page
+            // at a time.
+            const int PageRows = 1000;
+
             try
             {
                 var url = _config["Supabase:Url"];
                 var key = _config["Supabase:Key"];
                 if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(key)) return null;
 
-                var query = "select=changes&action=in.(trip_reassigned,trip_created)"
-                    + $"&occurred_at=gte.{Uri.EscapeDataString(from.ToString("o"))}"
-                    + $"&occurred_at=lt.{Uri.EscapeDataString(to.ToString("o"))}"
-                    + "&limit=10000";
-
-                var req = new HttpRequestMessage(HttpMethod.Get, $"{url}/rest/v1/audit_log?{query}");
-                req.Headers.TryAddWithoutValidation("apikey", key);
-                req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
-
-                var res = await _http.SendAsync(req);
-                if (!res.IsSuccessStatusCode) return null;
-
-                using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
                 var picks = new List<ReassignmentPick>();
 
-                foreach (var row in doc.RootElement.EnumerateArray())
+                for (var offset = 0; ; offset += PageRows)
                 {
-                    // Entries written before suggestions existed, and route-only moves,
-                    // carry no recommendation and say nothing about one.
-                    if (!row.TryGetProperty("changes", out var changes)
-                        || changes.ValueKind != JsonValueKind.Object
-                        || !changes.TryGetProperty("recommendation", out var rec)
-                        || rec.ValueKind != JsonValueKind.Object)
-                        continue;
+                    // Only entries that carry a recommendation, so trips made in bulk do not
+                    // fill the pages.
+                    var query = "select=changes&action=in.(trip_reassigned,trip_created)"
+                        + "&changes->recommendation=not.is.null"
+                        + $"&occurred_at=gte.{Uri.EscapeDataString(from.ToString("o"))}"
+                        + $"&occurred_at=lt.{Uri.EscapeDataString(to.ToString("o"))}"
+                        + $"&order=id.asc&offset={offset}&limit={PageRows}";
 
-                    var tookTop = rec.TryGetProperty("via", out var via)
-                                  && via.ValueKind == JsonValueKind.String
-                                  && via.GetString() == "suggestion";
-                    var fixedIssue = rec.TryGetProperty("issues", out var issues)
-                                     && issues.ValueKind == JsonValueKind.Array
-                                     && issues.GetArrayLength() > 0;
+                    var req = new HttpRequestMessage(HttpMethod.Get, $"{url}/rest/v1/audit_log?{query}");
+                    req.Headers.TryAddWithoutValidation("apikey", key);
+                    req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
 
-                    var screen = rec.TryGetProperty("screen", out var s)
-                                 && s.ValueKind == JsonValueKind.String
-                                 && PickScreen.IsKnown(s.GetString())
-                        ? s.GetString()
-                        : null;
+                    var res = await _http.SendAsync(req);
+                    if (!res.IsSuccessStatusCode) return null;
 
-                    picks.Add(new ReassignmentPick(tookTop, fixedIssue, screen));
+                    using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+                    var rows = doc.RootElement.GetArrayLength();
+                    AddPicks(doc.RootElement, picks);
+                    if (rows < PageRows) return picks;
                 }
-
-                return picks;
             }
             catch
             {
                 return null;
+            }
+        }
+
+        private static void AddPicks(JsonElement page, List<ReassignmentPick> picks)
+        {
+            foreach (var row in page.EnumerateArray())
+            {
+                // Entries written before suggestions existed, and route-only moves,
+                // carry no recommendation and say nothing about one.
+                if (!row.TryGetProperty("changes", out var changes)
+                    || changes.ValueKind != JsonValueKind.Object
+                    || !changes.TryGetProperty("recommendation", out var rec)
+                    || rec.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var tookTop = rec.TryGetProperty("via", out var via)
+                              && via.ValueKind == JsonValueKind.String
+                              && via.GetString() == "suggestion";
+                var fixedIssue = rec.TryGetProperty("issues", out var issues)
+                                 && issues.ValueKind == JsonValueKind.Array
+                                 && issues.GetArrayLength() > 0;
+
+                var screen = rec.TryGetProperty("screen", out var s)
+                             && s.ValueKind == JsonValueKind.String
+                             && PickScreen.IsKnown(s.GetString())
+                    ? s.GetString()
+                    : null;
+
+                picks.Add(new ReassignmentPick(tookTop, fixedIssue, screen));
             }
         }
 

@@ -246,8 +246,9 @@
 </div>
 
 @* REPLACEMENT SUGGESTIONS. How often dispatch took the driver or bus the rules ranked
-   first, over the month of the chosen day. A measure the system keeps, not a claim about
-   how good the ranking is: a month with a handful of reassignments says very little. *@
+   first, over a month or a year around the chosen day, counting every member of staff's
+   picks together. A measure the system keeps, not a claim about how good the ranking is:
+   a span with a handful of reassignments says very little. *@
 <div class="rp-card rp-suggest-card">
     <div class="rp-card-header">
         <span class="rp-card-icon rp-card-icon--green">
@@ -259,9 +260,23 @@
         </span>
         <span class="rp-card-title">Scheduling Suggestions</span>
         <span class="rp-suggest-month ms-auto" id="rpSuggestMonth"></span>
+        <div class="rp-period-select-wrap">
+            <select class="rp-period-select" id="rpSuggestRange" aria-label="Span of the figures">
+                <option value="month">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="year" selected>This Year</option>
+                <option value="lastYear">Last Year</option>
+            </select>
+            <span class="rp-select-arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg>
+            </span>
+        </div>
     </div>
     <div class="rp-suggest-body">
-        @* The month's figure, and the same figure for picks made to fix an issue, which
+        @* The span's figure, and the same figure for picks made to fix an issue, which
            is where following the ranking matters most. *@
         <div class="rp-suggest-overall">
             <div class="rp-suggest-figure">
@@ -995,11 +1010,13 @@
             : n + ' of ' + d + ' ' + noun;
 
         try {
-            const res = await fetch('/Reports/SuggestionStats' + (date ? '?date=' + encodeURIComponent(date) : ''));
+            const query = new URLSearchParams({ range: document.getElementById('rpSuggestRange').value });
+            if (date) query.set('date', date);
+            const res = await fetch('/Reports/SuggestionStats?' + query);
             if (!res.ok) throw new Error('suggestion stats ' + res.status);
             const s = await res.json();
 
-            document.getElementById('rpSuggestMonth').textContent = s.month;
+            document.getElementById('rpSuggestMonth').textContent = s.label;
             pct.textContent = share(s.tookTop, s.total);
             of.textContent = phrase(s.tookTop, s.total, s.total === 1 ? 'pick' : 'picks');
             fill('rpSuggestBar', s.tookTop, s.total);
@@ -1012,7 +1029,7 @@
             if (rows.length === 0) {
                 const none = document.createElement('div');
                 none.className = 'rp-suggest-none';
-                none.textContent = 'No picks recorded this month.';
+                none.textContent = 'No picks recorded in ' + s.label + '.';
                 screens.append(none);
             }
             rows.forEach(x => {
@@ -1094,6 +1111,7 @@
     document.getElementById('routeFilter').addEventListener('change', () => { currentPage = 1; loadAll(); });
     document.getElementById('passengerPeriodSelect').addEventListener('change', () => loadAll());
     document.getElementById('revenuePeriodSelect').addEventListener('change', () => loadAll());
+    document.getElementById('rpSuggestRange').addEventListener('change', () => loadSuggestionStats(getFilters().date));
 
     /* Date navigation (operational day, 06:00 -> 05:59 next morning). */
     function rpPHParts() {
@@ -1739,7 +1757,8 @@
         });
     });
 
-    // Close on X button
+    // Close on X button
+
     modalClose.addEventListener('click', closeModal);
 
     // Close on overlay click
