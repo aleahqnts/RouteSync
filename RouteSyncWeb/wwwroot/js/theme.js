@@ -42,14 +42,32 @@
         document.dispatchEvent(new CustomEvent('rs-theme', { detail: t }));
     }
 
-    // Colours ease across for a moment rather than jumping, then each element's own
-    // transitions apply again.
-    var fading = 0;
+    // The page cross-fades from one theme to the other as a single picture, so every part
+    // of it changes at the same moment. Each element easing its own colours instead left
+    // a busy page half switched for a beat, since no two finished together. Without view
+    // transitions in the browser, or with reduced motion asked for, it switches at once.
+    //
+    // The elements' own colour transitions are held off while it happens, or a button
+    // that eases its background would still be easing after the rest had landed.
+    var still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
     function fade() {
-        root.classList.add('rs-theme-fade');
-        apply();
-        clearTimeout(fading);
-        fading = setTimeout(function () { root.classList.remove('rs-theme-fade'); }, 320);
+        root.classList.add('rs-theme-switching');
+        var settle = function () {
+            setTimeout(function () { root.classList.remove('rs-theme-switching'); }, 30);
+        };
+        if (document.startViewTransition && !(still && still.matches)) {
+            document.startViewTransition(apply).finished.then(settle, settle);
+            // A transition waits for the page to draw a frame. One that is not being
+            // drawn, behind another window, still switches, and the transition then has
+            // nothing left to change.
+            setTimeout(function () {
+                if (root.getAttribute('data-theme') !== current()) apply();
+                settle();
+            }, 500);
+        } else {
+            apply();
+            settle();
+        }
     }
 
     apply();

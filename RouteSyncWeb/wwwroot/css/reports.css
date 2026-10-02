@@ -2,9 +2,9 @@
     :root {
     --rp-text: light-dark(#2D3748, #DEE1E7);
     --rp-muted: light-dark(#9AA5B4, #A1A5A9);
-    --rp-border: light-dark(#E8ECF0, #434343);
-    --rp-bg: light-dark(#F8F9FA, #2D2D2D);
-    --rp-white: light-dark(#FFFFFF, #2F2F2F);
+    --rp-border: light-dark(#E8ECF0, #4E4E4E);
+    --rp-bg: light-dark(#F8F9FA, #373737);
+    --rp-white: light-dark(#FFFFFF, #393939);
     --rp-teal: #4AADA8;
     --rp-radius: 14px;
     --rp-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .124));
@@ -87,14 +87,14 @@
     .rp-title-row .rp-title { margin-bottom:0; }
     .rp-toolbar-right { display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .rp-date-nav { display:inline-flex; align-items:center; gap:8px; }
-    .rp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #2B423F); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #405854); cursor:pointer; font-size:1.1rem; transition:background .15s, transform .15s; }
+    .rp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; font-size:1.1rem; transition:background .15s, transform .15s; }
     .rp-date-arrow:hover { background:#2e7d72; color:#fff; transform:translateY(-1px); }
-    .rp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #2B423F); color:light-dark(#2e7d72, #82CFC2); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #405854); cursor:pointer; white-space:nowrap; }
+    .rp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; white-space:nowrap; }
     .rp-date-badge i { font-size:1rem; }
-    .rp-date-today { display:inline-flex; align-items:center; padding:7px 14px; border-radius:30px; background:light-dark(#fff, #2F2F2F); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #405854); font-size:.82rem; font-weight:700; cursor:pointer; }
+    .rp-date-today { display:inline-flex; align-items:center; padding:7px 14px; border-radius:30px; background:light-dark(#fff, #393939); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); font-size:.82rem; font-weight:700; cursor:pointer; }
     .rp-date-today:hover { background:#2e7d72; color:#fff; }
-    .rp-btn-refresh { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; background:light-dark(#fff, #2F2F2F); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #405854); font-weight:700; font-size:.86rem; cursor:pointer; }
-    .rp-btn-refresh:hover { background:light-dark(#EAF7F5, #2B423F); }
+    .rp-btn-refresh { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; background:light-dark(#fff, #393939); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); font-weight:700; font-size:.86rem; cursor:pointer; }
+    .rp-btn-refresh:hover { background:light-dark(#EAF7F5, #354D4A); }
     .rp-refresh-ico { display: flex; align-items: center; font-size: 1rem; line-height: 1; }
     .rp-btn-refresh.spinning .rp-refresh-ico { animation:rpSpin .7s linear infinite; }
     @keyframes rpSpin { to { transform:rotate(360deg); } }
@@ -135,22 +135,22 @@
     }
 
     .rp-stat-icon--green {
-    background: light-dark(#E8F8EE, #2F4237);
+    background: light-dark(#E8F8EE, #394D41);
     color: light-dark(#27AE60, #7ED498);
     }
 
     .rp-stat-icon--red {
-    background: light-dark(#FEECEC, #4C3737);
+    background: light-dark(#FEECEC, #574142);
     color: light-dark(#E74C3C, #FFA193);
     }
 
     .rp-stat-icon--blue {
-    background: light-dark(#EAF3FF, #333E4D);
+    background: light-dark(#EAF3FF, #3D4958);
     color: light-dark(#3B82F6, #98BFFE);
     }
 
     .rp-stat-icon--pink {
-    background: light-dark(#FDF0F8, #483742);
+    background: light-dark(#FDF0F8, #53424D);
     color: light-dark(#D63384, #FB9CC1);
     }
 
@@ -237,12 +237,12 @@
     }
 
     .rp-card-icon--purple {
-    background: light-dark(#F0EEFF, #3D3A4E);
+    background: light-dark(#F0EEFF, #484559);
     color: light-dark(#7C6FE0, #B7B4FE);
     }
 
     .rp-card-icon--green {
-    background: light-dark(#E8F8EE, #2F4237);
+    background: light-dark(#E8F8EE, #394D41);
     color: light-dark(#27AE60, #7ED498);
     }
 
@@ -290,7 +290,7 @@
     }
 
     .rp-table tbody tr:hover {
-    background: light-dark(#FAFBFC, #2E2E2E);
+    background: light-dark(#FAFBFC, #383838);
     }
 
     .rp-plate {
@@ -310,17 +310,17 @@
     }
 
     .rp-shift--morning {
-    background: light-dark(#FFF8E1, #453D1F);
+    background: light-dark(#FFF8E1, #50472A);
     color: #F59E0B;
     }
 
     .rp-shift--afternoon {
-    background: light-dark(#E8F8EE, #2F4237);
+    background: light-dark(#E8F8EE, #394D41);
     color: light-dark(#27AE60, #7ED498);
     }
 
     .rp-shift--evening {
-    background: light-dark(#EAF3FF, #333E4D);
+    background: light-dark(#EAF3FF, #3D4958);
     color: light-dark(#3B82F6, #98BFFE);
     }
 
@@ -458,7 +458,7 @@
     height: 8px;
     margin-top: 10px;
     border-radius: 999px;
-    background: light-dark(#EDF1F4, #2A2A2A);
+    background: light-dark(#EDF1F4, #343434);
     overflow: hidden;
     }
 
@@ -491,7 +491,7 @@
     align-items: center;
     gap: 12px;
     padding: 9px 0;
-    border-bottom: 1px solid light-dark(#F1F3F6, #414141);
+    border-bottom: 1px solid light-dark(#F1F3F6, #4C4C4C);
     font-size: 0.84rem;
     }
 
@@ -663,7 +663,7 @@
 
     .rp-progress-wrap {
     height: 8px;
-    background: light-dark(#F0F0F0, #2A2A2A);
+    background: light-dark(#F0F0F0, #343434);
     border-radius: 4px;
     overflow: hidden;
     }
@@ -857,7 +857,7 @@
     }
 
     .tr-modal {
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     border-radius: 16px;
     width: 100%;
     max-width: 700px;
@@ -877,7 +877,7 @@
     border-bottom: 1px solid var(--rp-border);
     position: sticky;
     top: 0;
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     z-index: 1;
     border-radius: 16px 16px 0 0;
     }
@@ -969,10 +969,10 @@
     }
 
     .trd-badge[hidden] { display: none; }
-    .trd-badge--ok { background: light-dark(#E8F8EE, #2F4237); color: light-dark(#27AE60, #7ED498); }
-    .trd-badge--warn { background: light-dark(#FFF8E1, #453D1F); color: light-dark(#D48806, #EFB062); }
-    .trd-badge--bad { background: light-dark(#FDECEC, #4C3737); color: light-dark(#D14343, #FFA099); }
-    .trd-badge--idle { background: light-dark(#F1F3F6, #2B2B2B); color: light-dark(#6B7280, #B9BCC1); }
+    .trd-badge--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
+    .trd-badge--warn { background: light-dark(#FFF8E1, #50472A); color: light-dark(#D48806, #EFB062); }
+    .trd-badge--bad { background: light-dark(#FDECEC, #574142); color: light-dark(#D14343, #FFA099); }
+    .trd-badge--idle { background: light-dark(#F1F3F6, #353535); color: light-dark(#6B7280, #B9BCC1); }
 
     .trd-label {
     font-size: 0.7rem;
@@ -985,7 +985,7 @@
     .trd-figures {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    background: light-dark(#F8FAFB, #2D2D2D);
+    background: light-dark(#F8FAFB, #373737);
     border-bottom: 1px solid var(--rp-border);
     }
 
@@ -1052,7 +1052,7 @@
     .trd-times td {
     padding: 8px 10px;
     text-align: left;
-    border-bottom: 1px solid light-dark(#EEF1F4, #424242);
+    border-bottom: 1px solid light-dark(#EEF1F4, #4C4C4C);
     }
 
     .trd-times thead th {
@@ -1141,7 +1141,7 @@
     }
 
     .rg-modal {
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     border-radius: 20px;
     width: 100%;
     max-width: min(1240px, 96vw);
@@ -1171,7 +1171,7 @@
     .rg-modal-icon {
     width: 34px;
     height: 34px;
-    background: light-dark(#F0FDF4, #304236);
+    background: light-dark(#F0FDF4, #3B4D41);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -1214,7 +1214,7 @@
     .rg-filters {
     padding: 20px 18px;
     border-right: 1px solid var(--rp-border);
-    background: light-dark(#FAFBFC, #2E2E2E);
+    background: light-dark(#FAFBFC, #383838);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -1270,7 +1270,7 @@
     border: 1.5px solid var(--rp-border);
     border-radius: 9px;
     color: var(--rp-text);
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     outline: none;
     transition: border-color 180ms;
     }
@@ -1294,7 +1294,7 @@
     border: 1.5px solid var(--rp-border);
     border-radius: 9px;
     color: var(--rp-text);
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     cursor: pointer;
     outline: none;
     transition: border-color 180ms;
@@ -1316,12 +1316,12 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 20px;
-    background: light-dark(#F0F2F5, #2B2B2B);
+    background: light-dark(#F0F2F5, #353535);
     min-width: 0;
     }
 
     .rg-preview-sheet {
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     border-radius: 10px;
     padding: 20px;
     min-height: 340px;
@@ -1399,7 +1399,7 @@
     }
 
     .rg-preview-table th {
-    background: light-dark(#F8F9FA, #2D2D2D);
+    background: light-dark(#F8F9FA, #373737);
     color: var(--rp-muted);
     font-weight: 600;
     text-align: left;
@@ -1436,7 +1436,7 @@
     margin-top: 14px;
     padding: 12px 14px;
     border-top: 2px solid var(--rp-teal);
-    background: light-dark(#F4FBFA, #2D2D2D);
+    background: light-dark(#F4FBFA, #373737);
     border-radius: 0 0 8px 8px;
     font-family: 'Segoe UI', sans-serif;
     }
@@ -1462,7 +1462,7 @@
     padding: 16px 24px;
     border-top: 1px solid var(--rp-border);
     flex-shrink: 0;
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     }
 
     .rg-format-toggle {
@@ -1495,7 +1495,7 @@
     font-family: 'Segoe UI', sans-serif;
     font-weight: 600;
     border: none;
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     color: var(--rp-muted);
     cursor: pointer;
     transition: background 150ms, color 150ms;
@@ -1511,7 +1511,7 @@
     }
 
     .rg-toggle-btn:not(.rg-toggle-btn--active):hover {
-    background: light-dark(#F8F9FA, #2D2D2D);
+    background: light-dark(#F8F9FA, #373737);
     color: var(--rp-text);
     }
 
@@ -1519,7 +1519,7 @@
     padding: 10px 24px;
     border-radius: 10px;
     border: 1.5px solid var(--rp-border);
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     font-size: 0.88rem;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 600;
@@ -1529,7 +1529,7 @@
     }
 
     .rg-btn-cancel:hover {
-    background: light-dark(#F8F9FA, #2D2D2D);
+    background: light-dark(#F8F9FA, #373737);
     }
 
     .rg-btn-download {
@@ -1723,7 +1723,7 @@
         padding: 10px 12px;
         border: 1px solid var(--rp-border);
         border-radius: 12px;
-        background: light-dark(#fff, #2F2F2F);
+        background: light-dark(#fff, #393939);
     }
 
     /* Desk cell padding indents every value inside a card that is padded already,
@@ -2211,7 +2211,7 @@
             padding: 12px 14px;
             border: 1px solid var(--rp-border);
             border-radius: 12px;
-            background: light-dark(#F7FAFA, #2D2D2D);
+            background: light-dark(#F7FAFA, #373737);
         }
 
         .rg-glance-head {
@@ -2271,7 +2271,7 @@
             padding: 14px;
             gap: 12px;
             border-right: none;
-            background: light-dark(#fff, #2F2F2F);
+            background: light-dark(#fff, #393939);
         }
 
         .rg-modal-header {

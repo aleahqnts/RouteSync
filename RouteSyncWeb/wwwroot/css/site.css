@@ -17,7 +17,7 @@
 :root {
     color-scheme: light dark;
     /* The ground of the content column, behind every card. */
-    --rs-page: light-dark(#f8f9fa, #232323);
+    --rs-page: light-dark(#f8f9fa, #2C2C2C);
 }
 
     :root[data-theme="light"] { color-scheme: light; }
@@ -25,7 +25,7 @@
 
     /* Bootstrap's own parts, the body included, in the same ground and ink. */
     :root[data-theme="dark"] {
-        --bs-body-bg: #232323;
+        --bs-body-bg: #2C2C2C;
         --bs-body-color: #DEE1E7;
     }
 
@@ -33,9 +33,9 @@
    in its own flat grey. :where() adds nothing to the weight of the selector, so any field
    a page has styled keeps what it was given. */
 :where(:root[data-theme="dark"]) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), textarea, select) {
-    background-color: #282828;
+    background-color: #313131;
     color: #DEE1E7;
-    border-color: #4A4A4A;
+    border-color: #525252;
 }
 
 /* The map stays as it is in either theme: streets are read against the colours they were
@@ -60,7 +60,7 @@
     padding: 3px;
     border: 0;
     border-radius: 999px;
-    background: light-dark(#EEF2F6, #1C1C1C);
+    background: light-dark(#EEF2F6, #232323);
     cursor: pointer;
     transition: width var(--fw-transition, 220ms ease);
 }
@@ -82,7 +82,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    color: light-dark(#9AA5B4, #8A8A8A);
+    color: light-dark(#9AA5B4, #A1A5A9);
     font-size: .8rem;
     font-weight: 600;
     transition: color .25s ease;
@@ -90,7 +90,7 @@
 
     .rs-theme-pill:not([aria-pressed="true"]) .rs-theme-pill__opt--light,
     .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__opt--dark {
-        color: light-dark(#2D3748, #F2F2F2);
+        color: light-dark(#2D3748, #DEE1E7);
     }
 
     .rs-theme-pill__opt svg { flex: none; }
@@ -116,19 +116,25 @@
     left: 3px;
     width: calc(50% - 3px);
     border-radius: 999px;
-    background: light-dark(#DCE3EB, #4A4A4A);
+    background: light-dark(#DCE3EB, #585858);
     transition: transform .25s ease;
 }
 
     .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__knob { transform: translateX(100%); }
 
-/* For a moment after the switch, colours ease across instead of jumping. */
-html.rs-theme-fade,
-html.rs-theme-fade *,
-html.rs-theme-fade *::before,
-html.rs-theme-fade *::after {
-    transition: background-color .3s ease, color .3s ease, border-color .3s ease,
-                box-shadow .3s ease, fill .3s ease !important;
+/* The switch between themes, as one cross-fade of the whole page (see theme.js), with
+   every element's own transitions held off until it has landed. */
+html.rs-theme-switching,
+html.rs-theme-switching *,
+html.rs-theme-switching *::before,
+html.rs-theme-switching *::after {
+    transition: none !important;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: .28s;
+    animation-timing-function: ease;
 }
 
 
@@ -160,8 +166,8 @@ html.rs-theme-fade *::after {
     height: 80px;
     display: flex;
     align-items: center;
-    background: light-dark(#fff, #2F2F2F);
-    border-bottom: 1px solid light-dark(#ddd, #464646);
+    background: light-dark(#fff, #393939);
+    border-bottom: 1px solid light-dark(#ddd, #505050);
     padding: 0 70px;
     position: sticky;
     top: 0;
@@ -331,8 +337,8 @@ html.rs-theme-fade *::after {
     max-width: 560px;
     margin: 40px auto;
     padding: 32px 34px;
-    background: light-dark(#fff, #2F2F2F);
-    border: 1px solid light-dark(#e2e8f0, #444444);
+    background: light-dark(#fff, #393939);
+    border: 1px solid light-dark(#e2e8f0, #4E4E4E);
     border-radius: 16px;
     font-family: 'Segoe UI', sans-serif;
 }
@@ -358,7 +364,7 @@ html.rs-theme-fade *::after {
 
 .err-ref code {
     padding: 3px 8px;
-    background: light-dark(#f1f5f9, #2B2B2B);
+    background: light-dark(#f1f5f9, #353535);
     border-radius: 6px;
     font-size: 13px;
     color: light-dark(#334155, #DCE0E5);
@@ -417,9 +423,9 @@ html.rs-theme-fade *::after {
     .rs-cards tr {
         margin-bottom: 10px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#e2e8f0, #444444);
+        border: 1px solid light-dark(#e2e8f0, #4E4E4E);
         border-radius: 12px;
-        background: light-dark(#fff, #2F2F2F);
+        background: light-dark(#fff, #393939);
     }
 
     .rs-cards td {
@@ -433,7 +439,7 @@ html.rs-theme-fade *::after {
     }
 
     .rs-cards td + td {
-        border-top: 1px solid light-dark(#f1f5f9, #414141);
+        border-top: 1px solid light-dark(#f1f5f9, #4C4C4C);
     }
 
     .rs-cards td[data-label]::before {
@@ -593,9 +599,9 @@ html.rs-dialog-open {
         flex-shrink: 0;
         min-height: 40px;
         padding: 0 12px;
-        border: 1px solid light-dark(#E2E8F0, #444444);
+        border: 1px solid light-dark(#E2E8F0, #4E4E4E);
         border-radius: 10px;
-        background: light-dark(#fff, #2F2F2F);
+        background: light-dark(#fff, #393939);
         color: light-dark(#2D3748, #DEE1E7);
         font-size: .8rem;
         font-weight: 600;
@@ -620,8 +626,8 @@ html.rs-dialog-open {
         align-items: stretch;
         gap: 12px;
         padding: 14px 16px 16px;
-        background: light-dark(#fff, #2F2F2F);
-        border-bottom: 1px solid light-dark(#E2E8F0, #444444);
+        background: light-dark(#fff, #393939);
+        border-bottom: 1px solid light-dark(#E2E8F0, #4E4E4E);
         box-shadow: 0 10px 24px light-dark(rgba(0, 0, 0, .14), rgba(0, 0, 0, .236));
     }
 
@@ -753,7 +759,7 @@ html.rs-dialog-open {
        where the placeholder it replaces sat. */
     padding: 0 var(--rs-pick-pad, 6.5px);
     border-radius: 6px;
-    background: var(--rs-pick-bg, light-dark(#fff, #2F2F2F));
+    background: var(--rs-pick-bg, light-dark(#fff, #393939));
     color: inherit;
     font: inherit;
     /* Clipped rather than ellipsised. The text is the flex box's own, not a child, so
@@ -906,10 +912,10 @@ html.rs-dialog-open {
         z-index: 2;
         /* Lifted out of the flow, so it needs a ground of its own or the rows
            travel through it. */
-        background: light-dark(#fff, #2F2F2F);
+        background: light-dark(#fff, #393939);
         /* A collapsed table will not paint a border on a cell that has been lifted
            out of it, so the rule under the headings is drawn as a shadow. */
-        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #434343);
+        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #4E4E4E);
         /* Headings held on one line are what made these tables wider than the card
            they sit in. Allowed to wrap, the table compresses instead of needing a
            scrollbar of its own. */
@@ -975,12 +981,12 @@ html.rs-dialog-open {
         padding-top: calc(var(--rs-card-inset) - 1px);
         padding-left: calc(var(--rs-card-inset-x) - 1px);
         padding-right: calc(var(--rs-card-inset-x) - 1px);
-        border: 1px solid light-dark(#E8ECF0, #434343);
+        border: 1px solid light-dark(#E8ECF0, #4E4E4E);
         /* Whatever rule the heading draws under itself is its own; a card without
            one keeps none. */
         border-bottom: 0;
         border-radius: 14px 14px 0 0;
-        background: light-dark(#fff, #2F2F2F);
+        background: light-dark(#fff, #393939);
         box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 var(--rs-page);
     }
 
@@ -992,9 +998,9 @@ html.rs-dialog-open {
         left: -1px;
         right: -1px;
         height: var(--rs-card-gap, 0px);
-        background: light-dark(#fff, #2F2F2F);
-        border-left: 1px solid light-dark(#E8ECF0, #434343);
-        border-right: 1px solid light-dark(#E8ECF0, #434343);
+        background: light-dark(#fff, #393939);
+        border-left: 1px solid light-dark(#E8ECF0, #4E4E4E);
+        border-right: 1px solid light-dark(#E8ECF0, #4E4E4E);
     }
 }
 

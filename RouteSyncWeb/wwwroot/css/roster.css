@@ -4,9 +4,9 @@
         --ro-text: light-dark(#2D3748, #DEE1E7);
         --ro-muted: light-dark(#9AA5B4, #A1A5A9);
         --ro-soft: light-dark(#5A6473, #C0C3C9);
-        --ro-border: light-dark(#E8ECF0, #434343);
-        --ro-bg: light-dark(#F8F9FA, #2D2D2D);
-        --ro-white: light-dark(#FFFFFF, #2F2F2F);
+        --ro-border: light-dark(#E8ECF0, #4E4E4E);
+        --ro-bg: light-dark(#F8F9FA, #373737);
+        --ro-white: light-dark(#FFFFFF, #393939);
         --ro-red: #E53E3E;
         --ro-amber: #B7791F;
     }
@@ -56,9 +56,9 @@
         font-weight: 700;
     }
 
-    .ro-chip--none { background: light-dark(#EEF1F5, #2A2A2A); color: light-dark(#6B7280, #B9BCC1); }
-    .ro-chip--draft { background: light-dark(#FEF9E7, #433D27); color: light-dark(#7A6412, #D4BC72); }
-    .ro-chip--published { background: light-dark(#E6F4F3, #2A4241); color: light-dark(#2E7D72, #82CFC2); }
+    .ro-chip--none { background: light-dark(#EEF1F5, #343434); color: light-dark(#6B7280, #B9BCC1); }
+    .ro-chip--draft { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#7A6412, #D4BC72); }
+    .ro-chip--published { background: light-dark(#E6F4F3, #354D4C); color: light-dark(#2E7D72, #82CFC2); }
 
     .ro-saved {
         font-size: .78rem;
@@ -164,17 +164,17 @@
     .ro-banner[hidden] { display: none; }
 
     .ro-banner--moved {
-        border: 1px solid light-dark(#F3C4C4, #6C4748);
-        background: light-dark(#FDECEC, #4C3737);
+        border: 1px solid light-dark(#F3C4C4, #775253);
+        background: light-dark(#FDECEC, #574142);
         color: light-dark(#9B2C2C, #FFA099);
     }
 
     .ro-problems {
         margin: 0 0 14px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#F3C4C4, #6C4748);
+        border: 1px solid light-dark(#F3C4C4, #775253);
         border-radius: 10px;
-        background: light-dark(#FDECEC, #4C3737);
+        background: light-dark(#FDECEC, #574142);
         color: light-dark(#9B2C2C, #FFA099);
         font-size: .84rem;
     }
@@ -186,9 +186,9 @@
     .ro-wouldleave {
         margin: 0 0 14px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#E6D6A8, #5D5232);
+        border: 1px solid light-dark(#E6D6A8, #685D3C);
         border-radius: 10px;
-        background: light-dark(#FEF9E7, #433D27);
+        background: light-dark(#FEF9E7, #4E4831);
         color: light-dark(#7A6412, #D4BC72);
         font-size: .84rem;
     }
@@ -227,9 +227,9 @@
         z-index: 3;
         margin: -16px -18px 0;
         padding: 12px 18px;
-        border-bottom: 1px solid light-dark(#CDE9E4, #405854);
+        border-bottom: 1px solid light-dark(#CDE9E4, #4B635F);
         border-radius: 13px 13px 0 0;
-        background: var(--fw-teal-light, light-dark(#E8F6F5, #2A4241));
+        background: var(--fw-teal-light, light-dark(#E8F6F5, #354D4C));
         color: light-dark(#1a2a4a, #E1E4E9);
         box-shadow: 0 2px 6px light-dark(rgba(13, 28, 40, .08), rgba(0, 0, 0, .152));
     }
@@ -298,21 +298,21 @@
     .ro-day {
         padding: 2px 8px;
         border-radius: 999px;
-        background: light-dark(#E6F4F3, #2A4241);
+        background: light-dark(#E6F4F3, #354D4C);
         color: light-dark(#2E7D72, #82CFC2);
         font-size: .74rem;
         font-weight: 600;
         white-space: nowrap;
     }
 
-    .ro-day--short { background: light-dark(#FDECEC, #4C3737); color: var(--ro-red); }
+    .ro-day--short { background: light-dark(#FDECEC, #574142); color: var(--ro-red); }
 
     .ro-short {
         margin: 10px 0 0;
         padding: 8px 12px;
-        border: 1px solid light-dark(#E6D6A8, #5D5232);
+        border: 1px solid light-dark(#E6D6A8, #685D3C);
         border-radius: 8px;
-        background: light-dark(#FEF9E7, #433D27);
+        background: light-dark(#FEF9E7, #4E4831);
         color: light-dark(#7A6412, #D4BC72);
         font-size: .82rem;
     }
@@ -368,8 +368,8 @@
     /* A place auto-fill filled or emptied, until a person changes it or the roster is published. */
     .ro-suggested {
         border-radius: 8px;
-        box-shadow: 0 0 0 4px light-dark(#EAF6F5, #414141);
-        background: light-dark(#EAF6F5, #2A4241);
+        box-shadow: 0 0 0 4px light-dark(#EAF6F5, #4C4C4C);
+        background: light-dark(#EAF6F5, #354D4B);
     }
 
     /* The mark on a place auto-fill chose. Opens See changes at its line. */
@@ -379,7 +379,7 @@
         align-items: center;
         min-height: 24px;
         padding: 1px 9px;
-        border: 1px solid light-dark(#B7DDD9, #385A57);
+        border: 1px solid light-dark(#B7DDD9, #436562);
         border-radius: 999px;
         background: var(--ro-white);
         color: light-dark(#2E7D72, #82CFC2);
@@ -429,14 +429,14 @@
             padding: 3px 10px;
             border: 1px solid transparent;
             border-radius: 999px;
-            background: light-dark(#EEF1F5, #2A2A2A);
+            background: light-dark(#EEF1F5, #343434);
             color: var(--ro-text);
             font: inherit;
             font-size: .8rem;
             cursor: pointer;
         }
 
-            .ro-unplaced-chip:hover:not(:disabled) { border-color: light-dark(#C9D1DE, #484848); }
+            .ro-unplaced-chip:hover:not(:disabled) { border-color: light-dark(#C9D1DE, #535353); }
             .ro-unplaced-chip:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 2px; }
             .ro-unplaced-chip:disabled { cursor: default; }
 
@@ -453,7 +453,7 @@
         margin-left: 6px;
         padding: 1px 8px;
         border-radius: 999px;
-        background: light-dark(#FDECEC, #4C3737);
+        background: light-dark(#FDECEC, #574142);
         color: var(--ro-red);
         font-size: .75rem;
         vertical-align: middle;
@@ -502,7 +502,7 @@
         margin: 12px 0 0;
         padding: 8px 12px;
         border-radius: 8px;
-        background: light-dark(#FDECEC, #4C3737);
+        background: light-dark(#FDECEC, #574142);
         color: var(--ro-red);
         font-size: .82rem;
     }
@@ -547,7 +547,7 @@
         .ro-change:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: -2px; }
 
     /* The line a mark was pressed to see. */
-    .ro-change--here { background: light-dark(#EAF6F5, #2A4241); }
+    .ro-change--here { background: light-dark(#EAF6F5, #354D4B); }
 
     .ro-change--none {
         font-size: .85rem;
@@ -572,7 +572,7 @@
         cursor: pointer;
     }
 
-        .ro-change-main:hover { background: light-dark(#F4F8FB, #2C2C2C); }
+        .ro-change-main:hover { background: light-dark(#F4F8FB, #363636); }
         .ro-change-main:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 0; }
 
     /* The place a line was pressed to find, lit where it stands on the roster for a moment. */
@@ -629,7 +629,7 @@
         min-width: 18px;
         padding: 0 6px;
         border-radius: 999px;
-        background: light-dark(#EAF6F5, #2A4241);
+        background: light-dark(#EAF6F5, #354D4B);
         color: light-dark(#2E7D72, #82CFC2);
         font-size: .72rem;
         font-weight: 700;

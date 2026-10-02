@@ -10,9 +10,9 @@
 /* FleetMap/Index.cshtml */
     :root {
         --fm-teal: #4AADA8;
-        --fm-border: light-dark(#E8ECF0, #434343);
-        --fm-bg: light-dark(#F8F9FA, #2D2D2D);
-        --fm-white: light-dark(#FFFFFF, #2F2F2F);
+        --fm-border: light-dark(#E8ECF0, #4E4E4E);
+        --fm-bg: light-dark(#F8F9FA, #373737);
+        --fm-white: light-dark(#FFFFFF, #393939);
         --fm-text: light-dark(#2D3748, #DEE1E7);
         --fm-muted: light-dark(#9AA5B4, #A1A5A9);
         --fm-radius: 14px;
@@ -86,7 +86,7 @@
         height: 28px;
         padding: 0 11px;
         border-radius: 999px;
-        background: light-dark(#F1F4F8, #2B2B2B);
+        background: light-dark(#F1F4F8, #353535);
         color: light-dark(#4A5568, #D9DCE1);
         font: 700 0.76rem 'Segoe UI', sans-serif;
         font-variant-numeric: tabular-nums;
@@ -99,7 +99,7 @@
     }
 
     .fm-chip--trip {
-        background: light-dark(#E8F6F5, #2A4241);
+        background: light-dark(#E8F6F5, #354D4C);
         color: light-dark(#2E8C87, #77D0CA);
     }
 
@@ -144,7 +144,7 @@
 
     .fm-clear-btn:hover {
         color: light-dark(#E74C3C, #FFA193);
-        background: light-dark(#FDECEC, #4C3737);
+        background: light-dark(#FDECEC, #574142);
     }
 
     .fm-clear-btn[hidden] {
@@ -291,9 +291,9 @@
         display: none;
         align-items: center;
         gap: 8px;
-        background: light-dark(#FEF2F2, #4C3737);
+        background: light-dark(#FEF2F2, #574142);
         color: light-dark(#B91C1C, #FFA195);
-        border: 1.5px solid light-dark(#FECACA, #6C4748);
+        border: 1.5px solid light-dark(#FECACA, #775253);
         border-radius: 10px;
         padding: 8px 14px;
         font-size: 0.8rem;
@@ -368,7 +368,7 @@
     .fm-bus-marker--stale span {
         opacity: .55;
         color: light-dark(#374151, #DCDFE5);
-        background: light-dark(#fff, #2F2F2F) !important;
+        background: light-dark(#fff, #393939) !important;
         box-shadow: inset 0 0 0 2px currentColor, 0 2px 8px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
     }
 
@@ -396,7 +396,7 @@
        keeping to the road. The border takes the place of two pixels of padding, so the
        pill keeps its size. */
     .fm-bus-marker--off span {
-        border: 2px dashed light-dark(rgba(255, 255, 255, .95), rgba(47, 47, 47, .95));
+        border: 2px dashed light-dark(rgba(255, 255, 255, .95), rgba(57, 57, 57, .95));
         padding: 3px 10px;
     }
 
@@ -481,7 +481,7 @@
     .fm-tooltip__off {
         margin-top: 6px;
         padding-top: 6px;
-        border-top: 1px solid light-dark(#E5E7EB, #444444);
+        border-top: 1px solid light-dark(#E5E7EB, #4E4E4E);
         font-size: 0.72rem;
         font-weight: 600;
         color: light-dark(#374151, #DCDFE5);
@@ -490,7 +490,7 @@
     .fm-tooltip__stale {
         margin-top: 6px;
         padding-top: 6px;
-        border-top: 1px solid light-dark(#E5E7EB, #444444);
+        border-top: 1px solid light-dark(#E5E7EB, #4E4E4E);
         font-size: 0.72rem;
         font-weight: 600;
         color: light-dark(#B45309, #FCA677);
@@ -583,7 +583,7 @@
     .fm-panel__shift {
         font-weight: 700;
         color: #E8A33D;
-        background: light-dark(#FCF3DF, #473C23);
+        background: light-dark(#FCF3DF, #52462D);
         border-radius: 6px;
         padding: 2px 8px;
     }
@@ -609,7 +609,7 @@
         display: flex;
         align-items: center;
         gap: 14px;
-        background: light-dark(#F1F3F5, #2B2B2B);
+        background: light-dark(#F1F3F5, #353535);
         padding: 14px 22px;
     }
 
@@ -665,7 +665,7 @@
     }
 
     .fm-panel__rev-head {
-        background: light-dark(#F1F3F5, #2B2B2B);
+        background: light-dark(#F1F3F5, #353535);
         padding: 10px 22px;
         font-size: 1rem;
         color: light-dark(#2D3748, #DEE1E7);
@@ -698,7 +698,7 @@
         height: 18px;
         border-radius: 50%;
         background: #6366F1;
-        border: 3px solid light-dark(#fff, #2F2F2F);
+        border: 3px solid light-dark(#fff, #393939);
         box-shadow: 0 3px 8px light-dark(rgba(0, 0, 0, .3), rgba(0, 0, 0, .46));
     }
 
@@ -887,7 +887,7 @@
         width: 34px;
         height: 20px;
         border-radius: 999px;
-        background: light-dark(#D5DBE3, #505050);
+        background: light-dark(#D5DBE3, #5B5B5B);
         transition: background .15s;
     }
 
@@ -899,7 +899,7 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        background: light-dark(#fff, #2F2F2F);
+        background: light-dark(#fff, #393939);
         box-shadow: 0 1px 3px light-dark(rgba(0, 0, 0, .2), rgba(0, 0, 0, .32));
         transition: transform .15s;
     }
@@ -957,7 +957,7 @@
         height: 44px;
         /* The desk fills this the same grey as the page behind it. Here it floats on
            the bar, where that grey reads as a disabled field. */
-        background: var(--fm-white, light-dark(#fff, #2F2F2F));
+        background: var(--fm-white, light-dark(#fff, #393939));
     }
 
     /* Bus detail arrives from the bottom, where a thumb is, instead of taking a

@@ -4,12 +4,12 @@
         --fw-sidebar-collapsed: 72px;
         --fw-sidebar-expanded:  220px;
         --fw-teal:              #4AADA8;
-        --fw-teal-light:        light-dark(#E8F6F5, #2A4241);
+        --fw-teal-light:        light-dark(#E8F6F5, #354D4C);
         --fw-text-dark:         light-dark(#2D3748, #DEE1E7);
         --fw-text-muted:        light-dark(#9AA5B4, #A1A5A9);
-        --fw-bg:                light-dark(#FFFFFF, #2F2F2F);
-        --fw-divider:           light-dark(#E8ECF0, #434343);
-        --fw-bar-edge:          light-dark(#DDE3EA, #454545);
+        --fw-bg:                light-dark(#FFFFFF, #393939);
+        --fw-divider:           light-dark(#E8ECF0, #4E4E4E);
+        --fw-bar-edge:          light-dark(#DDE3EA, #4F4F4F);
         --fw-transition:        220ms ease;
     }
 
@@ -178,7 +178,7 @@
            it will not keep. A third shade would have to be read rather than glanced at. */
         background: #64748B;
         color: #fff;
-        box-shadow: 0 0 0 2px var(--fw-bg, light-dark(#fff, #2F2F2F));
+        box-shadow: 0 0 0 2px var(--fw-bg, light-dark(#fff, #393939));
     }
 
     .fw-sidebar__badge--urgent,
@@ -234,7 +234,7 @@
         gap: 10px;
         padding: 20px 12px 30px;
         flex-shrink: 0;
-        border-top: 1px solid light-dark(#d9d9d9, #474747);
+        border-top: 1px solid light-dark(#d9d9d9, #515151);
         white-space: nowrap;
         overflow: hidden;
         margin-left: 2px;
@@ -475,7 +475,7 @@
     /* The same shape in the dark surface and edge, which the data URI cannot take from
        --fw-bg and --fw-bar-edge either. */
     :root[data-theme="dark"] .fw-bar::before {
-        --fw-scoop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96V40H0Z' fill='%232F2F2F'/%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96' fill='none' stroke='%23454545' stroke-width='1'/%3E%3C/svg%3E");
+        --fw-scoop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96V40H0Z' fill='%23393939'/%3E%3Cpath d='M0 .5H9.83A8 8 0 0 1 17.66 6.86A31 31 0 0 0 78.34 6.86A8 8 0 0 1 86.17 .5H96' fill='none' stroke='%234F4F4F' stroke-width='1'/%3E%3C/svg%3E");
     }
 
     /* A sheet that ends at the top of the bar turns the scoop into a hole: two white
@@ -636,14 +636,14 @@
         min-height: 60px;
         padding: 8px 12px;
         border-radius: 14px;
-        background: light-dark(#F4FAF9, #2D2D2D);
+        background: light-dark(#F4FAF9, #373737);
         color: inherit;
         text-decoration: none;
         cursor: pointer;
         transition: background 150ms;
     }
 
-    .fw-sheet__who:active { background: light-dark(#E3F3F1, #2A4240); }
+    .fw-sheet__who:active { background: light-dark(#E3F3F1, #354D4B); }
 
     .fw-sheet__avatar {
         flex: none;
@@ -667,8 +667,8 @@
         gap: 2px;
         padding: 6px 8px 6px 12px;
         border-radius: 20px;
-        background: light-dark(#fff, #2F2F2F);
-        border: 1px solid light-dark(#CDE9E4, #405854);
+        background: light-dark(#fff, #393939);
+        border: 1px solid light-dark(#CDE9E4, #4B635F);
         font-size: .78rem;
         font-weight: 700;
         color: light-dark(#2E7D72, #82CFC2);
@@ -709,7 +709,7 @@
     }
 
     .fw-sheet__logout:active {
-        background: light-dark(#FDECEC, #4C3737);
+        background: light-dark(#FDECEC, #574142);
     }
 
     /* The rows share the gutter the heading above them uses, rather than running to
@@ -814,7 +814,7 @@
     max-width: 340px;
     padding: 22px 22px 18px;
     border-radius: 16px;
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     box-shadow: 0 18px 50px light-dark(rgba(15, 23, 42, .28), rgba(0, 0, 0, .432));
 }
 
@@ -856,7 +856,7 @@
 
 .fw-confirm__cancel {
     border: 1px solid var(--fw-divider);
-    background: light-dark(#fff, #2F2F2F);
+    background: light-dark(#fff, #393939);
     color: var(--fw-text-dark);
 }
 
