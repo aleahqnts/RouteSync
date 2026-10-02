@@ -327,7 +327,7 @@ $$;
 ALTER FUNCTION "public"."driver_is_active"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone) RETURNS json
+CREATE OR REPLACE FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb" DEFAULT '{}'::"jsonb") RETURNS json
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
     AS $$
@@ -344,16 +344,17 @@ CREATE OR REPLACE FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_
         select t.* from telemetry_data t
         where t.trip_id in (select trip_id from shown)
           and t."timestamp" >= p_since
+          and t.telemetry_id >= coalesce((p_seen ->> t.trip_id)::bigint, 0)
         order by t."timestamp" desc
         limit 1000) x), '[]'),
     'fare', coalesce((select json_agg(f) from fare_config f), '[]'))
 $$;
 
 
-ALTER FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone) OWNER TO "postgres";
+ALTER FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone) IS 'What the fleet map reads on every poll, in one request: active trips, recent positions of those shown, and the fare.';
+COMMENT ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb") IS 'What the fleet map reads on every poll, in one request: active trips, the positions of those shown from the last one the map used (p_seen, by trip), and the fare.';
 
 
 
@@ -3150,8 +3151,8 @@ GRANT ALL ON FUNCTION "public"."driver_is_active"() TO "app_camera";
 
 
 
-REVOKE ALL ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone) TO "service_role";
+REVOKE ALL ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb") TO "service_role";
 
 
 
