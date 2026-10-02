@@ -17,7 +17,7 @@
 :root {
     color-scheme: light dark;
     /* The ground of the content column, behind every card. */
-    --rs-page: light-dark(#f8f9fa, #0F1318);
+    --rs-page: light-dark(#f8f9fa, #232A31);
 }
 
     :root[data-theme="light"] { color-scheme: light; }
@@ -25,43 +25,75 @@
 
     /* Bootstrap's own parts, the body included, in the same ground and ink. */
     :root[data-theme="dark"] {
-        --bs-body-bg: #0F1318;
-        --bs-body-color: #D2DAE7;
+        --bs-body-bg: #232A31;
+        --bs-body-color: #C3CAD3;
     }
 
 /* Fields that set no colours of their own. Left to the browser, a dark page draws them
    in its own flat grey. :where() adds nothing to the weight of the selector, so any field
    a page has styled keeps what it was given. */
 :where(:root[data-theme="dark"]) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), textarea, select) {
-    background-color: #12161B;
-    color: #D2DAE7;
-    border-color: #2F343A;
+    background-color: #293037;
+    color: #C3CAD3;
+    border-color: #4A5159;
 }
 
-/* The map's streets are pictures, so they are turned dark rather than recoloured: the
-   tiles inverted and their hues turned back, so water stays blue and parks green. The
-   markers and lines drawn over them are in a pane of their own and keep their colours. */
-:root[data-theme="dark"] .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.7);
+/* The map stays as it is in either theme: streets are read against the colours they were
+   drawn in, and the buses and routes over them were chosen against those. Everything
+   inside a map, its buttons and legend included, keeps its light colours. */
+.leaflet-container,
+.fm-map-tools,
+.fm-legend,
+.db-map-link {
+    color-scheme: light;
 }
 
-:root[data-theme="dark"] .leaflet-container { background: #1B2027; }
-
-:root[data-theme="dark"] .leaflet-popup-content-wrapper,
-:root[data-theme="dark"] .leaflet-popup-tip,
-:root[data-theme="dark"] .leaflet-bar a,
-:root[data-theme="dark"] .leaflet-bar a:hover {
-    background: #232932;
-    color: #D2DAE7;
-    border-color: #2F343A;
+/* The light and dark switch: a sun and a moon in a pill, with a knob that slides under
+   whichever is in use. */
+.rs-theme-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    width: 58px;
+    height: 30px;
+    padding: 3px;
+    border: 0;
+    border-radius: 999px;
+    background: light-dark(#EEF2F6, #1B2128);
+    cursor: pointer;
 }
 
-:root[data-theme="dark"] .leaflet-control-attribution {
-    background: rgba(26, 30, 36, .8);
-    color: #969FAB;
+    .rs-theme-pill:focus-visible {
+        outline: 2px solid #4AADA8;
+        outline-offset: 2px;
+    }
+
+    .rs-theme-pill svg {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        color: light-dark(#9AA5B4, #6E7781);
+        transition: color .25s ease;
+    }
+
+    .rs-theme-pill:not([aria-pressed="true"]) .rs-theme-pill__sun,
+    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__moon {
+        color: light-dark(#2D3748, #E6EBF1);
+    }
+
+.rs-theme-pill__knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 24px;
+    border-radius: 999px;
+    background: light-dark(#D9E1EA, #3A4350);
+    transition: transform .25s ease;
 }
 
-    :root[data-theme="dark"] .leaflet-control-attribution a { color: #8EC9C5; }
+    .rs-theme-pill[aria-pressed="true"] .rs-theme-pill__knob { transform: translateX(26px); }
 
 /* For a moment after the switch, colours ease across instead of jumping. */
 html.rs-theme-fade,
@@ -101,8 +133,8 @@ html.rs-theme-fade *::after {
     height: 80px;
     display: flex;
     align-items: center;
-    background: light-dark(#fff, #1A1E24);
-    border-bottom: 1px solid light-dark(#ddd, #33373D);
+    background: light-dark(#fff, #30363E);
+    border-bottom: 1px solid light-dark(#ddd, #4A5159);
     padding: 0 70px;
     position: sticky;
     top: 0;
@@ -272,8 +304,8 @@ html.rs-theme-fade *::after {
     max-width: 560px;
     margin: 40px auto;
     padding: 32px 34px;
-    background: light-dark(#fff, #1A1E24);
-    border: 1px solid light-dark(#e2e8f0, #30353B);
+    background: light-dark(#fff, #30363E);
+    border: 1px solid light-dark(#e2e8f0, #484F57);
     border-radius: 16px;
     font-family: 'Segoe UI', sans-serif;
 }
@@ -282,33 +314,33 @@ html.rs-theme-fade *::after {
     margin: 0 0 10px;
     font-size: 24px;
     font-weight: 600;
-    color: light-dark(#0f172a, #DEE4F2);
+    color: light-dark(#0f172a, #CAD1DE);
 }
 
 .err-lead {
     margin: 0 0 22px;
     font-size: 15px;
-    color: light-dark(#475569, #C8D1DE);
+    color: light-dark(#475569, #B9C2CE);
 }
 
 .err-ref {
     margin: 0 0 6px;
     font-size: 14px;
-    color: light-dark(#0f172a, #DEE4F2);
+    color: light-dark(#0f172a, #CAD1DE);
 }
 
 .err-ref code {
     padding: 3px 8px;
-    background: light-dark(#f1f5f9, #171B20);
+    background: light-dark(#f1f5f9, #2C323A);
     border-radius: 6px;
     font-size: 13px;
-    color: light-dark(#334155, #CED7E4);
+    color: light-dark(#334155, #BEC7D3);
 }
 
 .err-note {
     margin: 0 0 24px;
     font-size: 13px;
-    color: light-dark(#64748b, #B5BECA);
+    color: light-dark(#64748b, #A7B0BC);
 }
 
 .err-back {
@@ -358,9 +390,9 @@ html.rs-theme-fade *::after {
     .rs-cards tr {
         margin-bottom: 10px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#e2e8f0, #30353B);
+        border: 1px solid light-dark(#e2e8f0, #484F57);
         border-radius: 12px;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
     }
 
     .rs-cards td {
@@ -374,14 +406,14 @@ html.rs-theme-fade *::after {
     }
 
     .rs-cards td + td {
-        border-top: 1px solid light-dark(#f1f5f9, #2D3238);
+        border-top: 1px solid light-dark(#f1f5f9, #464D55);
     }
 
     .rs-cards td[data-label]::before {
         content: attr(data-label);
         flex: 0 0 auto;
         max-width: 45%;
-        color: light-dark(#64748b, #B5BECA);
+        color: light-dark(#64748b, #A7B0BC);
         font-size: .74rem;
         font-weight: 600;
         text-align: left;
@@ -533,10 +565,10 @@ html.rs-dialog-open .main-content {
         flex-shrink: 0;
         min-height: 40px;
         padding: 0 12px;
-        border: 1px solid light-dark(#E2E8F0, #30353B);
+        border: 1px solid light-dark(#E2E8F0, #484F57);
         border-radius: 10px;
-        background: light-dark(#fff, #1A1E24);
-        color: light-dark(#2D3748, #D2DAE7);
+        background: light-dark(#fff, #30363E);
+        color: light-dark(#2D3748, #C1C9D6);
         font-size: .8rem;
         font-weight: 600;
         font-family: 'Segoe UI', sans-serif;
@@ -560,9 +592,9 @@ html.rs-dialog-open .main-content {
         align-items: stretch;
         gap: 12px;
         padding: 14px 16px 16px;
-        background: light-dark(#fff, #1A1E24);
-        border-bottom: 1px solid light-dark(#E2E8F0, #30353B);
-        box-shadow: 0 10px 24px light-dark(rgba(0, 0, 0, .14), rgba(0, 0, 0, .302));
+        background: light-dark(#fff, #30363E);
+        border-bottom: 1px solid light-dark(#E2E8F0, #484F57);
+        box-shadow: 0 10px 24px light-dark(rgba(0, 0, 0, .14), rgba(0, 0, 0, .236));
     }
 
     .rs-filters.rs-filters--open {
@@ -693,7 +725,7 @@ html.rs-dialog-open .main-content {
        where the placeholder it replaces sat. */
     padding: 0 var(--rs-pick-pad, 6.5px);
     border-radius: 6px;
-    background: var(--rs-pick-bg, light-dark(#fff, #1A1E24));
+    background: var(--rs-pick-bg, light-dark(#fff, #30363E));
     color: inherit;
     font: inherit;
     /* Clipped rather than ellipsised. The text is the flex box's own, not a child, so
@@ -718,7 +750,7 @@ html.rs-dialog-open .main-content {
 }
 
 .rs-pick > select option {
-    -webkit-text-fill-color: light-dark(#2D3748, #D2DAE7);
+    -webkit-text-fill-color: light-dark(#2D3748, #C1C9D6);
 }
 
 /* ===========================================================================
@@ -782,7 +814,7 @@ html.rs-dialog-open .main-content {
         white-space: nowrap;
         font-size: 1.02rem;
         font-weight: 800;
-        color: light-dark(#1a2a4a, #D6DEEB);
+        color: light-dark(#1a2a4a, #C4CCD9);
     }
 
     /* The heading is in the bar now, where it costs no height at all. */
@@ -846,10 +878,10 @@ html.rs-dialog-open .main-content {
         z-index: 2;
         /* Lifted out of the flow, so it needs a ground of its own or the rows
            travel through it. */
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
         /* A collapsed table will not paint a border on a cell that has been lifted
            out of it, so the rule under the headings is drawn as a shadow. */
-        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #2F343A);
+        box-shadow: inset 0 -1.5px 0 light-dark(#E8ECF0, #484E56);
         /* Headings held on one line are what made these tables wider than the card
            they sit in. Allowed to wrap, the table compresses instead of needing a
            scrollbar of its own. */
@@ -915,12 +947,12 @@ html.rs-dialog-open .main-content {
         padding-top: calc(var(--rs-card-inset) - 1px);
         padding-left: calc(var(--rs-card-inset-x) - 1px);
         padding-right: calc(var(--rs-card-inset-x) - 1px);
-        border: 1px solid light-dark(#E8ECF0, #2F343A);
+        border: 1px solid light-dark(#E8ECF0, #484E56);
         /* Whatever rule the heading draws under itself is its own; a card without
            one keeps none. */
         border-bottom: 0;
         border-radius: 14px 14px 0 0;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
         box-shadow: 0 calc(var(--rs-lead, 0px) * -1) 0 var(--rs-page);
     }
 
@@ -932,9 +964,9 @@ html.rs-dialog-open .main-content {
         left: -1px;
         right: -1px;
         height: var(--rs-card-gap, 0px);
-        background: light-dark(#fff, #1A1E24);
-        border-left: 1px solid light-dark(#E8ECF0, #2F343A);
-        border-right: 1px solid light-dark(#E8ECF0, #2F343A);
+        background: light-dark(#fff, #30363E);
+        border-left: 1px solid light-dark(#E8ECF0, #484E56);
+        border-right: 1px solid light-dark(#E8ECF0, #484E56);
     }
 }
 

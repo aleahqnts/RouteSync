@@ -193,19 +193,18 @@
 
     @* Light or dark, for this browser. See wwwroot/js/theme.js. *@
     <div class="fw-sidebar__theme">
-        <button type="button" class="fw-sidebar__link fw-theme-btn" data-theme-toggle aria-pressed="false" title="Dark mode">
-            <span class="fw-sidebar__icon" aria-hidden="true">
-                    <svg class="fw-theme-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
-                    </svg>
-                    <svg class="fw-theme-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="4" />
-                        <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
-                    </svg>
-            </span>
-            <span class="fw-sidebar__label">Dark mode <span class="fw-switch" aria-hidden="true"></span></span>
+        <button type="button" class="rs-theme-pill" data-theme-toggle aria-pressed="false"
+                aria-label="Dark mode" title="Light or dark">
+            <span class="rs-theme-pill__knob" aria-hidden="true"></span>
+            <svg class="rs-theme-pill__sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+            </svg>
+            <svg class="rs-theme-pill__moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
+            </svg>
         </button>
     </div>
 
@@ -346,25 +345,23 @@
         }
     </ul>
 
-    <ul class="fw-sheet__list">
-        <li>
-            <button type="button" class="fw-sheet__link fw-theme-btn" data-theme-toggle aria-pressed="false" tabindex="-1">
-                <span class="fw-sheet__icon" aria-hidden="true">
-                    <svg class="fw-theme-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
-                    </svg>
-                    <svg class="fw-theme-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="4" />
-                        <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
-                    </svg>
-                </span>
-                Dark mode
-                <span class="fw-switch" aria-hidden="true"></span>
-            </button>
-        </li>
-    </ul>
+    @* Light or dark, the same switch as on the rail. *@
+    <div class="fw-sheet__theme">
+        <span class="fw-sheet__theme-label">Appearance</span>
+        <button type="button" class="rs-theme-pill" data-theme-toggle aria-pressed="false"
+                aria-label="Dark mode" title="Light or dark" tabindex="-1">
+            <span class="rs-theme-pill__knob" aria-hidden="true"></span>
+            <svg class="rs-theme-pill__sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+            </svg>
+            <svg class="rs-theme-pill__moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1 -9 -9z" />
+            </svg>
+        </button>
+    </div>
 
     @* Past everything the sheet is opened for, so it is reached deliberately. *@
     <div class="fw-sheet__signout">

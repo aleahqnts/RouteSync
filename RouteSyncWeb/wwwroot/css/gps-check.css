@@ -2,11 +2,11 @@
    buttons, card and table. */
 :root {
     --gc-teal: #4AADA8;
-    --gc-text: light-dark(#2D3748, #D2DAE7);
-    --gc-muted: light-dark(#9AA5B4, #969FAB);
-    --gc-border: light-dark(#E8ECF0, #2F343A);
-    --gc-bg: light-dark(#F8F9FA, #181C22);
-    --gc-white: light-dark(#FFFFFF, #1A1E24);
+    --gc-text: light-dark(#2D3748, #C1C9D6);
+    --gc-muted: light-dark(#9AA5B4, #9099A5);
+    --gc-border: light-dark(#E8ECF0, #484E56);
+    --gc-bg: light-dark(#F8F9FA, #2D343B);
+    --gc-white: light-dark(#FFFFFF, #30363E);
 }
 
 /* Heading. */
@@ -120,7 +120,7 @@
     border-radius: 14px;
     padding: 14px 16px;
     font-family: 'Segoe UI', sans-serif;
-    box-shadow: 0 1px 4px light-dark(rgba(0, 0, 0, .06), rgba(0, 0, 0, .158));
+    box-shadow: 0 1px 4px light-dark(rgba(0, 0, 0, .06), rgba(0, 0, 0, .124));
 }
 
 .gc-stat-label {
@@ -149,7 +149,7 @@
     border: 1px solid var(--gc-border);
     border-radius: 14px;
     padding: 20px 22px;
-    box-shadow: 0 1px 4px light-dark(rgba(0, 0, 0, .06), rgba(0, 0, 0, .158));
+    box-shadow: 0 1px 4px light-dark(rgba(0, 0, 0, .06), rgba(0, 0, 0, .124));
 }
 
 .gc-card-header {

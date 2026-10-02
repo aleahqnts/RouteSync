@@ -16,10 +16,10 @@
         max-height: 94vh;
         max-height: 94dvh;
         overflow-y: auto;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
         border-radius: 14px;
         padding: 18px 20px 20px;
-        box-shadow: 0 18px 50px light-dark(rgba(15, 23, 42, 0.35), rgba(0, 0, 0, .68));
+        box-shadow: 0 18px 50px light-dark(rgba(15, 23, 42, 0.35), rgba(0, 0, 0, .53));
     }
 
     .cam-panel-head {
@@ -33,7 +33,7 @@
         flex: 1;
         font-size: 16px;
         font-weight: 800;
-        color: light-dark(#1b2a56, #9AB0E6);
+        color: light-dark(#1b2a56, #A0B6ED);
     }
 
     .cam-chip {
@@ -43,15 +43,15 @@
         border-radius: 999px;
     }
 
-    .cam-chip--on { background: light-dark(#eafaf1, #1B2F25); color: light-dark(#2fae74, #53CC90); }
-    .cam-chip--off { background: light-dark(#fdecec, #382425); color: light-dark(#d15b5b, #FF8A87); }
+    .cam-chip--on { background: light-dark(#eafaf1, #364A40); color: light-dark(#2fae74, #6DCF9B); }
+    .cam-chip--off { background: light-dark(#fdecec, #543F3F); color: light-dark(#d15b5b, #FB9894); }
 
     .cam-backlog {
         margin: 0 16px 12px;
         padding: 9px 12px;
         border-radius: 8px;
-        background: light-dark(#fdecec, #382425);
-        color: light-dark(#b4443f, #FF8A81);
+        background: light-dark(#fdecec, #543F3F);
+        color: light-dark(#b4443f, #FB988F);
         font-size: 13px;
         font-weight: 600;
     }
@@ -69,13 +69,13 @@
         margin: 0;
         font-size: 14px;
         font-weight: 700;
-        color: light-dark(#1b2a56, #9AB0E6);
+        color: light-dark(#1b2a56, #A0B6ED);
     }
 
     .cam-hint {
         margin: 0 0 10px;
         font-size: 12.5px;
-        color: light-dark(#8a93a2, #A2A9B6);
+        color: light-dark(#8a93a2, #99A0AD);
         text-align: center;
     }
 
@@ -134,17 +134,17 @@
 
     .cam-btn {
         flex: 1;
-        border: 1px solid light-dark(#d9dee6, #33373D);
-        background: light-dark(#fff, #1A1E24);
+        border: 1px solid light-dark(#d9dee6, #4A5159);
+        background: light-dark(#fff, #30363E);
         border-radius: 10px;
         padding: 10px 8px;
         font-size: 13px;
         font-weight: 700;
-        color: light-dark(#1b2a56, #9AB0E6);
+        color: light-dark(#1b2a56, #A0B6ED);
         cursor: pointer;
     }
 
-    .cam-btn:hover { background: light-dark(#f4f6fa, #171B21); }
+    .cam-btn:hover { background: light-dark(#f4f6fa, #2C333A); }
     .cam-btn:disabled { opacity: 0.5; cursor: default; }
 
     .cam-btn--save {
@@ -158,25 +158,25 @@
     .cam-note {
         margin: 10px 0 0;
         font-size: 12.5px;
-        color: light-dark(#8a93a2, #A2A9B6);
+        color: light-dark(#8a93a2, #99A0AD);
         text-align: center;
     }
 
-    .cam-note--ok { color: light-dark(#2fae74, #53CC90); font-weight: 700; }
-    .cam-note--err { color: light-dark(#d15b5b, #FF8A87); font-weight: 700; }
+    .cam-note--ok { color: light-dark(#2fae74, #6DCF9B); font-weight: 700; }
+    .cam-note--err { color: light-dark(#d15b5b, #FB9894); font-weight: 700; }
 
 /* Vehicles/Index.cshtml */
     :root {
         --vh-teal: #4AADA8;
-        --vh-teal-light: light-dark(#E8F6F5, #172F2E);
-        --vh-navy: light-dark(#2F3B82, #8B9FF0);
-        --vh-text: light-dark(#2D3748, #D2DAE7);
-        --vh-muted: light-dark(#9AA5B4, #969FAB);
-        --vh-border: light-dark(#E8ECF0, #2F343A);
-        --vh-bg: light-dark(#F8F9FA, #181C22);
-        --vh-white: light-dark(#FFFFFF, #1A1E24);
+        --vh-teal-light: light-dark(#E8F6F5, #324A49);
+        --vh-navy: light-dark(#2F3B82, #91A5F6);
+        --vh-text: light-dark(#2D3748, #C1C9D6);
+        --vh-muted: light-dark(#9AA5B4, #9099A5);
+        --vh-border: light-dark(#E8ECF0, #484E56);
+        --vh-bg: light-dark(#F8F9FA, #2D343B);
+        --vh-white: light-dark(#FFFFFF, #30363E);
         --vh-radius: 14px;
-        --vh-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
+        --vh-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .124));
     }
 
     /* Page title. */
@@ -217,18 +217,18 @@
         flex-shrink: 0;
     }
 
-    .vh-card-icon--green { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
-    .vh-card-icon--red   { background: light-dark(#FDECEC, #382425); color: light-dark(#E53E3E, #FF8B82); }
+    .vh-card-icon--green { background: light-dark(#E8F8EE, #364A3F); color: light-dark(#27AE60, #78CE92); }
+    .vh-card-icon--red   { background: light-dark(#FDECEC, #543F3F); color: light-dark(#E53E3E, #FB988F); }
 
     .vh-form-input--fixed {
-        background: light-dark(#F4F6F8, #171B20);
-        color: light-dark(#6B7280, #B7BECB);
+        background: light-dark(#F4F6F8, #2C333A);
+        color: light-dark(#6B7280, #A9B0BD);
         cursor: default;
     }
 
     .vh-field-note {
         font-size: 0.72rem;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
         margin-top: 2px;
     }
 
@@ -267,7 +267,7 @@
     /* Sits above the vehicle details, so it carries a heavier shadow to read as a
        separate sheet rather than part of the dialog underneath. */
     #inspectionChecklistModal .modal-content {
-        box-shadow: 0 24px 60px light-dark(rgba(15, 30, 60, 0.28), rgba(0, 0, 0, .554));
+        box-shadow: 0 24px 60px light-dark(rgba(15, 30, 60, 0.28), rgba(0, 0, 0, .432));
     }
 
     /* The faults on the open order. */
@@ -283,10 +283,10 @@
             gap: 9px;
             padding: 7px 0;
             font-size: 0.85rem;
-            color: light-dark(#2D3748, #D2DAE7);
+            color: light-dark(#2D3748, #C1C9D6);
         }
 
-            .vh-items li + li { border-top: 1px solid light-dark(#F4F6F8, #1A1E24); }
+            .vh-items li + li { border-top: 1px solid light-dark(#F4F6F8, #30363E); }
 
     .vh-item-mark {
         width: 16px;
@@ -295,13 +295,13 @@
         flex: none;
     }
 
-    .vh-item--open .vh-item-mark { color: light-dark(#C99A2E, #D9A941); }
+    .vh-item--open .vh-item-mark { color: light-dark(#C99A2E, #DCB055); }
 
     .vh-item--closed {
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
     }
 
-        .vh-item--closed .vh-item-mark { color: light-dark(#27AE60, #5ACC81); }
+        .vh-item--closed .vh-item-mark { color: light-dark(#27AE60, #78CE92); }
 
         .vh-item--closed .vh-item-label { text-decoration: line-through; }
 
@@ -310,8 +310,8 @@
     .vh-item-crit {
         padding: 1px 7px;
         border-radius: 999px;
-        background: light-dark(#FDF3E3, #342813);
-        color: light-dark(#B87A15, #E3A34A);
+        background: light-dark(#FDF3E3, #4F432F);
+        color: light-dark(#B87A15, #E7AA5B);
         font-size: 0.66rem;
         font-weight: 700;
         flex: none;
@@ -319,7 +319,7 @@
 
     .vh-item-outcome {
         font-size: 0.72rem;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
         flex: none;
     }
 
@@ -330,10 +330,10 @@
         align-items: center;
         gap: 4px;
         padding: 1px 8px;
-        border: 1px solid light-dark(#D6DCE7, #33383D);
+        border: 1px solid light-dark(#D6DCE7, #4B525A);
         border-radius: 999px;
-        background: light-dark(#fff, #1A1E24);
-        color: light-dark(#4A5568, #C9D1DE);
+        background: light-dark(#fff, #30363E);
+        color: light-dark(#4A5568, #BAC1CE);
         font-size: 0.68rem;
         font-weight: 600;
         flex: none;
@@ -347,7 +347,7 @@
        left blank, since a blank reads as a fault nobody photographed. */
     .vh-item-gone {
         font-size: 0.68rem;
-        color: light-dark(#B6BDC9, #89909C);
+        color: light-dark(#B6BDC9, #878E99);
         font-style: italic;
         flex: none;
     }
@@ -379,13 +379,13 @@
             max-height: calc(100dvh - var(--bs-modal-margin, 0.5rem) * 2 - 150px);
             margin: 0 auto;
             border-radius: 8px;
-            background: light-dark(#F2F4F8, #171B20);
+            background: light-dark(#F2F4F8, #2C323A);
         }
 
         .vh-photo figcaption {
             margin-top: 5px;
             font-size: 0.72rem;
-            color: light-dark(#9AA3B2, #98A0AC);
+            color: light-dark(#9AA3B2, #9299A6);
         }
 
     .vh-photo-gone {
@@ -393,20 +393,20 @@
         padding: 18px 0;
         text-align: center;
         font-size: 0.78rem;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
     }
 
     .vh-item-note {
         padding: 0 0 7px 25px !important;
         font-size: 0.76rem;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
         border-top: none !important;
     }
 
     .vh-item-summary {
         margin-top: 8px;
         font-size: 0.78rem;
-        color: light-dark(#6B7280, #B7BECB);
+        color: light-dark(#6B7280, #A9B0BD);
     }
 
     .vh-items-edit {
@@ -417,7 +417,7 @@
 
     .vh-item-edit {
         padding: 10px 2px;
-        border-bottom: 1px solid light-dark(#F4F6F8, #1A1E24);
+        border-bottom: 1px solid light-dark(#F4F6F8, #30363E);
     }
 
     .vh-item-edit-top {
@@ -448,19 +448,19 @@
         background: none;
         padding: 0;
         font-size: 0.74rem;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
         cursor: pointer;
         flex: none;
         white-space: nowrap;
     }
 
-        .vh-item-dismiss:hover { color: light-dark(#C0392B, #FE8C7B); }
+        .vh-item-dismiss:hover { color: light-dark(#C0392B, #FB998A); }
 
-    .vh-item-edit[data-state="fixed"] .vh-item-label { text-decoration: line-through; color: light-dark(#9AA3B2, #98A0AC); }
+    .vh-item-edit[data-state="fixed"] .vh-item-label { text-decoration: line-through; color: light-dark(#9AA3B2, #9299A6); }
 
-    .vh-item-edit[data-state="dismissed"] .vh-item-label { text-decoration: line-through; color: light-dark(#9AA3B2, #98A0AC); }
+    .vh-item-edit[data-state="dismissed"] .vh-item-label { text-decoration: line-through; color: light-dark(#9AA3B2, #9299A6); }
 
-    .vh-item-edit[data-state="dismissed"] .vh-item-dismiss { color: light-dark(#C0392B, #FE8C7B); font-weight: 600; }
+    .vh-item-edit[data-state="dismissed"] .vh-item-dismiss { color: light-dark(#C0392B, #FB998A); font-weight: 600; }
 
     .vh-item-why {
         margin-top: 8px;
@@ -501,7 +501,7 @@
         padding: 0 6px;
         border: 1px solid var(--vh-border);
         border-radius: 6px;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
         color: var(--vh-text);
         font-family: 'Segoe UI', sans-serif;
         font-size: 0.76rem;
@@ -510,7 +510,7 @@
     }
 
     .vh-page:hover:not(:disabled) { background: var(--vh-bg); }
-    .vh-page:disabled { color: light-dark(#C7CDD8, #818791); cursor: default; }
+    .vh-page:disabled { color: light-dark(#C7CDD8, #878C97); cursor: default; }
 
     .vh-page--on {
         background: var(--vh-navy);
@@ -519,7 +519,7 @@
         font-weight: 700;
     }
 
-    .vh-page-gap { color: light-dark(#9AA3B2, #98A0AC); font-size: 0.76rem; padding: 0 2px; }
+    .vh-page-gap { color: light-dark(#9AA3B2, #9299A6); font-size: 0.76rem; padding: 0 2px; }
 
     /* Everything recorded against a bus, newest first. */
     .vh-history {
@@ -534,18 +534,18 @@
             gap: 2px;
             padding: 9px 0;
             font-size: 0.84rem;
-            color: light-dark(#2D3748, #D2DAE7);
+            color: light-dark(#2D3748, #C1C9D6);
         }
 
-            .vh-history li + li { border-top: 1px solid light-dark(#F4F6F8, #1A1E24); }
+            .vh-history li + li { border-top: 1px solid light-dark(#F4F6F8, #30363E); }
 
     .vh-history-meta {
         font-size: 0.74rem;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
     }
 
     .vh-history--refused .vh-history-what {
-        color: light-dark(#9B2C2C, #FF8A82);
+        color: light-dark(#9B2C2C, #FB9890);
     }
 
     /* Inspection checklist, one line per item with how it was marked. */
@@ -560,8 +560,8 @@
         margin-bottom: 16px;
     }
 
-    .vh-cl-summary--pass { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#1E8449, #6BC989); }
-    .vh-cl-summary--fail { background: light-dark(#FDECEC, #382425); color: light-dark(#9B2C2C, #FF8A82); }
+    .vh-cl-summary--pass { background: light-dark(#E8F8EE, #364A3F); color: light-dark(#1E8449, #77CE92); }
+    .vh-cl-summary--fail { background: light-dark(#FDECEC, #543F3F); color: light-dark(#9B2C2C, #FB9890); }
 
     .vh-cl-when {
         font-size: 0.75rem;
@@ -576,9 +576,9 @@
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: light-dark(#9AA3B2, #98A0AC);
+        color: light-dark(#9AA3B2, #9299A6);
         padding-bottom: 6px;
-        border-bottom: 1px solid light-dark(#EEF1F5, #2E3338);
+        border-bottom: 1px solid light-dark(#EEF1F5, #464D55);
         margin-bottom: 2px;
     }
 
@@ -594,10 +594,10 @@
             gap: 10px;
             padding: 8px 2px;
             font-size: 0.86rem;
-            color: light-dark(#2D3748, #D2DAE7);
+            color: light-dark(#2D3748, #C1C9D6);
         }
 
-            .vh-cl-list li + li { border-top: 1px solid light-dark(#F4F6F8, #1A1E24); }
+            .vh-cl-list li + li { border-top: 1px solid light-dark(#F4F6F8, #30363E); }
 
     .vh-cl-name { flex: 1; }
 
@@ -613,27 +613,27 @@
         flex: none;
     }
 
-    .vh-cl--pass .vh-cl-mark { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
+    .vh-cl--pass .vh-cl-mark { background: light-dark(#E8F8EE, #364A3F); color: light-dark(#27AE60, #78CE92); }
 
     .vh-cl--fail {
-        color: light-dark(#9B2C2C, #FF8A82);
+        color: light-dark(#9B2C2C, #FB9890);
         font-weight: 600;
     }
 
-        .vh-cl--fail .vh-cl-mark { background: light-dark(#FDECEC, #382425); color: light-dark(#C0392B, #FE8C7B); }
+        .vh-cl--fail .vh-cl-mark { background: light-dark(#FDECEC, #543F3F); color: light-dark(#C0392B, #FB998A); }
 
     /* Marks an item that grounds the bus when it fails. */
     .vh-cl-crit {
         padding: 1px 7px;
         border-radius: 999px;
-        background: light-dark(#FDF3E3, #342813);
-        color: light-dark(#B87A15, #E3A34A);
+        background: light-dark(#FDF3E3, #4F432F);
+        color: light-dark(#B87A15, #E7AA5B);
         font-size: 0.66rem;
         font-weight: 700;
         letter-spacing: 0.03em;
         flex: none;
     }
-    .vh-card-icon--amber { background: light-dark(#FEF6E0, #33290A); color: light-dark(#D69E2E, #DEA639); }
+    .vh-card-icon--amber { background: light-dark(#FEF6E0, #4E4428); color: light-dark(#D69E2E, #E0AE57); }
 
     /* A KPI that filters the table. Lifts on hover with the same blue as the dashboard's cards. */
     .vh-card--click { cursor: pointer; text-decoration: none; transition: box-shadow .15s, transform .15s; }
@@ -778,7 +778,7 @@
     }
 
     .vh-table tbody tr:last-child td { border-bottom: none; }
-    .vh-table tbody tr:hover { background: light-dark(#FAFBFC, #191D22); }
+    .vh-table tbody tr:hover { background: light-dark(#FAFBFC, #2E353C); }
 
     .vh-id { font-weight: 600; color: var(--vh-text); }
     .vh-plate { font-size: 0.78rem; color: var(--vh-muted); }
@@ -794,19 +794,19 @@
         white-space: nowrap;
     }
 
-    .vh-badge--ready     { background: light-dark(#E8F6F5, #172F2E); color: light-dark(#2C9C96, #5CC5BE); }
-    .vh-badge--ontrip    { background: light-dark(#E3F2FD, #192D3A); color: light-dark(#2B6CB0, #74B5FF); }
-    .vh-badge--pending   { background: light-dark(#FEF9E7, #302A12); color: light-dark(#B7950B, #D0AE37); }
-    .vh-badge--flagged   { background: light-dark(#FDECEC, #382425); color: light-dark(#E53E3E, #FF8B82); }
-    .vh-badge--ok        { background: light-dark(#E8F8EE, #1B2F24); color: light-dark(#27AE60, #5ACC81); }
-    .vh-badge--attention { background: light-dark(#FDECEC, #382425); color: light-dark(#E53E3E, #FF8B82); }
-    .vh-badge--repair    { background: light-dark(#FEF9E7, #302A12); color: light-dark(#B7950B, #D0AE37); }
+    .vh-badge--ready     { background: light-dark(#E8F6F5, #324A49); color: light-dark(#2C9C96, #63CCC5); }
+    .vh-badge--ontrip    { background: light-dark(#E3F2FD, #354855); color: light-dark(#2B6CB0, #81BCFE); }
+    .vh-badge--pending   { background: light-dark(#FEF9E7, #4B452E); color: light-dark(#B7950B, #D3B555); }
+    .vh-badge--flagged   { background: light-dark(#FDECEC, #543F3F); color: light-dark(#E53E3E, #FB988F); }
+    .vh-badge--ok        { background: light-dark(#E8F8EE, #364A3F); color: light-dark(#27AE60, #78CE92); }
+    .vh-badge--attention { background: light-dark(#FDECEC, #543F3F); color: light-dark(#E53E3E, #FB988F); }
+    .vh-badge--repair    { background: light-dark(#FEF9E7, #4B452E); color: light-dark(#B7950B, #D3B555); }
     .vh-badge--default   { background: var(--vh-bg); color: var(--vh-text); }
 
     /* A bus that is out of the fleet rather than off the road, which is why this
        is not the slate the grounded ones wear. It had been falling to the default,
        whose ground is the colour of the page and so said nothing at all. */
-    .vh-badge--retired   { background: light-dark(#E4E7EC, #12161B); color: light-dark(#4B5563, #C8D1DE); }
+    .vh-badge--retired   { background: light-dark(#E4E7EC, #272E35); color: light-dark(#4B5563, #B9C2CE); }
 
     /* Action buttons. */
     .vh-actions-cell { display: flex; gap: 8px; }
@@ -873,9 +873,9 @@
     }
 
     .vh-alert--error {
-        background: light-dark(#FDECEC, #382425);
-        color: light-dark(#E53E3E, #FF8B82);
-        border: 1px solid light-dark(#F5B5B5, #643A3B);
+        background: light-dark(#FDECEC, #543F3F);
+        color: light-dark(#E53E3E, #FB988F);
+        border: 1px solid light-dark(#F5B5B5, #745050);
     }
 
     /* Topbar filters. */
@@ -1016,7 +1016,7 @@
     .vh-form-input:focus { border-color: var(--vh-teal); }
 
     .vh-form-input:disabled {
-        background: light-dark(#EDF0F3, #15191E);
+        background: light-dark(#EDF0F3, #2A3138);
         color: var(--vh-muted);
         cursor: not-allowed;
     }
@@ -1024,7 +1024,7 @@
     .vh-field-error {
         grid-column: 2;
         font-size: 0.78rem;
-        color: light-dark(#E53E3E, #FF8B82);
+        color: light-dark(#E53E3E, #FB988F);
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -1081,7 +1081,7 @@
     }
 
     .vh-modal-error {
-        color: light-dark(#E53E3E, #FF8B82);
+        color: light-dark(#E53E3E, #FB988F);
         font-family: 'Segoe UI', sans-serif;
         font-size: 0.875rem;
     }
@@ -1118,7 +1118,7 @@
 
     /* Clear-but-subtle divider between inspection sections. */
     .vh-flag-group + .vh-flag-group {
-        border-top: 1px solid light-dark(#E6E6EC, #31353B);
+        border-top: 1px solid light-dark(#E6E6EC, #484F57);
     }
 
     .vh-flag-group-label {
@@ -1140,7 +1140,7 @@
         position: relative;
         padding-left: 16px;
         font-size: 0.85rem;
-        color: light-dark(#B23B3B, #FF8A84);
+        color: light-dark(#B23B3B, #FB9891);
         font-family: 'Segoe UI', sans-serif;
         margin-bottom: 5px;
     }
@@ -1203,8 +1203,8 @@
         flex-shrink: 0;
     }
 
-    .vh-tl--resolved { background: light-dark(#E6F4EA, #1D2F23); color: light-dark(#1E7E34, #6FC97B); }
-    .vh-tl--open { background: light-dark(#FDECEA, #382422); color: light-dark(#C0392B, #FE8C7B); }
+    .vh-tl--resolved { background: light-dark(#E6F4EA, #384A3E); color: light-dark(#1E7E34, #81CC8A); }
+    .vh-tl--open { background: light-dark(#FDECEA, #543F3D); color: light-dark(#C0392B, #FB998A); }
 
     .vh-tl-date {
         font-size: 0.72rem;
@@ -1218,7 +1218,7 @@
     .vh-past-order {
         border: 1px solid var(--vh-border);
         border-radius: 8px;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
     }
 
     .vh-past-head {
@@ -1285,7 +1285,7 @@
         padding: 4px 12px;
         border: 1.5px solid var(--vh-border);
         border-radius: 20px;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
         font-size: 0.72rem;
         font-weight: 600;
         color: var(--vh-text);
@@ -1297,7 +1297,7 @@
 
     /* Action overlay (schedule maintenance / out of service). */
     .vh-action-overlay { position: fixed; inset: 0; background: rgba(13,28,40,.5); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .vh-action-box { background: light-dark(#fff, #1A1E24); border-radius: 14px; width: 100%; max-width: 440px; padding: 22px; box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .554)); font-family: 'Segoe UI', sans-serif; }
+    .vh-action-box { background: light-dark(#fff, #30363E); border-radius: 14px; width: 100%; max-width: 440px; padding: 22px; box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .432)); font-family: 'Segoe UI', sans-serif; }
     .vh-action-box--wide { max-width: 620px; }
 
     .vh-btn:disabled {
@@ -1307,9 +1307,9 @@
     .vh-action-title { margin: 0 0 6px; font-size: 1.1rem; font-weight: 800; color: var(--vh-navy); }
     .vh-action-desc { margin: 0 0 14px; font-size: 0.85rem; color: var(--vh-muted); line-height: 1.45; }
     .vh-action-error {
-        background: light-dark(#FDECEC, #382425);
-        border: 1px solid light-dark(#F5B5B5, #643A3B);
-        color: light-dark(#9B2C2C, #FF8A82);
+        background: light-dark(#FDECEC, #543F3F);
+        border: 1px solid light-dark(#F5B5B5, #745050);
+        color: light-dark(#9B2C2C, #FB9890);
         border-radius: 8px;
         padding: 9px 12px;
         font-size: 0.82rem;
@@ -1341,9 +1341,9 @@
     .vh-action-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
     .vh-oos-banner {
-        background: light-dark(#FDECEC, #382425);
-        border: 1px solid light-dark(#F5B5B5, #643A3B);
-        color: light-dark(#9B2C2C, #FF8A82);
+        background: light-dark(#FDECEC, #543F3F);
+        border: 1px solid light-dark(#F5B5B5, #745050);
+        color: light-dark(#9B2C2C, #FB9890);
         border-radius: 8px;
         padding: 10px 12px;
         font-size: 0.85rem;
@@ -1353,14 +1353,14 @@
 
     /* The review buttons look interchangeable, so each one says what it does. */
     .vh-action-hint {
-        color: light-dark(#6b7280, #B7BECB);
+        color: light-dark(#6b7280, #A9B0BD);
         font-size: 0.8rem;
         line-height: 1.5;
         margin: 0 0 10px;
     }
 
         .vh-action-hint strong {
-            color: light-dark(#374151, #CFD7E4);
+            color: light-dark(#374151, #BEC6D3);
         }
 
     .vh-review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -1385,7 +1385,7 @@
 
     /* One incident lifecycle (flagged → resolved) = one separated block. */
     .vh-thread-group {
-        background: light-dark(#F7F8FA, #181C21);
+        background: light-dark(#F7F8FA, #2D343B);
         border-radius: 10px;
         padding: 10px 12px;
         margin-bottom: 10px;
@@ -1516,7 +1516,7 @@
 
     /* Nothing to show is not the same as something to look at. */
     .vh-card--empty {
-        border-color: light-dark(#EDF1F5, #2E3339);
+        border-color: light-dark(#EDF1F5, #474D55);
     }
 
         .vh-card--empty .vh-card-short {
@@ -1538,8 +1538,8 @@
         }
 
     .vh-card--empty.vh-card--active {
-        background: light-dark(#EDF1F5, #15191F);
-        border-color: light-dark(#EDF1F5, #2E3339);
+        background: light-dark(#EDF1F5, #2B3138);
+        border-color: light-dark(#EDF1F5, #474D55);
     }
 
         .vh-card--empty.vh-card--active .vh-card-short {
@@ -1619,7 +1619,7 @@
         padding: 10px 14px;
         border: 1px solid var(--vh-border);
         border-radius: 12px;
-        background: light-dark(#fff, #1A1E24);
+        background: light-dark(#fff, #30363E);
     }
 
     .vh-table.vh-table td {

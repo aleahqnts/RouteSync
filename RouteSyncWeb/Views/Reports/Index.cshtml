@@ -675,12 +675,12 @@
     // The trip status pill, derived rather than stored.
     function statusBadge(status) {
     const map = {
-    'Completed':       ['light-dark(#1E7E34, #6FCB8A)', 'light-dark(#E6F4EA, #1B2F24)'],
-    'Active':          ['light-dark(#1D6FB8, #7DB6F0)', 'light-dark(#E3F0FB, #1C2B3B)'],
-    'Missed':          ['light-dark(#B42318, #FF8B82)', 'light-dark(#FDECEC, #382425)'],
-    'Not Yet Started': ['light-dark(#8A6D1B, #D0AE37)', 'light-dark(#FBF3DA, #302A12)']
+    'Completed':       ['light-dark(#1E7E34, #81CC8A)', 'light-dark(#E6F4EA, #384A3E)'],
+    'Active':          ['light-dark(#1D6FB8, #7DBDFF)', 'light-dark(#E3F0FB, #374754)'],
+    'Missed':          ['light-dark(#B42318, #FB998A)', 'light-dark(#FDECEC, #543F3F)'],
+    'Not Yet Started': ['light-dark(#8A6D1B, #D3B468)', 'light-dark(#FBF3DA, #4E4424)']
     };
-    const [fg, bg] = map[status] || ['light-dark(#6B7280, #A1A9B8)', 'light-dark(#F1F2F4, #252A31)'];
+    const [fg, bg] = map[status] || ['light-dark(#6B7280, #A9B0BD)', 'light-dark(#F1F2F4, #2B3239)'];
     const el = document.createElement('span');
     el.style.cssText = `color:${fg};background:${bg};padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;`;
     el.textContent = status || '—';
@@ -709,11 +709,11 @@
     pointRadius: 3,
     pointHoverRadius: 6,
     pointHitRadius: 20,
-    pointBackgroundColor: () => rsTheme.pick('#fff', '#1A1E24'),
+    pointBackgroundColor: () => rsTheme.pick('#fff', '#30363E'),
     pointBorderColor: color,
     pointBorderWidth: 1.5,
     pointHoverBackgroundColor: color,
-    pointHoverBorderColor: () => rsTheme.pick('#fff', '#1A1E24'),
+    pointHoverBorderColor: () => rsTheme.pick('#fff', '#30363E'),
     tension: 0.35,
     fill: false
     }]
@@ -726,10 +726,10 @@
     legend: { display: false },
     tooltip: {
     enabled: true,
-    backgroundColor: () => rsTheme.pick('#fff', '#232932'),
-    titleColor: () => rsTheme.pick('#2D3748', '#D2DAE7'),
-    bodyColor: () => rsTheme.pick('#2D3748', '#D2DAE7'),
-    borderColor: () => rsTheme.pick('#E8ECF0', '#2F343A'),
+    backgroundColor: () => rsTheme.pick('#fff', '#3A414A'),
+    titleColor: () => rsTheme.pick('#2D3748', '#C3CAD3'),
+    bodyColor: () => rsTheme.pick('#2D3748', '#C3CAD3'),
+    borderColor: () => rsTheme.pick('#E8ECF0', '#4A5159'),
     borderWidth: 1,
     padding: 10,
     displayColors: false,
@@ -746,7 +746,7 @@
     y: {
     display: true,
     position: 'left',
-    grid: { color: () => rsTheme.pick('#F0F0F0', '#2A3038') },
+    grid: { color: () => rsTheme.pick('#F0F0F0', '#3D444C') },
     border: { display: false },
     ticks: { font: { size: 10, family: 'Segoe UI' }, color: '#9AA5B4', maxTicksLimit: 5 },
     // Counts and takings are never negative, so the axis starts at zero even when a
@@ -779,10 +779,10 @@
     plugins: {
     legend: { display: false },
     tooltip: {
-    backgroundColor: () => rsTheme.pick('#fff', '#232932'),
-    titleColor: () => rsTheme.pick('#2D3748', '#D2DAE7'),
-    bodyColor: () => rsTheme.pick('#2D3748', '#D2DAE7'),
-    borderColor: () => rsTheme.pick('#E8ECF0', '#2F343A'),
+    backgroundColor: () => rsTheme.pick('#fff', '#3A414A'),
+    titleColor: () => rsTheme.pick('#2D3748', '#C3CAD3'),
+    bodyColor: () => rsTheme.pick('#2D3748', '#C3CAD3'),
+    borderColor: () => rsTheme.pick('#E8ECF0', '#4A5159'),
     borderWidth: 1,
     padding: 10,
     callbacks: {
@@ -792,7 +792,7 @@
     },
     scales: {
     x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' } },
-    y: { grid: { color: () => rsTheme.pick('#F0F0F0', '#2A3038') }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' } }
+    y: { grid: { color: () => rsTheme.pick('#F0F0F0', '#3D444C') }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' } }
     }
     }
     });

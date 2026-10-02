@@ -10,11 +10,11 @@
 /* FleetMap/Index.cshtml */
     :root {
         --fm-teal: #4AADA8;
-        --fm-border: light-dark(#E8ECF0, #2F343A);
-        --fm-bg: light-dark(#F8F9FA, #181C22);
-        --fm-white: light-dark(#FFFFFF, #1A1E24);
-        --fm-text: light-dark(#2D3748, #D2DAE7);
-        --fm-muted: light-dark(#9AA5B4, #969FAB);
+        --fm-border: light-dark(#E8ECF0, #484E56);
+        --fm-bg: light-dark(#F8F9FA, #2D343B);
+        --fm-white: light-dark(#FFFFFF, #30363E);
+        --fm-text: light-dark(#2D3748, #C1C9D6);
+        --fm-muted: light-dark(#9AA5B4, #9099A5);
         --fm-radius: 14px;
     }
 
@@ -86,8 +86,8 @@
         height: 28px;
         padding: 0 11px;
         border-radius: 999px;
-        background: light-dark(#F1F4F8, #161A20);
-        color: light-dark(#4A5568, #C9D1DE);
+        background: light-dark(#F1F4F8, #2C323A);
+        color: light-dark(#4A5568, #BAC1CE);
         font: 700 0.76rem 'Segoe UI', sans-serif;
         font-variant-numeric: tabular-nums;
     }
@@ -95,12 +95,12 @@
     .fm-chip svg {
         width: 14px;
         height: 14px;
-        color: light-dark(#8A96A8, #A0A8B4);
+        color: light-dark(#8A96A8, #979FAC);
     }
 
     .fm-chip--trip {
-        background: light-dark(#E8F6F5, #172F2E);
-        color: light-dark(#2E8C87, #6AC3BD);
+        background: light-dark(#E8F6F5, #324A49);
+        color: light-dark(#2E8C87, #70C9C4);
     }
 
     .fm-chip-dot {
@@ -133,7 +133,7 @@
         background: none;
         border: none;
         padding: 4px 6px;
-        color: light-dark(#9AA5B4, #969FAB);
+        color: light-dark(#9AA5B4, #9099A5);
         font-size: 0.78rem;
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
@@ -143,8 +143,8 @@
     }
 
     .fm-clear-btn:hover {
-        color: light-dark(#E74C3C, #FE8C7B);
-        background: light-dark(#FDECEC, #382425);
+        color: light-dark(#E74C3C, #FB998A);
+        background: light-dark(#FDECEC, #543F3F);
     }
 
     .fm-clear-btn[hidden] {
@@ -213,7 +213,7 @@
         z-index: 1000;
         background: var(--fm-white);
         border-radius: var(--fm-radius);
-        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .266));
+        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
         padding: 10px 14px 12px;
         max-width: 240px;
     }
@@ -231,7 +231,7 @@
         font: 700 0.74rem 'Segoe UI', sans-serif;
         letter-spacing: .04em;
         text-transform: uppercase;
-        color: light-dark(#9AA5B4, #969FAB);
+        color: light-dark(#9AA5B4, #9099A5);
     }
 
     .fm-legend-head:hover {
@@ -291,15 +291,15 @@
         display: none;
         align-items: center;
         gap: 8px;
-        background: light-dark(#FEF2F2, #382425);
-        color: light-dark(#B91C1C, #FE8B7E);
-        border: 1.5px solid light-dark(#FECACA, #643A3B);
+        background: light-dark(#FEF2F2, #543F3F);
+        color: light-dark(#B91C1C, #FB998D);
+        border: 1.5px solid light-dark(#FECACA, #745050);
         border-radius: 10px;
         padding: 8px 14px;
         font-size: 0.8rem;
         font-weight: 600;
         font-family: 'Segoe UI', sans-serif;
-        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .266));
+        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
     }
 
     .fm-conn-badge--visible {
@@ -336,7 +336,7 @@
         letter-spacing: 0.02em;
         padding: 5px 12px;
         border-radius: 16px;
-        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .25), rgba(0, 0, 0, .5));
+        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .25), rgba(0, 0, 0, .39));
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -358,7 +358,7 @@
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
         letter-spacing: 0.03em;
-        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .374));
+        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         white-space: nowrap;
     }
 
@@ -367,9 +367,9 @@
        where it is, and the two must not read alike on a board being acted on. */
     .fm-bus-marker--stale span {
         opacity: .55;
-        color: light-dark(#374151, #CFD7E4);
-        background: light-dark(#fff, #1A1E24) !important;
-        box-shadow: inset 0 0 0 2px currentColor, 0 2px 8px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .266));
+        color: light-dark(#374151, #BEC6D3);
+        background: light-dark(#fff, #30363E) !important;
+        box-shadow: inset 0 0 0 2px currentColor, 0 2px 8px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
     }
 
     /* The arrow inside the pill: which way the bus is going. The road's direction while
@@ -396,7 +396,7 @@
        keeping to the road. The border takes the place of two pixels of padding, so the
        pill keeps its size. */
     .fm-bus-marker--off span {
-        border: 2px dashed light-dark(rgba(255, 255, 255, .95), rgba(26, 30, 36, .95));
+        border: 2px dashed light-dark(rgba(255, 255, 255, .95), rgba(48, 54, 62, .95));
         padding: 3px 10px;
     }
 
@@ -427,7 +427,7 @@
     .fm-tooltip {
         background: var(--fm-white);
         border-radius: 10px;
-        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .374));
+        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         padding: 10px 14px;
         font-family: 'Segoe UI', sans-serif;
         min-width: 160px;
@@ -465,7 +465,7 @@
         align-items: center;
         gap: 6px;
         font-size: 0.75rem;
-        color: light-dark(#16A34A, #63CB7B);
+        color: light-dark(#16A34A, #7ECD8D);
         margin-bottom: 8px;
     }
 
@@ -481,19 +481,19 @@
     .fm-tooltip__off {
         margin-top: 6px;
         padding-top: 6px;
-        border-top: 1px solid light-dark(#E5E7EB, #30353B);
+        border-top: 1px solid light-dark(#E5E7EB, #484F57);
         font-size: 0.72rem;
         font-weight: 600;
-        color: light-dark(#374151, #CFD7E4);
+        color: light-dark(#374151, #BEC6D3);
     }
 
     .fm-tooltip__stale {
         margin-top: 6px;
         padding-top: 6px;
-        border-top: 1px solid light-dark(#E5E7EB, #30353B);
+        border-top: 1px solid light-dark(#E5E7EB, #484F57);
         font-size: 0.72rem;
         font-weight: 600;
-        color: light-dark(#B45309, #FA9257);
+        color: light-dark(#B45309, #F59F71);
     }
 
     .fm-tooltip__passengers {
@@ -518,7 +518,7 @@
         z-index: 1100;
         background: var(--fm-white);
         border-radius: var(--fm-radius);
-        box-shadow: 0 8px 28px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .374));
+        box-shadow: 0 8px 28px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         padding: 22px 0;
         font-family: 'Segoe UI', sans-serif;
         transform: translateX(calc(100% + 24px));
@@ -558,7 +558,7 @@
     .fm-panel__title {
         font-size: 1.6rem;
         font-weight: 800;
-        color: light-dark(#1A202C, #DAE1EF);
+        color: light-dark(#1A202C, #C8CEDC);
         letter-spacing: 0.01em;
         margin-bottom: 10px;
     }
@@ -576,14 +576,14 @@
 
     .fm-panel__route-no {
         font-weight: 800;
-        color: light-dark(#2563EB, #88B0FF);
+        color: light-dark(#2563EB, #92B7FE);
         margin-right: 6px;
     }
 
     .fm-panel__shift {
         font-weight: 700;
         color: #E8A33D;
-        background: light-dark(#FCF3DF, #34280D);
+        background: light-dark(#FCF3DF, #4F442A);
         border-radius: 6px;
         padding: 2px 8px;
     }
@@ -594,7 +594,7 @@
         gap: 10px;
         font-size: 1rem;
         font-weight: 700;
-        color: light-dark(#6B7280, #B7BECB);
+        color: light-dark(#6B7280, #A9B0BD);
     }
 
     .fm-panel__status-dot {
@@ -609,7 +609,7 @@
         display: flex;
         align-items: center;
         gap: 14px;
-        background: light-dark(#F1F3F5, #161A1F);
+        background: light-dark(#F1F3F5, #2B3239);
         padding: 14px 22px;
     }
 
@@ -633,7 +633,7 @@
     .fm-panel__driver-name {
         font-size: 1.05rem;
         font-weight: 600;
-        color: light-dark(#1A202C, #DAE1EF);
+        color: light-dark(#1A202C, #C8CEDC);
     }
 
     .fm-panel__driver-sub {
@@ -651,7 +651,7 @@
         flex: 1;
         text-align: center;
         font-size: 1.05rem;
-        color: light-dark(#4A5568, #C9D1DE);
+        color: light-dark(#4A5568, #BAC1CE);
         line-height: 1.25;
     }
 
@@ -660,22 +660,22 @@
         text-align: center;
         font-size: 1.9rem;
         font-weight: 800;
-        color: light-dark(#1A202C, #DAE1EF);
+        color: light-dark(#1A202C, #C8CEDC);
         border-left: 1px solid var(--fm-border);
     }
 
     .fm-panel__rev-head {
-        background: light-dark(#F1F3F5, #161A1F);
+        background: light-dark(#F1F3F5, #2B3239);
         padding: 10px 22px;
         font-size: 1rem;
-        color: light-dark(#2D3748, #D2DAE7);
+        color: light-dark(#2D3748, #C1C9D6);
     }
 
     .fm-panel__rev-val {
         margin-top: 14px;
         font-size: 1.35rem;
         font-weight: 700;
-        color: light-dark(#1A202C, #DAE1EF);
+        color: light-dark(#1A202C, #C8CEDC);
     }
 
     .fm-panel__updated {
@@ -698,15 +698,15 @@
         height: 18px;
         border-radius: 50%;
         background: #6366F1;
-        border: 3px solid light-dark(#fff, #1A1E24);
-        box-shadow: 0 3px 8px light-dark(rgba(0, 0, 0, .3), rgba(0, 0, 0, .59));
+        border: 3px solid light-dark(#fff, #30363E);
+        box-shadow: 0 3px 8px light-dark(rgba(0, 0, 0, .3), rgba(0, 0, 0, .46));
     }
 
     /* Stop tooltip. */
     .fm-stop-tooltip.leaflet-tooltip {
         background: var(--fm-white);
         border-radius: 8px;
-        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .15), rgba(0, 0, 0, .32));
+        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .15), rgba(0, 0, 0, .25));
         padding: 6px 10px;
         border: none;
         font-size: 0.8rem;
@@ -742,7 +742,7 @@
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
         cursor: pointer;
-        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .266));
+        box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
         transition: background .15s, color .15s;
     }
 
@@ -791,7 +791,7 @@
         font: 700 0.74rem 'Segoe UI', sans-serif;
         letter-spacing: .04em;
         text-transform: uppercase;
-        color: light-dark(#9AA5B4, #969FAB);
+        color: light-dark(#9AA5B4, #9099A5);
         padding: 2px 0 2px;
     }
 
@@ -826,7 +826,7 @@
         box-sizing: border-box;
         background: var(--fm-white);
         border-radius: var(--fm-radius);
-        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .266));
+        box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
         padding: 10px 14px;
     }
 
@@ -887,7 +887,7 @@
         width: 34px;
         height: 20px;
         border-radius: 999px;
-        background: light-dark(#D5DBE3, #3E4349);
+        background: light-dark(#D5DBE3, #525961);
         transition: background .15s;
     }
 
@@ -899,8 +899,8 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        background: light-dark(#fff, #1A1E24);
-        box-shadow: 0 1px 3px light-dark(rgba(0, 0, 0, .2), rgba(0, 0, 0, .41));
+        background: light-dark(#fff, #30363E);
+        box-shadow: 0 1px 3px light-dark(rgba(0, 0, 0, .2), rgba(0, 0, 0, .32));
         transition: transform .15s;
     }
 
@@ -957,7 +957,7 @@
         height: 44px;
         /* The desk fills this the same grey as the page behind it. Here it floats on
            the bar, where that grey reads as a disabled field. */
-        background: var(--fm-white, light-dark(#fff, #1A1E24));
+        background: var(--fm-white, light-dark(#fff, #30363E));
     }
 
     /* Bus detail arrives from the bottom, where a thumb is, instead of taking a

@@ -1,12 +1,12 @@
 /* Roster/Index.cshtml */
     :root {
         --ro-teal: #4AADA8;
-        --ro-text: light-dark(#2D3748, #D2DAE7);
-        --ro-muted: light-dark(#9AA5B4, #969FAB);
-        --ro-soft: light-dark(#5A6473, #BFC8D5);
-        --ro-border: light-dark(#E8ECF0, #2F343A);
-        --ro-bg: light-dark(#F8F9FA, #181C22);
-        --ro-white: light-dark(#FFFFFF, #1A1E24);
+        --ro-text: light-dark(#2D3748, #C1C9D6);
+        --ro-muted: light-dark(#9AA5B4, #9099A5);
+        --ro-soft: light-dark(#5A6473, #AFB7C4);
+        --ro-border: light-dark(#E8ECF0, #484E56);
+        --ro-bg: light-dark(#F8F9FA, #2D343B);
+        --ro-white: light-dark(#FFFFFF, #30363E);
         --ro-red: #E53E3E;
         --ro-amber: #B7791F;
     }
@@ -38,7 +38,7 @@
     .ro-title {
         margin: 0;
         font-size: 1.6rem;
-        color: light-dark(#1a2a4a, #D6DEEB);
+        color: light-dark(#1a2a4a, #C4CCD9);
     }
 
     /* The month, set like the planner's week beside its heading. */
@@ -46,7 +46,7 @@
         margin-left: auto;
         font-size: .95rem;
         font-weight: 700;
-        color: light-dark(#1a2a4a, #D6DEEB);
+        color: light-dark(#1a2a4a, #C4CCD9);
     }
 
     .ro-chip {
@@ -56,9 +56,9 @@
         font-weight: 700;
     }
 
-    .ro-chip--none { background: light-dark(#EEF1F5, #15191F); color: light-dark(#6B7280, #B7BECB); }
-    .ro-chip--draft { background: light-dark(#FEF9E7, #302A12); color: light-dark(#7A6412, #C7B065); }
-    .ro-chip--published { background: light-dark(#E6F4F3, #172F2E); color: light-dark(#2E7D72, #75C2B5); }
+    .ro-chip--none { background: light-dark(#EEF1F5, #2B3139); color: light-dark(#6B7280, #A9B0BD); }
+    .ro-chip--draft { background: light-dark(#FEF9E7, #4B452E); color: light-dark(#7A6412, #CDB66C); }
+    .ro-chip--published { background: light-dark(#E6F4F3, #324A49); color: light-dark(#2E7D72, #7CC8BC); }
 
     .ro-saved {
         font-size: .78rem;
@@ -128,11 +128,11 @@
     /* Publishing writes trips, so it is set apart from saving the roster. */
     .ro-btn--dark {
         background: #1B2A56;
-        border-color: light-dark(#1B2A56, #6579AB);
+        border-color: light-dark(#1B2A56, #7085B8);
         color: var(--ro-white);
     }
 
-        .ro-btn--dark:hover { color: var(--ro-white); border-color: light-dark(#1B2A56, #6579AB); filter: brightness(1.15); }
+        .ro-btn--dark:hover { color: var(--ro-white); border-color: light-dark(#1B2A56, #7085B8); filter: brightness(1.15); }
 
     .ro-input {
         width: 100%;
@@ -164,18 +164,18 @@
     .ro-banner[hidden] { display: none; }
 
     .ro-banner--moved {
-        border: 1px solid light-dark(#F3C4C4, #623C3C);
-        background: light-dark(#FDECEC, #382425);
-        color: light-dark(#9B2C2C, #FF8A82);
+        border: 1px solid light-dark(#F3C4C4, #745050);
+        background: light-dark(#FDECEC, #543F3F);
+        color: light-dark(#9B2C2C, #FB9890);
     }
 
     .ro-problems {
         margin: 0 0 14px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#F3C4C4, #623C3C);
+        border: 1px solid light-dark(#F3C4C4, #745050);
         border-radius: 10px;
-        background: light-dark(#FDECEC, #382425);
-        color: light-dark(#9B2C2C, #FF8A82);
+        background: light-dark(#FDECEC, #543F3F);
+        color: light-dark(#9B2C2C, #FB9890);
         font-size: .84rem;
     }
 
@@ -186,10 +186,10 @@
     .ro-wouldleave {
         margin: 0 0 14px;
         padding: 10px 14px;
-        border: 1px solid light-dark(#E6D6A8, #54461E);
+        border: 1px solid light-dark(#E6D6A8, #655A3A);
         border-radius: 10px;
-        background: light-dark(#FEF9E7, #302A12);
-        color: light-dark(#7A6412, #C7B065);
+        background: light-dark(#FEF9E7, #4B452E);
+        color: light-dark(#7A6412, #CDB66C);
         font-size: .84rem;
     }
 
@@ -204,7 +204,7 @@
         border: 1px solid var(--ro-border);
         border-radius: 14px;
         background: var(--ro-white);
-        box-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .158));
+        box-shadow: 0 1px 4px light-dark(rgba(0,0,0,.06), rgba(0, 0, 0, .124));
     }
 
     .ro-card-head {
@@ -227,11 +227,11 @@
         z-index: 3;
         margin: -16px -18px 0;
         padding: 12px 18px;
-        border-bottom: 1px solid light-dark(#CDE9E4, #354D49);
+        border-bottom: 1px solid light-dark(#CDE9E4, #48615D);
         border-radius: 13px 13px 0 0;
-        background: var(--fw-teal-light, light-dark(#E8F6F5, #172F2E));
-        color: light-dark(#1a2a4a, #D6DEEB);
-        box-shadow: 0 2px 6px light-dark(rgba(13, 28, 40, .08), rgba(0, 0, 0, .194));
+        background: var(--fw-teal-light, light-dark(#E8F6F5, #324A49));
+        color: light-dark(#1a2a4a, #C4CCD9);
+        box-shadow: 0 2px 6px light-dark(rgba(13, 28, 40, .08), rgba(0, 0, 0, .152));
     }
 
     .ro-route-toggle {
@@ -298,22 +298,22 @@
     .ro-day {
         padding: 2px 8px;
         border-radius: 999px;
-        background: light-dark(#E6F4F3, #172F2E);
-        color: light-dark(#2E7D72, #75C2B5);
+        background: light-dark(#E6F4F3, #324A49);
+        color: light-dark(#2E7D72, #7CC8BC);
         font-size: .74rem;
         font-weight: 600;
         white-space: nowrap;
     }
 
-    .ro-day--short { background: light-dark(#FDECEC, #382425); color: var(--ro-red); }
+    .ro-day--short { background: light-dark(#FDECEC, #543F3F); color: var(--ro-red); }
 
     .ro-short {
         margin: 10px 0 0;
         padding: 8px 12px;
-        border: 1px solid light-dark(#E6D6A8, #54461E);
+        border: 1px solid light-dark(#E6D6A8, #655A3A);
         border-radius: 8px;
-        background: light-dark(#FEF9E7, #302A12);
-        color: light-dark(#7A6412, #C7B065);
+        background: light-dark(#FEF9E7, #4B452E);
+        color: light-dark(#7A6412, #CDB66C);
         font-size: .82rem;
     }
 
@@ -368,8 +368,8 @@
     /* A place auto-fill filled or emptied, until a person changes it or the roster is published. */
     .ro-suggested {
         border-radius: 8px;
-        box-shadow: 0 0 0 4px light-dark(#EAF6F5, #2E3238);
-        background: light-dark(#EAF6F5, #172F2E);
+        box-shadow: 0 0 0 4px light-dark(#EAF6F5, #464D55);
+        background: light-dark(#EAF6F5, #324A49);
     }
 
     /* The mark on a place auto-fill chose. Opens See changes at its line. */
@@ -379,10 +379,10 @@
         align-items: center;
         min-height: 24px;
         padding: 1px 9px;
-        border: 1px solid light-dark(#B7DDD9, #2D4F4C);
+        border: 1px solid light-dark(#B7DDD9, #40625F);
         border-radius: 999px;
         background: var(--ro-white);
-        color: light-dark(#2E7D72, #75C2B5);
+        color: light-dark(#2E7D72, #7CC8BC);
         font: inherit;
         font-size: .7rem;
         font-weight: 700;
@@ -429,14 +429,14 @@
             padding: 3px 10px;
             border: 1px solid transparent;
             border-radius: 999px;
-            background: light-dark(#EEF1F5, #15191F);
+            background: light-dark(#EEF1F5, #2B3139);
             color: var(--ro-text);
             font: inherit;
             font-size: .8rem;
             cursor: pointer;
         }
 
-            .ro-unplaced-chip:hover:not(:disabled) { border-color: light-dark(#C9D1DE, #363A40); }
+            .ro-unplaced-chip:hover:not(:disabled) { border-color: light-dark(#C9D1DE, #4D545C); }
             .ro-unplaced-chip:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 2px; }
             .ro-unplaced-chip:disabled { cursor: default; }
 
@@ -453,7 +453,7 @@
         margin-left: 6px;
         padding: 1px 8px;
         border-radius: 999px;
-        background: light-dark(#FDECEC, #382425);
+        background: light-dark(#FDECEC, #543F3F);
         color: var(--ro-red);
         font-size: .75rem;
         vertical-align: middle;
@@ -502,7 +502,7 @@
         margin: 12px 0 0;
         padding: 8px 12px;
         border-radius: 8px;
-        background: light-dark(#FDECEC, #382425);
+        background: light-dark(#FDECEC, #543F3F);
         color: var(--ro-red);
         font-size: .82rem;
     }
@@ -547,7 +547,7 @@
         .ro-change:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: -2px; }
 
     /* The line a mark was pressed to see. */
-    .ro-change--here { background: light-dark(#EAF6F5, #172F2E); }
+    .ro-change--here { background: light-dark(#EAF6F5, #324A49); }
 
     .ro-change--none {
         font-size: .85rem;
@@ -572,7 +572,7 @@
         cursor: pointer;
     }
 
-        .ro-change-main:hover { background: light-dark(#F4F8FB, #181C21); }
+        .ro-change-main:hover { background: light-dark(#F4F8FB, #2D333B); }
         .ro-change-main:focus-visible { outline: 2px solid var(--ro-teal); outline-offset: 0; }
 
     /* The place a line was pressed to find, lit where it stands on the roster for a moment. */
@@ -603,7 +603,7 @@
     .ro-change-why {
         font-size: .8rem;
         line-height: 1.4;
-        color: light-dark(#5F6F85, #B8C1CD);
+        color: light-dark(#5F6F85, #A9B2BE);
     }
 
     .ro-change-clear { flex: 0 0 auto; }
@@ -629,8 +629,8 @@
         min-width: 18px;
         padding: 0 6px;
         border-radius: 999px;
-        background: light-dark(#EAF6F5, #172F2E);
-        color: light-dark(#2E7D72, #75C2B5);
+        background: light-dark(#EAF6F5, #324A49);
+        color: light-dark(#2E7D72, #7CC8BC);
         font-size: .72rem;
         font-weight: 700;
         line-height: 18px;
@@ -658,7 +658,7 @@
         margin: 10px 0 0;
         font-size: .82rem;
         line-height: 1.4;
-        color: light-dark(#94560A, #E4A061);
+        color: light-dark(#94560A, #EBA767);
     }
 
         .ro-fill-cost i { flex: none; margin-top: 2px; }
@@ -685,7 +685,7 @@
         padding: 22px;
         border-radius: 14px;
         background: var(--ro-white);
-        box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .554));
+        box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .432));
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -696,7 +696,7 @@
 
     .ro-box-grab {
         margin-left: auto;
-        color: light-dark(#B6C2CF, #858F9A);
+        color: light-dark(#B6C2CF, #838D98);
         font-size: 1.1rem;
         letter-spacing: -3px;
         line-height: 1;
@@ -720,7 +720,7 @@
             flex-direction: column;
             max-height: calc(100vh - 120px);
             max-height: calc(100dvh - 120px);
-            box-shadow: 0 10px 34px light-dark(rgba(13, 28, 40, .30), rgba(0, 0, 0, .59)), 0 0 0 1px light-dark(rgba(13, 28, 40, .06), rgba(0, 0, 0, .158));
+            box-shadow: 0 10px 34px light-dark(rgba(13, 28, 40, .30), rgba(0, 0, 0, .46)), 0 0 0 1px light-dark(rgba(13, 28, 40, .06), rgba(0, 0, 0, .124));
             /* The whole box is the handle. The lines and the buttons put their own cursor back. */
             cursor: move;
             user-select: none;
@@ -758,7 +758,7 @@
         background: #1B2A56;
         color: #fff;
         font-size: .85rem;
-        box-shadow: 0 8px 24px light-dark(rgba(0,0,0,.2), rgba(0, 0, 0, .41));
+        box-shadow: 0 8px 24px light-dark(rgba(0,0,0,.2), rgba(0, 0, 0, .32));
     }
 
     .ro-toast[hidden] { display: none; }
