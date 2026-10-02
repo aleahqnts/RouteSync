@@ -676,6 +676,15 @@
     display: contents;
 }
 
+/* Which release is running, quiet under the page, as on the profile. */
+.db-version {
+    margin: 24px 0 8px;
+    text-align: center;
+    font-size: .74rem;
+    color: light-dark(#9AA5B4, #A1A5A9);
+    font-variant-numeric: tabular-nums;
+}
+
 /* The card is a link to the Fleet Map, and the overlay is what says so. It faded
    in on hover, so on a phone the card looked inert. Shown outright instead. */
 @media (hover: none) and (pointer: coarse) {
