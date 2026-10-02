@@ -284,6 +284,7 @@ namespace FleetWise.Controllers
                 new(ClaimTypes.Name, user.FullName),
                 new(ClaimTypes.Email, user.Email),
                 new(ClaimTypes.Role, user.RoleName),
+                new(SessionLimits.SignedInClaim, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()),
             };
             if (mustChange)
                 claims.Add(new Claim(PasswordPolicy.MustChangeClaim, "1"));

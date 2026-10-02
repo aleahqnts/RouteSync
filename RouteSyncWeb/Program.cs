@@ -57,6 +57,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/";
         options.AccessDeniedPath = "/";
+
+        // Idle sign-ins end; see SessionLimits.
+        options.ExpireTimeSpan = SessionLimits.Idle;
+        options.SlidingExpiration = true;
+        options.Events.OnValidatePrincipal = SessionLimits.ValidateAsync;
     });
 
 // The form token and the one-time message cookie are sent only over HTTPS. Left alone,
