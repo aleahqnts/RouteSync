@@ -11,7 +11,7 @@
 
 @if (loading)
 {
-    <div class="ta-loading">Loading...</div>
+    <div class="ta-loading">Loading…</div>
 }
 else if (trip is null)
 {
@@ -64,12 +64,12 @@ else
                 <p class="status"><span class="dot"></span> In Progress</p>
             }
         </div>
-        <p class="date">@DateTime.Today.ToString("dddd, MMMM d, yyyy")</p>
+        <p class="date">@PhTime.Now.Date.ToString("dddd, MMMM d, yyyy")</p>
 
         <div class="bus-card">
             <span class="bus-ico"><svg viewBox="0 0 49 52" fill="none"><path d="M12.25 45.5C11.67 45.5 11.19 45.29 10.8 44.88C10.4 44.46 10.21 43.95 10.21 43.33V38.89C9.6 38.17 9.1 37.37 8.73 36.48C8.35 35.6 8.17 34.63 8.17 33.58V13C8.17 10 9.48 7.81 12.1 6.42C14.72 5.03 18.85 4.33 24.5 4.33C30.35 4.33 34.54 5 37.06 6.34C39.57 7.67 40.83 9.89 40.83 13V33.58C40.83 34.63 40.65 35.6 40.27 36.48C39.9 37.37 39.4 38.17 38.79 38.89V43.33C38.79 43.95 38.6 44.46 38.2 44.88C37.81 45.29 37.33 45.5 36.75 45.5H34.71C34.13 45.5 33.64 45.29 33.25 44.88C32.86 44.46 32.67 43.95 32.67 43.33V41.17H16.33V43.33C16.33 43.95 16.14 44.46 15.75 44.88C15.36 45.29 14.87 45.5 14.29 45.5H12.25ZM12.25 21.67H36.75V15.17H12.25V21.67ZM17.35 34.67C18.2 34.67 18.93 34.35 19.52 33.72C20.12 33.09 20.42 32.32 20.42 31.42C20.42 30.51 20.12 29.75 19.52 29.11C18.93 28.48 18.2 28.17 17.35 28.17C16.5 28.17 15.78 28.48 15.18 29.11C14.59 29.75 14.29 30.51 14.29 31.42C14.29 32.32 14.59 33.09 15.18 33.72C15.78 34.35 16.5 34.67 17.35 34.67ZM31.65 34.67C32.5 34.67 33.22 34.35 33.82 33.72C34.41 33.09 34.71 32.32 34.71 31.42C34.71 30.51 34.41 29.75 33.82 29.11C33.22 28.48 32.5 28.17 31.65 28.17C30.8 28.17 30.07 28.48 29.48 29.11C28.88 29.75 28.58 30.51 28.58 31.42C28.58 32.32 28.88 33.09 29.48 33.72C30.07 34.35 30.8 34.67 31.65 34.67ZM16.33 36.83H32.67C33.79 36.83 34.75 36.41 35.55 35.56C36.35 34.71 36.75 33.69 36.75 32.5V26H12.25V32.5C12.25 33.69 12.65 34.71 13.45 35.56C14.25 36.41 15.21 36.83 16.33 36.83Z" fill="#4BA2A3" /></svg></span>
             <div>
-                <p class="bus-name">@(vehicle?.VehicleId ?? trip.VehicleId) <span class="plate">(@(vehicle?.PlateNumber ?? "—"))</span></p>
+                <p class="bus-name">@(vehicle?.VehicleId ?? trip.VehicleId) <span class="plate">(@(vehicle?.PlateNumber ?? "N/A"))</span></p>
                 <p class="route">@(route?.RouteName ?? $"Route {trip.RouteId}")</p>
                 @* A change that arrives mid shift is worth more than quietly swapping the
                    name. A driver looking at this screen has been running the old route for
@@ -178,12 +178,12 @@ else
             <p class="prog-remaining">@Remaining</p>
             <div class="bar"><div class="fill" style="width:@(ProgressPct)%"></div></div>
             <div class="prog-times">
-                <span>@DateTime.Today.Add(trip.ShiftStartTime).ToString("h:mm tt")</span>
+                <span>@PhTime.Now.Date.Add(trip.ShiftStartTime).ToString("h:mm tt")</span>
                 @if (trip.BreakStart is TimeSpan breakStart)
                 {
                     <span class="prog-break">Break @TripBreak.Range(breakStart)</span>
                 }
-                <span>@DateTime.Today.Add(trip.ShiftEndTime).ToString("h:mm tt")</span>
+                <span>@PhTime.Now.Date.Add(trip.ShiftEndTime).ToString("h:mm tt")</span>
             </div>
         </div>
 
@@ -204,7 +204,7 @@ else
                     <div class="c-bus-row">
                         <span class="c-bus-ico"><svg viewBox="0 0 49 52" fill="none"><path d="M12.25 45.5C11.67 45.5 11.19 45.29 10.8 44.88C10.4 44.46 10.21 43.95 10.21 43.33V38.89C9.6 38.17 9.1 37.37 8.73 36.48C8.35 35.6 8.17 34.63 8.17 33.58V13C8.17 10 9.48 7.81 12.1 6.42C14.72 5.03 18.85 4.33 24.5 4.33C30.35 4.33 34.54 5 37.06 6.34C39.57 7.67 40.83 9.89 40.83 13V33.58C40.83 34.63 40.65 35.6 40.27 36.48C39.9 37.37 39.4 38.17 38.79 38.89V43.33C38.79 43.95 38.6 44.46 38.2 44.88C37.81 45.29 37.33 45.5 36.75 45.5H34.71C34.13 45.5 33.64 45.29 33.25 44.88C32.86 44.46 32.67 43.95 32.67 43.33V41.17H16.33V43.33C16.33 43.95 16.14 44.46 15.75 44.88C15.36 45.29 14.87 45.5 14.29 45.5H12.25ZM12.25 21.67H36.75V15.17H12.25V21.67ZM17.35 34.67C18.2 34.67 18.93 34.35 19.52 33.72C20.12 33.09 20.42 32.32 20.42 31.42C20.42 30.51 20.12 29.75 19.52 29.11C18.93 28.48 18.2 28.17 17.35 28.17C16.5 28.17 15.78 28.48 15.18 29.11C14.59 29.75 14.29 30.51 14.29 31.42C14.29 32.32 14.59 33.09 15.18 33.72C15.78 34.35 16.5 34.67 17.35 34.67ZM31.65 34.67C32.5 34.67 33.22 34.35 33.82 33.72C34.41 33.09 34.71 32.32 34.71 31.42C34.71 30.51 34.41 29.75 33.82 29.11C33.22 28.48 32.5 28.17 31.65 28.17C30.8 28.17 30.07 28.48 29.48 29.11C28.88 29.75 28.58 30.51 28.58 31.42C28.58 32.32 28.88 33.09 29.48 33.72C30.07 34.35 30.8 34.67 31.65 34.67ZM16.33 36.83H32.67C33.79 36.83 34.75 36.41 35.55 35.56C36.35 34.71 36.75 33.69 36.75 32.5V26H12.25V32.5C12.25 33.69 12.65 34.71 13.45 35.56C14.25 36.41 15.21 36.83 16.33 36.83Z" fill="#4BA2A3" /></svg></span>
                         <div>
-                            <p class="c-bus-name">@(vehicle?.VehicleId ?? trip.VehicleId) <span class="plate">(@(vehicle?.PlateNumber ?? "—"))</span></p>
+                            <p class="c-bus-name">@(vehicle?.VehicleId ?? trip.VehicleId) <span class="plate">(@(vehicle?.PlateNumber ?? "N/A"))</span></p>
                             <p class="c-route">@(route?.RouteName ?? $"Route {trip.RouteId}")</p>
                         </div>
                     </div>
@@ -314,7 +314,7 @@ else
 
     private string StartLabel => trip?.ActualStartTime is not null
         ? PhTime.Raw(trip.ActualStartTime.Value).ToString("h:mm tt")
-        : (trip is null ? "" : DateTime.Today.Add(trip.ShiftStartTime).ToString("h:mm tt"));
+        : (trip is null ? "" : PhTime.Now.Date.Add(trip.ShiftStartTime).ToString("h:mm tt"));
 
     // The shift window is anchored to the trip's own date. An end at or before the start
     // means an overnight shift, for example 10pm to 6am, whose end rolls to the next day
@@ -463,7 +463,7 @@ else
     {
         if (trip is null) return;
         var c = new TripCache(trip.TripId, vehicle?.VehicleId ?? trip.VehicleId,
-            vehicle?.PlateNumber ?? "—", trip.RouteId, route?.RouteName ?? $"Route {trip.RouteId}",
+            vehicle?.PlateNumber ?? "N/A", trip.RouteId, route?.RouteName ?? $"Route {trip.RouteId}",
             trip.ShiftStartTime.Ticks, trip.ShiftEndTime.Ticks, trip.Date.Ticks,
             trip.TotalBoarded, fare, trip.TripStatus, trip.ActualStartTime?.Ticks,
             trip.BreakStart?.Ticks);

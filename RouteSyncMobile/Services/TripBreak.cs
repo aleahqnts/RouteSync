@@ -28,9 +28,9 @@ public static class TripBreak
 
     /// <summary>The break as "1:00 AM to 2:00 AM".</summary>
     public static string Range(TimeSpan breakStart) =>
-        $"{DateTime.Today.Add(breakStart):h:mm tt} to {DateTime.Today.Add(breakStart + Length):h:mm tt}";
+        $"{PhTime.Now.Date.Add(breakStart):h:mm tt} to {PhTime.Now.Date.Add(breakStart + Length):h:mm tt}";
 
     /// <summary>When the break ends, as "2:00 AM".</summary>
     public static string EndLabel(TimeSpan breakStart) =>
-        DateTime.Today.Add(breakStart + Length).ToString("h:mm tt");
+        PhTime.Now.Date.Add(breakStart + Length).ToString("h:mm tt");
 }

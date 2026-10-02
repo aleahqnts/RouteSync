@@ -133,8 +133,8 @@
 
 @code {
     private bool loading = true;
-    private DateTime month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
-    private DateTime selected = DateTime.Today;
+    private DateTime month = new(PhTime.Now.Date.Year, PhTime.Now.Date.Month, 1);
+    private DateTime selected = PhTime.Now.Date;
 
     private List<Trip> trips = new();
     private List<LeaveRequest> leave = new();
@@ -311,7 +311,7 @@
         scheduledWeeks.TryGetValue(MondayOf(d), out var rosterOnly)
         && (!rosterOnly || publishedMonths.Contains(new DateTime(d.Year, d.Month, 1)));
 
-    private DateTime ThisMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime ThisMonth => new(PhTime.Now.Date.Year, PhTime.Now.Date.Month, 1);
 
     /// <summary>The furthest month ahead the calendar will open.</summary>
     /// <remarks>
@@ -374,7 +374,7 @@
     private string DayClass(DateTime d, List<string> shifts, LeaveRequest? onLeave, bool unplanned)
     {
         var c = new List<string>();
-        if (d.Date == DateTime.Today) c.Add("cal-today");
+        if (d.Date == PhTime.Now.Date) c.Add("cal-today");
         if (d.Date == selected.Date) c.Add("cal-sel");
         if (onLeave is not null) c.Add("cal-leave-day");
         else if (shifts.Count == 0 && unplanned) c.Add("cal-unplanned");
@@ -464,7 +464,7 @@
             .AddDays(t.ShiftEndTime <= t.ShiftStartTime ? 1 : 0);
 
     private static string TimeRange(Trip t) =>
-        $"{DateTime.Today.Add(t.ShiftStartTime):h:mm tt} to {DateTime.Today.Add(t.ShiftEndTime):h:mm tt}";
+        $"{PhTime.Now.Date.Add(t.ShiftStartTime):h:mm tt} to {PhTime.Now.Date.Add(t.ShiftEndTime):h:mm tt}";
 
     /// <summary>How the chosen day stands, in a word, beside its date.</summary>
     private string PanelTag

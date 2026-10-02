@@ -38,7 +38,7 @@
                    naming those same days, is read as counting them twice. Filing still
                    counts them: what can be asked for and what has been agreed are
                    different questions. *@
-                var used = LeaveEntitlement.Used(requests, type, DateTime.Today.Year);
+                var used = LeaveEntitlement.Used(requests, type, PhTime.Now.Date.Year);
                 var left = Math.Max(0, LeaveEntitlement.DaysPerYear[type] - used.Approved);
                 <div class="lv-bal">
                     <p class="lv-bal-n">@left<span class="lv-bal-of">/@LeaveEntitlement.DaysPerYear[type]</span></p>
@@ -135,7 +135,7 @@
                             }
                             else if (CanAskToCancel(r))
                             {
-                                <button class="lv-cancel" @onclick="@(() => OpenWithdraw(r))">Ask to cancel</button>
+                                <button class="lv-cancel" @onclick="@(() => OpenWithdraw(r))">Ask to Cancel</button>
                             }
                             </div>
                         </div>
@@ -264,7 +264,7 @@
             <div class="lv-modal-foot">
                 <button class="lv-btn-ghost" @onclick="CloseForm">Cancel</button>
                 <button class="psave" disabled="@sending" @onclick="Submit">
-                    @(sending ? "Sending…" : "File request")
+                    @(sending ? "Sending…" : "File Request")
                 </button>
             </div>
         </div>
@@ -304,7 +304,7 @@
             <div class="lv-modal-foot">
                 <button class="lv-btn-ghost" @onclick="CloseWithdraw">Close</button>
                 <button class="psave" disabled="@sending" @onclick="SubmitWithdraw">
-                    @(sending ? "Sending…" : "Send request")
+                    @(sending ? "Sending…" : "Send Request")
                 </button>
             </div>
         </div>
@@ -439,8 +439,8 @@
     private static DateTime EarliestStart =>
         PhTime.OperationalDay.AddDays(-LeaveEntitlement.BackdatingDays);
 
-    private DateTime start = DateTime.Today;
-    private DateTime end = DateTime.Today;
+    private DateTime start = PhTime.Now.Date;
+    private DateTime end = PhTime.Now.Date;
 
     /// <summary>What is wrong with the form, or null when nothing is.</summary>
     private string? problem;
@@ -557,8 +557,8 @@
     {
         // Today, not a date three days out. A driver filing at short notice should not
         // have to correct the form before they can use it.
-        start = DateTime.Today;
-        end = DateTime.Today;
+        start = PhTime.Now.Date;
+        end = PhTime.Now.Date;
         type = LeaveEntitlement.Vacation;
         reason = "";
         problem = null;
@@ -665,7 +665,8 @@
             // request refused for its contents and one that never arrived are different
             // problems, and telling a driver to check their connection when the server
             // answered sends them looking in the wrong place.
-            problem = ex.Message;
+            problem = DriverDataService.Explain(ex, "Couldn't send the request. Try again.");
+            System.Diagnostics.Debug.WriteLine($"[Leave.File] {ex}");
             problemField = null;
         }
         finally
@@ -751,7 +752,8 @@
         }
         catch (Exception ex)
         {
-            withdrawProblem = ex.Message;
+            withdrawProblem = DriverDataService.Explain(ex, "Couldn't send the request. Try again.");
+            System.Diagnostics.Debug.WriteLine($"[Leave.Withdraw] {ex}");
         }
         finally
         {
@@ -772,7 +774,8 @@
             // Said here, on the page the button is on. It used to go to the message under
             // the filing form, which is not on screen when a request is being cancelled,
             // so a refusal reached the driver as nothing happening at all.
-            await Say(ex.Message, bad: true);
+            await Say(DriverDataService.Explain(ex, "Couldn't cancel the request. Try again."), bad: true);
+            System.Diagnostics.Debug.WriteLine($"[Leave.Cancel] {ex}");
         }
     }
 

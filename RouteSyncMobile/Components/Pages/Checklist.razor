@@ -11,7 +11,7 @@
 
 @if (loading)
 {
-    <div class="cl-loading">Loading...</div>
+    <div class="cl-loading">Loading…</div>
 }
 else if (loadFailed)
 {
@@ -115,10 +115,12 @@ else
                             }
                         </span>
                         <div class="marks">
-                            <button class="mark check @(item.Status == "Pass" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Pass"))">
+                            <button class="mark check @(item.Status == "Pass" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Pass"))"
+                                    aria-label="@($"Pass: {item.Label}")" aria-pressed="@(item.Status == "Pass" ? "true" : "false")">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12.5l4 4 10-11" /></svg>
                             </button>
-                            <button class="mark minus @(item.Status == "Fail" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Fail"))">
+                            <button class="mark minus @(item.Status == "Fail" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Fail"))"
+                                    aria-label="@($"Fail: {item.Label}")" aria-pressed="@(item.Status == "Fail" ? "true" : "false")">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 12h12" /></svg>
                             </button>
                         </div>
@@ -154,7 +156,7 @@ else
                             }
                             else
                             {
-                                <button class="ph-btn ph-add" @onclick="@(() => TakePhoto(item))" disabled="@cameraBusy">Add photo</button>
+                                <button class="ph-btn ph-add" @onclick="@(() => TakePhoto(item))" disabled="@cameraBusy">Add Photo</button>
                             }
                         </div>
                     }

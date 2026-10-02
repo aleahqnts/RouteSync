@@ -8,7 +8,7 @@
 
 @if (loading)
 {
-    <div class="td-loading">Loading...</div>
+    <div class="td-loading">Loading…</div>
 }
 else if (trip is null)
 {
@@ -35,7 +35,7 @@ else
             <div class="divider"></div>
             <p class="muted">Bus to Drive</p>
             <p class="bus">@(vehicle?.VehicleId ?? trip.VehicleId)</p>
-            <p class="muted">Plate Number: @(vehicle?.PlateNumber ?? "—")</p>
+            <p class="muted">Plate Number: @(vehicle?.PlateNumber ?? "N/A")</p>
 
             @if (checklist is not null)
             {
@@ -79,12 +79,12 @@ else
         {
             if (trip is null) return "";
             var d = trip.Date.Date;
-            return (d == DateTime.Today ? "Today, " : "") + d.ToString("MMMM d, yyyy");
+            return (d == PhTime.Now.Date ? "Today, " : "") + d.ToString("MMMM d, yyyy");
         }
     }
 
     private string TimeRange => trip is null ? "" :
-        $"{DateTime.Today.Add(trip.ShiftStartTime):h:mm tt} to {DateTime.Today.Add(trip.ShiftEndTime):h:mm tt}";
+        $"{PhTime.Now.Date.Add(trip.ShiftStartTime):h:mm tt} to {PhTime.Now.Date.Add(trip.ShiftEndTime):h:mm tt}";
 
     protected override async Task OnInitializedAsync()
     {

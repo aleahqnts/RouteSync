@@ -60,7 +60,7 @@ else
             </div>
             <div class="prow">
                 <span class="pico green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5 5-6"/></svg></span>
-                <span class="pk">Status</span><span class="pv">@(user.AccountStatus ?? "—")</span>
+                <span class="pk">Status</span><span class="pv">@(user.AccountStatus ?? "Unknown")</span>
             </div>
             <div class="prow">
                 <span class="pico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>
@@ -85,7 +85,7 @@ else
                 @* Granted days, matching the leave page. A figure with the undecided days
                    already removed, printed above a line naming them, reads as double
                    counting. *@
-                var used = LeaveEntitlement.Used(leaveRequests, type, DateTime.Today.Year);
+                var used = LeaveEntitlement.Used(leaveRequests, type, PhTime.Now.Date.Year);
                 var left = Math.Max(0, LeaveEntitlement.DaysPerYear[type] - used.Approved);
                 <div class="lv-bal">
                     <p class="lv-bal-n">@left<span class="lv-bal-of">/@LeaveEntitlement.DaysPerYear[type]</span></p>
@@ -150,7 +150,7 @@ else
                     <p class="@(profileOk ? "ok-msg" : "err-msg")">@profileMsg</p>
                 }
                 <button class="psave" @onclick="SaveProfile" disabled="@savingProfile">
-                    @(savingProfile ? "Saving..." : "Save Changes")
+                    @(savingProfile ? "Saving…" : "Save Changes")
                 </button>
             </div>
         }
@@ -197,12 +197,12 @@ else
                     <p class="@(pwdOk ? "ok-msg" : "err-msg")">@pwdMsg</p>
                 }
                 <button class="psave" @onclick="ChangePassword" disabled="@savingPwd">
-                    @(savingPwd ? "Updating..." : "Update Password")
+                    @(savingPwd ? "Updating…" : "Update Password")
                 </button>
             </div>
         }
 
-        <button class="plogout" @onclick="@(() => showLogoutConfirm = true)">Log out</button>
+        <button class="plogout" @onclick="@(() => showLogoutConfirm = true)">Log Out</button>
 
         <p class="pver">RouteSync Driver @AppVersion.Text</p>
     </div>
@@ -215,7 +215,7 @@ else
                 <p class="lo-sub">You'll stop receiving assignments and messages until you log back in.</p>
                 <div class="lo-actions">
                     <button class="lo-cancel" @onclick="@(() => showLogoutConfirm = false)">Cancel</button>
-                    <button class="lo-confirm" @onclick="Logout">Log out</button>
+                    <button class="lo-confirm" @onclick="Logout">Log Out</button>
                 </div>
             </div>
         </div>
@@ -317,7 +317,7 @@ else
             var done = tripsTask.Result.Where(t => t.TripStatus == "Completed").ToList();
             tripsDone = done.Count;
             passengers = done.Sum(t => t.TotalBoarded);
-            tripsThisMonth = done.Count(t => t.Date.Year == DateTime.Today.Year && t.Date.Month == DateTime.Today.Month);
+            tripsThisMonth = done.Count(t => t.Date.Year == PhTime.Now.Date.Year && t.Date.Month == PhTime.Now.Date.Month);
             lastTripDate = done.OrderByDescending(t => t.Date).FirstOrDefault()?.Date;
         }
 

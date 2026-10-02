@@ -118,6 +118,22 @@ public class DriverDataService
     /// <summary>The code a start is refused with while the bus is still on another shift's trip.</summary>
     public const string BusStillOnTrip = "RS409";
 
+    /// <summary>A failure as a sentence a driver can act on.</summary>
+    /// <remarks>
+    /// A refusal the server answered carries its own reason, written to be read, and is
+    /// shown as it is; this service raises its own refusals the same way. A request that
+    /// never got an answer is a connection problem whatever the exception says, and anything
+    /// else is a fault in the app, whose wording means nothing to a driver and goes to the log.
+    /// </remarks>
+    /// <param name="fallback">What to say when the failure is neither of the first two.</param>
+    public static string Explain(Exception ex, string fallback) => ex switch
+    {
+        HttpRequestException { StatusCode: not null } => ex.Message,
+        HttpRequestException or TaskCanceledException or IOException
+            => "Can't reach the server. Check your connection and try again.",
+        _ => fallback,
+    };
+
     /// <summary>Fails with what the server said, rather than with a status code.</summary>
     /// <remarks>
     /// EnsureSuccessStatusCode throws away the body, which is where postgrest puts the
@@ -242,11 +258,11 @@ public class DriverDataService
     {
         // Yesterday is included so an overnight shift, for example 10pm to 6am, is still
         // found after midnight even though it belongs to the previous calendar day.
-        var yesterday = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
+        var yesterday = PhTime.Now.Date.AddDays(-1).ToString("yyyy-MM-dd");
         var r = await _supabase.From<Trip>()
             .Filter("driver_id", Operator.Equals, userId.ToString())
             .Filter("date", Operator.GreaterThanOrEqual, yesterday)
-            .Filter("date", Operator.LessThanOrEqual, DateTime.Today.ToString("yyyy-MM-dd"))
+            .Filter("date", Operator.LessThanOrEqual, PhTime.Now.Date.ToString("yyyy-MM-dd"))
             .Get();
 
         // A shift that ended without ever being started is dropped. One that is Active
@@ -272,7 +288,7 @@ public class DriverDataService
     /// </remarks>
     public async Task<Trip?> GetUpcomingAssignmentAsync(int userId)
     {
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        var today = PhTime.Now.Date.ToString("yyyy-MM-dd");
         var r = await _supabase.From<Trip>()
             .Filter("driver_id", Operator.Equals, userId.ToString())
             .Filter("date", Operator.GreaterThan, today)
@@ -736,8 +752,9 @@ public class DriverDataService
             new { status = "Cancelled", decided_at = PhTime.Now });
 
         if (changed == 0)
-            throw new InvalidOperationException(
-                "That request could not be cancelled. It may already have been decided.");
+            throw new HttpRequestException(
+                "That request could not be cancelled. It may already have been decided.",
+                null, System.Net.HttpStatusCode.Conflict);
     }
 
     /// <summary>Calls a database function as the signed-in driver.</summary>

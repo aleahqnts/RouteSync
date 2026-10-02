@@ -61,7 +61,7 @@ else
                         <div class="tc-stats">
                             <span class="tc-stat">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-4.5 5.5-4.5s5.5 1.5 5.5 4.5M15.5 5.5a3.2 3.2 0 0 1 0 5M17.5 14.7c1.8.7 3 1.9 3 4.3"/></svg>
-                                @t.TotalBoarded passengers
+                                @t.TotalBoarded @(t.TotalBoarded == 1 ? "passenger" : "passengers")
                             </span>
                             <span class="tc-stat">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -86,10 +86,10 @@ else
     private readonly Dictionary<int, string> routeNames = new();
 
     private int MonthTrips => trips.Count(t =>
-        t.TripStatus == "Completed" && t.Date.Year == DateTime.Today.Year && t.Date.Month == DateTime.Today.Month);
+        t.TripStatus == "Completed" && t.Date.Year == PhTime.Now.Date.Year && t.Date.Month == PhTime.Now.Date.Month);
 
     private int MonthPassengers => trips.Where(t =>
-        t.TripStatus == "Completed" && t.Date.Year == DateTime.Today.Year && t.Date.Month == DateTime.Today.Month)
+        t.TripStatus == "Completed" && t.Date.Year == PhTime.Now.Date.Year && t.Date.Month == PhTime.Now.Date.Month)
         .Sum(t => t.TotalBoarded);
 
     private IEnumerable<IGrouping<string, Trip>> Grouped =>
@@ -99,8 +99,8 @@ else
     private static string Label(DateTime d)
     {
         var dd = d.Date;
-        if (dd == DateTime.Today) return "Today";
-        if (dd == DateTime.Today.AddDays(-1)) return "Yesterday";
+        if (dd == PhTime.Now.Date) return "Today";
+        if (dd == PhTime.Now.Date.AddDays(-1)) return "Yesterday";
         return dd.ToString("MMMM d, yyyy");
     }
 
@@ -112,7 +112,7 @@ else
     };
 
     private static string TimeRange(Trip t) =>
-        $"{DateTime.Today.Add(t.ShiftStartTime):h:mm tt} – {DateTime.Today.Add(t.ShiftEndTime):h:mm tt}";
+        $"{PhTime.Now.Date.Add(t.ShiftStartTime):h:mm tt} – {PhTime.Now.Date.Add(t.ShiftEndTime):h:mm tt}";
 
     protected override async Task OnInitializedAsync()
     {

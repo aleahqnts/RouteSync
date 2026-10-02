@@ -30,7 +30,7 @@ else
             @if (UnreadCount > 0)
             {
                 <button class="nmark" @onclick="MarkAllRead" disabled="@markingAll">
-                    @(markingAll ? "Marking…" : "Mark all read")
+                    @(markingAll ? "Marking…" : "Mark All Read")
                 </button>
             }
         </div>
@@ -131,7 +131,7 @@ else
     private static string When(MessageModel n)
     {
         var t = PhTime.Raw(n.CreatedAt);
-        var age = DateTime.Now - t;
+        var age = PhTime.Now - t;
         if (age < TimeSpan.FromMinutes(1)) return "now";
         if (age < TimeSpan.FromHours(1)) return $"{(int)age.TotalMinutes}m";
         if (age < TimeSpan.FromHours(24)) return $"{(int)age.TotalHours}h";
@@ -166,8 +166,8 @@ else
     private static string Label(DateTime d)
     {
         var dd = d.Date;
-        if (dd == DateTime.Today) return "Today";
-        if (dd == DateTime.Today.AddDays(-1)) return "Yesterday";
+        if (dd == PhTime.Now.Date) return "Today";
+        if (dd == PhTime.Now.Date.AddDays(-1)) return "Yesterday";
         return dd.ToString("MMMM d, yyyy");
     }
 

@@ -81,12 +81,12 @@ else
                 <div class="tl-row">
                     <span class="tl-dot start"></span>
                     <span class="tl-k">Trip started</span>
-                    <span class="tl-v">@TimeOrDash(trip.ActualStartTime)</span>
+                    <span class="tl-v">@TimeOrNotRecorded(trip.ActualStartTime)</span>
                 </div>
                 <div class="tl-row">
                     <span class="tl-dot end"></span>
                     <span class="tl-k">Trip ended</span>
-                    <span class="tl-v">@TimeOrDash(trip.ActualEndTime)</span>
+                    <span class="tl-v">@TimeOrNotRecorded(trip.ActualEndTime)</span>
                 </div>
             </div>
         </div>
@@ -95,7 +95,7 @@ else
         <div class="card">
             <p class="card-title">Assignment</p>
             <div class="row"><span class="k">Bus</span><span class="v">@(vehicle?.VehicleId ?? trip.VehicleId)</span></div>
-            <div class="row"><span class="k">Plate Number</span><span class="v">@(vehicle?.PlateNumber ?? "—")</span></div>
+            <div class="row"><span class="k">Plate Number</span><span class="v">@(vehicle?.PlateNumber ?? "N/A")</span></div>
             <div class="row"><span class="k">Driver</span><span class="v">@Session.DisplayName</span></div>
         </div>
 
@@ -133,7 +133,7 @@ else
     private BusChecklist? checklist;
 
     private string ShiftRange => trip is null ? "" :
-        $"{DateTime.Today.Add(trip.ShiftStartTime):h:mm tt} – {DateTime.Today.Add(trip.ShiftEndTime):h:mm tt}";
+        $"{PhTime.Now.Date.Add(trip.ShiftStartTime):h:mm tt} – {PhTime.Now.Date.Add(trip.ShiftEndTime):h:mm tt}";
 
     private string StatusClass => trip?.TripStatus switch
     {
@@ -153,14 +153,14 @@ else
     {
         get
         {
-            if (trip?.ActualStartTime is null || trip.ActualEndTime is null) return "—";
+            if (trip?.ActualStartTime is null || trip.ActualEndTime is null) return "Not recorded";
             var span = trip.ActualEndTime.Value - trip.ActualStartTime.Value;
-            if (span < TimeSpan.Zero) return "—";
+            if (span < TimeSpan.Zero) return "Not recorded";
             return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:D2}m" : $"{span.Minutes}m";
         }
     }
 
-    private static string TimeOrDash(DateTime? dt) => dt is null ? "—" : PhTime.Raw(dt.Value).ToString("h:mm tt");
+    private static string TimeOrNotRecorded(DateTime? dt) => dt is null ? "Not recorded" : PhTime.Raw(dt.Value).ToString("h:mm tt");
 
     protected override async Task OnInitializedAsync()
     {

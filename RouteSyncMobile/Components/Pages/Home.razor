@@ -105,7 +105,7 @@ else
                     <span class="bus-ico"><svg viewBox="0 0 49 52" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.25 45.4997C11.6715 45.4997 11.1866 45.292 10.7953 44.8768C10.404 44.4615 10.2083 43.9469 10.2083 43.333V38.8913C9.59579 38.1691 9.10239 37.3656 8.72808 36.4809C8.35378 35.5962 8.16663 34.6302 8.16663 33.583V12.9997C8.16663 10.0025 9.4767 7.8087 12.0968 6.41842C14.717 5.02815 18.8513 4.33301 24.5 4.33301C30.3527 4.33301 34.5382 5.00106 37.0562 6.33717C39.5743 7.67329 40.8333 9.89412 40.8333 12.9997V33.583C40.8333 34.6302 40.6461 35.5962 40.2718 36.4809C39.8975 37.3656 39.4041 38.1691 38.7916 38.8913V43.333C38.7916 43.9469 38.596 44.4615 38.2046 44.8768C37.8133 45.292 37.3284 45.4997 36.75 45.4997H34.7083C34.1298 45.4997 33.6449 45.292 33.2536 44.8768C32.8623 44.4615 32.6666 43.9469 32.6666 43.333V41.1663H16.3333V43.333C16.3333 43.9469 16.1376 44.4615 15.7463 44.8768C15.355 45.292 14.8701 45.4997 14.2916 45.4997H12.25ZM12.25 21.6663H36.75V15.1663H12.25V21.6663ZM17.3541 34.6663C18.2048 34.6663 18.9279 34.3504 19.5234 33.7184C20.1189 33.0865 20.4166 32.3191 20.4166 31.4163C20.4166 30.5136 20.1189 29.7462 19.5234 29.1143C18.9279 28.4823 18.2048 28.1663 17.3541 28.1663C16.5034 28.1663 15.7803 28.4823 15.1849 29.1143C14.5894 29.7462 14.2916 30.5136 14.2916 31.4163C14.2916 32.3191 14.5894 33.0865 15.1849 33.7184C15.7803 34.3504 16.5034 34.6663 17.3541 34.6663ZM31.6458 34.6663C32.4965 34.6663 33.2196 34.3504 33.8151 33.7184C34.4106 33.0865 34.7083 32.3191 34.7083 31.4163C34.7083 30.5136 34.4106 29.7462 33.8151 29.1143C33.2196 28.4823 32.4965 28.1663 31.6458 28.1663C30.7951 28.1663 30.072 28.4823 29.4765 29.1143C28.881 29.7462 28.5833 30.5136 28.5833 31.4163C28.5833 32.3191 28.881 33.0865 29.4765 33.7184C30.072 34.3504 30.7951 34.6663 31.6458 34.6663ZM13.1687 10.833H36.0354C35.525 10.2191 34.4276 9.70454 32.7432 9.28926C31.0588 8.87398 28.3451 8.66634 24.602 8.66634C20.9611 8.66634 18.2984 8.89204 16.614 9.34342C14.9296 9.79481 13.7812 10.2913 13.1687 10.833ZM16.3333 36.833H32.6666C33.7895 36.833 34.7508 36.4087 35.5505 35.5601C36.3501 34.7115 36.75 33.6913 36.75 32.4997V25.9997H12.25V32.4997C12.25 33.6913 12.6498 34.7115 13.4494 35.5601C14.2491 36.4087 15.2104 36.833 16.3333 36.833Z" fill="#4BA2A3" /></svg></span>
                     <div>
                         <p class="bus">@(vehicle?.VehicleId ?? assignment.VehicleId)</p>
-                        <p class="s-sub">Plate Number: @(vehicle?.PlateNumber ?? "—")</p>
+                        <p class="s-sub">Plate Number: @(vehicle?.PlateNumber ?? "N/A")</p>
                     </div>
                 </div>
 
@@ -187,7 +187,7 @@ else
                 <div class="info-card row">
                     <div>
                         <p class="s-title">Today's Summary</p>
-                        <p class="s-sub">@DateTime.Today.ToString("MMMM d, yyyy")</p>
+                        <p class="s-sub">@PhTime.Now.Date.ToString("MMMM d, yyyy")</p>
                     </div>
                     <button class="link-btn" @onclick="@(() => Nav.NavigateTo("/trips"))">View Trips</button>
                 </div>
@@ -404,7 +404,7 @@ else
     {
         get
         {
-            var h = DateTime.Now.Hour;
+            var h = PhTime.Now.Hour;
             return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening";
         }
     }
@@ -415,7 +415,7 @@ else
         {
             if (assignment is null) return "";
             var d = assignment.Date.Date;
-            var prefix = d == DateTime.Today ? "Today, " : "";
+            var prefix = d == PhTime.Now.Date ? "Today, " : "";
             return prefix + d.ToString("MMMM d, yyyy");
         }
     }
@@ -490,8 +490,8 @@ else
         {
             if (assignment is null) return "";
             var unlock = ChecklistOpensAt;
-            if (unlock.Date == DateTime.Today) return $"Checklist opens at {unlock:h:mm tt}";
-            if (unlock.Date == DateTime.Today.AddDays(1)) return $"Checklist opens tomorrow, {unlock:h:mm tt}";
+            if (unlock.Date == PhTime.Now.Date) return $"Checklist opens at {unlock:h:mm tt}";
+            if (unlock.Date == PhTime.Now.Date.AddDays(1)) return $"Checklist opens tomorrow, {unlock:h:mm tt}";
             return $"Checklist opens {unlock:MMM d, h:mm tt}";
         }
     }
@@ -509,14 +509,14 @@ else
                 return $"Bus {BusLabel} is in service until {OpenTripEndLabel}. Contact dispatch to start earlier.";
 
             var unlock = StartOpensAt;
-            if (unlock.Date == DateTime.Today) return $"You can start this shift at {unlock:h:mm tt}";
-            if (unlock.Date == DateTime.Today.AddDays(1)) return $"You can start this shift tomorrow, {unlock:h:mm tt}";
+            if (unlock.Date == PhTime.Now.Date) return $"You can start this shift at {unlock:h:mm tt}";
+            if (unlock.Date == PhTime.Now.Date.AddDays(1)) return $"You can start this shift tomorrow, {unlock:h:mm tt}";
             return $"You can start this shift {unlock:MMM d, h:mm tt}";
         }
     }
 
     private string TimeRange => assignment is null ? "" :
-        $"{DateTime.Today.Add(assignment.ShiftStartTime):h:mm tt} to {DateTime.Today.Add(assignment.ShiftEndTime):h:mm tt}";
+        $"{PhTime.Now.Date.Add(assignment.ShiftStartTime):h:mm tt} to {PhTime.Now.Date.Add(assignment.ShiftEndTime):h:mm tt}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -575,7 +575,7 @@ else
             var availabilityTask = Data.GetAvailabilityAsync(uid);
             var todayTask = Data.GetTodayAssignmentAsync(uid);
             var lastTripTask = Data.GetLastCompletedTripAsync(uid);
-            var leaveTask = Data.GetApprovedLeaveOnAsync(uid, DateTime.Today);
+            var leaveTask = Data.GetApprovedLeaveOnAsync(uid, PhTime.OperationalDay);
 
             await Task.WhenAll(availabilityTask, todayTask, lastTripTask, leaveTask);
 
@@ -623,13 +623,12 @@ else
         catch (Exception ex)
         {
             // Background polls fail quietly, since a brief outage must not flash an error
-            // over a working page. A manual load reports the real reason instead: a parse
-            // failure is not a connectivity problem and should not claim to be one.
+            // over a working page. A manual load says what went wrong in plain words: a
+            // fault in the app is not a connectivity problem and should not claim to be one,
+            // and its technical wording goes to the log below.
             if (!silent)
             {
-                statusMsg = ex is System.Net.Http.HttpRequestException or System.Threading.Tasks.TaskCanceledException
-                    ? "Couldn't load. Check your connection."
-                    : $"Couldn't load. {ex.GetType().Name}: {ex.Message}";
+                statusMsg = DriverDataService.Explain(ex, "Couldn't load your shift. Try again in a moment.");
             }
             System.Diagnostics.Debug.WriteLine($"[Home.Load] {ex}");
         }
