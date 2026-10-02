@@ -33,6 +33,14 @@ public class DriverDataService
     private sealed record MessageScope(int UserId, DateTime CreatedAt, HashSet<string> Routes, DateTime At);
     private volatile MessageScope? _messageScope;
 
+    // The driver's messages as last read in full, and when. Between full reads only
+    // messages newer than the newest held are asked for. Messages are only ever added,
+    // so the full read is there to let the oldest fall out of the fourteen days.
+    private readonly object _messagesGate = new();
+    private int _messagesUser;
+    private List<MessageModel> _messages = new();
+    private DateTime _messagesReadAt = DateTime.MinValue;
+
     /// <summary>The columns the trip list and the driver's figures read.</summary>
     private const string TripListColumns =
         "trip_id,date,shift_type,shift_start_time,shift_end_time,route_id,vehicle_id,driver_id," +
@@ -432,12 +440,16 @@ public class DriverDataService
     }
 
     /// <summary>
-    /// Messages this driver should see: broadcasts, messages for any route they run, and
-    /// messages addressed to them directly.
+    /// Messages this driver should see, newest first: broadcasts, messages for any route
+    /// they run, and messages addressed to them directly.
     /// </summary>
     /// <remarks>
     /// Limited to the last 14 days to keep the history small. Message volume is low
     /// enough that route and driver matching is resolved on the device.
+    ///
+    /// Asked for every few seconds, so the fourteen days are read in full only every
+    /// <see cref="HeldFor"/>. In between, only messages newer than the newest one held
+    /// are read, which on most checks is none.
     /// </remarks>
     public async Task<List<MessageModel>> GetMessagesAsync(int userId)
     {
@@ -450,19 +462,50 @@ public class DriverDataService
         if (scope.CreatedAt > cutoff) cutoff = scope.CreatedAt;
         var myRoutes = scope.Routes;
 
-        var r = await _supabase.From<MessageModel>()
-            .Filter("created_at", Operator.GreaterThanOrEqual, cutoff.ToString("yyyy-MM-dd HH:mm:ss"))
-            .Order("created_at", Ordering.Descending)
-            .Get();
+        long newestHeld;
+        bool full;
+        lock (_messagesGate)
+        {
+            full = _messagesUser != userId || DateTime.UtcNow - _messagesReadAt >= HeldFor;
+            newestHeld = full || _messages.Count == 0 ? 0 : _messages.Max(m => m.MessageId);
+        }
+
+        Postgrest.Interfaces.IPostgrestTable<MessageModel> query = _supabase.From<MessageModel>()
+            .Filter("created_at", Operator.GreaterThanOrEqual, cutoff.ToString("yyyy-MM-dd HH:mm:ss"));
+        if (!full)
+            query = query.Filter("message_id", Operator.GreaterThan, newestHeld.ToString());
+        var r = await query.Order("created_at", Ordering.Descending).Get();
 
         var me = userId.ToString();
-        return r.Models.Where(m => (m.TargetAudience ?? "").ToLowerInvariant() switch
+        var mine = r.Models.Where(m => (m.TargetAudience ?? "").ToLowerInvariant() switch
         {
             "all"    => true,
             "route"  => myRoutes.Contains(m.TargetId),
             "driver" => m.TargetId == me,
             _        => false
         }).ToList();
+
+        lock (_messagesGate)
+        {
+            if (full)
+            {
+                _messagesUser = userId;
+                _messages = mine;
+                _messagesReadAt = DateTime.UtcNow;
+            }
+            else if (_messagesUser == userId)
+            {
+                // Two checks running at once can both bring back the same new message.
+                var held = _messages.Select(m => m.MessageId).ToHashSet();
+                _messages = mine.Where(m => held.Add(m.MessageId))
+                    .Concat(_messages)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .ThenByDescending(m => m.MessageId)
+                    .ToList();
+            }
+
+            return _messages.ToList();
+        }
     }
 
     /// <summary>
@@ -501,7 +544,14 @@ public class DriverDataService
     /// <summary>Read state, which is meaningful only for messages addressed to a single
     /// driver.</summary>
     public async Task MarkMessageReadAsync(long id)
-        => await PatchAsync($"messages?message_id=eq.{id}", new { is_read = true });
+    {
+        await PatchAsync($"messages?message_id=eq.{id}", new { is_read = true });
+
+        // The held copy is what the next few checks return, so it is marked too.
+        lock (_messagesGate)
+            foreach (var m in _messages)
+                if (m.MessageId == id) m.IsRead = true;
+    }
 
     public async Task<UserModel?> GetUserAsync(int userId)
     {
