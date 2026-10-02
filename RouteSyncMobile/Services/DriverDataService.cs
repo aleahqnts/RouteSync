@@ -28,10 +28,9 @@ public class DriverDataService
     // Routes change rarely, and the home page asks for the assigned one on every refresh.
     private static readonly Dictionary<int, (BusRoute Route, DateTime At)> _routes = new();
 
-    // When the account was made and the routes it has run, for matching messages. Both
-    // change rarely and the message check runs every few seconds.
-    private sealed record MessageScope(int UserId, DateTime CreatedAt, HashSet<string> Routes, DateTime At);
-    private volatile MessageScope? _messageScope;
+    // When the account was made, which never changes, for the start of its messages.
+    private sealed record AccountStart(int UserId, DateTime CreatedAt);
+    private volatile AccountStart? _accountStart;
 
     // The driver's messages as last read in full, and when. Between full reads only
     // messages newer than the newest held are asked for. Messages are only ever added,
@@ -444,12 +443,13 @@ public class DriverDataService
     /// they run, and messages addressed to them directly.
     /// </summary>
     /// <remarks>
-    /// Limited to the last 14 days to keep the history small. Message volume is low
-    /// enough that route and driver matching is resolved on the device.
+    /// Limited to the last 14 days to keep the history small. Which messages a driver may
+    /// read is decided by the database as it answers, from the trips they have run, so a
+    /// message to a route the driver was put on a moment ago is returned straight away.
     ///
-    /// Asked for every few seconds, so the fourteen days are read in full only every
-    /// <see cref="HeldFor"/>. In between, only messages newer than the newest one held
-    /// are read, which on most checks is none.
+    /// Asked for every few seconds, so only messages newer than the newest one held are
+    /// read, which on most checks is none. The fourteen days are read whole every
+    /// <see cref="HeldFor"/>, which lets the oldest drop off the end.
     /// </remarks>
     public async Task<List<MessageModel>> GetMessagesAsync(int userId)
     {
@@ -458,9 +458,8 @@ public class DriverDataService
         // Messages sent before the account existed are never shown. Broadcasts match
         // every driver and route messages match any route they are assigned to, so
         // without this clamp a new driver would inherit the entire 14-day backlog.
-        var scope = await MessageScopeAsync(userId);
-        if (scope.CreatedAt > cutoff) cutoff = scope.CreatedAt;
-        var myRoutes = scope.Routes;
+        var createdAt = await AccountCreatedAsync(userId);
+        if (createdAt > cutoff) cutoff = createdAt;
 
         long newestHeld;
         bool full;
@@ -476,11 +475,14 @@ public class DriverDataService
             query = query.Filter("message_id", Operator.GreaterThan, newestHeld.ToString());
         var r = await query.Order("created_at", Ordering.Descending).Get();
 
+        // Route messages are already only those for the driver's routes. A message to
+        // another driver is never returned either; this keeps it so if the app is ever
+        // signed in some other way.
         var me = userId.ToString();
         var mine = r.Models.Where(m => (m.TargetAudience ?? "").ToLowerInvariant() switch
         {
             "all"    => true,
-            "route"  => myRoutes.Contains(m.TargetId),
+            "route"  => true,
             "driver" => m.TargetId == me,
             _        => false
         }).ToList();
@@ -508,37 +510,20 @@ public class DriverDataService
         }
     }
 
-    /// <summary>
-    /// When the account was made and the routes it has ever run, held for
-    /// <see cref="HeldFor"/>. Only the route column of the driver's trips is read, a page
-    /// at a time.
-    /// </summary>
-    private async Task<(DateTime CreatedAt, HashSet<string> Routes)> MessageScopeAsync(int userId)
+    /// <summary>When the account was made, read once per driver.</summary>
+    private async Task<DateTime> AccountCreatedAsync(int userId)
     {
-        if (_messageScope is { } held && held.UserId == userId && DateTime.UtcNow - held.At < HeldFor)
-            return (held.CreatedAt, held.Routes);
+        if (_accountStart is { } held && held.UserId == userId)
+            return held.CreatedAt;
 
         var user = (await _supabase.From<UserModel>()
             .Select("user_id,created_at")
             .Filter("user_id", Operator.Equals, userId.ToString())
             .Get()).Models.FirstOrDefault();
+        if (user is null) return DateTime.MinValue;
 
-        var routes = new HashSet<string>();
-        for (var from = 0; ; from += PageRows)
-        {
-            var page = (await _supabase.From<Trip>()
-                .Select("trip_id,route_id")
-                .Filter("driver_id", Operator.Equals, userId.ToString())
-                .Order("trip_id", Ordering.Ascending)
-                .Range(from, from + PageRows - 1)
-                .Get()).Models;
-            foreach (var t in page) routes.Add(t.RouteId.ToString());
-            if (page.Count < PageRows) break;
-        }
-
-        var createdAt = user?.CreatedAt ?? DateTime.MinValue;
-        _messageScope = new MessageScope(userId, createdAt, routes, DateTime.UtcNow);
-        return (createdAt, routes);
+        _accountStart = new AccountStart(userId, user.CreatedAt);
+        return user.CreatedAt;
     }
 
     /// <summary>Read state, which is meaningful only for messages addressed to a single
