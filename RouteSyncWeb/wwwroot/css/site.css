@@ -10,12 +10,12 @@
 
    Every colour in these stylesheets is written light-dark(light, dark), and which of
    the two is drawn follows color-scheme, set here from data-theme on <html> (see
-   wwwroot/js/theme.js). A colour added later is written the same way, or it stays the
+   wwwroot/js/theme.js), light unless dark was chosen. A colour added later is written the same way, or it stays the
    same in both and stands out in one of them.
    =========================================================================== */
 
 :root {
-    color-scheme: light dark;
+    color-scheme: light;
     /* The ground of the content column, behind every card. */
     --rs-page: light-dark(#f8f9fa, #2C2C2C);
 }
@@ -129,6 +129,12 @@ html.rs-theme-switching *,
 html.rs-theme-switching *::before,
 html.rs-theme-switching *::after {
     transition: none !important;
+}
+
+/* The pictures of the page lie over it only to be looked at, so the pointer reaches
+   through them and nothing under it loses its hover. */
+::view-transition {
+    pointer-events: none;
 }
 
 ::view-transition-old(root),

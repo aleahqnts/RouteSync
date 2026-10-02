@@ -4,8 +4,9 @@
 // drawn follows the color-scheme of the page, set from data-theme on <html>. Bootstrap's
 // own parts follow data-bs-theme, kept to the same value.
 //
-// The page follows the device's setting until someone presses a [data-theme-toggle], and
-// from then on keeps what they chose, in this browser.
+// The page is light until someone presses a [data-theme-toggle], and from then on keeps
+// what they chose, in this browser. The device's own dark setting is not followed: the
+// dashboard opens light for everyone who has not asked otherwise.
 //
 // Loaded in the head, before anything is drawn, so a dark page is dark from its first
 // frame rather than flashing white.
@@ -14,17 +15,16 @@
 
     var KEY = 'rs-theme';
     var root = document.documentElement;
-    var device = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
-    // What was chosen on the switch, or null to follow the device.
+    // What was chosen on the switch, or null for the light default.
     var picked = null;
     try {
         var stored = localStorage.getItem(KEY);
         if (stored === 'light' || stored === 'dark') picked = stored;
-    } catch (e) { /* storage refused: follow the device */ }
+    } catch (e) { /* storage refused: light */ }
 
     function current() {
-        return picked || (device && device.matches ? 'dark' : 'light');
+        return picked || 'light';
     }
 
     function mark() {
@@ -56,7 +56,11 @@
             setTimeout(function () { root.classList.remove('rs-theme-switching'); }, 30);
         };
         if (document.startViewTransition && !(still && still.matches)) {
-            document.startViewTransition(apply).finished.then(settle, settle);
+            var shift = document.startViewTransition(apply);
+            shift.finished.then(settle, settle);
+            // A transition the browser drops, say for a hidden page, still switches; the
+            // drop itself needs no report.
+            shift.ready.catch(function () { });
             // A transition waits for the page to draw a frame. One that is not being
             // drawn, behind another window, still switches, and the transition then has
             // nothing left to change.
@@ -72,17 +76,31 @@
 
     apply();
 
-    if (device && device.addEventListener) {
-        device.addEventListener('change', function () {
-            if (!picked) fade();
-        });
-    }
-
     // The switches are in the body, which is not there yet.
     document.addEventListener('DOMContentLoaded', mark);
 
+    // The rail opens while the pointer is over it. For the moment of the cross-fade the
+    // page under the pointer is a picture of itself, so the rail would lose its hover,
+    // fold, and open again. It is held open instead, until the pointer really leaves.
+    function holdRail(toggle) {
+        var rail = toggle.closest('.fw-sidebar');
+        if (!rail) return;
+        rail.classList.add('fw-sidebar--held');
+        setTimeout(function () {
+            if (rail.matches(':hover')) {
+                rail.addEventListener('mouseleave', function () {
+                    rail.classList.remove('fw-sidebar--held');
+                }, { once: true });
+            } else {
+                rail.classList.remove('fw-sidebar--held');
+            }
+        }, 600);
+    }
+
     document.addEventListener('click', function (e) {
-        if (!e.target.closest('[data-theme-toggle]')) return;
+        var toggle = e.target.closest('[data-theme-toggle]');
+        if (!toggle) return;
+        holdRail(toggle);
         picked = current() === 'dark' ? 'light' : 'dark';
         try { localStorage.setItem(KEY, picked); } catch (err) { /* kept for this page only */ }
         fade();

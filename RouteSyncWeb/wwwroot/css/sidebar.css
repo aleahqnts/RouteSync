@@ -33,7 +33,9 @@
         z-index: 500;
     }
 
-    .fw-sidebar:hover {
+    /* Open while the pointer is over it, or while held open by theme.js through the
+       switch between themes. */
+    .fw-sidebar:is(:hover, .fw-sidebar--held) {
         width: var(--fw-sidebar-expanded);
     }
 
@@ -69,7 +71,7 @@
 
     .fw-sidebar__logo-text strong { color: var(--fw-teal); }
 
-    .fw-sidebar:hover .fw-sidebar__logo-text {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__logo-text {
         opacity: 1;
         transform: translateX(0);
     }
@@ -151,7 +153,7 @@
     }
 
     /* Opened, it is simply the last thing in the row, spaced by the row's own gap. */
-    .fw-sidebar:hover .fw-sidebar__badge {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__badge {
         position: static;
     }
 
@@ -210,7 +212,7 @@
         pointer-events: none;
     }
 
-    .fw-sidebar:hover .fw-sidebar__label {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__label {
         opacity: 1;
         transform: translateX(0);
     }
@@ -222,7 +224,7 @@
 
     .fw-sidebar .rs-theme-pill { width: 100%; }
 
-    .fw-sidebar:hover .rs-theme-pill__label {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .rs-theme-pill__label {
         max-width: 60px;
         opacity: 1;
     }
@@ -258,7 +260,7 @@
         text-decoration: none;
     }
 
-    .fw-sidebar:hover .fw-sidebar__me:hover {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__me:hover {
         background: var(--fw-teal-light);
     }
 
@@ -288,7 +290,7 @@
         margin-left: 3px;
     }
 
-    .fw-sidebar:hover .fw-sidebar__profile-info {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__profile-info {
         opacity: 1;
         transform: translateX(0);
     }
@@ -308,7 +310,7 @@
        names fit in two where one would cut them off after the first name. Only while
        open, since the closed rail squeezes the hidden name and wrapping it there would
        make the block taller and jump when the rail opens. */
-    .fw-sidebar:hover .fw-sidebar__profile-name {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__profile-name {
         white-space: normal;
         overflow-wrap: anywhere;
         display: -webkit-box;
@@ -339,7 +341,7 @@
         transition: opacity var(--fw-transition), transform var(--fw-transition);
     }
 
-    .fw-sidebar:hover .fw-sidebar__logout {
+    .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__logout {
         opacity: 1;
         transform: translateX(0);
     }
