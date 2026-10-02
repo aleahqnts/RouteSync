@@ -266,19 +266,22 @@ public class DriverDataService
 
     /// <summary>The nearest trip after today that is not completed, shown as a preview on
     /// the home screen.</summary>
+    /// <remarks>
+    /// The server picks the one trip. Home asks every few seconds, and a published roster
+    /// gives a driver a month of trips ahead.
+    /// </remarks>
     public async Task<Trip?> GetUpcomingAssignmentAsync(int userId)
     {
         var today = DateTime.Today.ToString("yyyy-MM-dd");
         var r = await _supabase.From<Trip>()
             .Filter("driver_id", Operator.Equals, userId.ToString())
             .Filter("date", Operator.GreaterThan, today)
+            .Filter("trip_status", Operator.NotEqual, "Completed")
             .Order("date", Ordering.Ascending)
+            .Order("shift_start_time", Ordering.Ascending)
+            .Limit(1)
             .Get();
-
-        return r.Models
-            .Where(t => t.TripStatus != "Completed")
-            .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
-            .FirstOrDefault();
+        return r.Models.FirstOrDefault();
     }
 
     /// <summary>
@@ -328,6 +331,22 @@ public class DriverDataService
 
         var r = await q.Get();
         return r.Models.OrderByDescending(c => c.SubmittedAt).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Whether the bus about to be driven has been inspected for a trip: the latest
+    /// inspection's status alone, without the answers to each item.
+    /// </summary>
+    /// <remarks>For the home screen, which asks every few seconds and shows only the status.</remarks>
+    public async Task<BusChecklist?> GetChecklistStatusAsync(string tripId, string? vehicleId)
+    {
+        var q = _supabase.From<BusChecklist>()
+            .Select("checklist_id,trip_id,vehicle_id,driver_id,submitted_at,checklist_status")
+            .Filter("trip_id", Operator.Equals, tripId);
+        if (!string.IsNullOrEmpty(vehicleId))
+            q = q.Filter("vehicle_id", Operator.Equals, vehicleId);
+        var r = await q.Order("submitted_at", Ordering.Descending).Limit(1).Get();
+        return r.Models.FirstOrDefault();
     }
 
     /// <summary>What the bus is doing before a shift on it can be started.</summary>

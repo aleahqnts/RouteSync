@@ -599,7 +599,7 @@ else
                 var vehicleTask = Data.GetVehicleAsync(assignment.VehicleId);
                 var checklistTask = isUpcoming
                     ? Task.FromResult<BusChecklist?>(null)
-                    : Data.GetChecklistAsync(assignment.TripId, assignment.VehicleId);
+                    : Data.GetChecklistStatusAsync(assignment.TripId, assignment.VehicleId);
                 // Not asked for a shift on a later day, where a bus in use now says
                 // nothing about whether it will still be in use then.
                 var contextTask = isUpcoming || string.IsNullOrEmpty(assignment.VehicleId)
