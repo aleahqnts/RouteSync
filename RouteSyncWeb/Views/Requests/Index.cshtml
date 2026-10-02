@@ -31,10 +31,10 @@
     };
 
     // The stored word is one token because the column is checked against a list. What is
-    // read here is a sentence.
+    // read here says what the approval is waiting on, short enough to sit on one line.
     string StatusLabel(string s) =>
         string.Equals(s, "AwaitingChange", StringComparison.OrdinalIgnoreCase)
-            ? "Awaiting schedule change"
+            ? "Needs cover"
             : s;
 }
 
@@ -280,7 +280,7 @@
                                it explains, rather than as a second line under the buttons. *@
                             <td data-label="Status">
                                 <span class="rq-badge @StatusClass(r.Status)"
-                                      title="@(pending || held ? null : r.DecisionNote)">@StatusLabel(r.Status)</span>
+                                      title="@(held ? "Approval begun. The driver is still on the schedule for some of these days." : pending ? null : r.DecisionNote)">@StatusLabel(r.Status)</span>
                                 @* Approved leave with days pulled out of it still reads as
                                    approved, because most of it is. This says the rest. *@
                                 @if (r.RevokedCount > 0)

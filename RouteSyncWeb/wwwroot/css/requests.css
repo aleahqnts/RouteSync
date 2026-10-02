@@ -692,17 +692,6 @@
         margin-left: auto;
     }
 
-    /* The longest status, "Awaiting schedule change", takes two lines rather than the
-       width of three columns. */
-    @media (min-width: 600px) {
-        .rq-table td[data-label="Status"] > .rq-badge {
-            max-width: 15ch;
-            white-space: normal;
-            border-radius: 12px;
-            line-height: 1.3;
-        }
-    }
-
     .rq-actions .rq-btn {
         padding: 6px 12px;
         border-radius: 8px;
