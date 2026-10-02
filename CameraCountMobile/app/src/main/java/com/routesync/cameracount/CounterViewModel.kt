@@ -73,6 +73,19 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     private fun waiting(err: String? = null) =
         UiState.Waiting(vehicleId, err, plate, lastSummary, unreconciled)
 
+    /**
+     * A failed poll as the waiting screen words it. Only a refusal needs someone to act, so
+     * it is the one told apart from the rest, which retry on their own.
+     */
+    private fun describe(e: Exception): String = when {
+        e is com.routesync.cameracount.data.HttpRefused && e.status in setOf(401, 403) ->
+            "Refused by the server. Bind this phone again."
+        e is com.routesync.cameracount.data.HttpRefused && e.status >= 500 ->
+            "Server error, retrying…"
+        e is java.io.IOException -> "Offline, retrying…"
+        else -> "Can't reach the server, retrying…"
+    }
+
     /** How many held counts the database has not confirmed, republished each poll. */
     private var unreconciled = 0
 
@@ -334,7 +347,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     // reporting its own cancellation as a failed poll.
                     throw e
                 } catch (e: Exception) {
-                    if (tripId == null) _state.value = waiting(e.message)
+                    if (tripId == null) _state.value = waiting(describe(e))
                     // While counting, poll errors are tolerated. The flush loop keeps trying.
                 }
                 // Held counts are offered on every pass, including while a later trip is

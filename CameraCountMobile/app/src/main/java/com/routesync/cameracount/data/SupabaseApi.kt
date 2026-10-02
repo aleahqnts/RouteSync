@@ -98,7 +98,7 @@ object SupabaseApi {
                 "&order=actual_start_time.desc.nullslast&limit=1"
         val req = Request.Builder().url(url).supabaseHeaders().get().build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("GET trips ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "GET trips ${res.code}")
             val arr = JSONArray(res.body?.string() ?: "[]")
             if (arr.length() == 0) return@withContext null
             val row = arr.getJSONObject(0)
@@ -129,7 +129,7 @@ object SupabaseApi {
             .patch(body)
             .build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("PATCH claim ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "PATCH claim ${res.code}")
             JSONArray(res.body?.string() ?: "[]").length() > 0 // 0 rows = someone else owns it
         }
     }
@@ -155,7 +155,7 @@ object SupabaseApi {
                 .patch(body)
                 .build()
             http.newCall(req).execute().use { res ->
-                if (!res.isSuccessful) throw IllegalStateException("PATCH trips ${res.code}")
+                if (!res.isSuccessful) throw HttpRefused(res.code, "PATCH trips ${res.code}")
                 JSONArray(res.body?.string() ?: "[]").length() > 0
             }
         }
@@ -176,7 +176,7 @@ object SupabaseApi {
             .patch(body)
             .build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("PATCH vehicles ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "PATCH vehicles ${res.code}")
             JSONArray(res.body?.string() ?: "[]").length() > 0
         }
     }
@@ -190,7 +190,7 @@ object SupabaseApi {
             .patch(body)
             .build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("PATCH vehicles ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "PATCH vehicles ${res.code}")
         }
     }
 
@@ -224,7 +224,7 @@ object SupabaseApi {
                 .patch(body)
                 .build()
             http.newCall(req).execute().use { res ->
-                if (!res.isSuccessful) throw IllegalStateException("PATCH reconcile ${res.code}")
+                if (!res.isSuccessful) throw HttpRefused(res.code, "PATCH reconcile ${res.code}")
                 val arr = JSONArray(res.body?.string() ?: "[]")
                 if (arr.length() == 0) null else arr.getJSONObject(0).optInt("total_boarded", 0)
             }
@@ -364,7 +364,7 @@ object SupabaseApi {
         val url = "$BASE/vehicles?select=vehicle_id,plate_number&order=vehicle_id"
         val req = Request.Builder().url(url).supabaseHeaders().get().build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("GET vehicles ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "GET vehicles ${res.code}")
             val arr = JSONArray(res.body?.string() ?: "[]")
             (0 until arr.length()).map {
                 val row = arr.getJSONObject(it)
@@ -382,7 +382,7 @@ object SupabaseApi {
         val url = "$BASE/vehicles?vehicle_id=eq.$vehicleId&select=vehicle_id,plate_number"
         val req = Request.Builder().url(url).supabaseHeaders().get().build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("GET vehicles ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "GET vehicles ${res.code}")
             val arr = JSONArray(res.body?.string() ?: "[]")
             if (arr.length() == 0) return@withContext null
             arr.getJSONObject(0).optString("plate_number", "")
@@ -405,7 +405,7 @@ object SupabaseApi {
                 "&select=line_ax,line_ay,line_bx,line_by,inward_sign,use_back_camera,version,wake_requested_at"
         val req = Request.Builder().url(url).supabaseHeaders().get().build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("GET device_config ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "GET device_config ${res.code}")
             val arr = JSONArray(res.body?.string() ?: "[]")
             if (arr.length() == 0) return@withContext null
             val r = arr.getJSONObject(0)
@@ -452,7 +452,7 @@ object SupabaseApi {
             .post(body)
             .build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("UPSERT device_config ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "UPSERT device_config ${res.code}")
         }
     }
 
@@ -501,7 +501,7 @@ object SupabaseApi {
             .post(body)
             .build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("UPSERT device_status ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "UPSERT device_status ${res.code}")
         }
     }
 
@@ -560,7 +560,7 @@ object SupabaseApi {
             .post(jpeg.toRequestBody(JPEG))
             .build()
         http.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw IllegalStateException("PUT snapshot ${res.code}")
+            if (!res.isSuccessful) throw HttpRefused(res.code, "PUT snapshot ${res.code}")
         }
     }
 
@@ -574,7 +574,7 @@ object SupabaseApi {
             .build()
         http.newCall(req).execute().use { res ->
             if (!res.isSuccessful && res.code != 404)
-                throw IllegalStateException("DELETE snapshot ${res.code}")
+                throw HttpRefused(res.code, "DELETE snapshot ${res.code}")
         }
     }
 
@@ -586,3 +586,10 @@ object SupabaseApi {
         http.newCall(req).execute().use { it.isSuccessful }
     }
 }
+
+/**
+ * The server answered and refused. Kept apart from a failure to reach it, so the screen can
+ * say which: a phone that has been refused needs a person, one that is offline only needs
+ * signal.
+ */
+class HttpRefused(val status: Int, message: String) : IllegalStateException(message)

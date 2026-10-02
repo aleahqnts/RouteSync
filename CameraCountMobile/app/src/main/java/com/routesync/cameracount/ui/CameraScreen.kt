@@ -612,7 +612,7 @@ private fun DetectionSurface(
             Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp)
                 .background(Color(0xAA000000)).padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            Text("persons: ${boxes.size}", color = RsColor.TealBright, fontWeight = FontWeight.Bold)
+            Text("People: ${boxes.size}", color = RsColor.TealBright, fontWeight = FontWeight.Bold)
             Text(
                 "$fps fps · ${inferMs}ms · ${if (detector.usingGpu) "GPU" else "CPU"}",
                 color = Color.White, fontSize = 12.sp
@@ -620,15 +620,17 @@ private fun DetectionSurface(
             lensInfo?.let {
                 Text(it, color = RsColor.Muted, fontSize = 11.sp)
             }
+            // The reason is in the log. On the door it only needs to say that counting
+            // carries on.
             frameError?.let {
-                Text(it, color = Color(0xFFFF6B6B), fontSize = 11.sp)
+                Text("A frame was skipped, still counting", color = Color(0xFFFF6B6B), fontSize = 11.sp)
             }
             // Repeated rebinds with no frames means something outside this app holds
             // the camera. Report it rather than leaving a black screen that suggests a
             // fix is imminent.
             if (cameraUnreachable) {
                 Text(
-                    "camera not responding, still retrying",
+                    "Camera not responding, still retrying",
                     color = Color(0xFFFFC94D), fontSize = 11.sp
                 )
             }
@@ -770,7 +772,10 @@ private fun DetectionSurface(
                             scaleX = sc; scaleY = sc
                         }
                     )
-                    Text("passengers boarded", color = Color.White, fontSize = 13.sp)
+                    Text(
+                        if (s.count == 1) "Passenger boarded" else "Passengers boarded",
+                        color = Color.White, fontSize = 13.sp
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "${s.tripId} · " + when {
@@ -802,7 +807,7 @@ private fun DetectionSurface(
                     Text("$it", color = Color(0x559AE0D4), fontSize = 44.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("counting · screen resting", color = Color(0x44FFFFFF), fontSize = 12.sp)
+                Text("Counting · screen resting", color = Color(0x44FFFFFF), fontSize = 12.sp)
             }
         }
     }

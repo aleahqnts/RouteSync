@@ -393,7 +393,7 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
             s.lastError?.let {
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Offline, retrying…", color = RsColor.Error, fontWeight = FontWeight.Bold,
+                    it, color = RsColor.Error, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                     modifier = Modifier.clip(RoundedCornerShape(8.dp))
                         .background(RsColor.Mint1).padding(horizontal = 12.dp, vertical = 6.dp)
                 )
@@ -428,11 +428,15 @@ private fun StandbyCard(vm: CounterViewModel, s: CounterViewModel.UiState.Standb
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             StatusDot(active = false)
             Spacer(Modifier.height(12.dp))
-            Text("⚠ Two counter phones detected", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = RsColor.Error)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(RsIcons.Warning, contentDescription = null, tint = RsColor.Error, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Two counter phones detected", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = RsColor.Error)
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 "Another device is already counting trip ${s.tripId} on ${s.vehicleId}. " +
-                    "Each bus must have exactly ONE counter phone. Unbind the phone that " +
+                    "Each bus must have exactly one counter phone. Unbind the phone that " +
                     "doesn't belong. Counts are safe: only one device is being accepted.",
                 color = RsColor.Muted, textAlign = TextAlign.Center
             )

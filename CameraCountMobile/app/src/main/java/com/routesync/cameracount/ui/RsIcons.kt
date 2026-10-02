@@ -84,6 +84,17 @@ object RsIcons {
         )
     }
 
+    /** Warning triangle, for a problem that needs a person rather than a retry. */
+    val Warning: ImageVector by lazy {
+        strokeIcon(
+            "Warning",
+            "M12,3.5 L21.5,20 L2.5,20 z",
+            // The mark inside: a stroke and a dot below it.
+            "M12,9.5 L12,14",
+            "M12,17 L12,17.01"
+        )
+    }
+
     val EyeOpen: ImageVector by lazy {
         strokeIcon(
             "EyeOpen",
