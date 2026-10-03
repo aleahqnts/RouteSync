@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -193,6 +195,14 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
 
     val vehicleOk = CounterViewModel.VEHICLE_ID_RE.matches(vehicle)
 
+    // The suite's mark over the name, as on the driver app's sign-in. Decorative: the
+    // name beneath it says the same thing to a screen reader.
+    Image(
+        painterResource(R.drawable.rs_logo),
+        contentDescription = null,
+        modifier = Modifier.width(88.dp).aspectRatio(438f / 346f)
+    )
+    Spacer(Modifier.height(12.dp))
     RsWordmark("Sentinel")
     Spacer(Modifier.height(24.dp))
     RsCard {
