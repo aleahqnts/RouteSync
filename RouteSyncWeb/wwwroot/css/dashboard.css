@@ -17,7 +17,7 @@
         display: flex;
         align-items: center;
         gap: 20px;
-        margin-bottom: 28px;
+        margin-bottom: 18px;
         }
 
         .db-route-wrap {
@@ -82,7 +82,7 @@
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 12px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         }
 
         .db-title-row .db-title { margin-bottom: 0; }
@@ -213,14 +213,14 @@
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 16px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         }
 
         .db-stat-card {
         background: var(--db-white);
         border: 1px solid var(--db-border);
         border-radius: var(--db-radius);
-        padding: 20px 22px;
+        padding: 16px 22px;
         box-shadow: var(--db-shadow);
         }
 
@@ -228,7 +228,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         }
 
         .db-stat-icon {
@@ -297,7 +297,6 @@
         display: grid;
         grid-template-columns: 1.4fr 1fr;
         gap: 16px;
-        margin-bottom: 20px;
         }
 
         /* Shared card. */
@@ -313,7 +312,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         flex-wrap: wrap;
         }
 
@@ -645,6 +644,13 @@
         }
 
         /* Responsive. */
+        /* On a desktop screen the chart and map give up a little height so the whole page
+           fits a laptop without scrolling; taller screens keep the full size. */
+        @media (min-width: 1101px) {
+            .db-chart-canvas { height: clamp(150px, calc(100dvh - 502px), 260px) !important; }
+            .db-map-link { height: clamp(170px, calc(100dvh - 482px), 280px); }
+        }
+
         @media (max-width: 1100px) {
         .db-stat-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -678,7 +684,7 @@
 
 /* Which release is running, quiet under the page, as on the profile. */
 .db-version {
-    margin: 24px 0 8px;
+    margin: 12px 0 0;
     text-align: center;
     font-size: .74rem;
     color: light-dark(#9AA5B4, #A1A5A9);
