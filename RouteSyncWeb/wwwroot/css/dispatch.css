@@ -1504,7 +1504,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 22px 28px 18px;
+        padding: 14px 22px;
         border-bottom: 1px solid light-dark(#E8ECF0, #4E4E4E);
         position: sticky;
         top: 0;
@@ -1514,7 +1514,7 @@
     }
 
     .atm-title {
-        font-size: 1.15rem;
+        font-size: 1.08rem;
         font-weight: 700;
         color: light-dark(#1a2a4a, #E1E4E9);
         margin: 0;
@@ -1541,29 +1541,30 @@
         padding: 0;
     }
 
-    .atm-section-label {
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: light-dark(#9AA5B4, #A1A5A9);
-        text-transform: uppercase;
-        letter-spacing: .06em;
-        padding: 14px 28px 10px;
-        background: light-dark(#F8F9FA, #373737);
-        border-top: 1px solid light-dark(#E8ECF0, #4E4E4E);
-        border-bottom: 1px solid light-dark(#E8ECF0, #4E4E4E);
-    }
-
     .atm-section {
-        padding: 18px 28px;
+        padding: 13px 22px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 9px;
         border-bottom: 1px solid light-dark(#E8ECF0, #4E4E4E);
     }
 
     .atm-section--last {
         border-bottom: none;
     }
+
+    /* Labels in one column beside their fields, so each choice takes a single row and
+       the labels line up down the dialog. A hint drops under its own field. */
+    .atm-form {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 9px 14px;
+    }
+
+        .atm-form .atm-field { display: contents; }
+        .atm-form .atm-label { white-space: nowrap; }
+        .atm-form .atm-hint { grid-column: 2; margin-top: -4px; }
 
     .atm-field {
         display: flex;
@@ -1646,7 +1647,7 @@
         align-items: center;
         justify-content: flex-end;
         gap: 10px;
-        padding: 18px 28px;
+        padding: 14px 22px;
         border-top: 1px solid light-dark(#E8ECF0, #4E4E4E);
         position: sticky;
         bottom: 0;

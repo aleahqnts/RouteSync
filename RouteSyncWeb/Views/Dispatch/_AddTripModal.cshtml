@@ -12,11 +12,12 @@
         @* Body *@
         <div class="atm-body">
 
-            @* Trip Information *@
-            <div class="atm-section-label">Trip Information</div>
-            <div class="atm-section">
+            @* When and where the trip runs, then who runs it. Each label sits beside its
+               field and a hairline parts the two groups, as on Reassign, so the whole
+               dialog fits on a laptop screen without scrolling. *@
+            <div class="atm-section atm-form">
                 <div class="atm-field">
-                    <label class="atm-label" for="atm-shift-type">Shift Type</label>
+                    <label class="atm-label" for="atm-shift-type">Shift</label>
                     <div class="atm-select-wrap">
                         <select id="atm-shift-type" class="atm-select" data-on="change:atmShiftChange">
                             <option value="">Select shift type…</option>
@@ -27,7 +28,7 @@
                     </div>
                 </div>
                 <div class="atm-field">
-                    <label class="atm-label" for="atm-shift-time">Shift Time</label>
+                    <label class="atm-label" for="atm-shift-time">Hours</label>
                     <div class="atm-select-wrap">
                         <select id="atm-shift-time" class="atm-select" disabled>
                             <option value="">Select shift type first…</option>
@@ -44,11 +45,9 @@
                 </div>
             </div>
 
-            @* Vehicle Details *@
-            <div class="atm-section-label">Vehicle Details</div>
-            <div class="atm-section">
+            <div class="atm-section atm-section--last atm-form">
                 <div class="atm-field">
-                    <label class="atm-label" for="atm-vehicle-id">Vehicle ID</label>
+                    <label class="atm-label" for="atm-vehicle-id">Bus</label>
                     <div class="atm-select-wrap">
                         <select id="atm-vehicle-id" class="atm-select">
                             <option value="">Select shift first…</option>
@@ -56,13 +55,8 @@
                     </div>
                     <span class="atm-hint" id="atm-vehicle-hint"></span>
                 </div>
-            </div>
-
-            @* Driver Details *@
-            <div class="atm-section-label">Driver Details</div>
-            <div class="atm-section atm-section--last">
                 <div class="atm-field">
-                    <label class="atm-label" for="atm-driver">Driver Name</label>
+                    <label class="atm-label" for="atm-driver">Driver</label>
                     <div class="atm-select-wrap">
                         <select id="atm-driver" class="atm-select rs-id-list">
                             <option value="">Select shift first…</option>
