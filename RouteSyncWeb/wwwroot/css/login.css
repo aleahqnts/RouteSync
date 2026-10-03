@@ -63,8 +63,7 @@ body {
 }
 
 .logo {
-    width: 200px;
-    
+    width: 120px;
 }
 
 .tagline {
@@ -405,7 +404,7 @@ body {
     }
 
     .logo {
-        width: 120px;
+        width: 80px;
     }
 
     .brand-name {
