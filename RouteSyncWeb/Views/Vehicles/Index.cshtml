@@ -22,7 +22,7 @@
 
 @* SUMMARY CARDS *@
 <div class="vh-cards">
-    <a href="@Url.Action("Index")"
+    <a href="@Url.Action("Index")" data-vh-card="all"
        class="vh-card vh-card--click @(string.IsNullOrEmpty(Model.SelectedStatus)
                                         && string.IsNullOrEmpty(Model.SelectedCondition)
                                         && string.IsNullOrEmpty(Model.SelectedRoute)
@@ -47,7 +47,7 @@
         </div>
     </a>
 
-    <a href="@Url.Action("Index", new { status = "Flagged", route = Model.SelectedRoute, search = Model.SearchTerm })"
+    <a href="@Url.Action("Index", new { status = "Flagged", route = Model.SelectedRoute, search = Model.SearchTerm })" data-vh-card="flagged"
        @* condition is deliberately omitted: a card sets one filter, not two. *@
        class="vh-card vh-card--click @(Model.SelectedStatus == "Flagged" ? "vh-card--active" : "") @(Model.FlaggedVehicles == 0 ? "vh-card--empty" : "")"
        title="Show only flagged vehicles">
@@ -64,7 +64,7 @@
         </div>
     </a>
 
-    <a href="@Url.Action("Index", new { condition = "Under Repair", route = Model.SelectedRoute, search = Model.SearchTerm })"
+    <a href="@Url.Action("Index", new { condition = "Under Repair", route = Model.SelectedRoute, search = Model.SearchTerm })" data-vh-card="repair"
        class="vh-card vh-card--click @(Model.SelectedCondition == "Under Repair" ? "vh-card--active" : "") @(Model.ScheduledMaintenance == 0 ? "vh-card--empty" : "")"
        title="Show only vehicles under repair">
         <div class="vh-card-icon vh-card-icon--amber">
@@ -261,7 +261,7 @@
         vhScheduleCancel:      function () { vhScheduleCancel(); },
         vhItemsCancel:         function () { vhItemsCancel(); },
         vhActionCancel:        function () { vhActionCancel(); },
-        vhFilterSubmit:        function () { this.form.submit(); },
+        vhFilterSubmit:        function () { vhApplyFilters(); },
         // _CameraCalibrateModal
         camClose:              function () { camClose(); },
         camStart:              function () { camStart(); },
@@ -583,12 +583,106 @@
             });
     }
 
+    // The filters, the search box and the summary cards change the table in place. The rows
+    // are fetched on their own already, so only they are asked for again; the address is
+    // kept in step, so a reload or a copied link opens on the same view and the refresh
+    // after an action keeps the filters that were set.
+    function vhFilterControls() {
+        return {
+            route: document.querySelector('#vhFilters select[name="route"]'),
+            status: document.querySelector('#vhFilters select[name="status"]'),
+            condition: document.querySelector('#vhFilters select[name="condition"]'),
+            search: document.querySelector('.vh-search-input')
+        };
+    }
+
+    function vhFilterQuery(c) {
+        const params = new URLSearchParams();
+        if (c.route && c.route.value) params.set('route', c.route.value);
+        if (c.status && c.status.value) params.set('status', c.status.value);
+        if (c.condition && c.condition.value) params.set('condition', c.condition.value);
+        if (c.search && c.search.value.trim()) params.set('search', c.search.value.trim());
+        return params;
+    }
+
+    // A card is lit for the filter it sets, and its link carries the route and search as
+    // they stand, for a click that opens it in a new tab.
+    function vhMarkCards(c) {
+        const none = !vhFilterQuery(c).toString();
+        document.querySelectorAll('[data-vh-card]').forEach(function (card) {
+            const kind = card.dataset.vhCard;
+            const on = kind === 'all' ? none
+                : kind === 'flagged' ? c.status.value === 'Flagged'
+                : c.condition.value === 'Under Repair';
+            card.classList.toggle('vh-card--active', on);
+
+            const link = new URLSearchParams();
+            if (kind !== 'all') {
+                if (c.route.value) link.set('route', c.route.value);
+                if (kind === 'flagged') link.set('status', 'Flagged'); else link.set('condition', 'Under Repair');
+                if (c.search && c.search.value.trim()) link.set('search', c.search.value.trim());
+            }
+            card.setAttribute('href', location.pathname + (link.toString() ? '?' + link : ''));
+        });
+    }
+
+    function vhApplyFilters() {
+        const c = vhFilterControls();
+        const query = vhFilterQuery(c).toString();
+        history.replaceState(history.state, '', location.pathname + (query ? '?' + query : ''));
+        vhMarkCards(c);
+        loadVehicleRows();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // A card sets one filter, as its link does: All clears every filter and the search,
+        // Flagged and Scheduled Maintenance each clear the other.
+        document.querySelectorAll('[data-vh-card]').forEach(function (card) {
+            card.addEventListener('click', function (e) {
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                const c = vhFilterControls();
+                const kind = card.dataset.vhCard;
+                if (kind === 'all') {
+                    c.route.value = ''; c.status.value = ''; c.condition.value = '';
+                    if (c.search) c.search.value = '';
+                } else if (kind === 'flagged') {
+                    c.status.value = 'Flagged'; c.condition.value = '';
+                } else {
+                    c.condition.value = 'Under Repair'; c.status.value = '';
+                }
+                vhApplyFilters();
+            });
+        });
+
+        // The search asks for rows as the plate is typed, and Enter no longer reloads.
+        const box = document.querySelector('.vh-search-input');
+        let pending;
+        if (box) box.addEventListener('input', function () {
+            clearTimeout(pending);
+            pending = setTimeout(vhApplyFilters, 200);
+        });
+        document.querySelectorAll('.vh-search-form, #vhFilters').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                clearTimeout(pending);
+                vhApplyFilters();
+            });
+        });
+    });
+
+    // Answers are applied in the order they were asked for, so a slow reply to an older
+    // filter never replaces the rows for a newer one.
+    let vhRowsAsked = 0;
+
     function loadVehicleRows() {
         const tbody = document.getElementById('vehiclesTableBody');
+        const asked = ++vhRowsAsked;
         fetch('@Url.Action("VehicleRows", "Vehicles")' + window.location.search)
             .then(function (response) { return response.text(); })
-            .then(function (html) { tbody.innerHTML = html; })
+            .then(function (html) { if (asked === vhRowsAsked) tbody.innerHTML = html; })
             .catch(function () {
+                if (asked !== vhRowsAsked) return;
                 tbody.innerHTML = '<tr><td colspan="6" class="vh-empty">Failed to load vehicles.</td></tr>';
             });
     }
