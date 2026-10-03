@@ -438,19 +438,61 @@
         list-style: none;
         margin: 0;
         padding: 0;
-    }
-
-    .pf-leave {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 12px 0;
-        border-bottom: 1px solid light-dark(#F1F3F6, #4C4C4C);
+        flex-direction: column;
+        gap: 10px;
     }
 
-    .pf-leave:last-child { border-bottom: none; padding-bottom: 0; }
-    .pf-leave:first-child { padding-top: 0; }
+    /* One request: its dates, what it is, and what can still be done with it. The left
+       edge carries the status colour so the list can be read at a glance. */
+    .pf-leave {
+        --pf-tone: light-dark(#D48806, #EFB062);
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 14px;
+        padding: 12px 14px 12px 12px;
+        border: 1px solid var(--pf-border);
+        border-left: 4px solid var(--pf-tone);
+        border-radius: 12px;
+        background: light-dark(#FFFFFF, #3E3E3E);
+        transition: box-shadow .15s ease;
+    }
+
+    .pf-leave:hover { box-shadow: 0 4px 14px light-dark(rgba(26, 43, 74, .08), rgba(0, 0, 0, .25)); }
+
+    .pf-leave--ok { --pf-tone: light-dark(#27AE60, #7ED498); }
+    .pf-leave--bad { --pf-tone: light-dark(#D14343, #FFA099); }
+    .pf-leave--idle { --pf-tone: light-dark(#B9C0CB, #6B6E73); }
+
+    .pf-leave-date {
+        width: 52px;
+        padding: 6px 0 7px;
+        border-radius: 10px;
+        background: light-dark(#F3F5F8, #4A4A4A);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+    }
+
+    .pf-leave-mon {
+        font-size: .66rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--pf-tone);
+    }
+
+    .pf-leave-day {
+        margin-top: 4px;
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--pf-dark);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pf-leave-day--run { font-size: .9rem; margin-top: 6px; }
 
     .pf-leave-main { min-width: 0; }
 
@@ -461,18 +503,47 @@
         gap: 6px 8px;
     }
 
-    .pf-leave-type { font-weight: 700; font-size: .9rem; color: var(--pf-dark); }
-    .pf-leave-span { margin-top: 3px; font-size: .84rem; color: var(--pf-soft); }
-    .pf-leave-note { margin-top: 4px; font-size: .8rem; color: var(--pf-muted); overflow-wrap: anywhere; }
-    .pf-leave-note--answer { color: var(--pf-soft); }
+    .pf-leave-type { font-weight: 700; font-size: .92rem; color: var(--pf-dark); }
+    .pf-leave-span { margin-top: 3px; font-size: .82rem; color: var(--pf-soft); }
+
+    .pf-leave-label {
+        margin-right: 6px;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--pf-muted);
+    }
+
+    .pf-leave-note { margin-top: 6px; font-size: .82rem; color: var(--pf-text); overflow-wrap: anywhere; }
+
+    /* What the office said back, set apart from the driver's own words. */
+    .pf-leave-reply {
+        margin-top: 8px;
+        padding: 7px 10px;
+        border-radius: 8px;
+        background: light-dark(#F3F5F8, #4A4A4A);
+        font-size: .82rem;
+        color: var(--pf-text);
+        overflow-wrap: anywhere;
+    }
 
     .pf-leave-act {
-        flex-shrink: 0;
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         gap: 6px;
-        max-width: 55%;
+        max-width: 260px;
+    }
+
+    .pf-leave-act > .pf-btn, .pf-leave-act > summary { min-width: 118px; justify-content: center; }
+
+    .pf-leave-empty {
+        padding: 18px;
+        border: 1px dashed var(--pf-border);
+        border-radius: 12px;
+        text-align: center;
+        color: var(--pf-muted);
     }
 
     .pf-leave-act summary { list-style: none; display: inline-flex; align-items: center; }
@@ -534,8 +605,8 @@
         .pf-row2, .pf-row3 { grid-template-columns: minmax(0, 1fr); }
         .pf-credit { padding: 10px; }
         .pf-credit-n { font-size: 1.2rem; }
-        .pf-leave { flex-direction: column; }
-        .pf-leave-act { align-items: flex-start; max-width: none; }
+        .pf-leave { grid-template-columns: auto minmax(0, 1fr); }
+        .pf-leave-act { grid-column: 2; align-items: flex-start; max-width: none; }
         .pf-ask { min-width: 0; }
         .pf-actions .pf-btn { flex: 1; }
     }

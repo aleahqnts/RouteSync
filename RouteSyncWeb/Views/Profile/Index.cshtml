@@ -13,6 +13,21 @@
         _ => "pf-badge--wait",
     };
 
+    static string Tone(string status) => status switch
+    {
+        "Approved" => "ok",
+        "Rejected" => "bad",
+        "Cancelled" => "idle",
+        _ => "wait",
+    };
+
+    // The days a request covers, for the date block: one day, a run inside one month,
+    // or only the first day when the run crosses into the next month.
+    static string Days(LeaveRequest r) =>
+        r.StartDate.Date == r.EndDate.Date || r.StartDate.Month != r.EndDate.Month || r.StartDate.Year != r.EndDate.Year
+            ? r.StartDate.Day.ToString()
+            : $"{r.StartDate.Day}–{r.EndDate.Day}";
+
     static string StatusLabel(string status) =>
         status == "AwaitingChange" ? "Pending" : status;
 
@@ -280,7 +295,7 @@
 
             @if (Model.Requests.Count == 0)
             {
-                <p class="pf-empty">You have not filed any leave.</p>
+                <p class="pf-empty pf-leave-empty">You have not filed any leave. Requests you file show here with their answer.</p>
             }
             else
             {
@@ -295,7 +310,13 @@
                             : null;
                         var days = LeaveEntitlement.Days(r);
 
-                        <li class="pf-leave">
+                        var dayText = Days(r);
+
+                        <li class="pf-leave pf-leave--@Tone(r.Status)">
+                            <div class="pf-leave-date" aria-hidden="true">
+                                <span class="pf-leave-mon">@r.StartDate.ToString("MMM")</span>
+                                <span class="pf-leave-day @(dayText.Length > 2 ? "pf-leave-day--run" : "")">@dayText</span>
+                            </div>
                             <div class="pf-leave-main">
                                 <div class="pf-leave-top">
                                     <span class="pf-leave-type">@r.LeaveType</span>
@@ -308,18 +329,18 @@
                                 <div class="pf-leave-span">@Span(r) &middot; @days @(days == 1 ? "day" : "days")</div>
                                 @if (!string.IsNullOrWhiteSpace(r.Reason))
                                 {
-                                    <div class="pf-leave-note">“@r.Reason”</div>
+                                    <div class="pf-leave-note"><span class="pf-leave-label">Reason</span>@r.Reason</div>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(r.DecisionNote))
                                 {
-                                    <div class="pf-leave-note pf-leave-note--answer">Answer: @r.DecisionNote</div>
+                                    <div class="pf-leave-reply"><span class="pf-leave-label">Answer</span>@r.DecisionNote</div>
                                 }
                                 @if (r.RevokedDates?.Count > 0)
                                 {
                                     var n = r.RevokedDates.Count;
                                     var taken = $"{n} {(n == 1 ? "day was" : "days were")} taken back"
                                         + (string.IsNullOrWhiteSpace(r.RevokeNote) ? "" : $": {r.RevokeNote}");
-                                    <div class="pf-leave-note pf-leave-note--answer">@taken</div>
+                                    <div class="pf-leave-reply"><span class="pf-leave-label">Changed</span>@taken</div>
                                 }
                             </div>
 
