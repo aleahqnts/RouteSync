@@ -52,7 +52,7 @@ namespace FleetWise.Controllers
             if (ModelState.IsValid)
             {
                 var existing = await _supabase.From<UserModel>()
-                    .Filter("email_address", Postgrest.Constants.Operator.Equals, model.Email.Trim())
+                    .Filter("email_address", Postgrest.Constants.Operator.Equals, model.Email.Trim().ToLowerInvariant())
                     .Get();
 
                 if (existing.Models.Count > 0)
@@ -72,7 +72,7 @@ namespace FleetWise.Controllers
                 FirstName = model.FirstName.Trim(),
                 MiddleName = string.IsNullOrWhiteSpace(model.MiddleName) ? null : model.MiddleName.Trim(),
                 LastName = model.LastName.Trim(),
-                EmailAddress = model.Email.Trim(),
+                EmailAddress = model.Email.Trim().ToLowerInvariant(),
                 RoleId = model.RoleId,
                 AccountStatus = "Activated",
                 CreatedAt = PhClock.Now,
@@ -88,7 +88,7 @@ namespace FleetWise.Controllers
             // temporary password is documented policy rather than a secret, and is still
             // never written to the audit trail.
             await _audit.WriteAsync("user_created",
-                $"created the account {model.FirstName} {model.LastName} ({model.Email.Trim()})",
+                $"created the account {model.FirstName} {model.LastName} ({model.Email.Trim().ToLowerInvariant()})",
                 "users", created?.UserId);
 
             TempData["Success"] = $"User \"{model.FirstName} {model.LastName}\" created. Temporary password: {PasswordPolicy.TemporaryPassword}. They'll be asked to change it on first login.";
@@ -102,7 +102,7 @@ namespace FleetWise.Controllers
             if (ModelState.IsValid)
             {
                 var existing = await _supabase.From<UserModel>()
-                    .Filter("email_address", Postgrest.Constants.Operator.Equals, model.Email.Trim())
+                    .Filter("email_address", Postgrest.Constants.Operator.Equals, model.Email.Trim().ToLowerInvariant())
                     .Get();
 
                 if (existing.Models.Any(u => u.UserId != model.UserId))
@@ -135,7 +135,7 @@ namespace FleetWise.Controllers
             user.FirstName = model.FirstName.Trim();
             user.MiddleName = string.IsNullOrWhiteSpace(model.MiddleName) ? null : model.MiddleName.Trim();
             user.LastName = model.LastName.Trim();
-            user.EmailAddress = model.Email.Trim();
+            user.EmailAddress = model.Email.Trim().ToLowerInvariant();
             user.RoleId = model.RoleId;
             user.AccountStatus = model.AccountStatus;
             user.UpdatedAt = PhClock.Now;

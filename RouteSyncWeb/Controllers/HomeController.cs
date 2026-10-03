@@ -149,7 +149,7 @@ namespace FleetWise.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            var r = await _reset.RequestAsync(model.Email.Trim());
+            var r = await _reset.RequestAsync(model.Email.Trim().ToLowerInvariant());
             if (r.Outcome == PasswordResetApi.Outcome.Unreachable)
             {
                 ModelState.AddModelError("", "Could not reach the server. Try again in a moment.");
@@ -166,7 +166,7 @@ namespace FleetWise.Controllers
 
             return View(nameof(VerifyResetCode), new VerifyResetCodeViewModel
             {
-                Email = model.Email.Trim(),
+                Email = model.Email.Trim().ToLowerInvariant(),
                 SentAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             });
         }

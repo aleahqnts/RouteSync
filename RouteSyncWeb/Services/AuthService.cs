@@ -30,6 +30,9 @@ namespace FleetWise.Services
         /// </remarks>
         public async Task<SignInCheck> CheckSignInAsync(string email, string password)
         {
+            // Addresses are stored in lower case, so the one typed matches whatever its case.
+            email = email.Trim().ToLowerInvariant();
+
             // Sign-in is the first call after an idle spell, so it is the one that meets
             // a connection the far end has already closed.
             var usersResponse = await Transient.RunAsync(() => _supabase

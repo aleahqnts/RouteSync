@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
   let email: string, password: string;
   try {
     const body = await req.json();
-    email = String(body.email ?? "").trim();
+    // Addresses are stored in lower case, so the one typed matches whatever its case.
+    email = String(body.email ?? "").trim().toLowerCase();
     password = String(body.password ?? "");
   } catch {
     return json(400, { error: "Invalid JSON body" });

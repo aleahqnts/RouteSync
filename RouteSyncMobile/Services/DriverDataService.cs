@@ -584,7 +584,7 @@ public class DriverDataService
     public async Task<UserModel?> GetDriverByEmailAsync(string email)
     {
         var r = await _supabase.From<UserModel>()
-            .Filter("email_address", Operator.Equals, email)
+            .Filter("email_address", Operator.Equals, email.Trim().ToLowerInvariant())
             .Get();
         var u = r.Models.FirstOrDefault();
         return (u is not null && u.RoleId == 2 && u.AccountStatus == "Activated") ? u : null;
