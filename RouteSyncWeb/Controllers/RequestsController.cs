@@ -675,10 +675,11 @@ namespace FleetWise.Controllers
         /// Answers a driver asking for granted leave back.
         /// </summary>
         /// <remarks>
-        /// Accepting cancels the leave outright, which frees the days and staffs nothing:
-        /// the week was planned around the absence, so the answer carries a reminder that
-        /// those days now need a driver. It cannot make anybody do it, and it should not
-        /// pretend the days filled themselves.
+        /// Accepting cancels the leave outright. The driver's shifts on those days were
+        /// handed to other drivers before the leave could be approved, and cancelling does
+        /// not hand them back: the buses stay covered and the driver returns with nothing
+        /// scheduled. The answer carries a reminder to give them shifts if they should
+        /// drive, since nothing here does it for them.
         ///
         /// Declining leaves the leave exactly as it was. Either way the driver is told, the
         /// row keeps who answered and what they wrote, and the audit trail keeps both the
@@ -738,13 +739,13 @@ namespace FleetWise.Controllers
                     + $"covering {Span(found)}"
                     + (string.IsNullOrWhiteSpace(found.WithdrawReason) ? "" : $", asked because: {found.WithdrawReason}")
                     + (string.IsNullOrWhiteSpace(note) ? "" : $". {note.Trim()}")
-                    + (accept ? ". Those days now have no driver assigned." : ""),
+                    + (accept ? ". The driver has no shifts on those days until the schedule gives them some." : ""),
                 "requests", requestId.ToString());
 
             return Ok(new
             {
                 staffing = accept
-                    ? $"{Span(found)} now has no driver. Check the schedule for those days."
+                    ? $"Leave cancelled. The driver has no shifts on {Span(found)}. Add them to the schedule if they need to drive."
                     : null,
             });
         }

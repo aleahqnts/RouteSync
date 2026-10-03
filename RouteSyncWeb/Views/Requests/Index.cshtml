@@ -387,10 +387,13 @@
             <p class="rq-quote-w" id="rqAskWhen"></p>
         </div>
 
-        @* Cancelling frees the days and staffs nobody. The schedule was built around the
-           absence, so this says plainly what is left to do. *@
+        @* Approving the leave handed the driver's shifts on these days to other drivers,
+           and cancelling it does not hand them back. The buses stay covered; it is the
+           driver who comes back to nothing, so this says so and what to do about it. *@
         <p id="rqAskWarn" class="rq-warn" style="display:none;">
-            These days will have no driver assigned. Check the schedule once this is done.
+            The driver will be back at work on these days but will have no shifts. Their shifts
+            went to other drivers when this leave was approved. Add them to the schedule if
+            they need to drive.
         </p>
 
         <p id="rqAskError" class="rq-box-error" style="display:none;"></p>
@@ -1469,8 +1472,8 @@
                             : 'The server could not save that (' + res.status + '). Try again.');
                 }
 
-                // The days are free and nobody is on them. Said after the fact rather than
-                // in the dialog, because it is a thing to go and do next.
+                // The driver is back with no shifts on those days. Said again after the fact,
+                // because it is a thing to go and do next.
                 let staffing = null;
                 try { staffing = (await res.json()).staffing; } catch (e) { }
 
