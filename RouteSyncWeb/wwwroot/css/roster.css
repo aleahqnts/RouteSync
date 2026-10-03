@@ -127,12 +127,12 @@
 
     /* Publishing writes trips, so it is set apart from saving the roster. */
     .ro-btn--dark {
-        background: #1B2A56;
-        border-color: light-dark(#1B2A56, #7085B8);
-        color: var(--ro-white);
+        background: light-dark(#1B2A56, #3B5BA5);
+        border-color: light-dark(#1B2A56, #3B5BA5);
+        color: #FFFFFF;
     }
 
-        .ro-btn--dark:hover { color: var(--ro-white); border-color: light-dark(#1B2A56, #7085B8); filter: brightness(1.15); }
+        .ro-btn--dark:hover { color: #FFFFFF; border-color: light-dark(#1B2A56, #3B5BA5); filter: brightness(1.15); }
 
     .ro-input {
         width: 100%;
