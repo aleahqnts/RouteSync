@@ -153,7 +153,8 @@ public class LocationTrackingService : Service
         new NotificationCompat.Builder(this, ChannelId)
             .SetContentTitle("RouteSync")
             .SetContentText(text)
-            .SetSmallIcon(Resource.Mipmap.appicon)
+            .SetSmallIcon(Resource.Drawable.ic_notification)
+            .SetColor(unchecked((int)0xFF3AB39C))
             .SetOngoing(true)
             .Build();
 
@@ -193,7 +194,8 @@ public class LocationTrackingService : Service
                 .SetContentTitle("Location Is Off")
                 .SetContentText(body)
                 .SetStyle(new NotificationCompat.BigTextStyle().BigText(body))
-                .SetSmallIcon(Resource.Mipmap.appicon)
+                .SetSmallIcon(Resource.Drawable.ic_notification)
+                .SetColor(unchecked((int)0xFF3AB39C))
                 .SetPriority(NotificationCompat.PriorityHigh)
                 .SetAutoCancel(true)
                 .SetContentIntent(pending)

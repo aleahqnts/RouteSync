@@ -81,7 +81,8 @@ class WatcherService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notif = Notification.Builder(this, ensureChannel(CHANNEL_TRIP, "Trip started"))
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF3AB39C.toInt())
             .setContentTitle("Trip started")
             .setContentText("Tap to start counting passengers.")
             .setContentIntent(pi)
@@ -99,7 +100,8 @@ class WatcherService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return Notification.Builder(this, ensureChannel(CHANNEL_STANDBY, "Counter standby"))
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF3AB39C.toInt())
             .setContentTitle("RouteSync Sentinel")
             .setContentText("Standby: watching for trips.")
             .setContentIntent(pi)
