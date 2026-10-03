@@ -1129,6 +1129,20 @@ COMMENT ON FUNCTION "public"."trips_takeover_guard"() IS 'Holds a bus to one act
 
 
 
+CREATE OR REPLACE FUNCTION "public"."users_email_lower"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  new.email_address := lower(btrim(new.email_address));
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."users_email_lower"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."vehicles_release_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2502,6 +2516,10 @@ COMMENT ON TRIGGER "trg_trips_takeover_guard" ON "public"."trips" IS 'Settles th
 
 
 
+CREATE OR REPLACE TRIGGER "trg_users_email_lower" BEFORE INSERT OR UPDATE OF "email_address" ON "public"."users" FOR EACH ROW EXECUTE FUNCTION "public"."users_email_lower"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_vehicles_release_guard" BEFORE UPDATE ON "public"."vehicles" FOR EACH ROW WHEN (("old"."vehicle_status" IS DISTINCT FROM "new"."vehicle_status")) EXECUTE FUNCTION "public"."vehicles_release_guard"();
 
 
@@ -3231,6 +3249,11 @@ GRANT ALL ON FUNCTION "public"."trips_roster_guard"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."trips_takeover_guard"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trips_takeover_guard"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."users_email_lower"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."users_email_lower"() TO "service_role";
 
 
 
