@@ -722,9 +722,14 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     // after 30s of silence. The local count is discarded: the new owner
                     // seeds from the database and counts on from there, so keeping it
                     // would inflate the total if this device claimed the trip again.
+                    // Its held copy goes too: the database refuses every write from a
+                    // phone that no longer holds the claim, so it could never be stored
+                    // and would only sit on screen as a count waiting to be saved.
+                    // Counting stops first, so no new boarding can write it back.
                     count = 0
                     val trip = t
                     stopCounting()
+                    prefs.clearPendingCount(trip)
                     _state.value = UiState.Standby(vehicleId, trip)
                     break
                 }
