@@ -1,8 +1,8 @@
-YOLO11n model — required for Phase 3+ detection
-================================================
+YOLO11n model, required for passenger detection
+===============================================
 
 The app expects:  app/src/main/assets/yolo11n_float32.tflite
-(app runs without it; the Camera screen just shows these instructions)
+(the app runs without it; the camera screen says the detector is missing)
 
 One-time export (any PC with Python 3.9+):
 

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.routesync.cameracount.CounterViewModel
@@ -140,23 +141,53 @@ fun CameraScreen(
                 PackageManager.PERMISSION_GRANTED
         )
     }
+    // Once the camera has been refused for good, Android stops showing the dialog and a
+    // request returns at once, so the way back is the app's own page in Settings.
+    var refusedForGood by remember { mutableStateOf(false) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         granted = it
+        val activity = context as? android.app.Activity
+        refusedForGood = !it && activity != null &&
+            !androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                activity, Manifest.permission.CAMERA
+            )
     }
 
     LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
 
+    // Picks up a grant made in Settings when the app comes back to the front.
+    LifecycleResumeEffect(Unit) {
+        if (!granted) granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        onPauseOrDispose { }
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when {
-            !granted -> CenterMsg("Camera permission needed.\nTap to grant.") {
+            !granted && refusedForGood -> CenterMsg(
+                "Camera access is off for this app.\nTurn it on under Permissions in Settings.",
+                "Open settings"
+            ) {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", context.packageName, null)
+                        )
+                    )
+                }
+            }
+            !granted -> CenterMsg("Camera permission needed.\nTap to grant.", "Grant camera access") {
                 ask.launch(Manifest.permission.CAMERA)
             }
             else -> {
                 val detector = remember { YoloDetector.tryCreate(context) }
                 if (detector == null) {
                     CenterMsg(
-                        "Model missing.\n\nExport YOLO11n and place it at\napp/src/main/assets/${YoloDetector.MODEL_ASSET}\n\nSee assets/README.txt for the one-line export.",
-                        null
+                        "The passenger detector couldn't start.\n\nReinstall the app. If this " +
+                            "keeps happening, contact the fleet office.",
+                        null, null
                     )
                 } else {
                     DetectionSurface(detector, vm, calibrate, onClose)
@@ -832,7 +863,7 @@ private fun DetectionSurface(
 }
 
 @Composable
-private fun CenterMsg(text: String, onTap: (() -> Unit)?) {
+private fun CenterMsg(text: String, action: String?, onTap: (() -> Unit)?) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -841,7 +872,7 @@ private fun CenterMsg(text: String, onTap: (() -> Unit)?) {
         Text(text, color = Color.White, fontSize = 15.sp)
         onTap?.let {
             Spacer(Modifier.height(16.dp))
-            Button(onClick = it) { Text("Grant camera access") }
+            Button(onClick = it) { Text(action ?: "") }
         }
     }
 }
