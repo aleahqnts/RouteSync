@@ -25,7 +25,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.first
 import com.routesync.cameracount.ui.*
 
 /**
@@ -347,21 +346,18 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
 
     // A bound phone whose line was never calibrated counts against the default
     // mid-screen line, which produces meaningless totals. The prompt repeats until the
-    // installer has calibrated once.
-    var lineIsDefault by remember { mutableStateOf(false) }
+    // installer has calibrated once. Followed live, so a calibration pushed from the
+    // dashboard clears it without leaving the screen. Starts hidden, so it never
+    // flashes up on a calibrated phone while the store is read.
+    val lineCalibrated by prefs.lineCalibrated.collectAsState(initial = true)
     var deviceId by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
-        val cal = prefs.lineCalibration.first()
-        lineIsDefault = cal.ax == com.routesync.cameracount.data.Prefs.DEF_AX &&
-            cal.ay == com.routesync.cameracount.data.Prefs.DEF_AY &&
-            cal.bx == com.routesync.cameracount.data.Prefs.DEF_BX &&
-            cal.by == com.routesync.cameracount.data.Prefs.DEF_BY
         deviceId = prefs.deviceId()
     }
 
     Header(vm, s.vehicleId, onCamera)
     Spacer(Modifier.height(20.dp))
-    if (lineIsDefault) {
+    if (!lineCalibrated) {
         Row(
             Modifier.widthIn(max = 380.dp).fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))

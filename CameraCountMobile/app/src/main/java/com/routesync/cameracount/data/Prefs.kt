@@ -111,6 +111,14 @@ class Prefs(private val context: Context) {
         )
     }
 
+    /**
+     * Whether a line has ever been saved here, on the phone or from the dashboard.
+     *
+     * Every save writes all four endpoints, so their presence is the record. A line
+     * saved where the default sits still counts: the installer looked and chose it.
+     */
+    val lineCalibrated: Flow<Boolean> = context.dataStore.data.map { it[LINE_AX] != null }
+
     suspend fun saveLine(ax: Float, ay: Float, bx: Float, by: Float, inwardSign: Int) {
         context.dataStore.edit {
             it[LINE_AX] = ax; it[LINE_AY] = ay
