@@ -20,6 +20,10 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 values ('inspection-photos', 'inspection-photos', false, 524288, '{image/jpeg}'::text[])
 on conflict (id) do nothing;
 
+-- The platform grants the storage schema to its own roles only. Without this the app
+-- roles are refused at the schema before any policy is consulted.
+grant usage on schema storage to app_camera, app_driver;
+
 grant select on storage.buckets to app_camera;
 grant delete, insert, select, update on storage.objects to app_camera;
 grant select on storage.buckets to app_driver;
