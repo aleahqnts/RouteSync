@@ -71,6 +71,18 @@ private fun promptOverlayPermission(context: android.content.Context) {
     }
 }
 
+/** The missing permissions Android asks for with its own dialog, in one request. */
+private fun runtimeToAsk(context: android.content.Context): Array<String> = buildList {
+    if (!granted(context, android.Manifest.permission.CAMERA)) add(android.Manifest.permission.CAMERA)
+    if (android.os.Build.VERSION.SDK_INT >= 33 &&
+        !granted(context, android.Manifest.permission.POST_NOTIFICATIONS)
+    ) add(android.Manifest.permission.POST_NOTIFICATIONS)
+}.toTypedArray()
+
+private fun granted(context: android.content.Context, permission: String) =
+    androidx.core.content.ContextCompat.checkSelfPermission(context, permission) ==
+        android.content.pm.PackageManager.PERMISSION_GRANTED
+
 /** Nearest Activity for a Compose context, which may be wrapped several layers deep. */
 private tailrec fun android.content.Context.activity(): android.app.Activity? = when (this) {
     is android.app.Activity -> this
@@ -117,22 +129,19 @@ fun Root(vm: CounterViewModel = viewModel()) {
         }
     }
 
-    // Two permissions, requested in order. API 33 and up needs notification permission
-    // for the trip foreground service. The overlay permission is required for the watcher
-    // to open this app when a trip starts, and Android offers no dialog for it, only a
-    // settings page, so that page is opened directly. The overlay request is chained
-    // after the notification dialog so the two prompts never appear at once.
+    // Every permission is asked for on launch, from the first one after installation,
+    // rather than when a trip first needs it. Camera and notifications share one
+    // request; API 33 and up needs the second for the trip foreground service. The
+    // overlay permission lets the watcher open this app when a trip starts, and Android
+    // offers no dialog for it, only a settings page, so that page is opened next.
+    // Chained, so two prompts never appear at once.
     val context = androidx.compose.ui.platform.LocalContext.current
-    val askNotif = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    val askRuntime = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { promptOverlayPermission(context) }
     LaunchedEffect(Unit) {
-        if (android.os.Build.VERSION.SDK_INT >= 33 &&
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.POST_NOTIFICATIONS
-            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) askNotif.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        else promptOverlayPermission(context)
+        val ask = runtimeToAsk(context)
+        if (ask.isNotEmpty()) askRuntime.launch(ask) else promptOverlayPermission(context)
     }
 
     // While a trip is active this device is the counter. The camera and tracker run for
