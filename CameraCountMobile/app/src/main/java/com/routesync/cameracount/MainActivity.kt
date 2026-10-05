@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -480,18 +481,43 @@ private fun Header(vm: CounterViewModel, vehicleId: String, onCamera: () -> Unit
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RsWordmark("Sentinel")
+        // The wordmark gives way first on a narrow phone, so the actions, and the bus
+        // identifier above all, are always measured at their full width.
+        Box(Modifier.weight(1f, fill = false)) { RsWordmark("Sentinel") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Screen pinning keeps the app from being swiped away or backgrounded on a
             // mounted phone. Unpinning is a system gesture, Back and Recents together.
-            TextButton(onClick = {
+            HeaderAction("Pin", RsColor.Muted) {
                 runCatching { (context as? android.app.Activity)?.startLockTask() }
-            }) { Text("Pin", color = RsColor.Muted, fontWeight = FontWeight.Bold) }
-            TextButton(onClick = onCamera) { Text("Calibrate", color = RsColor.Navy, fontWeight = FontWeight.Bold) }
-            TextButton(onClick = { showUnbind = true }) { Text(vehicleId, color = RsColor.Teal, fontWeight = FontWeight.Bold) }
+            }
+            HeaderAction("Calibrate", RsColor.Navy, onCamera)
+            HeaderAction(vehicleId, RsColor.Teal) { showUnbind = true }
         }
     }
     if (showUnbind) UnbindDialog(vm) { showUnbind = false }
+}
+
+/**
+ * A text action in the header.
+ *
+ * Narrower than a TextButton, whose 58dp minimum width and 12dp padding leave three
+ * actions and the wordmark wider than a common phone, which wrapped the last digit of the
+ * bus identifier out of view. Never wraps.
+ */
+@Composable
+private fun HeaderAction(text: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    Text(
+        text,
+        color = color,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+    )
 }
 
 @Composable
