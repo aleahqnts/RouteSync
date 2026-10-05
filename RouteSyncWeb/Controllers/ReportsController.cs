@@ -627,7 +627,7 @@ namespace FleetWise.Controllers
                 .Select(v => new
                 {
                     id = v.VehicleId,
-                    label = $"{v.VehicleId} — {v.PlateNumber}",
+                    label = $"{v.VehicleId} · {v.PlateNumber}",
                     routeIds = vehicleRoutes.TryGetValue(v.VehicleId, out var r) ? r : new List<int>()
                 });
 
@@ -748,6 +748,10 @@ namespace FleetWise.Controllers
         /// </remarks>
         private static string Money(Trip t) => $"₱{EarnedAmount(t):N2}";
 
+        /// <summary>The plate of the bus that ran the trip, or N/A for a bus no longer on file.</summary>
+        private static string PlateOf(Dictionary<string, Vehicle> vehiclesById, Trip t) =>
+            vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : "N/A";
+
         /// <summary>The same figure unformatted, for a column a spreadsheet will add up.</summary>
         private static decimal EarnedAmount(Trip t) => Earned(t) ? t.EstimatedRevenue : 0m;
 
@@ -763,13 +767,14 @@ namespace FleetWise.Controllers
                 .Select(g => new
                 {
                     groupName = g.Key,
-                    columns = new[] { "Trip ID", "Date", "Driver", "Bus ID", "Shift", "Actual Start", "Actual End", "Status", "Passengers", "Revenue" },
+                    columns = new[] { "Trip ID", "Date", "Driver", "Bus ID", "Plate Number", "Shift", "Actual Start", "Actual End", "Status", "Passengers", "Revenue" },
                     rows = g.Select(t => new[]
                     {
                         t.TripId,
                         t.Date.ToString("MMM dd, yyyy"),
                         userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
-                        vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId,
+                        t.VehicleId,
+                        PlateOf(vehiclesById, t),
                         t.ShiftType ?? "",
                         FmtActual(t.ActualStartTime),
                         FmtActual(t.ActualEndTime),
@@ -823,13 +828,14 @@ namespace FleetWise.Controllers
                 .Select(g => new
                 {
                     groupName = g.Key,
-                    columns = new[] { "Trip ID", "Date", "Driver", "Bus ID", "Shift", "Status", "Revenue" },
+                    columns = new[] { "Trip ID", "Date", "Driver", "Bus ID", "Plate Number", "Shift", "Status", "Revenue" },
                     rows = g.Select(t => new[]
                     {
                         t.TripId,
                         t.Date.ToString("MMM dd, yyyy"),
                         userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
-                        vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId,
+                        t.VehicleId,
+                        PlateOf(vehiclesById, t),
                         t.ShiftType ?? "",
                         DeriveStatus(t),
                         Money(t)
@@ -887,8 +893,8 @@ namespace FleetWise.Controllers
             string[] columns = reportType switch
             {
                 "Passenger" => new[] { "Trip ID", "Date", "Driver", "Route", "Shift", "Actual Start", "Actual End", "Status", "Passengers" },
-                "Revenue" => new[] { "Trip ID", "Date", "Driver", "Bus ID", "Route", "Shift", "Status", "Revenue" },
-                _ => new[] { "Trip ID", "Date", "Driver", "Bus ID", "Route", "Shift", "Actual Start", "Actual End", "Status", "Passengers", "Revenue" }
+                "Revenue" => new[] { "Trip ID", "Date", "Driver", "Bus ID", "Plate Number", "Route", "Shift", "Status", "Revenue" },
+                _ => new[] { "Trip ID", "Date", "Driver", "Bus ID", "Plate Number", "Route", "Shift", "Actual Start", "Actual End", "Status", "Passengers", "Revenue" }
             };
 
             Func<Trip, string[]> rowBuilder = reportType switch
@@ -910,7 +916,8 @@ namespace FleetWise.Controllers
                     t.TripId,
                     t.Date.ToString("MMM dd, yyyy"),
                     userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
-                    vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId,
+                    t.VehicleId,
+                    PlateOf(vehiclesById, t),
                     routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A",
                     t.ShiftType ?? "",
                     DeriveStatus(t),
@@ -921,7 +928,8 @@ namespace FleetWise.Controllers
                     t.TripId,
                     t.Date.ToString("MMM dd, yyyy"),
                     userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A",
-                    vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId,
+                    t.VehicleId,
+                    PlateOf(vehiclesById, t),
                     routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A",
                     t.ShiftType ?? "",
                     FmtActual(t.ActualStartTime),
@@ -1152,13 +1160,14 @@ namespace FleetWise.Controllers
 
                 case "Revenue":
                     fileName = $"RevenueReport_{PeriodStamp(from, to)}.csv";
-                    sb.AppendLine("Trip ID,Date,Driver,Bus ID,Route,Shift,Status,Revenue");
+                    sb.AppendLine("Trip ID,Date,Driver,Bus ID,Plate Number,Route,Shift,Status,Revenue");
                     foreach (var t in filtered)
                         sb.AppendLine(string.Join(",",
                             CsvEscape(t.TripId),
                             CsvEscape(t.Date.ToString("MMM dd, yyyy")),
                             CsvEscape(userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A"),
-                            CsvEscape(vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId),
+                            CsvEscape(t.VehicleId),
+                            CsvEscape(PlateOf(vehiclesById, t)),
                             CsvEscape(routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A"),
                             CsvEscape(t.ShiftType ?? ""),
                             CsvEscape(DeriveStatus(t)),
@@ -1167,13 +1176,14 @@ namespace FleetWise.Controllers
 
                 default:
                     fileName = $"DailyTripReport_{PeriodStamp(from, to)}.csv";
-                    sb.AppendLine("Trip ID,Date,Driver,Bus ID,Route,Shift,Actual Start,Actual End,Status,Passengers,Revenue");
+                    sb.AppendLine("Trip ID,Date,Driver,Bus ID,Plate Number,Route,Shift,Actual Start,Actual End,Status,Passengers,Revenue");
                     foreach (var t in filtered)
                         sb.AppendLine(string.Join(",",
                             CsvEscape(t.TripId),
                             CsvEscape(t.Date.ToString("MMM dd, yyyy")),
                             CsvEscape(userNames.TryGetValue(t.DriverId, out var dn) ? dn : "N/A"),
-                            CsvEscape(vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : t.VehicleId),
+                            CsvEscape(t.VehicleId),
+                            CsvEscape(PlateOf(vehiclesById, t)),
                             CsvEscape(routeNames.TryGetValue(t.RouteId, out var rn) ? rn : "N/A"),
                             CsvEscape(t.ShiftType ?? ""),
                             CsvEscape(FmtActual(t.ActualStartTime)),
