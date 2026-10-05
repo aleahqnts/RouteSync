@@ -188,9 +188,12 @@ namespace FleetWise.Services
                 return new TripStatusView("Completed", "Available", "Completed", vehicleFlagged);
 
             // Waiting to depart. Readiness comes from this trip's own inspection: none
-            // yet is pending, and an open incident against the bus is a flag.
+            // yet is pending, and an open incident against the bus is a flag. A failed
+            // inspection whose faults have since been repaired is pending too, because
+            // the driver app will not start the shift until the bus is inspected again.
             var vehicleStatus = checklist == null ? "Pending"
                               : vehicleFlagged ? "Flagged"
+                              : string.Equals(checklist.ChecklistStatus, "Failed", StringComparison.OrdinalIgnoreCase) ? "Pending"
                               : "Ready to Deploy";
 
             // A driver with no availability row counts as available. A deactivated account

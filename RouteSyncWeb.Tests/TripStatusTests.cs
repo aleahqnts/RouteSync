@@ -42,4 +42,50 @@ public class TripStatusTests
 
         Assert.Equal("Completed", view.TripStatus);
     }
+
+    [Fact]
+    public void A_failed_inspection_keeps_the_bus_flagged_while_its_fault_is_open()
+    {
+        var w = new World();
+        var bus = w.Bus("B01");
+        var trip = w.Trip(Wednesday, "Morning", w.Driver("Ana"), bus);
+
+        var view = TripStatus.Resolve(trip, bus, w.Drivers[0], null, Inspection(trip, "Failed"), true, Now);
+
+        Assert.Equal("Flagged", view.VehicleStatus);
+    }
+
+    [Fact]
+    public void A_repaired_bus_whose_inspection_failed_waits_for_a_new_one()
+    {
+        var w = new World();
+        var bus = w.Bus("B01");
+        var trip = w.Trip(Wednesday, "Morning", w.Driver("Ana"), bus);
+
+        var view = TripStatus.Resolve(trip, bus, w.Drivers[0], null, Inspection(trip, "Failed"), false, Now);
+
+        Assert.Equal("Pending", view.VehicleStatus);
+    }
+
+    [Theory]
+    [InlineData("Passed")]
+    [InlineData("Passed with Defects")]
+    [InlineData("Skipped")]
+    public void A_cleared_inspection_makes_the_bus_ready(string result)
+    {
+        var w = new World();
+        var bus = w.Bus("B01");
+        var trip = w.Trip(Wednesday, "Morning", w.Driver("Ana"), bus);
+
+        var view = TripStatus.Resolve(trip, bus, w.Drivers[0], null, Inspection(trip, result), false, Now);
+
+        Assert.Equal("Ready to Deploy", view.VehicleStatus);
+    }
+
+    private static FleetWise.Models.BusChecklist Inspection(FleetWise.Models.Trip trip, string result) => new()
+    {
+        TripId = trip.TripId,
+        VehicleId = trip.VehicleId,
+        ChecklistStatus = result,
+    };
 }
