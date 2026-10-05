@@ -124,6 +124,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         val VEHICLE_ID_RE = Regex("^V\\d{3}$")
         const val MIN_PASSCODE = 4
 
+        private const val TOO_MANY_TRIES =
+            "Too many passcode attempts. Wait a few minutes, then try again."
+
         /**
          * Frame silence that hands the trip to the driver's manual counter.
          *
@@ -173,6 +176,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 SupabaseApi.TokenResult.Denied ->
                     onResult(null, "Wrong fleet passcode.")
+                SupabaseApi.TokenResult.TooManyTries ->
+                    onResult(null, TOO_MANY_TRIES)
                 SupabaseApi.TokenResult.Unreachable ->
                     onResult(null, "Can't reach the server. Check the internet connection.")
             }
@@ -198,7 +203,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     SupabaseApi.deviceJwt = tok.token
                 }
                 SupabaseApi.TokenResult.Denied -> {
-                    onResult("Wrong fleet passcode. Binding is verified by the server now.")
+                    onResult("Wrong fleet passcode.")
+                    return@launch
+                }
+                SupabaseApi.TokenResult.TooManyTries -> {
+                    onResult(TOO_MANY_TRIES)
                     return@launch
                 }
                 SupabaseApi.TokenResult.Unreachable -> {

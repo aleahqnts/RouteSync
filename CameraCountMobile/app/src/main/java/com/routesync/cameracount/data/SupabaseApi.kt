@@ -45,6 +45,8 @@ object SupabaseApi {
     sealed interface TokenResult {
         data class Ok(val token: String) : TokenResult
         data object Denied : TokenResult
+        /** The server is limiting attempts; the passcode may well be right. */
+        data object TooManyTries : TokenResult
         data object Unreachable : TokenResult
     }
 
@@ -73,7 +75,8 @@ object SupabaseApi {
                                 .optString("token", "")
                             if (token.isNotEmpty()) TokenResult.Ok(token) else TokenResult.Unreachable
                         }
-                        res.code == 401 || res.code == 400 || res.code == 429 -> TokenResult.Denied
+                        res.code == 429 -> TokenResult.TooManyTries
+                        res.code == 401 || res.code == 400 -> TokenResult.Denied
                         else -> TokenResult.Unreachable // fn not deployed / 5xx
                     }
                 }
