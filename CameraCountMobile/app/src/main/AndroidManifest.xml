@@ -17,7 +17,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- No backup: the phone's identity must not be copied to another phone.
+         allowBackup covers Android 11 and below, the extraction rules Android 12 on,
+         where allowBackup alone still allows a phone-to-phone transfer. -->
     <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="RouteSync Sentinel"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
