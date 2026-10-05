@@ -126,7 +126,7 @@ class WatcherService : Service() {
         private const val CHANNEL_STANDBY = "watcher_standby"
         private const val CHANNEL_TRIP = "watcher_trip"
         private const val NOTIF_ID = 3001
-        private const val TRIP_NOTIF_ID = 3002
+        const val TRIP_NOTIF_ID = 3002
 
         /** Idempotent, so it is safe to call from boot, from an app launch, or on bind. */
         fun start(context: Context) {

@@ -45,7 +45,19 @@ class MainActivity : ComponentActivity() {
         setContent { RsTheme { Root() } }
     }
 
-    override fun onResume() { super.onResume(); uiVisible = true }
+    override fun onResume() {
+        super.onResume()
+        uiVisible = true
+        // The restart and trip-start notices exist to bring this screen up. Once it is
+        // up they have done their job, and left alone Android can keep them pinned over
+        // the top of the app, covering its controls.
+        runCatching {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.cancel(BootReceiver.NOTIF_ID)
+            nm.cancel(WatcherService.TRIP_NOTIF_ID)
+        }
+    }
+
     override fun onPause() { super.onPause(); uiVisible = false }
 
     companion object {
