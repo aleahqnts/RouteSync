@@ -539,21 +539,6 @@ namespace FleetWise.Controllers
             }
             catch { /* route may not exist */ }
 
-            var telemetryResponse = await _supabase
-                .From<TelemetryData>()
-                .Filter("trip_id", Operator.Equals, tripId)
-                .Order("timestamp", Ordering.Descending)
-                .Limit(1)
-                .Get();
-
-            var latestTelemetry = telemetryResponse.Models.FirstOrDefault();
-
-            // Telemetry passenger counts are sparse and frequently zero on real trips, so
-            // the trip's own total is used instead. Without the fallback the modal reports
-            // zero for trips that carried passengers.
-            var liveBoarded = latestTelemetry?.TotalPassengers ?? 0;
-            if (liveBoarded <= 0) liveBoarded = tripResponse.TotalBoarded;
-
             // The pre-trip checklist, as the driver's own trip report shows it. The latest
             // row, should a trip carry more than one.
             BusChecklist? checklist = null;
@@ -589,7 +574,10 @@ namespace FleetWise.Controllers
                     ? $"{driverResponse.FirstName} {driverResponse.LastName}"
                     : "N/A",
                 driverId = tripResponse.DriverId,
-                totalPassengers = liveBoarded,
+                // The settled trip total, the same figure as the table and the exports.
+                // Telemetry carries the driver phone's own counter, which lags the camera
+                // and stops at the last ping before the trip ends.
+                totalPassengers = tripResponse.TotalBoarded,
                 estimatedRevenue = tripResponse.EstimatedRevenue,
                 tripStatus = DeriveStatus(tripResponse),
                 date = tripResponse.Date.ToString("MMMM dd, yyyy")
