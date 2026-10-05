@@ -476,17 +476,6 @@
         background: #16A34A;
     }
 
-    /* Said in the tooltip as well as drawn on the pin, because a faint pin among
-       twenty is a thing you notice only once you know to look. */
-    .fm-tooltip__off {
-        margin-top: 6px;
-        padding-top: 6px;
-        border-top: 1px solid light-dark(#E5E7EB, #4E4E4E);
-        font-size: 0.72rem;
-        font-weight: 600;
-        color: light-dark(#374151, #DCDFE5);
-    }
-
     .fm-tooltip__stale {
         margin-top: 6px;
         padding-top: 6px;
