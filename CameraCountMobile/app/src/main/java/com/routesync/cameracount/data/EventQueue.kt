@@ -75,9 +75,6 @@ interface EventQueueDao {
             "where attempts >= :maxAttempts or deviceTimestamp < :oldestKept"
     )
     suspend fun purge(maxAttempts: Int, oldestKept: Long): Int
-
-    @Query("select count(*) from boarding_event_queue")
-    suspend fun depth(): Int
 }
 
 /**

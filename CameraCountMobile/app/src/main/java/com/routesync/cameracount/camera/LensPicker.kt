@@ -17,12 +17,12 @@ import kotlin.math.hypot
  * length.
  *
  * Where nothing wider is exposed, because the vendor restricts physical camera ids to
- * system apps, the plain back selector is returned with its field of view so the UI can
- * report that no wide lens is available.
+ * system apps, the plain back selector is returned with its field of view, which the UI
+ * shows so a narrow lens is visible at a glance.
  */
 object LensPicker {
 
-    data class Pick(val selector: CameraSelector, val fovDegrees: Int, val isWide: Boolean)
+    data class Pick(val selector: CameraSelector, val fovDegrees: Int)
 
     /** Widest field of view in whole degrees among cameras with the given facing, or 0
      *  if the characteristics cannot be read. */
@@ -52,13 +52,10 @@ object LensPicker {
         val backs = cameraInfos.filter {
             it.lensFacing == CameraSelector.LENS_FACING_BACK
         }
-        if (backs.isEmpty()) return Pick(CameraSelector.DEFAULT_BACK_CAMERA, 0, false)
+        if (backs.isEmpty()) return Pick(CameraSelector.DEFAULT_BACK_CAMERA, 0)
 
         val scored = backs.map { it to (fovOf(it) ?: 0f) }
         val widest = scored.maxByOrNull { it.second }!!
-        val defaultFov = fovOf(
-            backs.firstOrNull() ?: backs[0]
-        ) ?: 0f
 
         // A selector that pins CameraX to exactly this CameraInfo.
         val id = Camera2CameraInfo.from(widest.first).cameraId
@@ -69,8 +66,6 @@ object LensPicker {
             }
             .build()
 
-        // Counted as wide only when meaningfully wider than the default back camera.
-        val isWide = widest.second >= defaultFov + 15f && widest.second > 85f
-        return Pick(selector, widest.second.toInt(), isWide)
+        return Pick(selector, widest.second.toInt())
     }
 }

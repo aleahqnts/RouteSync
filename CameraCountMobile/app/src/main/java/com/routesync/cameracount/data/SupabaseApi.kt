@@ -580,14 +580,6 @@ object SupabaseApi {
                 throw HttpRefused(res.code, "DELETE snapshot ${res.code}")
         }
     }
-
-    /** Connectivity check: can this device reach the database at all? */
-    suspend fun ping(): Boolean = withContext(Dispatchers.IO) {
-        val req = Request.Builder()
-            .url("$BASE/trips?select=trip_id&limit=1")
-            .supabaseHeaders().get().build()
-        http.newCall(req).execute().use { it.isSuccessful }
-    }
 }
 
 /**

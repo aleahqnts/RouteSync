@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
  * Bridge between the camera pipeline and the RouteSync database. Owns the trip lifecycle,
  * the passenger count, and the device's configuration follower.
  *
- * Three loops run against the bound vehicle:
+ * Four loops run against the bound vehicle:
  *
  * - Poll, every 4s: look for an Active trip and lock on to it or release it.
  * - Flush, every 5s: one PATCH carrying `total_boarded` and `count_heartbeat`. Heartbeat
@@ -136,6 +136,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
          */
         const val STALL_AFTER_MS = 12_000L
 
+        /** Poll passes between charge readings: four seconds apart, so five minutes. */
+        private const val HEALTH_EVERY = 75
+
         /**
          * How many held crossings go up in one request.
          *
@@ -143,9 +146,6 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
          * small enough that a dropped connection part-way through costs one round trip
          * rather than the whole queue.
          */
-        /** Poll passes between charge readings: four seconds apart, so five minutes. */
-        private const val HEALTH_EVERY = 75
-
         private const val EVENT_BATCH = 200
 
         /** Refusals of one event before it is given up on. Counts only outright

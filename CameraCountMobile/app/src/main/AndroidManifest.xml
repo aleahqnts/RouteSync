@@ -2,17 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Camera used from Phase 3 onward; declared now so the manifest is final early. -->
+    <!-- Counting runs on the camera, on-device. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
     <!-- A foreground service keeps the counter alive for the whole trip. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Phase 9b: relaunch after a power-blip reboot (fixed dashboard fixture). -->
+    <!-- Relaunch after a power-blip reboot (fixed dashboard fixture). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <!-- Phase 9b watcher: specialUse is the one FGS type allowed to start from boot on
+    <!-- Trip watcher: specialUse is the one FGS type allowed to start from boot on
          API 34+; the overlay grant lets it open the UI directly on trip start. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -57,7 +57,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Phase 9b: always-on trip watcher; reopens the UI when a trip starts. -->
+        <!-- Always-on trip watcher; reopens the UI when a trip starts. -->
         <service
             android:name=".WatcherService"
             android:exported="false"
