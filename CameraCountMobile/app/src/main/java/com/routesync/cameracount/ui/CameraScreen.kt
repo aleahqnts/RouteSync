@@ -218,6 +218,10 @@ private fun DetectionSurface(
     // slipped mount while passengers board will abandon the fix if it asks for one.
     var adjusting by remember { mutableStateOf(false) }
 
+    // A save waits on the server for the next config version, which takes up to the
+    // network timeout offline. The button says so and takes no second press meanwhile.
+    var savingLine by remember { mutableStateOf(false) }
+
     // Back cancels the adjustment instead of reaching the root handler's exit prompt.
     // Composed below that handler, so this one takes the press while it is enabled.
     BackHandler(enabled = adjusting) {
@@ -654,26 +658,40 @@ private fun DetectionSurface(
                         Text("Flip boarding side", color = Color.White)
                     }
                     Spacer(Modifier.width(12.dp))
-                    Button(onClick = {
-                        scope.launch {
-                            prefs.saveLine(ax, ay, bx, by, inwardSign)
-                            // Side and origin history describes the previous line, so
-                            // clear it before anyone is counted against stale geometry.
-                            synchronized(tracker) { tracker.resetCrossingState() }
-                            // A calibration made on the phone authors a new version and
-                            // pushes it up, keeping the database row authoritative.
-                            // Offline the push fails and the follower reconciles on a
-                            // later poll.
-                            val v = nextConfigVersion(prefs)
-                            runCatching {
-                                com.routesync.cameracount.data.SupabaseApi.upsertDeviceConfig(
-                                    prefs.deviceId(), ax, ay, bx, by, inwardSign,
-                                    prefs.useBackCamera.first(), v
-                                )
+                    Button(
+                        enabled = !savingLine,
+                        // The default disabled look is a faint grey that vanishes against
+                        // the camera, so a save in progress keeps the button's own colour.
+                        colors = ButtonDefaults.buttonColors(
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            disabledContentColor = Color.White
+                        ),
+                        onClick = {
+                            savingLine = true
+                            scope.launch {
+                                try {
+                                    prefs.saveLine(ax, ay, bx, by, inwardSign)
+                                    // Side and origin history describes the previous line, so
+                                    // clear it before anyone is counted against stale geometry.
+                                    synchronized(tracker) { tracker.resetCrossingState() }
+                                    // A calibration made on the phone authors a new version and
+                                    // pushes it up, keeping the database row authoritative.
+                                    // Offline the push fails and the follower reconciles on a
+                                    // later poll.
+                                    val v = nextConfigVersion(prefs)
+                                    runCatching {
+                                        com.routesync.cameracount.data.SupabaseApi.upsertDeviceConfig(
+                                            prefs.deviceId(), ax, ay, bx, by, inwardSign,
+                                            prefs.useBackCamera.first(), v
+                                        )
+                                    }
+                                    if (adjusting) adjusting = false else onClose?.invoke()
+                                } finally {
+                                    savingLine = false
+                                }
                             }
-                            if (adjusting) adjusting = false else onClose?.invoke()
                         }
-                    }) { Text("Save line", fontWeight = FontWeight.Bold) }
+                    ) { Text(if (savingLine) "Saving…" else "Save line", fontWeight = FontWeight.Bold) }
                 }
                 if (adjusting) {
                     Spacer(Modifier.height(8.dp))
