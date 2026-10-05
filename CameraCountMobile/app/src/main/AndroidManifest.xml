@@ -24,8 +24,12 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
 
+        <!-- The launcher shows the activity's label. "RouteSync Sentinel" is cut to
+             "RouteSync Se…" under an icon, beside the driver app's "RouteSync", so the
+             launcher entry is the short name; the app keeps its full name elsewhere. -->
         <activity
             android:name=".MainActivity"
+            android:label="Sentinel"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
