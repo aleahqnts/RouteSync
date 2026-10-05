@@ -783,13 +783,22 @@ private fun DetectionSurface(
 
         // Not-charging warning. The counter stops when the battery does.
         if (counting && !charging) {
-            Text(
-                "⚡ Not charging",
-                color = Color(0xFFFFC94D), fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 176.dp)
+            Row(
+                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 176.dp)
                     .clip(RoundedCornerShape(8.dp)).background(Color(0xCC000000))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    RsIcons.Warning, contentDescription = null,
+                    tint = Color(0xFFFFC94D), modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "Not charging",
+                    color = Color(0xFFFFC94D), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         // Counting HUD: live count, trip, and sync state from the view model.
