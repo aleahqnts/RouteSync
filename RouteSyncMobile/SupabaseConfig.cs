@@ -9,8 +9,8 @@ namespace FleetWiseMobile;
 /// </remarks>
 public static class SupabaseConfig
 {
-    public const string Url = "https://vrtluruqaxutecydbrsq.supabase.co";
-    public const string Key = "sb_publishable_sjkjW2K7QOPRKmixJdhSgA_8rPtoFzD";
+    public const string Url = "https://ggrhmjiamyqhihtyfnui.supabase.co";
+    public const string Key = "sb_publishable_m47oBT9uYiiOSOrADi2Clw_t-yFGWlO";
     public const string FunctionsUrl = $"{Url}/functions/v1";
 
     // Driver JWT issued by the auth-login edge function. Null until sign-in succeeds.

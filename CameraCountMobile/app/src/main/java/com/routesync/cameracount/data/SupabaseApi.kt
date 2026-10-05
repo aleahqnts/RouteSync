@@ -20,9 +20,9 @@ import java.util.concurrent.TimeUnit
  */
 object SupabaseApi {
 
-    private const val BASE = "https://vrtluruqaxutecydbrsq.supabase.co/rest/v1"
-    private const val FUNCTIONS = "https://vrtluruqaxutecydbrsq.supabase.co/functions/v1"
-    private const val KEY = "sb_publishable_sjkjW2K7QOPRKmixJdhSgA_8rPtoFzD"
+    private const val BASE = "https://ggrhmjiamyqhihtyfnui.supabase.co/rest/v1"
+    private const val FUNCTIONS = "https://ggrhmjiamyqhihtyfnui.supabase.co/functions/v1"
+    private const val KEY = "sb_publishable_m47oBT9uYiiOSOrADi2Clw_t-yFGWlO"
     private val JSON = "application/json".toMediaType()
 
     /**
@@ -546,7 +546,7 @@ object SupabaseApi {
     // Snapshot transport. A private storage bucket holds at most one transient object
     // per device, named {device_id}.jpg, deleted as soon as it has served its purpose.
 
-    private const val STORAGE = "https://vrtluruqaxutecydbrsq.supabase.co/storage/v1"
+    private const val STORAGE = "https://ggrhmjiamyqhihtyfnui.supabase.co/storage/v1"
     private val JPEG = "image/jpeg".toMediaType()
 
     /** Uploads this device's snapshot, overwriting any previous one. Row-level security

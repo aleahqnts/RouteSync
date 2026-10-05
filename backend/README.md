@@ -21,7 +21,7 @@ convention. Everything else sits beside it.
 Run from the repository root, naming this directory as the project:
 
 ```
-npx supabase@latest functions deploy <name> --project-ref vrtluruqaxutecydbrsq --workdir backend --no-verify-jwt
+npx supabase@latest functions deploy <name> --project-ref ggrhmjiamyqhihtyfnui --workdir backend --no-verify-jwt
 ```
 
 `--no-verify-jwt` is right for every function here. Each one verifies its own bearer
@@ -63,7 +63,7 @@ The CLI runs `pg_dump` inside Docker. Without Docker, ask it to print the script
 would have run and run that instead, against a local `pg_dump` of version 17 or newer:
 
 ```
-npx supabase@latest db dump --project-ref vrtluruqaxutecydbrsq --workdir backend --dry-run
+npx supabase@latest db dump --project-ref ggrhmjiamyqhihtyfnui --workdir backend --dry-run
 ```
 
 Add `--role-only` for `roles.sql`. The printed script carries a freshly minted database
