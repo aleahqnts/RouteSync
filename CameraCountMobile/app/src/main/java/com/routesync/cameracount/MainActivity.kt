@@ -283,7 +283,13 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
                         onClick = { open = true },
                         trailing = { RsFieldIcon(RsIcons.Bus) }
                     )
-                    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    // Capped so the list scrolls inside the screen. Left to grow, a long fleet
+                    // ran under the navigation bar and the last bus could not be reached.
+                    DropdownMenu(
+                        expanded = open,
+                        onDismissRequest = { open = false },
+                        modifier = Modifier.heightIn(max = 320.dp)
+                    ) {
                         fleet!!.forEach { v ->
                             DropdownMenuItem(
                                 text = {
