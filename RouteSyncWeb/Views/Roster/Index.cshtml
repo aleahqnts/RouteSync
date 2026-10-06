@@ -1156,8 +1156,8 @@
             suggestBtn.addEventListener('click', async function () {
                 const anyChosen = readSeats().some(function (s) { return s.restWeekday != null; });
                 if (anyChosen && !await ask('Suggest rest days',
-                        'Rest days and floaters\' home shifts already chosen will be replaced with suggestions. '
-                        + 'Nothing is saved until you save the roster.', 'Suggest')) return;
+                        'Replace the rest days and floater shifts already chosen? Nothing is saved yet.',
+                        'Suggest')) return;
                 suggest();
             });
         }
@@ -1212,9 +1212,8 @@
                 const previous = generateBtn.dataset.previous;
                 if (readSeats().some(function (s) { return s.driverId != null; })
                     && !await ask('Generate from ' + previous,
-                        'The roster on this page is replaced with ' + previous + '\'s, every shift rotated one step '
-                        + 'backward, then auto-filled: drivers no longer active and buses no longer running come off, '
-                        + 'and empty places are filled for you to review. Nothing is published.', 'Generate')) return;
+                        'Replace this roster with ' + previous + '\'s, rotated and auto-filled? Nothing is published.',
+                        'Generate')) return;
 
                 generateBtn.disabled = true;
                 try {

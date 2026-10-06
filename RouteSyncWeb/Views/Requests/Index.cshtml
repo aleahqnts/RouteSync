@@ -391,9 +391,8 @@
            and cancelling it does not hand them back. The buses stay covered; it is the
            driver who comes back to nothing, so this says so and what to do about it. *@
         <p id="rqAskWarn" class="rq-warn" style="display:none;">
-            The driver will be back at work on these days but will have no shifts. Their shifts
-            went to other drivers when this leave was approved. Add them to the schedule if
-            they need to drive.
+            Their shifts on these days went to other drivers. Add them back on the schedule
+            if they need to drive.
         </p>
 
         <p id="rqAskError" class="rq-box-error" style="display:none;"></p>
@@ -453,8 +452,7 @@
             <template id="rqRevokeDays-@r.RequestId">
                 <p class="rq-box-desc">@r.DriverName · @r.Span</p>
                 <p class="rq-revoke-hint">
-                    Leave every day ticked to take the whole leave back, or untick the days
-                    the driver keeps.
+                    Untick the days the driver keeps.
                 </p>
                 <ul class="rq-daylist">
                     @foreach (var d in r.RevokableDays)
@@ -524,8 +522,7 @@
             <div class="rq-covers" id="rqCovers" hidden></div>
             <p class="visually-hidden" id="rqCoversLive" aria-live="polite"></p>
             <p class="rq-blocking-s" id="rqBlockingNote">
-                This request is held until they are cleared. The driver still sees it as
-                pending.
+                Held until they are cleared. The driver sees it as pending.
             </p>
         </div>
 
@@ -1301,8 +1298,7 @@
             });
 
             blockingTitle.textContent = 'Choose who covers each shift';
-            blockingNote.textContent = 'Each driver chosen is sent their new shift. Leave a shift '
-                + 'for now and this request stays held.';
+            blockingNote.textContent = 'Each chosen driver is told. Skip one and this stays held.';
             document.getElementById('rqBlockingList').hidden = true;
             blockingBox.classList.add('rq-blocking--covers');
             decideBox.classList.add('rq-box--wide');
