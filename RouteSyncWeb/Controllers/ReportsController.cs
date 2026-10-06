@@ -1089,6 +1089,7 @@ namespace FleetWise.Controllers
                 });
             }).GeneratePdf();
 
+            await LogReportAsync(reportType, "PDF", from, to, routeId, driverId, vehicleId, routeNames, userNames, filtered.Count);
             return File(pdfBytes, "application/pdf", fileName);
         }
 
@@ -1204,7 +1205,38 @@ namespace FleetWise.Controllers
                 sb.AppendLine($"Total Revenue,{filtered.Where(Earned).Sum(t => t.EstimatedRevenue):F2}");
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            await LogReportAsync(reportType, "CSV", from, to, routeId, driverId, vehicleId, routeNames, userNames, filtered.Count);
             return File(bytes, "text/csv", fileName);
+        }
+
+        /// <summary>Records a report handed out as a file: which one, in what form, for which days and filters.</summary>
+        /// <remarks>
+        /// Only the file is recorded. The preview is drawn again on every change of filter,
+        /// and an entry for each would bury the report that was actually taken away.
+        /// </remarks>
+        private Task LogReportAsync(string reportType, string format, DateTime from, DateTime to,
+            int? routeId, int? driverId, string? vehicleId,
+            IReadOnlyDictionary<int, string> routeNames, IReadOnlyDictionary<int, string> userNames, int trips)
+        {
+            var name = reportType switch
+            {
+                "Passenger" => "Passenger",
+                "Revenue" => "Revenue",
+                _ => "Daily Trip",
+            };
+            var days = from == to
+                ? from.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture)
+                : from.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture) + " to " + to.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
+
+            var filters = new List<string>();
+            if (routeId is int r) filters.Add(routeNames.TryGetValue(r, out var route) ? route : $"route {r}");
+            if (driverId is int d) filters.Add(userNames.TryGetValue(d, out var driver) ? driver : $"driver {d}");
+            if (!string.IsNullOrWhiteSpace(vehicleId)) filters.Add(vehicleId);
+
+            return _audit.WriteAsync("report_generated",
+                $"generated the {name} report as {format} for {days}"
+                    + (filters.Count > 0 ? " (" + string.Join(", ", filters) + ")" : "")
+                    + $": {trips} {(trips == 1 ? "trip" : "trips")}");
         }
 
         // Shift-time helpers.
