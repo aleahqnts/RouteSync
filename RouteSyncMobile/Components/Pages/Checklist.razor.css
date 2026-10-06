@@ -206,12 +206,12 @@
     box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
 }
 
-.mark.minus {
+.mark.cross {
     border: 1.5px solid #f3c7c7;
     color: #d0494b;
 }
 
-.mark.minus.on {
+.mark.cross.on {
     background: #dc2626;
     border-color: #dc2626;
     color: #ffffff;
