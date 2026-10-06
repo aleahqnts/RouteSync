@@ -1,7 +1,7 @@
 @model EditVehicleViewModel
 @*
     Edit vehicle form, fetched per vehicle into the edit modal. Edits the vehicle
-    Profile (Plate Number + Route) only; posts to VehiclesController.Edit (PRG + TempData).
+    Profile (Plate Number, Route, Seat Capacity) only; posts to VehiclesController.Edit (PRG + TempData).
     Maintenance status / incident lifecycle is handled in the View modal, not here.
 *@
 <form asp-action="Edit" asp-controller="Vehicles" method="post">
@@ -36,6 +36,11 @@
                     </span>
                 </div>
                 <span asp-validation-for="RouteId" class="vh-field-error"></span>
+            </div>
+            <div class="vh-form-row">
+                <label asp-for="Capacity">Seat Capacity:</label>
+                <input asp-for="Capacity" class="vh-form-input" type="number" min="1" max="120" />
+                <span asp-validation-for="Capacity" class="vh-field-error"></span>
             </div>
         </div>
 

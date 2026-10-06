@@ -892,12 +892,15 @@ namespace FleetWise.Controllers
             // so editing never changes maintenance state.
             vehicle.PlateNumber = model.PlateNumber.Trim();
             vehicle.RouteId = model.RouteId;
+            var seatsWere = vehicle.Capacity;
+            vehicle.Capacity = model.Capacity;
             vehicle.UpdatedAt = PhClock.Now;
 
             await _supabase.From<Vehicle>().Update(vehicle);
 
+            var seatsNote = seatsWere == model.Capacity ? "" : $", seats {seatsWere} to {model.Capacity}";
             await _audit.WriteAsync("vehicle_updated",
-                $"edited bus {model.VehicleId} (plate {vehicle.PlateNumber})",
+                $"edited bus {model.VehicleId} (plate {vehicle.PlateNumber}{seatsNote})",
                 "vehicles", model.VehicleId);
 
             TempData["Success"] = $"Vehicle \"{model.VehicleId}\" was updated successfully.";
@@ -1248,6 +1251,7 @@ namespace FleetWise.Controllers
                 VehicleId = vehicle.VehicleId,
                 PlateNumber = posted?.PlateNumber ?? vehicle.PlateNumber ?? "",
                 RouteId = posted?.RouteId ?? vehicle.RouteId ?? 0,
+                Capacity = posted?.Capacity ?? vehicle.Capacity,
                 RouteOptions = BuildRouteOptions(routes),
                 Retired = vehicle.RetiredAt != null,
                 RetiredReason = vehicle.RetiredReason,
