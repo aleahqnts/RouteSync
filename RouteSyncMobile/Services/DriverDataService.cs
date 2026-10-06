@@ -557,8 +557,12 @@ public class DriverDataService
             .Get()).Models.FirstOrDefault();
         if (user is null) return DateTime.MinValue;
 
-        _accountStart = new AccountStart(userId, user.CreatedAt);
-        return user.CreatedAt;
+        // Stored as Philippine wall-clock, so the eight hours postgrest adds on the way
+        // back are taken off. Left on, every message in an account's first eight hours
+        // fell before the clamp and was never shown.
+        var createdAt = PhTime.Raw(user.CreatedAt);
+        _accountStart = new AccountStart(userId, createdAt);
+        return createdAt;
     }
 
     /// <summary>Read state, which is meaningful only for messages addressed to a single
