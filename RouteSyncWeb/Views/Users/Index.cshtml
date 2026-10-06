@@ -221,13 +221,25 @@
         return query ? '?' + query : '';
     }
 
+    // Only the latest request draws the table. Typing sends one per pause, and an earlier,
+    // slower answer arriving last would otherwise put back rows for a shorter search.
+    let userRowsAsked = 0;
+
     function loadUserRows() {
         const tbody = document.getElementById('usersTableBody');
+        const asked = ++userRowsAsked;
         fetch('@Url.Action("UserRows", "Users")' + currentUserQuery())
-            .then(function (response) { return response.text(); })
-            .then(function (html) { tbody.innerHTML = html; })
+            .then(function (response) {
+                // A sign-in page or an error page is not rows; set into the table it shows
+                // as nothing at all, which reads as "no such user".
+                if (response.redirected) { location.reload(); throw new Error('signed out'); }
+                if (!response.ok) throw new Error(String(response.status));
+                return response.text();
+            })
+            .then(function (html) { if (asked === userRowsAsked) tbody.innerHTML = html; })
             .catch(function () {
-                tbody.innerHTML = '<tr><td colspan="6" class="us-empty">Failed to load users.</td></tr>';
+                if (asked !== userRowsAsked) return;
+                tbody.innerHTML = '<tr><td colspan="7" class="us-empty">Users could not be loaded. Try again.</td></tr>';
             });
     }
 
