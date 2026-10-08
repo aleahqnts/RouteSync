@@ -7,9 +7,21 @@
 
     var list = box.querySelector('.rs-attn__list');
     var count = box.querySelector('.rs-attn__count');
+    var more = box.querySelector('.rs-attn__more');
     // Same rule as the fleet map's stale marker: a trip that has been silent this long.
     var SILENT_AFTER_MS = 2 * 60 * 1000;
+    // Lines shown before the rest fold behind "Show more".
+    var SHOWN = 5;
+    // This many of one kind read as one line rather than a column of near-identical ones.
+    var GROUP_AT = 3;
     var LABELS = { relief: 'Relief', issue: "Can't run", late: 'Late', fault: 'Fault', signal: 'No signal' };
+    var GROUPED = {
+        issue: function (n) { return n + " trips can't run as assigned"; },
+        late: function (n) { return n + " trips haven't started"; },
+        fault: function (n) { return n + ' buses have an open fault'; },
+        signal: function (n) { return n + " buses on a trip haven't reported"; }
+    };
+    var expanded = false;
 
     function getJson(url) {
         return fetch(url, { headers: { 'Accept': 'application/json' } })
@@ -22,7 +34,19 @@
         return isNaN(then) ? 0 : Date.now() - then;
     }
 
-    function line(kind, text, href) {
+    // Hours and minutes, as the dispatch board's late badge writes them.
+    function duration(mins) {
+        if (mins < 60) return mins + 'm';
+        var h = Math.floor(mins / 60), m = mins % 60;
+        return m ? h + 'h ' + m + 'm' : h + 'h';
+    }
+
+    function names(ids) {
+        var shown = ids.slice(0, 4).join(', ');
+        return ids.length > 4 ? shown + ' and ' + (ids.length - 4) + ' more' : shown;
+    }
+
+    function line(kind, text, sub, href) {
         var li = document.createElement('li');
         li.className = 'rs-attn__item rs-attn__item--' + kind;
         var a = document.createElement('a');
@@ -31,33 +55,96 @@
         var tag = document.createElement('span');
         tag.className = 'rs-attn__tag';
         tag.textContent = LABELS[kind];
+        var body = document.createElement('span');
+        body.className = 'rs-attn__body';
         var msg = document.createElement('span');
         msg.className = 'rs-attn__text';
         msg.textContent = text;
-        a.append(tag, msg);
+        body.append(msg);
+        if (sub) {
+            var s = document.createElement('span');
+            s.className = 'rs-attn__sub';
+            s.textContent = sub;
+            body.append(s);
+        }
+        a.append(tag, body);
         li.append(a);
         return li;
+    }
+
+    function tripsHref(ids) {
+        return box.dataset.dispatchUrl + '?trip=' + ids.map(encodeURIComponent).join(',');
+    }
+
+    // One entry per kind once there are enough of it, kept in the order the server ranked
+    // them, which is most urgent first. A driver needing relief is never folded away.
+    function lines(entries) {
+        var byKind = {};
+        entries.forEach(function (e) { (byKind[e.kind] = byKind[e.kind] || []).push(e); });
+        var done = {};
+        var out = [];
+        entries.forEach(function (e) {
+            var same = byKind[e.kind];
+            if (same.length < GROUP_AT || !GROUPED[e.kind]) {
+                out.push(line(e.kind, e.text, null, e.href));
+                return;
+            }
+            if (done[e.kind]) return;
+            done[e.kind] = true;
+            var ids = same.map(function (x) { return x.vehicleId; });
+            var sub = names(ids);
+            if (e.kind === 'late') {
+                var worst = Math.max.apply(null, same.map(function (x) { return x.minutes || 0; }));
+                sub += '. Longest ' + duration(worst) + ' late.';
+            }
+            var href = e.kind === 'signal'
+                ? box.dataset.mapUrl
+                : tripsHref(same.map(function (x) { return x.tripId; }));
+            out.push(line(e.kind, GROUPED[e.kind](same.length), sub, href));
+        });
+        return out;
     }
 
     function render(trips, buses) {
         // A failed read leaves what is on screen rather than claiming all is clear.
         if (trips === null || buses === null) return;
 
-        var lines = trips.map(function (t) {
-            return line(t.kind, t.text, box.dataset.dispatchUrl + '?trip=' + encodeURIComponent(t.tripId));
+        var entries = trips.map(function (t) {
+            return {
+                kind: t.kind, text: t.text, vehicleId: t.vehicleId, tripId: t.tripId,
+                minutes: t.lateMinutes, href: tripsHref([t.tripId])
+            };
         });
         buses.forEach(function (b) {
             var ms = silentFor(b);
             if (b.status !== 'On Trip' || ms < SILENT_AFTER_MS) return;
-            var mins = Math.round(ms / 60000);
-            lines.push(line('signal', b.vehicleId + ' has not reported for ' + mins + ' min.',
-                box.dataset.mapUrl + '?bus=' + encodeURIComponent(b.vehicleId)));
+            entries.push({
+                kind: 'signal', vehicleId: b.vehicleId,
+                text: b.vehicleId + " hasn't reported for " + duration(Math.round(ms / 60000)) + '.',
+                href: box.dataset.mapUrl + '?bus=' + encodeURIComponent(b.vehicleId)
+            });
         });
 
-        list.replaceChildren.apply(list, lines);
-        count.textContent = lines.length ? String(lines.length) : '';
-        box.classList.toggle('rs-attn--clear', lines.length === 0);
+        var all = lines(entries);
+        all.forEach(function (li, i) { li.hidden = !expanded && i >= SHOWN; });
+        list.replaceChildren.apply(list, all);
+
+        var hidden = all.length - SHOWN;
+        more.hidden = hidden <= 0;
+        more.textContent = expanded ? 'Show fewer' : 'Show ' + hidden + ' more';
+        more.setAttribute('aria-expanded', String(expanded));
+
+        count.textContent = entries.length ? String(entries.length) : '';
+        box.classList.toggle('rs-attn--clear', entries.length === 0);
     }
+
+    more.addEventListener('click', function () {
+        expanded = !expanded;
+        var items = list.children;
+        for (var i = SHOWN; i < items.length; i++) items[i].hidden = !expanded;
+        more.textContent = expanded ? 'Show fewer' : 'Show ' + (items.length - SHOWN) + ' more';
+        more.setAttribute('aria-expanded', String(expanded));
+    });
 
     function load() {
         if (document.hidden) return;

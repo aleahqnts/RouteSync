@@ -314,6 +314,12 @@ namespace FleetWise.Controllers
                 () => ReadAttentionAsync(today)));
         }
 
+        /// <summary>A delay in hours and minutes, written as the board's late badge writes it.</summary>
+        private static string LateText(TimeSpan late) =>
+            late.TotalMinutes < 60 ? $"{(int)late.TotalMinutes}m"
+            : late.Minutes == 0 ? $"{(int)late.TotalHours}h"
+            : $"{(int)late.TotalHours}h {late.Minutes}m";
+
         /// <summary>The needs-attention list for one day, read from the database.</summary>
         private async Task<List<object>> ReadAttentionAsync(DateTime today)
         {
@@ -336,12 +342,16 @@ namespace FleetWise.Controllers
                         ? (1, "issue", $"{t.VehicleId} is grounded. The {t.ShiftType} trip needs another bus.")
                         : (1, "issue", $"{Name(r.Driver)} can't drive. The {t.ShiftType} trip on {t.VehicleId} needs another driver.");
                 else if (r.Late is TimeSpan late)
-                    hit = (2, "late", $"{t.VehicleId} hasn't started. {(int)late.TotalMinutes} min late.");
+                    hit = (2, "late", $"{t.VehicleId} hasn't started. {LateText(late)} late.");
                 else if (r.Flagged && r.TripStatus != "Active" && faultsSaid.Add(t.VehicleId))
                     hit = (3, "fault", $"{t.VehicleId} has an open fault. Check it before the {t.ShiftType} trip.");
 
                 if (hit is { } h)
-                    items.Add((h.Rank, t.ShiftStartTime, new { kind = h.Kind, tripId = t.TripId, vehicleId = t.VehicleId, text = h.Text }));
+                    items.Add((h.Rank, t.ShiftStartTime, new
+                    {
+                        kind = h.Kind, tripId = t.TripId, vehicleId = t.VehicleId, text = h.Text,
+                        lateMinutes = h.Kind == "late" ? (int)r.Late!.Value.TotalMinutes : 0,
+                    }));
             }
 
             return items.OrderBy(i => i.Rank).ThenBy(i => i.Start).Select(i => i.Item).ToList();

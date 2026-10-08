@@ -212,7 +212,8 @@
         if (status === 'Flagged') return '#DC2626'; // red
         if (status === 'Out of Service') return '#6B7280'; // slate — grounded
         if (status === 'Offline') return '#9CA3AF'; // grey
-        return '#F59E0B'; // amber — Ready to Deploy / Pending / other parked
+        if (status === 'Pending') return '#F59E0B'; // amber, waiting on its checklist, as on Dispatch
+        return '#3B82F6'; // blue, ready to deploy and other parked, as on Dispatch
     }
 
     // Server timestamps are UTC but serialized without a 'Z', so append one before parsing.

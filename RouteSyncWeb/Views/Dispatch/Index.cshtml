@@ -303,6 +303,7 @@
                                 }
 
                                 <tr class="dp-trip-row"
+                                    data-trip-id="@trip.TripId"
                                     data-trip-status="@trip.TripStatus"
                                     @(trip.LateBy is null ? "" : "data-late")
                                     data-shift-id="@shiftId"
@@ -468,19 +469,32 @@
         dpCloseMsg:         function () { dpCloseMsg(); }
     });
 
-    // Opened from the needs-attention list or the fleet map: /Dispatch?trip=ID shows that
-    // trip, and &do=reassign or &do=message presses that row's own button instead. A trip
-    // not on this board, or one that can no longer be reassigned, is shown instead.
+    // Arriving from the needs-attention list, /Dispatch?trip=ID[,ID...] marks those rows,
+    // opening a folded route first. From the fleet map panel, &do=view, reassign or message
+    // opens that trip's own window instead; a trip that can no longer be reassigned, or is
+    // not on this board, opens its details.
     window.addEventListener('load', function () {
         var params = new URLSearchParams(location.search);
-        var askedTrip = params.get('trip');
-        if (!askedTrip) return;
-        // Dropped from the address once shown, so a later reload does not open it again.
+        var asked = (params.get('trip') || '').split(',').filter(Boolean);
+        if (!asked.length) return;
+        // Dropped from the address once acted on, so a later reload does not repeat it.
         history.replaceState(null, '', location.pathname);
-        var sel = { reassign: '.dp-btn-reassign', message: '.dp-btn-msg' }[params.get('do')];
-        var btn = sel && document.querySelector(sel + '[data-trip-id="' + CSS.escape(askedTrip) + '"]');
-        if (btn && !btn.disabled) btn.click();
-        else openTripModal(askedTrip);
+
+        var act = params.get('do');
+        if (act) {
+            var sel = { reassign: '.dp-btn-reassign', message: '.dp-btn-msg' }[act];
+            var btn = sel && document.querySelector(sel + '[data-trip-id="' + CSS.escape(asked[0]) + '"]');
+            if (btn && !btn.disabled) btn.click();
+            else openTripModal(asked[0]);
+            return;
+        }
+
+        var selector = asked.map(function (id) { return '.dp-trip-row[data-trip-id="' + CSS.escape(id) + '"]'; }).join(',');
+        document.querySelectorAll(selector).forEach(function (row) {
+            var card = row.closest('.dp-route-card');
+            if (card) card.classList.remove('dp-route-card--shut');
+        });
+        dpHighlight(selector);
     });
 
     function dpShowMsg(messages, title) {

@@ -1121,7 +1121,7 @@ th.rs-sortable:focus-visible {
 
 .rs-attn__link {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     gap: 10px;
     padding: 7px 8px;
     border-radius: 8px;
@@ -1178,4 +1178,33 @@ th.rs-sortable:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
     .rs-attn__head::after { transition: none; }
+}
+
+.rs-attn__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rs-attn__text { font-weight: 600; }
+.rs-attn__sub { font-size: .8rem; color: light-dark(#5F6B7A, #BCC0C4); }
+.rs-attn__tag { margin-top: 1px; }
+
+.rs-attn__more {
+    margin: 8px 0 0 8px;
+    padding: 4px 0;
+    border: none;
+    background: none;
+    color: light-dark(#226964, #8FD8D2);
+    font-size: .82rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.rs-attn__more:focus-visible {
+    outline: 2px solid light-dark(#2F7F7A, #7ACFCA);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* On the dashboard there is room for two columns, which halves the height. */
+@media (min-width: 900px) {
+    .rs-attn:not(.rs-attn--map) .rs-attn__list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
 }
