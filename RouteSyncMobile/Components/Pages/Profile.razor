@@ -34,7 +34,7 @@ else
                     <span class="dot"></span>@(available ? "Available" : "Cannot drive")
                 </span>
             </div>
-            <p class="hero-since">Driving with RouteSync since @user.CreatedAt.ToString("MMMM yyyy")</p>
+            <p class="hero-since">Driving with RouteSync since @PhTime.Raw(user.CreatedAt).ToString("MMMM yyyy")</p>
         </div>
 
         <div class="stats">
@@ -64,7 +64,7 @@ else
             </div>
             <div class="prow">
                 <span class="pico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>
-                <span class="pk">Member since</span><span class="pv">@user.CreatedAt.ToString("MMM d, yyyy")</span>
+                <span class="pk">Member since</span><span class="pv">@PhTime.Raw(user.CreatedAt).ToString("MMM d, yyyy")</span>
             </div>
             @if (lastTripDate is not null)
             {

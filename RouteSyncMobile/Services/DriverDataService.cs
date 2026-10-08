@@ -229,7 +229,7 @@ public class DriverDataService
         var r = await _supabase.From<DriverAvailability>()
             .Filter("user_id", Operator.Equals, userId.ToString())
             .Get();
-        return r.Models.FirstOrDefault()?.AvailabilityStatus ?? "Unavailable";
+        return r.Models.FirstOrDefault()?.AvailabilityStatus ?? "Available";
     }
 
     public async Task SetAvailabilityAsync(int userId, string status, string? reason = null)
