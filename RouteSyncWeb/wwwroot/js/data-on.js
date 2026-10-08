@@ -58,6 +58,15 @@
         });
     };
 
+    // A role="button" element that is not a native button answers Enter and Space as a click.
+    document.addEventListener('keydown', function (event) {
+        var el = event.target;
+        if ((event.key !== 'Enter' && event.key !== ' ') || !el.matches || !el.matches('[role="button"][data-on]')) return;
+        if (el.tagName === 'BUTTON' || !/(^|\s)click:/.test(el.getAttribute('data-on'))) return;
+        event.preventDefault();
+        el.click();
+    });
+
     new MutationObserver(function (records) {
         records.forEach(function (r) { r.addedNodes.forEach(scan); });
     }).observe(document.documentElement, { childList: true, subtree: true });

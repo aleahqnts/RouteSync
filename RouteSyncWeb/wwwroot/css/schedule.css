@@ -118,7 +118,7 @@
        level, and the figures come later in the row, so they won. */
     .sch-shift-col { background:light-dark(#FBFCFD, #383838); font-weight:700; color:light-dark(#2D3748, #DEE1E7); font-size:.82rem; text-align:left; width:104px; position:sticky; left:0; z-index:4; vertical-align:middle; }
     .sch-shift-name { margin-bottom:8px; }
-    .sch-add-bus { display:inline-block; padding:4px 9px; border:1px dashed light-dark(#B7D9D5, #466561); border-radius:7px; background:light-dark(#F2FAF9, #373737); color:light-dark(#3d9490, #7ACFCA); font-size:.72rem; font-weight:700; cursor:pointer; }
+    .sch-add-bus { display:inline-block; padding:4px 9px; border:1px dashed light-dark(#B7D9D5, #466561); border-radius:7px; background:light-dark(#F2FAF9, #373737); color:light-dark(#337B77, #7ACFCA); font-size:.72rem; font-weight:700; cursor:pointer; }
     .sch-add-bus:hover { background:light-dark(#E4F3F1, #354D4A); border-color:#4AADA8; }
     .sch-cell-td { min-width:120px; }
     .sch-cell { display:flex; flex-direction:column; gap:5px; position:relative; }
@@ -190,7 +190,7 @@
 
     .sch-cell.sch-dirty--found::before { transform: scale(1.6); }
     .sch-locked { display:flex; flex-direction:column; gap:4px; align-items:center; padding:6px; }
-    .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:light-dark(#F0F2F5, #353535); color:light-dark(#6B7C93, #B4B8BD); }
+    .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:light-dark(#F0F2F5, #353535); color:light-dark(#5F6E83, #B4B8BD); }
     .sch-lock-txt { font-size:.72rem; color:light-dark(#6B7C93, #B4B8BD); }
 
     /* A slot on a shift that finished with nothing rostered on it. Held apart from a blank
@@ -205,7 +205,7 @@
         margin-left:auto;
         font-size:.82rem;
         font-weight:600;
-        color:light-dark(#6B7C93, #B4B8BD);
+        color:light-dark(#5F6E83, #B4B8BD);
         background:light-dark(#F0F2F5, #353535);
         border-radius:8px;
         padding:8px 14px;
@@ -271,7 +271,7 @@
         .sch-modal-overlay--free .sch-modal-grab {
             display: block;
             margin-left: auto;
-            color: light-dark(#B6C2CF, #94989D);
+            color: light-dark(#5C728B, #BCC0C4);
             font-size: 1.1rem;
             letter-spacing: -3px;
             line-height: 1;
@@ -336,7 +336,7 @@
     .sch-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
     .sch-modal-btn { border:none; border-radius:8px; padding:9px 18px; font-size:.85rem; font-weight:700; color:#fff; background:#E74C3C; cursor:pointer; white-space:nowrap; }
     .sch-modal-btn:hover { background:#cf3d2e; }
-    .sch-modal-btn-override { background:light-dark(#fff, #393939); color:light-dark(#B7791F, #EFB062); border:1.5px solid light-dark(#E6B800, #685D3C); }
+    .sch-modal-btn-override { background:light-dark(#fff, #393939); color:light-dark(#9F691B, #EFB062); border:1.5px solid light-dark(#E6B800, #685D3C); }
     .sch-modal-btn-override:hover { background:light-dark(#FFF8E6, #504730); }
 
     /* The mark that says the panel can be taken hold of. Drawn only where it can be:

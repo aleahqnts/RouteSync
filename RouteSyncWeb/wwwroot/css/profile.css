@@ -4,7 +4,7 @@
         --pf-teal-light: light-dark(#E8F6F5, #354D4C);
         --pf-text: light-dark(#2D3748, #DEE1E7);
         --pf-dark: light-dark(#1A2B4A, #E0E3E9);
-        --pf-muted: light-dark(#9AA5B4, #A1A5A9);
+        --pf-muted: light-dark(#5F6B7A, #BCC0C4);
         --pf-soft: light-dark(#5A6778, #BFC2C7);
         --pf-border: light-dark(#E8ECF0, #4E4E4E);
         --pf-bg: light-dark(#F8F9FA, #373737);
@@ -36,7 +36,7 @@
         padding: 10px 14px;
         border-radius: 10px;
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#1E8449, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
         font: 600 .88rem 'Segoe UI', sans-serif;
     }
 
@@ -165,10 +165,10 @@
 
     .pf-ico svg { width: 17px; height: 17px; }
 
-    .pf-ico--blue  { background: light-dark(#EAF1FB, #3E4858); color: light-dark(#3B82C4, #88C3FE); }
-    .pf-ico--green { background: light-dark(#EAFAF1, #394D42); color: light-dark(#2FAE74, #74D5A1); }
+    .pf-ico--blue  { background: light-dark(#EAF1FB, #3E4858); color: light-dark(#326EA7, #88C3FE); }
+    .pf-ico--green { background: light-dark(#EAFAF1, #394D42); color: light-dark(#227E54, #74D5A1); }
     .pf-ico--amber { background: light-dark(#FDF4E5, #514633); color: #F5A623; }
-    .pf-ico--teal  { background: light-dark(#E8F5F1, #364D47); color: light-dark(#2E9E8F, #6BD3C3); }
+    .pf-ico--teal  { background: light-dark(#E8F5F1, #364D47); color: light-dark(#23786D, #6BD3C3); }
     .pf-ico--navy  { background: light-dark(#ECEFF7, #343434); color: light-dark(#1B2A56, #A6BDF3); }
 
     .pf-badge {
@@ -180,11 +180,11 @@
         white-space: nowrap;
     }
 
-    .pf-badge--role { background: light-dark(#EAF3FF, #3D4958); color: light-dark(#2F6FD6, #98BFFE); text-transform: uppercase; letter-spacing: .03em; }
-    .pf-badge--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
-    .pf-badge--wait { background: light-dark(#FFF8E1, #50472A); color: light-dark(#D48806, #EFB062); }
-    .pf-badge--bad { background: light-dark(#FDECEC, #574142); color: light-dark(#D14343, #FFA099); }
-    .pf-badge--idle { background: light-dark(#F1F3F6, #353535); color: light-dark(#6B7280, #B9BCC1); }
+    .pf-badge--role { background: light-dark(#EAF3FF, #3D4958); color: light-dark(#2969CF, #98BFFE); text-transform: uppercase; letter-spacing: .03em; }
+    .pf-badge--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
+    .pf-badge--wait { background: light-dark(#FFF8E1, #50472A); color: light-dark(#9D6504, #EFB062); }
+    .pf-badge--bad { background: light-dark(#FDECEC, #574142); color: light-dark(#C93131, #FFA099); }
+    .pf-badge--idle { background: light-dark(#F1F3F6, #353535); color: light-dark(#666D7A, #B9BCC1); }
 
     .pf-cols {
         display: grid;
@@ -326,7 +326,7 @@
         padding: 0 12px;
         border: none;
         background: none;
-        color: light-dark(#aaa, #A1A1A1);
+        color: light-dark(#717171, #AAAAAA);
         cursor: pointer;
     }
 
@@ -354,7 +354,7 @@
         align-items: center;
         gap: 7px;
         font-size: 12px;
-        color: light-dark(#9aa3b2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
         transition: color .15s ease;
     }
 

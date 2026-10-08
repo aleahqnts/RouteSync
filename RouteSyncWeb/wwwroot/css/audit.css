@@ -2,7 +2,7 @@
     :root {
         --au-teal: #4AADA8;
         --au-text: light-dark(#2D3748, #DEE1E7);
-        --au-muted: light-dark(#9AA5B4, #A1A5A9);
+        --au-muted: light-dark(#5F6B7A, #BCC0C4);
         --au-border: light-dark(#E8ECF0, #4E4E4E);
         --au-bg: light-dark(#F8F9FA, #373737);
         --au-white: light-dark(#FFFFFF, #393939);
@@ -262,9 +262,9 @@
         white-space: nowrap;
     }
 
-    .au-pill--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
+    .au-pill--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
     .au-pill--denied { background: light-dark(#FDECEC, #574142); color: light-dark(#C0392B, #FFA192); }
-    .au-pill--error { background: light-dark(#FEF3E2, #534530); color: light-dark(#B7791F, #EFB062); }
+    .au-pill--error { background: light-dark(#FEF3E2, #534530); color: light-dark(#966319, #EFB062); }
 
     /* Expand toggle. */
     .au-toggle-cell { text-align: center; }
@@ -841,10 +841,10 @@
     }
 
     .si-sev--high { background: light-dark(#FDECEC, #574142); color: light-dark(#C0392B, #FFA192); }
-    .si-sev--medium { background: light-dark(#FEF3E2, #534530); color: light-dark(#B7791F, #EFB062); }
+    .si-sev--medium { background: light-dark(#FEF3E2, #534530); color: light-dark(#966319, #EFB062); }
     .si-sev--low { background: light-dark(#EEF2F6, #343434); color: light-dark(#5A6B7F, #BDC1C5); }
 
-    .si-pill--waiting { background: light-dark(#FEF3E2, #534530); color: light-dark(#B7791F, #EFB062); }
+    .si-pill--waiting { background: light-dark(#FEF3E2, #534530); color: light-dark(#966319, #EFB062); }
 
     .si-reviewed { font-size: 0.78rem; color: var(--au-muted); }
 

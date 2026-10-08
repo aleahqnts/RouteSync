@@ -43,8 +43,8 @@
         border-radius: 999px;
     }
 
-    .cam-chip--on { background: light-dark(#eafaf1, #394D42); color: light-dark(#2fae74, #74D5A1); }
-    .cam-chip--off { background: light-dark(#fdecec, #574142); color: light-dark(#d15b5b, #FFA09C); }
+    .cam-chip--on { background: light-dark(#eafaf1, #394D42); color: light-dark(#227E54, #74D5A1); }
+    .cam-chip--off { background: light-dark(#fdecec, #574142); color: light-dark(#C43737, #FFA09C); }
 
     .cam-backlog {
         margin: 0 16px 12px;
@@ -75,7 +75,7 @@
     .cam-hint {
         margin: 0 0 10px;
         font-size: 12.5px;
-        color: light-dark(#8a93a2, #A9ACB2);
+        color: light-dark(#677282, #A9ACB2);
         text-align: center;
     }
 
@@ -158,7 +158,7 @@
     .cam-note {
         margin: 10px 0 0;
         font-size: 12.5px;
-        color: light-dark(#8a93a2, #A9ACB2);
+        color: light-dark(#677282, #A9ACB2);
         text-align: center;
     }
 
@@ -171,7 +171,7 @@
         --vh-teal-light: light-dark(#E8F6F5, #354D4C);
         --vh-navy: light-dark(#2F3B82, #91A5F6);
         --vh-text: light-dark(#2D3748, #DEE1E7);
-        --vh-muted: light-dark(#9AA5B4, #A1A5A9);
+        --vh-muted: light-dark(#5F6B7A, #BCC0C4);
         --vh-border: light-dark(#E8ECF0, #4E4E4E);
         --vh-bg: light-dark(#F8F9FA, #373737);
         --vh-white: light-dark(#FFFFFF, #393939);
@@ -217,18 +217,18 @@
         flex-shrink: 0;
     }
 
-    .vh-card-icon--green { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
-    .vh-card-icon--red   { background: light-dark(#FDECEC, #574142); color: light-dark(#E53E3E, #FFA098); }
+    .vh-card-icon--green { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
+    .vh-card-icon--red   { background: light-dark(#FDECEC, #574142); color: light-dark(#D41C1C, #FFA098); }
 
     .vh-form-input--fixed {
         background: light-dark(#F4F6F8, #363636);
-        color: light-dark(#6B7280, #B9BCC1);
+        color: light-dark(#686F7C, #B9BCC1);
         cursor: default;
     }
 
     .vh-field-note {
         font-size: 0.72rem;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
         margin-top: 2px;
     }
 
@@ -298,7 +298,7 @@
     .vh-item--open .vh-item-mark { color: light-dark(#C99A2E, #E2B75C); }
 
     .vh-item--closed {
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
     }
 
         .vh-item--closed .vh-item-mark { color: light-dark(#27AE60, #7ED498); }
@@ -311,7 +311,7 @@
         padding: 1px 7px;
         border-radius: 999px;
         background: light-dark(#FDF3E3, #524632);
-        color: light-dark(#B87A15, #EDB161);
+        color: light-dark(#956311, #EDB161);
         font-size: 0.66rem;
         font-weight: 700;
         flex: none;
@@ -319,7 +319,7 @@
 
     .vh-item-outcome {
         font-size: 0.72rem;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
         flex: none;
     }
 
@@ -347,7 +347,7 @@
        left blank, since a blank reads as a fault nobody photographed. */
     .vh-item-gone {
         font-size: 0.68rem;
-        color: light-dark(#B6BDC9, #979A9F);
+        color: light-dark(#657289, #BCC0C4);
         font-style: italic;
         flex: none;
     }
@@ -385,7 +385,7 @@
         .vh-photo figcaption {
             margin-top: 5px;
             font-size: 0.72rem;
-            color: light-dark(#9AA3B2, #A2A5AA);
+            color: light-dark(#667285, #A9ABB0);
         }
 
     .vh-photo-gone {
@@ -393,20 +393,20 @@
         padding: 18px 0;
         text-align: center;
         font-size: 0.78rem;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
     }
 
     .vh-item-note {
         padding: 0 0 7px 25px !important;
         font-size: 0.76rem;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
         border-top: none !important;
     }
 
     .vh-item-summary {
         margin-top: 8px;
         font-size: 0.78rem;
-        color: light-dark(#6B7280, #B9BCC1);
+        color: light-dark(#6A717F, #B9BCC1);
     }
 
     .vh-items-edit {
@@ -448,7 +448,7 @@
         background: none;
         padding: 0;
         font-size: 0.74rem;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
         cursor: pointer;
         flex: none;
         white-space: nowrap;
@@ -541,7 +541,7 @@
 
     .vh-history-meta {
         font-size: 0.74rem;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
     }
 
     .vh-history--refused .vh-history-what {
@@ -560,7 +560,7 @@
         margin-bottom: 16px;
     }
 
-    .vh-cl-summary--pass { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1E8449, #7ED498); }
+    .vh-cl-summary--pass { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1D7E46, #7ED498); }
     .vh-cl-summary--fail { background: light-dark(#FDECEC, #574142); color: light-dark(#9B2C2C, #FFA099); }
 
     .vh-cl-when {
@@ -576,7 +576,7 @@
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: light-dark(#9AA3B2, #A2A5AA);
+        color: light-dark(#667285, #A9ABB0);
         padding-bottom: 6px;
         border-bottom: 1px solid light-dark(#EEF1F5, #4C4C4C);
         margin-bottom: 2px;
@@ -613,7 +613,7 @@
         flex: none;
     }
 
-    .vh-cl--pass .vh-cl-mark { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
+    .vh-cl--pass .vh-cl-mark { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
 
     .vh-cl--fail {
         color: light-dark(#9B2C2C, #FFA099);
@@ -627,13 +627,13 @@
         padding: 1px 7px;
         border-radius: 999px;
         background: light-dark(#FDF3E3, #524632);
-        color: light-dark(#B87A15, #EDB161);
+        color: light-dark(#956311, #EDB161);
         font-size: 0.66rem;
         font-weight: 700;
         letter-spacing: 0.03em;
         flex: none;
     }
-    .vh-card-icon--amber { background: light-dark(#FEF6E0, #51472B); color: light-dark(#D69E2E, #E6B55D); }
+    .vh-card-icon--amber { background: light-dark(#FEF6E0, #51472B); color: light-dark(#8F681C, #E6B55D); }
 
     /* A KPI that filters the table. Lifts on hover with the same blue as the dashboard's cards. */
     .vh-card--click { cursor: pointer; text-decoration: none; transition: box-shadow .15s, transform .15s; }
@@ -794,13 +794,13 @@
         white-space: nowrap;
     }
 
-    .vh-badge--ready     { background: light-dark(#E8F6F5, #354D4C); color: light-dark(#2C9C96, #6AD2CB); }
+    .vh-badge--ready     { background: light-dark(#E8F6F5, #354D4C); color: light-dark(#227A75, #6AD2CB); }
     .vh-badge--ontrip    { background: light-dark(#E3F2FD, #384A58); color: light-dark(#2B6CB0, #8DC2FE); }
-    .vh-badge--pending   { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#B7950B, #D9BB5C); }
-    .vh-badge--flagged   { background: light-dark(#FDECEC, #574142); color: light-dark(#E53E3E, #FFA098); }
-    .vh-badge--ok        { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
-    .vh-badge--attention { background: light-dark(#FDECEC, #574142); color: light-dark(#E53E3E, #FFA098); }
-    .vh-badge--repair    { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#B7950B, #D9BB5C); }
+    .vh-badge--pending   { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#876E08, #D9BB5C); }
+    .vh-badge--flagged   { background: light-dark(#FDECEC, #574142); color: light-dark(#D41C1C, #FFA098); }
+    .vh-badge--ok        { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
+    .vh-badge--attention { background: light-dark(#FDECEC, #574142); color: light-dark(#D41C1C, #FFA098); }
+    .vh-badge--repair    { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#876E08, #D9BB5C); }
     .vh-badge--default   { background: var(--vh-bg); color: var(--vh-text); }
 
     /* A bus that is out of the fleet rather than off the road, which is why this
@@ -874,7 +874,7 @@
 
     .vh-alert--error {
         background: light-dark(#FDECEC, #574142);
-        color: light-dark(#E53E3E, #FFA098);
+        color: light-dark(#D31D1D, #FFA098);
         border: 1px solid light-dark(#F5B5B5, #775252);
     }
 
@@ -1024,7 +1024,7 @@
     .vh-field-error {
         grid-column: 2;
         font-size: 0.78rem;
-        color: light-dark(#E53E3E, #FFA098);
+        color: light-dark(#DC1E1E, #FFA098);
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -1081,7 +1081,7 @@
     }
 
     .vh-modal-error {
-        color: light-dark(#E53E3E, #FFA098);
+        color: light-dark(#DC1E1E, #FFA098);
         font-family: 'Segoe UI', sans-serif;
         font-size: 0.875rem;
     }
@@ -1203,7 +1203,7 @@
         flex-shrink: 0;
     }
 
-    .vh-tl--resolved { background: light-dark(#E6F4EA, #3B4D41); color: light-dark(#1E7E34, #88D390); }
+    .vh-tl--resolved { background: light-dark(#E6F4EA, #3B4D41); color: light-dark(#1E7C33, #88D390); }
     .vh-tl--open { background: light-dark(#FDECEA, #57423F); color: light-dark(#C0392B, #FFA192); }
 
     .vh-tl-date {
@@ -1353,7 +1353,7 @@
 
     /* The review buttons look interchangeable, so each one says what it does. */
     .vh-action-hint {
-        color: light-dark(#6b7280, #B9BCC1);
+        color: light-dark(#6A717F, #B9BCC1);
         font-size: 0.8rem;
         line-height: 1.5;
         margin: 0 0 10px;
@@ -1502,7 +1502,7 @@
         height: 19px;
         padding: 0 5px;
         border-radius: 999px;
-        background: #94A3B8;
+        background: #64748B;
         color: #fff;
         font-size: .66rem;
         font-weight: 700;

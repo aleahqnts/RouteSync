@@ -29,6 +29,8 @@
 @* chart data carried here so refresh can update the chart without reloading the page *@
 <script type="application/json" id="dbChartData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { bars = Model.ChartData, usual = Model.ChartUsual, now = Model.ChartNowIndex }))</script>
 
+@await Html.PartialAsync("_Attention", "page")
+
 @* STAT CARDS *@
 <div class="db-stat-grid">
 
@@ -62,7 +64,8 @@
         <div class="db-stat-value" id="dbFlagged">@Model.FlaggedVehicles</div>
     </a>
 
-    <div class="db-stat-card db-stat-card--click" data-on="click:dbToggleBreakdown" title="Click for per-trip breakdown">
+    <div class="db-stat-card db-stat-card--click" data-on="click:dbToggleBreakdown" title="Click for per-trip breakdown"
+         role="button" tabindex="0" aria-haspopup="dialog">
         <div class="db-stat-header">
             <span class="db-stat-icon db-stat-icon--blue">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
@@ -103,7 +106,7 @@
         }
         <div class="db-stat-delta @(revUp ? "db-stat-delta--up" : "db-stat-delta--down")"
              id="dbRevenueDelta" style="@(Model.RevenueDelta == 0 ? "display:none;" : "")">
-            @Html.Raw(revUp ? "&#x2B06;" : "&#x2B07;") &#8369;@(revUp ? "+" : "")@Model.RevenueDelta.ToString("N0") vs yesterday
+            @Html.Raw(revUp ? "&#x2B06;" : "&#x2B07;") @(revUp ? "+" : "-")&#8369;@Math.Abs(Model.RevenueDelta).ToString("N0") vs yesterday
         </div>
     </div>
 
@@ -111,14 +114,14 @@
 
 @* TOTAL PASSENGERS MODAL (opened by the card) *@
 <div class="db-modal-overlay" id="dbBreakdown" style="display:none;" data-on="click:dbBreakdownBackdrop">
-    <div class="db-modal">
+    <div class="db-modal" role="dialog" aria-modal="true" aria-labelledby="dbBreakdownTitle">
         @{
             // Only trips that carried passengers. A trip yet to start contributes nothing.
             var boardedRows = Model.ActiveTripBreakdown.Where(r => r.Passengers > 0).ToList();
         }
         <div class="db-modal-head">
             <div>
-                <div class="db-modal-title">Total Boarded Breakdown</div>
+                <div class="db-modal-title" id="dbBreakdownTitle">Total Boarded Breakdown</div>
                 <div class="db-modal-sub" id="dbBreakdownSub">Trips with boarding (@boardedRows.Count) &bull; @Model.TotalPassengers boarded</div>
             </div>
             <button class="db-modal-close" data-on="click:dbCloseModal" aria-label="Close">&times;</button>
@@ -185,7 +188,8 @@
                 </button>
             </div>
         </div>
-        <canvas id="demandChart" class="db-chart-canvas"></canvas>
+        <canvas id="demandChart" class="db-chart-canvas" role="img"
+                aria-label="Passengers boarded each hour of today's service day, beside the usual @Model.Today.ToString("dddd")"></canvas>
     </div>
 
     @* Fleet Map *@
@@ -404,13 +408,20 @@
         }
 
         // Total Passengers modal.
+        // Focus moves into the dialog and back to what opened it.
+        let dbReturnFocus = null;
         function dbToggleBreakdown() {
         const m = document.getElementById('dbBreakdown');
-        if (m) m.style.display = 'flex';
+        if (!m) return;
+        dbReturnFocus = document.activeElement;
+        m.style.display = 'flex';
+        m.querySelector('.db-modal-close')?.focus();
         }
         function dbCloseModal() {
         const m = document.getElementById('dbBreakdown');
-        if (m) m.style.display = 'none';
+        if (!m || m.style.display === 'none') return;
+        m.style.display = 'none';
+        if (dbReturnFocus && document.contains(dbReturnFocus)) dbReturnFocus.focus();
         }
         document.addEventListener('keydown', e => { if (e.key === 'Escape') dbCloseModal(); });
 
@@ -447,8 +458,8 @@
             const up = value >= 0;
             el.style.display = '';
             el.className = 'db-stat-delta ' + (up ? 'db-stat-delta--up' : 'db-stat-delta--down');
-            el.textContent = (up ? '⬆ ' : '⬇ ') + (peso ? '₱' : '') +
-                (up ? '+' : '') + dbPeso.format(value) + ' vs yesterday';
+            el.textContent = (up ? '⬆ ' : '⬇ ') + (up ? '+' : '-') + (peso ? '₱' : '') +
+                dbPeso.format(Math.abs(value)) + ' vs yesterday';
         }
 
         function dbBreakdown(rows, boarded) {

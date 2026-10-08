@@ -261,7 +261,7 @@
                 @Html.AntiForgeryToken()
                 <div class="pf-row3">
                     <label class="pf-field">
-                        <span class="pf-label">Type</span>
+                        <span class="pf-label">Type<span class="fw-req" aria-hidden="true">*</span></span>
                         <select name="LeaveType">
                             @foreach (var t in LeaveEntitlement.Types)
                             {
@@ -271,12 +271,12 @@
                         <span class="pf-err" data-err="leaveType"></span>
                     </label>
                     <label class="pf-field">
-                        <span class="pf-label">From</span>
+                        <span class="pf-label">From<span class="fw-req" aria-hidden="true">*</span></span>
                         <input type="date" name="StartDate" value="@Model.Today.ToString("yyyy-MM-dd")" min="@Model.Earliest.ToString("yyyy-MM-dd")" data-leave-start />
                         <span class="pf-err" data-err="startDate"></span>
                     </label>
                     <label class="pf-field">
-                        <span class="pf-label">To</span>
+                        <span class="pf-label">To<span class="fw-req" aria-hidden="true">*</span></span>
                         <input type="date" name="EndDate" value="@Model.Today.ToString("yyyy-MM-dd")" min="@Model.Earliest.ToString("yyyy-MM-dd")" data-leave-end />
                         <span class="pf-err" data-err="endDate"></span>
                     </label>

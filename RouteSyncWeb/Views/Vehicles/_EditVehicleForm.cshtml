@@ -20,12 +20,12 @@
                 <input type="text" class="vh-form-input" value="@Model.VehicleId" disabled />
             </div>
             <div class="vh-form-row">
-                <label asp-for="PlateNumber">Plate Number:</label>
+                <label asp-for="PlateNumber">Plate Number:<span class="fw-req" aria-hidden="true">*</span></label>
                 <input asp-for="PlateNumber" class="vh-form-input" />
                 <span asp-validation-for="PlateNumber" class="vh-field-error"></span>
             </div>
             <div class="vh-form-row">
-                <label asp-for="RouteId">Route:</label>
+                <label asp-for="RouteId">Route:<span class="fw-req" aria-hidden="true">*</span></label>
                 <div class="vh-select-wrap" style="width:100%;">
                     <select asp-for="RouteId" class="vh-form-input" style="appearance:none;"
                             asp-items="Model.RouteOptions">
@@ -38,7 +38,7 @@
                 <span asp-validation-for="RouteId" class="vh-field-error"></span>
             </div>
             <div class="vh-form-row">
-                <label asp-for="Capacity">Seat Capacity:</label>
+                <label asp-for="Capacity">Seat Capacity:<span class="fw-req" aria-hidden="true">*</span></label>
                 <input asp-for="Capacity" class="vh-form-input" type="number" min="1" max="120" />
                 <span asp-validation-for="Capacity" class="vh-field-error"></span>
             </div>

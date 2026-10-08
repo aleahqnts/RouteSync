@@ -101,111 +101,9 @@ namespace FleetWise.Controllers
             // Before 6 AM that is still the previous calendar day. The header arrows move
             // this a day at a time.
             var selected = DateTime.TryParse(date, out var d) ? d.Date : PhClock.OperationalDay;
-            var selStr = selected.ToString("yyyy-MM-dd");
 
-            // A trip is dated by the day it starts. An overnight shift crosses midnight
-            // but still belongs to its start day, so the board for a given day is exactly
-            // the trips dated that day. Merging in the previous day would show an
-            // overnight trip on two boards.
-            var tripsTask = _supabase.From<Trip>()
-                                       .Filter("date", Operator.Equals, selStr)
-                                       .Get();
-            var vehiclesTask = _supabase.From<Vehicle>().Get();
-            var routesTask = _supabase.From<BusRoute>().Get();
-            // Every driver, deactivated ones included. A trip they drove before leaving is
-            // still theirs, and without them it reads as never having had a driver.
-            // TripStatus marks the account where it still has a trip to run.
-            var driversTask = _supabase.From<UserModel>()
-                                       .Filter("role_id", Operator.Equals, "2")
-                                       .Get();
-            var availabilityTask = _supabase.From<DriverAvailability>().Get();
-            // Open incidents only. Every log ever written would pass the database's
-            // thousand-row cap in time, and the newest would be the ones cut off.
-            var maintTask = _supabase.From<MaintenanceLog>()
-                                     .Filter<object>("resolved_at", Operator.Is, null)
-                                     .Get();
-
-            await Task.WhenAll(tripsTask, vehiclesTask, routesTask, driversTask, availabilityTask, maintTask);
-
-            // Trips for this operational day, including overnight ones, which carry today's date.
-            var trips = tripsTask.Result.Models
-                .Where(t => t.Date.Date == selected)
-                .ToList();
-            var vehicles = vehiclesTask.Result.Models;
-            var routes = routesTask.Result.Models;
-            var drivers = driversTask.Result.Models;
-
-            // The checklists of the trips on this board, not every checklist ever submitted,
-            // for the same reason.
-            var tripIds = trips.Select(t => (object)t.TripId).ToList();
-            var checklists = tripIds.Count == 0
-                ? new List<BusChecklist>()
-                : (await _supabase.From<BusChecklist>()
-                                  .Filter("trip_id", Operator.In, tripIds)
-                                  .Get()).Models;
-
-            // The availability flag carries no date, so it speaks for the operational day it
-            // is read on and no other. Applied to a later board, one sick call would turn
-            // every trip that driver has for the rest of the month into an assignment issue.
-            // Leave has dates, and is folded in below for whichever day is shown.
-            var availability = selected == PhClock.OperationalDay
-                ? availabilityTask.Result.Models
-                : new List<DriverAvailability>();
-
-            // A vehicle with an unresolved maintenance log is flagged regardless of any
-            // trip, so the flag survives the bus going on trip and outlives the
-            // vehicle_status column, which later shifts overwrite.
-            var openIncidents = maintTask.Result.Models
-                .Where(l => l.ResolvedAt == null && l.VehicleId != null)
-                .GroupBy(l => l.VehicleId)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.CreatedAt).First());
-
-            var flaggedVehicleIds = openIncidents.Keys.ToHashSet();
-
-            // Lookups keyed by id, used while resolving each trip below.
-            var vehicleDict = vehicles.ToDictionary(v => v.VehicleId);
-            var driverDict = drivers.ToDictionary(d => d.UserId);
-            var availabilityDict = availability.ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
-
-            // What each of them said. Kept apart from the status, because leave is folded
-            // into that below and carries no reason of this kind.
-            var awayReasons = availability
-                .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable", StringComparison.OrdinalIgnoreCase)
-                         && !string.IsNullOrWhiteSpace(a.Reason))
-                .ToDictionary(a => a.UserId, a => a.Reason.Trim());
-
-            // Leave approved for the day this board is showing counts the same as being
-            // unavailable, because on that day it is the same thing.
-            availabilityDict = await _assignments.WithLeaveAsync(availabilityDict, selected);
-
-            // One checklist per trip. Where a bus was inspected more than once, the most
-            // recent submission wins.
-            var checklistDict = checklists
-                .GroupBy(c => c.TripId)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.SubmittedAt).First());
-
-            // Status comes from TripStatus so this board, the trip detail modal and the
-            // counters below cannot drift apart. See that class for the rules.
-            (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late) Resolve(Trip trip)
-            {
-                vehicleDict.TryGetValue(trip.VehicleId, out var vehicle);
-                driverDict.TryGetValue(trip.DriverId, out var driver);
-                var driverAvail = availabilityDict.TryGetValue(trip.DriverId, out var avail) ? avail : "Available";
-                var cl = checklistDict.TryGetValue(trip.TripId, out var c0) ? c0 : null;
-
-                var view = TripStatus.Resolve(
-                    trip, vehicle, driver, driverAvail, cl,
-                    flaggedVehicleIds.Contains(trip.VehicleId), PhClock.Now);
-
-                return (vehicle, driver, view.VehicleStatus, view.DriverStatus, view.TripStatus, view.VehicleFlagged, view.Late);
-            }
-
-            var resolved = new Dictionary<string, (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late)>();
-            foreach (var trip in trips)
-            {
-                try { resolved[trip.TripId] = Resolve(trip); }
-                catch { resolved[trip.TripId] = (null, null, "Pending", "Available", "Pending", false, null); }
-            }
+            var (trips, routes, availability, awayReasons, flaggedVehicleIds, openIncidents, resolved) =
+                await ResolveDayAsync(selected);
 
             // Header counters.
             int activeTrips = trips.Count(t => resolved[t.TripId].TripStatus == "Active");
@@ -392,6 +290,168 @@ namespace FleetWise.Controllers
             }
 
             return View(vm);
+        }
+
+        /// <summary>What on today's board needs a dispatcher, most urgent first.</summary>
+        /// <remarks>
+        /// Read from the same resolution as the board, so the list and the board never
+        /// disagree. A bus that has stopped reporting is the map's to say, and is added by
+        /// the page from the positions it already reads.
+        /// </remarks>
+        [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Attention()
+        {
+            var day = await ResolveDayAsync(PhClock.OperationalDay);
+            static string Name(UserModel u) =>
+                u == null ? "The driver" : $"{u.FirstName} {u.LastName}".Trim();
+
+            var items = new List<(int Rank, TimeSpan Start, object Item)>();
+            var faultsSaid = new HashSet<string>();
+            foreach (var t in day.Trips)
+            {
+                var r = day.Resolved[t.TripId];
+                if (r.TripStatus is "Completed" or "Missed") continue;
+
+                (int Rank, string Kind, string Text)? hit = null;
+                if (r.TripStatus == "Active" && r.DriverStatus == "Unavailable")
+                    hit = (0, "relief", $"{Name(r.Driver)} can't continue on {t.VehicleId}. Send relief.");
+                else if (r.TripStatus == "Assignment Issue")
+                    hit = r.Vehicle?.OutOfService == true
+                        ? (1, "issue", $"{t.VehicleId} is grounded. The {t.ShiftType} trip needs another bus.")
+                        : (1, "issue", $"{Name(r.Driver)} can't drive. The {t.ShiftType} trip on {t.VehicleId} needs another driver.");
+                else if (r.Late is TimeSpan late)
+                    hit = (2, "late", $"{t.VehicleId} hasn't started. {(int)late.TotalMinutes} min late.");
+                else if (r.Flagged && r.TripStatus != "Active" && faultsSaid.Add(t.VehicleId))
+                    hit = (3, "fault", $"{t.VehicleId} has an open fault. Check it before the {t.ShiftType} trip.");
+
+                if (hit is { } h)
+                    items.Add((h.Rank, t.ShiftStartTime, new { kind = h.Kind, tripId = t.TripId, vehicleId = t.VehicleId, text = h.Text }));
+            }
+
+            return Json(items.OrderBy(i => i.Rank).ThenBy(i => i.Start).Select(i => i.Item));
+        }
+
+        private sealed record BoardDay(
+            List<Trip> Trips,
+            List<BusRoute> Routes,
+            List<DriverAvailability> Availability,
+            Dictionary<int, string> AwayReasons,
+            HashSet<string> FlaggedVehicleIds,
+            Dictionary<string, MaintenanceLog> OpenIncidents,
+            Dictionary<string, (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late)> Resolved);
+
+        /// <summary>One operational day's trips with each one's status worked out.</summary>
+        /// <remarks>Shared by the board and the needs-attention list so the two never disagree.</remarks>
+        private async Task<BoardDay> ResolveDayAsync(DateTime selected)
+        {
+            var selStr = selected.ToString("yyyy-MM-dd");
+
+            // A trip is dated by the day it starts. An overnight shift crosses midnight
+            // but still belongs to its start day, so the board for a given day is exactly
+            // the trips dated that day. Merging in the previous day would show an
+            // overnight trip on two boards.
+            var tripsTask = _supabase.From<Trip>()
+                                       .Filter("date", Operator.Equals, selStr)
+                                       .Get();
+            var vehiclesTask = _supabase.From<Vehicle>().Get();
+            var routesTask = _supabase.From<BusRoute>().Get();
+            // Every driver, deactivated ones included. A trip they drove before leaving is
+            // still theirs, and without them it reads as never having had a driver.
+            // TripStatus marks the account where it still has a trip to run.
+            var driversTask = _supabase.From<UserModel>()
+                                       .Filter("role_id", Operator.Equals, "2")
+                                       .Get();
+            var availabilityTask = _supabase.From<DriverAvailability>().Get();
+            // Open incidents only. Every log ever written would pass the database's
+            // thousand-row cap in time, and the newest would be the ones cut off.
+            var maintTask = _supabase.From<MaintenanceLog>()
+                                     .Filter<object>("resolved_at", Operator.Is, null)
+                                     .Get();
+
+            await Task.WhenAll(tripsTask, vehiclesTask, routesTask, driversTask, availabilityTask, maintTask);
+
+            // Trips for this operational day, including overnight ones, which carry today's date.
+            var trips = tripsTask.Result.Models
+                .Where(t => t.Date.Date == selected)
+                .ToList();
+            var vehicles = vehiclesTask.Result.Models;
+            var routes = routesTask.Result.Models;
+            var drivers = driversTask.Result.Models;
+
+            // The checklists of the trips on this board, not every checklist ever submitted,
+            // for the same reason.
+            var tripIds = trips.Select(t => (object)t.TripId).ToList();
+            var checklists = tripIds.Count == 0
+                ? new List<BusChecklist>()
+                : (await _supabase.From<BusChecklist>()
+                                  .Filter("trip_id", Operator.In, tripIds)
+                                  .Get()).Models;
+
+            // The availability flag carries no date, so it speaks for the operational day it
+            // is read on and no other. Applied to a later board, one sick call would turn
+            // every trip that driver has for the rest of the month into an assignment issue.
+            // Leave has dates, and is folded in below for whichever day is shown.
+            var availability = selected == PhClock.OperationalDay
+                ? availabilityTask.Result.Models
+                : new List<DriverAvailability>();
+
+            // A vehicle with an unresolved maintenance log is flagged regardless of any
+            // trip, so the flag survives the bus going on trip and outlives the
+            // vehicle_status column, which later shifts overwrite.
+            var openIncidents = maintTask.Result.Models
+                .Where(l => l.ResolvedAt == null && l.VehicleId != null)
+                .GroupBy(l => l.VehicleId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.CreatedAt).First());
+
+            var flaggedVehicleIds = openIncidents.Keys.ToHashSet();
+
+            // Lookups keyed by id, used while resolving each trip below.
+            var vehicleDict = vehicles.ToDictionary(v => v.VehicleId);
+            var driverDict = drivers.ToDictionary(d => d.UserId);
+            var availabilityDict = availability.ToDictionary(a => a.UserId, a => a.AvailabilityStatus);
+
+            // What each of them said. Kept apart from the status, because leave is folded
+            // into that below and carries no reason of this kind.
+            var awayReasons = availability
+                .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable", StringComparison.OrdinalIgnoreCase)
+                         && !string.IsNullOrWhiteSpace(a.Reason))
+                .ToDictionary(a => a.UserId, a => a.Reason.Trim());
+
+            // Leave approved for the day this board is showing counts the same as being
+            // unavailable, because on that day it is the same thing.
+            availabilityDict = await _assignments.WithLeaveAsync(availabilityDict, selected);
+
+            // One checklist per trip. Where a bus was inspected more than once, the most
+            // recent submission wins.
+            var checklistDict = checklists
+                .GroupBy(c => c.TripId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.SubmittedAt).First());
+
+            // Status comes from TripStatus so this board, the trip detail modal and the
+            // counters below cannot drift apart. See that class for the rules.
+            (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late) Resolve(Trip trip)
+            {
+                vehicleDict.TryGetValue(trip.VehicleId, out var vehicle);
+                driverDict.TryGetValue(trip.DriverId, out var driver);
+                var driverAvail = availabilityDict.TryGetValue(trip.DriverId, out var avail) ? avail : "Available";
+                var cl = checklistDict.TryGetValue(trip.TripId, out var c0) ? c0 : null;
+
+                var view = TripStatus.Resolve(
+                    trip, vehicle, driver, driverAvail, cl,
+                    flaggedVehicleIds.Contains(trip.VehicleId), PhClock.Now);
+
+                return (vehicle, driver, view.VehicleStatus, view.DriverStatus, view.TripStatus, view.VehicleFlagged, view.Late);
+            }
+
+            var resolved = new Dictionary<string, (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late)>();
+            foreach (var trip in trips)
+            {
+                try { resolved[trip.TripId] = Resolve(trip); }
+                catch { resolved[trip.TripId] = (null, null, "Pending", "Available", "Pending", false, null); }
+            }
+
+            return new BoardDay(trips, routes, availability, awayReasons, flaggedVehicleIds, openIncidents, resolved);
         }
 
         [HttpGet]

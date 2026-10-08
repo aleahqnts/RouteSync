@@ -13,7 +13,7 @@
                     <div class="us-section-header">Profile</div>
                     <div class="us-section-body">
                         <div class="us-form-row">
-                            <label asp-for="FirstName">First Name:</label>
+                            <label asp-for="FirstName">First Name:<span class="fw-req" aria-hidden="true">*</span></label>
                             <input asp-for="FirstName" id="euFirstName" class="us-form-input" />
                             <span asp-validation-for="FirstName" class="us-field-error"></span>
                         </div>
@@ -23,12 +23,12 @@
                             <span asp-validation-for="MiddleName" class="us-field-error"></span>
                         </div>
                         <div class="us-form-row">
-                            <label asp-for="LastName">Last Name:</label>
+                            <label asp-for="LastName">Last Name:<span class="fw-req" aria-hidden="true">*</span></label>
                             <input asp-for="LastName" id="euLastName" class="us-form-input" />
                             <span asp-validation-for="LastName" class="us-field-error"></span>
                         </div>
                         <div class="us-form-row">
-                            <label asp-for="Email">Email Address:</label>
+                            <label asp-for="Email">Email Address:<span class="fw-req" aria-hidden="true">*</span></label>
                             <input asp-for="Email" id="euEmail" class="us-form-input" />
                             <span asp-validation-for="Email" class="us-field-error"></span>
                         </div>
@@ -36,7 +36,7 @@
                     <div class="us-section-header">Role Assignment</div>
                     <div class="us-section-body">
                         <div class="us-form-row">
-                            <label asp-for="RoleId">Role:</label>
+                            <label asp-for="RoleId">Role:<span class="fw-req" aria-hidden="true">*</span></label>
                             <select asp-for="RoleId" id="euRoleId" class="us-form-input" asp-items="(List<SelectListItem>)ViewBag.Roles"></select>
                             <span class="us-field-hint">Permissions will be based on selected role.</span>
                             <span asp-validation-for="RoleId" class="us-field-error"></span>
@@ -45,7 +45,7 @@
                     <div class="us-section-header">Account Status</div>
                     <div class="us-section-body">
                         <div class="us-form-row">
-                            <label asp-for="AccountStatus">Status:</label>
+                            <label asp-for="AccountStatus">Status:<span class="fw-req" aria-hidden="true">*</span></label>
                             <select asp-for="AccountStatus" id="euAccountStatus" class="us-form-input">
                                 <option value="Activated">Activated</option>
                                 <option value="Deactivated">Deactivated</option>

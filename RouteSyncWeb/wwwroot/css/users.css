@@ -4,7 +4,7 @@
         --us-teal-light: light-dark(#E8F6F5, #354D4C);
         --us-navy: light-dark(#2F3B82, #91A5F6);
         --us-text: light-dark(#2D3748, #DEE1E7);
-        --us-muted: light-dark(#9AA5B4, #A1A5A9);
+        --us-muted: light-dark(#5F6B7A, #BCC0C4);
         --us-border: light-dark(#E8ECF0, #4E4E4E);
         --us-bg: light-dark(#F8F9FA, #373737);
         --us-white: light-dark(#FFFFFF, #393939);
@@ -272,12 +272,12 @@
 
     .us-role-badge--dispatch {
         background: light-dark(#FEF9E7, #4E4831);
-        color: light-dark(#B7950B, #D9BB5C);
+        color: light-dark(#876E08, #D9BB5C);
     }
 
     .us-role-badge--driver {
         background: light-dark(#F3E8FD, #4F415A);
-        color: light-dark(#805AD5, #C2B0FF);
+        color: light-dark(#764ED1, #C2B0FF);
     }
 
     .us-role-badge--default {
@@ -298,12 +298,12 @@
 
     .us-status--active {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
     }
 
     .us-status--inactive {
         background: light-dark(#F1F2F4, #353535);
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#606D81, #BCC0C4);
     }
 
     /* Edit button. */
@@ -348,7 +348,7 @@
 
     .us-alert--error {
         background: light-dark(#FDECEC, #574142);
-        color: light-dark(#E53E3E, #FFA098);
+        color: light-dark(#D31D1D, #FFA098);
         border: 1px solid light-dark(#F5B5B5, #775252);
     }
 
@@ -432,7 +432,7 @@
     .us-field-error {
         grid-column: 2;
         font-size: 0.78rem;
-        color: light-dark(#E53E3E, #FFA098);
+        color: light-dark(#DC1E1E, #FFA098);
         font-family: 'Segoe UI', sans-serif;
     }
 
@@ -1015,3 +1015,4 @@
         background: transparent;
     }
 }
+

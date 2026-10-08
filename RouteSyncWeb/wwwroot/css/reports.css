@@ -1,7 +1,7 @@
 ﻿/* Reports/Index.cshtml */
     :root {
     --rp-text: light-dark(#2D3748, #DEE1E7);
-    --rp-muted: light-dark(#9AA5B4, #A1A5A9);
+    --rp-muted: light-dark(#5F6B7A, #BCC0C4);
     --rp-border: light-dark(#E8ECF0, #4E4E4E);
     --rp-bg: light-dark(#F8F9FA, #373737);
     --rp-white: light-dark(#FFFFFF, #393939);
@@ -87,9 +87,9 @@
     .rp-title-row .rp-title { margin-bottom:0; }
     .rp-toolbar-right { display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .rp-date-nav { display:inline-flex; align-items:center; gap:8px; }
-    .rp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; font-size:1.1rem; transition:background .15s, transform .15s; }
+    .rp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2D796F, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; font-size:1.1rem; transition:background .15s, transform .15s; }
     .rp-date-arrow:hover { background:#2e7d72; color:#fff; transform:translateY(-1px); }
-    .rp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; white-space:nowrap; }
+    .rp-date-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2D796F, #82CFC2); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; white-space:nowrap; }
     .rp-date-badge i { font-size:1rem; }
     .rp-date-today { display:inline-flex; align-items:center; padding:7px 14px; border-radius:30px; background:light-dark(#fff, #393939); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); font-size:.82rem; font-weight:700; cursor:pointer; }
     .rp-date-today:hover { background:#2e7d72; color:#fff; }
@@ -136,22 +136,22 @@
 
     .rp-stat-icon--green {
     background: light-dark(#E8F8EE, #394D41);
-    color: light-dark(#27AE60, #7ED498);
+    color: light-dark(#1D7E46, #7ED498);
     }
 
     .rp-stat-icon--red {
     background: light-dark(#FEECEC, #574142);
-    color: light-dark(#E74C3C, #FFA193);
+    color: light-dark(#CF2A1A, #FFA193);
     }
 
     .rp-stat-icon--blue {
     background: light-dark(#EAF3FF, #3D4958);
-    color: light-dark(#3B82F6, #98BFFE);
+    color: light-dark(#0B62F1, #98BFFE);
     }
 
     .rp-stat-icon--pink {
     background: light-dark(#FDF0F8, #53424D);
-    color: light-dark(#D63384, #FB9CC1);
+    color: light-dark(#CA2978, #FB9CC1);
     }
 
     .rp-stat-label {
@@ -186,15 +186,15 @@
     }
 
     .rp-delta--up {
-    color: light-dark(#27AE60, #7ED498);
+    color: light-dark(#1D8047, #7ED498);
     }
 
     .rp-delta--down {
-    color: light-dark(#E74C3C, #FFA193);
+    color: light-dark(#D82C1B, #FFA193);
     }
 
     .rp-skeleton {
-    color: light-dark(#D0D5DD, #8F9297);
+    color: light-dark(#64728A, #A9ACB0);
     animation: rp-pulse 1.2s ease-in-out infinite;
     }
 
@@ -238,12 +238,12 @@
 
     .rp-card-icon--purple {
     background: light-dark(#F0EEFF, #484559);
-    color: light-dark(#7C6FE0, #B7B4FE);
+    color: light-dark(#6556DA, #B7B4FE);
     }
 
     .rp-card-icon--green {
     background: light-dark(#E8F8EE, #394D41);
-    color: light-dark(#27AE60, #7ED498);
+    color: light-dark(#1D7E46, #7ED498);
     }
 
     .rp-card-title {
@@ -311,17 +311,17 @@
 
     .rp-shift--morning {
     background: light-dark(#FFF8E1, #50472A);
-    color: #F59E0B;
+    color: light-dark(#9C6306, #F59E0B);
     }
 
     .rp-shift--afternoon {
     background: light-dark(#E8F8EE, #394D41);
-    color: light-dark(#27AE60, #7ED498);
+    color: light-dark(#1D7E46, #7ED498);
     }
 
     .rp-shift--evening {
     background: light-dark(#EAF3FF, #3D4958);
-    color: light-dark(#3B82F6, #98BFFE);
+    color: light-dark(#0B62F1, #98BFFE);
     }
 
     /* View button. */
@@ -413,7 +413,7 @@
     .rp-suggest-month {
     margin-right: 10px;
     font-size: 0.8rem;
-    color: light-dark(#8a98a3, #A7ACAF);
+    color: light-dark(#64737F, #A7ACAF);
     }
 
     /* The span's figures on the left, the screens that make them up on the right. */
@@ -756,15 +756,15 @@
     }
 
     .rp-template-btn--green {
-    color: light-dark(#27AE60, #7ED498);
+    color: light-dark(#1D8047, #7ED498);
     }
 
     .rp-template-btn--blue {
-    color: light-dark(#3B82F6, #98BFFE);
+    color: light-dark(#1268F4, #98BFFE);
     }
 
     .rp-template-btn--pink {
-    color: light-dark(#D63384, #FB9CC1);
+    color: light-dark(#D02A7C, #FB9CC1);
     }
 
     .rp-template-btn:hover {
@@ -969,10 +969,10 @@
     }
 
     .trd-badge[hidden] { display: none; }
-    .trd-badge--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
-    .trd-badge--warn { background: light-dark(#FFF8E1, #50472A); color: light-dark(#D48806, #EFB062); }
-    .trd-badge--bad { background: light-dark(#FDECEC, #574142); color: light-dark(#D14343, #FFA099); }
-    .trd-badge--idle { background: light-dark(#F1F3F6, #353535); color: light-dark(#6B7280, #B9BCC1); }
+    .trd-badge--ok { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
+    .trd-badge--warn { background: light-dark(#FFF8E1, #50472A); color: light-dark(#9D6504, #EFB062); }
+    .trd-badge--bad { background: light-dark(#FDECEC, #574142); color: light-dark(#C93131, #FFA099); }
+    .trd-badge--idle { background: light-dark(#F1F3F6, #353535); color: light-dark(#666D7A, #B9BCC1); }
 
     .trd-label {
     font-size: 0.7rem;
@@ -1176,7 +1176,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: light-dark(#27AE60, #7ED498);
+    color: light-dark(#1D8047, #7ED498);
     flex-shrink: 0;
     }
 
@@ -1344,7 +1344,7 @@
     padding: 60px 0;
     text-align: center;
     font-size: 0.88rem;
-    color: light-dark(#E74C3C, #FFA193);
+    color: light-dark(#D82C1B, #FFA193);
     font-family: 'Segoe UI', sans-serif;
     }
 
@@ -2261,7 +2261,7 @@
 
         /* Nothing to download is the one thing worth interrupting for. */
         .rg-glance-note--empty {
-            color: light-dark(#E74C3C, #FFA193);
+            color: light-dark(#D82C1B, #FFA193);
             font-weight: 600;
         }
 

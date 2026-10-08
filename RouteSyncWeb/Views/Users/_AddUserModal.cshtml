@@ -12,7 +12,7 @@
                     <div class="us-section-header">Profile</div>
                     <div class="us-section-body">
                         <div class="us-form-row">
-                            <label asp-for="FirstName">First Name:</label>
+                            <label asp-for="FirstName">First Name:<span class="fw-req" aria-hidden="true">*</span></label>
                             <input asp-for="FirstName" class="us-form-input" />
                             <span asp-validation-for="FirstName" class="us-field-error"></span>
                         </div>
@@ -22,12 +22,12 @@
                             <span asp-validation-for="MiddleName" class="us-field-error"></span>
                         </div>
                         <div class="us-form-row">
-                            <label asp-for="LastName">Last Name:</label>
+                            <label asp-for="LastName">Last Name:<span class="fw-req" aria-hidden="true">*</span></label>
                             <input asp-for="LastName" class="us-form-input" />
                             <span asp-validation-for="LastName" class="us-field-error"></span>
                         </div>
                         <div class="us-form-row">
-                            <label asp-for="Email">Email Address:</label>
+                            <label asp-for="Email">Email Address:<span class="fw-req" aria-hidden="true">*</span></label>
                             <input asp-for="Email" class="us-form-input" />
                             <span asp-validation-for="Email" class="us-field-error"></span>
                         </div>
@@ -40,7 +40,7 @@
                     <div class="us-section-header">Role Assignment</div>
                     <div class="us-section-body">
                         <div class="us-form-row">
-                            <label asp-for="RoleId">Role:</label>
+                            <label asp-for="RoleId">Role:<span class="fw-req" aria-hidden="true">*</span></label>
                             <select asp-for="RoleId" class="us-form-input" asp-items="(List<SelectListItem>)ViewBag.Roles">
                                 <option value="0">Select role…</option>
                             </select>

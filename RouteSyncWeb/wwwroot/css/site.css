@@ -82,7 +82,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    color: light-dark(#9AA5B4, #A1A5A9);
+    color: light-dark(#5F6B7A, #BCC0C4);
     font-size: .8rem;
     font-weight: 600;
     transition: color .25s ease;
@@ -382,7 +382,7 @@ html.rs-theme-switching *::after {
 .err-note {
     margin: 0 0 24px;
     font-size: 13px;
-    color: light-dark(#64748b, #B8BCC1);
+    color: light-dark(#627288, #B8BCC1);
 }
 
 .err-back {
@@ -455,7 +455,7 @@ html.rs-theme-switching *::after {
         content: attr(data-label);
         flex: 0 0 auto;
         max-width: 45%;
-        color: light-dark(#64748b, #B8BCC1);
+        color: light-dark(#627288, #B8BCC1);
         font-size: .74rem;
         font-weight: 600;
         text-align: left;
@@ -1051,4 +1051,131 @@ th.rs-sortable[aria-sort="ascending"]::after {
 th.rs-sortable:focus-visible {
     outline: 2px solid #4AADA8;
     outline-offset: -2px;
+}
+
+.fw-req {
+    color: light-dark(#C62828, #FF8A80);
+    margin-left: 2px;
+}
+
+/* Needs-attention list (dashboard, and floating over the fleet map). */
+.rs-attn {
+    margin: 0 0 18px;
+    padding: 12px 16px;
+    border: 1px solid light-dark(#E3E8EF, #4A4A4A);
+    border-radius: 12px;
+    background: light-dark(#FFFFFF, #393939);
+    box-shadow: 0 2px 10px light-dark(rgba(16, 24, 40, .06), rgba(0, 0, 0, .25));
+    color: light-dark(#2D3748, #DEE1E7);
+}
+
+.rs-attn__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .92rem;
+    list-style: none;
+}
+
+.rs-attn__head::-webkit-details-marker { display: none; }
+
+.rs-attn__head::after {
+    content: "";
+    margin-left: auto;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform .2s ease-out;
+}
+
+.rs-attn:not([open]) .rs-attn__head::after { transform: rotate(-45deg); }
+
+.rs-attn__head:focus-visible {
+    outline: 2px solid light-dark(#2F7F7A, #7ACFCA);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+.rs-attn__count:not(:empty) {
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: light-dark(#B42318, #FFB4AE);
+    color: light-dark(#FFFFFF, #3A1F1D);
+    font-size: .75rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.rs-attn__list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+}
+
+.rs-attn__link {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+    font-size: .86rem;
+    line-height: 1.35;
+}
+
+.rs-attn__link:hover { background: light-dark(#F3F5F8, #424242); }
+
+.rs-attn__link:focus-visible {
+    outline: 2px solid light-dark(#2F7F7A, #7ACFCA);
+    outline-offset: 1px;
+}
+
+.rs-attn__tag {
+    flex: none;
+    min-width: 72px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.rs-attn__item--relief .rs-attn__tag,
+.rs-attn__item--issue .rs-attn__tag { background: light-dark(#FDECEC, #574142); color: light-dark(#B42318, #FFB4AE); }
+.rs-attn__item--late .rs-attn__tag,
+.rs-attn__item--fault .rs-attn__tag { background: light-dark(#FFF4DE, #50472A); color: light-dark(#8A5300, #F2C27A); }
+.rs-attn__item--signal .rs-attn__tag { background: light-dark(#EDF1F5, #3A3F47); color: light-dark(#3F4756, #D3D8DF); }
+
+.rs-attn__clear {
+    display: none;
+    margin: 8px 0 0;
+    font-size: .86rem;
+    color: light-dark(#5F6B7A, #BCC0C4);
+}
+
+.rs-attn--clear .rs-attn__clear { display: block; }
+.rs-attn--clear .rs-attn__list { display: none; }
+
+/* Over the map: under the zoom buttons, scrolling within itself. */
+.rs-attn--map {
+    position: absolute;
+    left: 10px;
+    top: 92px;
+    z-index: 1000;
+    width: min(340px, calc(100% - 20px));
+    max-height: 45vh;
+    overflow: auto;
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rs-attn__head::after { transition: none; }
 }

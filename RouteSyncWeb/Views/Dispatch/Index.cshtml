@@ -67,9 +67,10 @@
             </div>
             <div class="@(Model.DelayedTrips > 0 ? "dp-side-btn" : "")"
                  data-on="@(Model.DelayedTrips > 0 ? "click:dpHighlightDelayed" : null)"
+                 role="@(Model.DelayedTrips > 0 ? "button" : null)" tabindex="@(Model.DelayedTrips > 0 ? "0" : null)"
                  title="Departure time passed and the trip has not started">
                 <div class="rp-stat-label">Delayed</div>
-                <div class="rp-stat-value dp-side-value--red">@Model.DelayedTrips</div>
+                <div class="rp-stat-value@(Model.DelayedTrips > 0 ? " dp-side-value--red" : "")">@Model.DelayedTrips</div>
                 @if (Model.DelayedTrips > 0)
                 {
                     <div class="dp-side-view">Show &#8250;</div>
@@ -79,7 +80,8 @@
     </div>
 
     <div class="rp-stat-card @(Model.UnassignedTrips > 0 ? "dp-card-click" : "")"
-         data-on="@(Model.UnassignedTrips > 0 ? "click:dpHighlightIssues" : null)">
+         data-on="@(Model.UnassignedTrips > 0 ? "click:dpHighlightIssues" : null)"
+         role="@(Model.UnassignedTrips > 0 ? "button" : null)" tabindex="@(Model.UnassignedTrips > 0 ? "0" : null)">
         <div class="rp-stat-header">
             <span class="rp-stat-icon rp-stat-icon--red">
                 <i class="ti ti-alert-circle"></i>
@@ -94,7 +96,7 @@
         <div class="dp-side-row">
             <a class="dp-side-link" href="/Vehicles?status=Flagged" title="Buses on today's trips that carry an open fault">
                 <div class="rp-stat-label">Flagged Vehicles</div>
-                <div class="rp-stat-value dp-side-value--red">@Model.FlaggedVehicles</div>
+                <div class="rp-stat-value@(Model.FlaggedVehicles > 0 ? " dp-side-value--red" : "")">@Model.FlaggedVehicles</div>
                 @if (Model.FlaggedVehicles > 0)
                 {
                     <div class="dp-side-view">View &#8250;</div>
@@ -102,7 +104,7 @@
             </a>
             <div>
                 <div class="rp-stat-label">Unable to Drive</div>
-                <div class="rp-stat-value dp-side-value--red">@Model.UnavailableDrivers</div>
+                <div class="rp-stat-value@(Model.UnavailableDrivers > 0 ? " dp-side-value--red" : "")">@Model.UnavailableDrivers</div>
             </div>
         </div>
     </div>
@@ -137,7 +139,7 @@
     </a>
     <div class="dp-search-wrap">
         <i class="ti ti-search dp-search-icon"></i>
-        <input type="text" id="searchInput" class="dp-search-input" placeholder="Search bus, plate, driver or ID…" data-on="input:dpFilterRows" />
+        <input type="text" id="searchInput" class="dp-search-input" aria-label="Search bus, plate, driver or ID" placeholder="Search bus, plate, driver or ID…" data-on="input:dpFilterRows" />
     </div>
     <button class="dp-btn-refresh" id="dpRefreshBtn" data-on="click:dpRefreshNow" title="Refresh this page only">
         <i class="ti ti-refresh"></i> Refresh
@@ -430,7 +432,7 @@
                                                 @(trip.TripStatus == "Completed" || trip.TripStatus == "Missed" ? "disabled" : "")>
                                                 Reassign
                                             </button>
-                                            <button class="dp-btn-msg" title="Message" data-trip-id="@trip.TripId" data-vehicle-id="@(trip.VehicleId ?? "")" data-driver-name="@(trip.DriverName ?? "")" data-on="click:dpTripMessage"><i class="ti ti-message"></i></button>
+                                            <button class="dp-btn-msg" title="Message" aria-label="Message the driver" data-trip-id="@trip.TripId" data-vehicle-id="@(trip.VehicleId ?? "")" data-driver-name="@(trip.DriverName ?? "")" data-on="click:dpTripMessage"><i class="ti ti-message"></i></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -509,6 +511,15 @@
         dpCloseApply:       function () { dpCloseApply(); },
         dpConfirmApply:     function () { dpConfirmApply(); },
         dpCloseMsg:         function () { dpCloseMsg(); }
+    });
+
+    // Opened from the needs-attention list: /Dispatch?trip=ID shows that trip.
+    window.addEventListener('load', function () {
+        var askedTrip = new URLSearchParams(location.search).get('trip');
+        if (!askedTrip) return;
+        // Dropped from the address once shown, so a later reload does not open it again.
+        history.replaceState(null, '', location.pathname);
+        openTripModal(askedTrip);
     });
 
     function dpShowMsg(messages, title) {

@@ -2,7 +2,7 @@
     :root {
         --rq-teal: #4AADA8;
         --rq-text: light-dark(#2D3748, #DEE1E7);
-        --rq-muted: light-dark(#9AA5B4, #A1A5A9);
+        --rq-muted: light-dark(#5F6B7A, #BCC0C4);
         --rq-border: light-dark(#E8ECF0, #4E4E4E);
         --rq-bg: light-dark(#F8F9FA, #373737);
         --rq-white: light-dark(#FFFFFF, #393939);
@@ -67,7 +67,7 @@
         padding: 6px 14px;
         border-radius: 30px;
         background: light-dark(#FEF9E7, #4E4831);
-        color: light-dark(#B7950B, #D9BB5C);
+        color: light-dark(#876E08, #D9BB5C);
         border: 1px solid light-dark(#F5E6B8, #685D3C);
         font-size: .8rem;
         font-weight: 700;
@@ -313,7 +313,7 @@
         background: light-dark(#FEF9E7, #4E4831);
         font-size: .7rem;
         font-weight: 700;
-        color: light-dark(#B7950B, #D9BB5C);
+        color: light-dark(#876E08, #D9BB5C);
         white-space: nowrap;
     }
 
@@ -339,14 +339,14 @@
         white-space: nowrap;
     }
 
-    .rq-badge--vacation  { background: light-dark(#E8F6F5, #354D4C); color: light-dark(#2C9C96, #6AD2CB); }
+    .rq-badge--vacation  { background: light-dark(#E8F6F5, #354D4C); color: light-dark(#227A75, #6AD2CB); }
     .rq-badge--sick      { background: light-dark(#E3F2FD, #384A58); color: light-dark(#2B6CB0, #8DC2FE); }
-    .rq-badge--emergency { background: light-dark(#FDECEC, #574142); color: light-dark(#E53E3E, #FFA098); }
+    .rq-badge--emergency { background: light-dark(#FDECEC, #574142); color: light-dark(#D41C1C, #FFA098); }
     .rq-badge--default   { background: light-dark(#E4E7EC, #313131); color: light-dark(#4B5563, #D8DCE1); }
 
-    .rq-badge--pending   { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#B7950B, #D9BB5C); }
-    .rq-badge--approved  { background: light-dark(#E8F8EE, #394D41); color: light-dark(#27AE60, #7ED498); }
-    .rq-badge--rejected  { background: light-dark(#FDECEC, #574142); color: light-dark(#E53E3E, #FFA098); }
+    .rq-badge--pending   { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#876E08, #D9BB5C); }
+    .rq-badge--approved  { background: light-dark(#E8F8EE, #394D41); color: light-dark(#1C7E46, #7ED498); }
+    .rq-badge--rejected  { background: light-dark(#FDECEC, #574142); color: light-dark(#D41C1C, #FFA098); }
     .rq-badge--cancelled { background: light-dark(#E4E7EC, #313131); color: light-dark(#4B5563, #D8DCE1); }
 
     /* An approval begun and not finished. Neither the amber of a request nobody has
@@ -368,7 +368,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .04em;
-        color: light-dark(#7C8B99, #ADB1B6);
+        color: light-dark(#647380, #ADB1B6);
     }
 
     .rq-quote-t {
@@ -511,7 +511,7 @@
     .rq-blocking-s {
         margin: 8px 0 0;
         font-size: .75rem;
-        color: light-dark(#9a8434, #D4BD6E);
+        color: light-dark(#83702C, #D4BD6E);
     }
 
     /* With covers to choose, the box is a plain section of the dialog rather than a
@@ -609,7 +609,7 @@
         font-weight: 700;
         letter-spacing: .06em;
         text-transform: uppercase;
-        color: light-dark(#2C9C96, #6AD2CB);
+        color: light-dark(#237C77, #6AD2CB);
     }
 
     .rq-cover-who {
@@ -797,7 +797,7 @@
         color: light-dark(#C0392B, #FFA192);
     }
 
-    .rq-btn--reject:hover { background: light-dark(#FADBD8, #603D3A); border-color: #E53E3E; color: light-dark(#E53E3E, #FFA098); }
+    .rq-btn--reject:hover { background: light-dark(#FADBD8, #603D3A); border-color: #E53E3E; color: light-dark(#C41A1A, #FFA098); }
 
     .rq-btn--primary {
         background: var(--rq-teal);
@@ -949,7 +949,7 @@
         padding: 8px 12px;
         border-radius: 8px;
         background: light-dark(#FDECEC, #574142);
-        color: light-dark(#E53E3E, #FFA098);
+        color: light-dark(#D31D1D, #FFA098);
         font-size: .8rem;
     }
 

@@ -1,4 +1,5 @@
 ﻿/* Dispatch/Index.cshtml */
+    .dp-card-click:focus-visible, .dp-side-btn:focus-visible { outline:2px solid light-dark(#2F7F7A, #7ACFCA); outline-offset:2px; }
     .dp-card-click { cursor:pointer; transition:box-shadow .15s, transform .15s; }
     .dp-card-click:hover { box-shadow:0 6px 20px rgba(231,76,60,.22); transform:translateY(-2px); }
     /* Found, not flagged.
@@ -44,7 +45,7 @@
     }
 
     .dp-title-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-    .dp-date-badge { position:relative; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; }
+    .dp-date-badge { position:relative; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:30px; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2D796F, #82CFC2); font-size:.86rem; font-weight:700; border:1px solid light-dark(#CDE9E4, #4B635F); cursor:pointer; }
     /* The field is not read; the badge under it is. It keeps the badge's size so a
        press anywhere on the date opens the calendar, and stays reachable by keyboard.
        Left with its own appearance, invisible: a date field told to drop it stops
@@ -56,9 +57,9 @@
     .dp-date-badge i { font-size:1rem; }
     .dp-cycle-main { font-weight:800; }
     .dp-cycle-range { font-weight:600; font-size:.74rem; color:light-dark(#3d9490, #7ACFCA); padding-left:8px; margin-left:4px; border-left:1px solid light-dark(#BFE2DC, #456560); }
-    .dp-overnight-tag { display:inline-block; margin-top:3px; padding:1px 7px; border-radius:10px; background:light-dark(#EEF2FF, #424758); color:light-dark(#4F6BED, #A4BBFF); font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+    .dp-overnight-tag { display:inline-block; margin-top:3px; padding:1px 7px; border-radius:10px; background:light-dark(#EEF2FF, #424758); color:light-dark(#415FEC, #A4BBFF); font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
     .dp-date-nav { display:inline-flex; align-items:center; gap:8px; }
-    .dp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); text-decoration:none; font-size:1.1rem; transition:background .15s,transform .15s; }
+    .dp-date-arrow { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2D796F, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); text-decoration:none; font-size:1.1rem; transition:background .15s,transform .15s; }
     .dp-date-arrow:hover { background:#2e7d72; color:#fff; transform:translateY(-1px); }
     .dp-date-today { display:inline-flex; align-items:center; padding:7px 14px; border-radius:30px; background:light-dark(#fff, #393939); color:light-dark(#2e7d72, #82CFC2); border:1px solid light-dark(#CDE9E4, #4B635F); font-size:.82rem; font-weight:700; text-decoration:none; }
     .dp-date-today:hover { background:#2e7d72; color:#fff; }
@@ -89,7 +90,7 @@
     .dp-suggest-short { display:flex; align-items:flex-start; gap:5px; margin:0; color:light-dark(#94560A, #F2AD6E); }
     .dp-suggest-short i { flex:none; margin-top:2px; }
     .dp-suggest-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; margin-top:6px; }
-    .dp-btn-apply { min-height:24px; border:1px solid light-dark(#CDE9E4, #4B635F); background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2e7d72, #82CFC2); border-radius:6px; padding:2px 10px; font-size:.76rem; font-weight:700; cursor:pointer; }
+    .dp-btn-apply { min-height:24px; border:1px solid light-dark(#CDE9E4, #4B635F); background:light-dark(#EAF7F5, #354D4A); color:light-dark(#2D796F, #82CFC2); border-radius:6px; padding:2px 10px; font-size:.76rem; font-weight:700; cursor:pointer; }
     .dp-btn-apply:hover { background:light-dark(#d6efeb, #2D4F4A); }
     .dp-suggest-more { min-height:24px; border:none; background:none; padding:2px 0; color:light-dark(#2e7d72, #82CFC2); font-size:.76rem; font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
     .dp-suggest-more:hover { color:light-dark(#1f5e56, #D7DEDC); }
@@ -109,7 +110,7 @@
 /* Dispatch/Index.cshtml */
     :root {
         --rp-text: light-dark(#2D3748, #DEE1E7);
-        --rp-muted: light-dark(#9AA5B4, #A1A5A9);
+        --rp-muted: light-dark(#5F6B7A, #BCC0C4);
         --rp-border: light-dark(#E8ECF0, #4E4E4E);
         --rp-bg: light-dark(#F8F9FA, #373737);
         --rp-white: light-dark(#FFFFFF, #393939);
@@ -207,17 +208,17 @@
 
     .rp-stat-icon--green {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
     }
 
     .rp-stat-icon--red {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
     }
 
     .rp-stat-icon--amber {
         background: light-dark(#FFF8E1, #50472A);
-        color: #F59E0B;
+        color: light-dark(#9C6306, #F59E0B);
     }
 
     .rp-stat-label {
@@ -264,7 +265,7 @@
     }
 
     .dp-side-value--red {
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
     }
 
     /* clickable flagged column */
@@ -291,7 +292,7 @@
     .dp-side-view {
         font-size: 0.68rem;
         font-weight: 700;
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
         text-transform: uppercase;
         letter-spacing: .04em;
         margin-top: 2px;
@@ -485,7 +486,7 @@
         font-size: 0.78rem;
         font-family: 'Segoe UI', sans-serif;
         font-weight: 600;
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
     }
 
     .dp-needs-dot {
@@ -682,7 +683,7 @@
     .dp-flag {
         display: inline-flex;
         align-items: center;
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
         font-size: 0.95rem;
         margin-left: 2px;
     }
@@ -721,27 +722,27 @@
 
     .dp-badge--active {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
     }
 
     .dp-badge--not-started {
         background: light-dark(#EAF3FF, #3D4958);
-        color: light-dark(#3B82F6, #98BFFE);
+        color: light-dark(#0B62F1, #98BFFE);
     }
 
     .dp-badge--pending {
         background: light-dark(#FFF8E1, #50472A);
-        color: #F59E0B;
+        color: light-dark(#9C6306, #F59E0B);
     }
 
     .dp-badge--issue {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
     }
 
     .dp-badge--completed {
         background: light-dark(#F0F0F0, #343434);
-        color: light-dark(#6B7280, #B9BCC1);
+        color: light-dark(#656C79, #B9BCC1);
     }
 
     .dp-badge--missed {
@@ -966,7 +967,7 @@
         background: none;
         border: none;
         font-size: 1.4rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         cursor: pointer;
         line-height: 1;
         padding: 2px 6px;
@@ -1000,7 +1001,7 @@
 
     .tdm-badge--active {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
     }
 
         .tdm-badge--active::before {
@@ -1009,7 +1010,7 @@
 
     .tdm-badge--issue {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
     }
 
         .tdm-badge--issue::before {
@@ -1018,7 +1019,7 @@
 
     .tdm-badge--not-started {
         background: light-dark(#EEF2FF, #424758);
-        color: light-dark(#4F6AD8, #A4BBFF);
+        color: light-dark(#4763D7, #A4BBFF);
     }
 
         .tdm-badge--not-started::before {
@@ -1027,7 +1028,7 @@
 
     .tdm-badge--pending {
         background: light-dark(#FFF8E1, #50472A);
-        color: #F59E0B;
+        color: light-dark(#9C6306, #F59E0B);
     }
 
         .tdm-badge--pending::before {
@@ -1036,7 +1037,7 @@
 
     .tdm-badge--completed {
         background: light-dark(#F0F2F5, #353535);
-        color: light-dark(#6B7C93, #B4B8BD);
+        color: light-dark(#5F6E83, #B4B8BD);
     }
 
         .tdm-badge--completed::before {
@@ -1054,7 +1055,7 @@
 
     .tdm-badge--passed {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
     }
 
         .tdm-badge--passed::before {
@@ -1063,7 +1064,7 @@
 
     .tdm-badge--failed {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
     }
 
         .tdm-badge--failed::before {
@@ -1073,7 +1074,7 @@
     /* Nothing critical failed, so the bus ran, but the faults still need review. */
     .tdm-badge--defects {
         background: light-dark(#FDF3E3, #524632);
-        color: light-dark(#B87A15, #EDB161);
+        color: light-dark(#956311, #EDB161);
     }
 
         .tdm-badge--defects::before {
@@ -1094,7 +1095,7 @@
     .tdm-section-title {
         font-size: 0.82rem;
         font-weight: 700;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         text-transform: uppercase;
         letter-spacing: .06em;
     }
@@ -1128,7 +1129,7 @@
     .tdm-label {
         font-size: 0.72rem;
         font-weight: 600;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         text-transform: uppercase;
         letter-spacing: .05em;
     }
@@ -1160,7 +1161,7 @@
 
     .tdm-break-note {
         font-size: 0.75rem;
-        color: light-dark(#2F855A, #7FD3A3);
+        color: light-dark(#2D7F56, #7FD3A3);
     }
 
         .tdm-break-note--bad { color: light-dark(#E53E3E, #FFA098); }
@@ -1240,7 +1241,7 @@
 
     .tdm-accordion-chevron {
         transition: transform 200ms;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
     }
 
         .tdm-accordion-chevron.open {
@@ -1272,7 +1273,7 @@
     .tdm-insp-card-title {
         font-size: 0.95rem;
         font-weight: 700;
-        color: light-dark(#6B7C93, #B4B8BD);
+        color: light-dark(#627287, #B4B8BD);
     }
 
     .tdm-insp-card-body {
@@ -1351,7 +1352,7 @@
         flex: none;
         font-size: 0.72rem;
         font-style: italic;
-        color: light-dark(#B6BDC9, #979A9F);
+        color: light-dark(#657289, #BCC0C4);
     }
 
     /* Above the trip dialog, so it closes first and leaves the trip open underneath. */
@@ -1397,7 +1398,7 @@
         .tdm-photo figcaption {
             margin-top: 6px;
             font-size: 0.75rem;
-            color: light-dark(#8A93A2, #A9ACB2);
+            color: light-dark(#677282, #A9ACB2);
         }
 
     .tdm-photo-gone {
@@ -1405,7 +1406,7 @@
         padding: 18px 0;
         text-align: center;
         font-size: 0.82rem;
-        color: light-dark(#8A93A2, #A9ACB2);
+        color: light-dark(#677282, #A9ACB2);
     }
 
     .tdm-notes-box {
@@ -1431,7 +1432,7 @@
         align-items: center;
         gap: 12px;
         padding: 48px 24px;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         font-size: 0.88rem;
     }
 
@@ -1453,7 +1454,7 @@
     .tdm-error {
         padding: 24px;
         text-align: center;
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
         font-size: 0.88rem;
     }
 
@@ -1524,7 +1525,7 @@
         background: none;
         border: none;
         font-size: 1.4rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         cursor: pointer;
         padding: 2px 6px;
         border-radius: 6px;
@@ -1628,13 +1629,13 @@
 
         .atm-select:disabled {
             background: light-dark(#F8F9FA, #373737);
-            color: light-dark(#9AA5B4, #A1A5A9);
+            color: light-dark(#5F6B7A, #BCC0C4);
             cursor: not-allowed;
         }
 
     .atm-hint {
         font-size: 0.75rem;
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
         display: none;
     }
 
@@ -1827,7 +1828,7 @@
         background: none;
         border: none;
         font-size: 1.4rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         cursor: pointer;
         padding: 2px 6px;
         border-radius: 6px;
@@ -1848,7 +1849,7 @@
         gap: 10px;
         padding: 48px 28px;
         font-size: 0.9rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
     }
 
     /* Names the side of the trip being chosen. A quiet heading inside the section it
@@ -1859,7 +1860,7 @@
         margin: 0;
         font-size: 0.72rem;
         font-weight: 700;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         text-transform: uppercase;
         letter-spacing: .06em;
         display: flex;
@@ -1882,12 +1883,12 @@
 
     .rtm-badge--issue {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
     }
 
     .rtm-badge--pending {
         background: light-dark(#FFF8E1, #50472A);
-        color: #F59E0B;
+        color: light-dark(#9C6306, #F59E0B);
     }
 
     .rtm-badge-dot {
@@ -1968,7 +1969,7 @@
 
     .rtm-hint {
         font-size: 0.78rem;
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
         display: none;
     }
 
@@ -2179,7 +2180,7 @@
         background: none;
         border: none;
         font-size: 1.4rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         cursor: pointer;
         padding: 2px 6px;
         border-radius: 6px;
@@ -2219,12 +2220,12 @@
 
     .bm-optional {
         font-weight: 400;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         font-size: 0.82rem;
     }
 
     .bm-required {
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
     }
 
     .bm-recipient-card {
@@ -2242,7 +2243,7 @@
         height: 42px;
         border-radius: 10px;
         background: light-dark(#E8F6F5, #354D4C);
-        color: light-dark(#4AADA8, #70D1CC);
+        color: light-dark(#337774, #70D1CC);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2257,13 +2258,13 @@
 
     .bm-recipient-sub {
         font-size: 0.8rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         margin-top: 2px;
     }
 
     .bm-recipient-note {
         font-size: 0.78rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         margin: 0;
     }
 
@@ -2303,7 +2304,7 @@
 
     .bm-char-count {
         font-size: 0.75rem;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         text-align: right;
     }
 

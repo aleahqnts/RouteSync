@@ -1002,7 +1002,7 @@ namespace FleetWise.Controllers
                         {
                             col.Item().AlignCenter().PaddingTop(40)
                                 .Text("No data found for the selected filters.")
-                                .FontColor("#9AA5B4").FontSize(10);
+                                .FontColor("#5F6B7A").FontSize(10);
                             return;
                         }
 

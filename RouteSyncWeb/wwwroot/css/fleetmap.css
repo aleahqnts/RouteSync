@@ -14,7 +14,7 @@
         --fm-bg: light-dark(#F8F9FA, #373737);
         --fm-white: light-dark(#FFFFFF, #393939);
         --fm-text: light-dark(#2D3748, #DEE1E7);
-        --fm-muted: light-dark(#9AA5B4, #A1A5A9);
+        --fm-muted: light-dark(#5F6B7A, #BCC0C4);
         --fm-radius: 14px;
     }
 
@@ -95,12 +95,12 @@
     .fm-chip svg {
         width: 14px;
         height: 14px;
-        color: light-dark(#8A96A8, #A8ABB0);
+        color: light-dark(#647287, #A8ABB0);
     }
 
     .fm-chip--trip {
         background: light-dark(#E8F6F5, #354D4C);
-        color: light-dark(#2E8C87, #77D0CA);
+        color: light-dark(#287974, #77D0CA);
     }
 
     .fm-chip-dot {
@@ -133,7 +133,7 @@
         background: none;
         border: none;
         padding: 4px 6px;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         font-size: 0.78rem;
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
@@ -143,7 +143,7 @@
     }
 
     .fm-clear-btn:hover {
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CD2A1A, #FFA193);
         background: light-dark(#FDECEC, #574142);
     }
 
@@ -231,7 +231,7 @@
         font: 700 0.74rem 'Segoe UI', sans-serif;
         letter-spacing: .04em;
         text-transform: uppercase;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
     }
 
     .fm-legend-head:hover {
@@ -425,7 +425,10 @@
     }
 
     .fm-tooltip {
-        background: var(--fm-white);
+        background: color-mix(in srgb, var(--fm-white) 62%, transparent);
+        -webkit-backdrop-filter: blur(14px) saturate(160%);
+        backdrop-filter: blur(14px) saturate(160%);
+        border: 1px solid light-dark(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));
         border-radius: 10px;
         box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         padding: 10px 14px;
@@ -465,7 +468,7 @@
         align-items: center;
         gap: 6px;
         font-size: 0.75rem;
-        color: light-dark(#16A34A, #84D393);
+        color: light-dark(#11813B, #84D393);
         margin-bottom: 8px;
     }
 
@@ -505,7 +508,10 @@
         bottom: 16px;
         width: 300px;
         z-index: 1100;
-        background: var(--fm-white);
+        background: color-mix(in srgb, var(--fm-white) 62%, transparent);
+        -webkit-backdrop-filter: blur(14px) saturate(160%);
+        backdrop-filter: blur(14px) saturate(160%);
+        border: 1px solid light-dark(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));
         border-radius: var(--fm-radius);
         box-shadow: 0 8px 28px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         padding: 22px 0;
@@ -571,7 +577,7 @@
 
     .fm-panel__shift {
         font-weight: 700;
-        color: #E8A33D;
+        color: light-dark(#986212, #E8A33D);
         background: light-dark(#FCF3DF, #52462D);
         border-radius: 6px;
         padding: 2px 8px;
@@ -583,7 +589,7 @@
         gap: 10px;
         font-size: 1rem;
         font-weight: 700;
-        color: light-dark(#6B7280, #B9BCC1);
+        color: light-dark(#6A717F, #B9BCC1);
     }
 
     .fm-panel__status-dot {
@@ -598,7 +604,7 @@
         display: flex;
         align-items: center;
         gap: 14px;
-        background: light-dark(#F1F3F5, #353535);
+        background: light-dark(rgba(241, 243, 245, .55), rgba(53, 53, 53, .45));
         padding: 14px 22px;
     }
 
@@ -654,7 +660,7 @@
     }
 
     .fm-panel__rev-head {
-        background: light-dark(#F1F3F5, #353535);
+        background: light-dark(rgba(241, 243, 245, .55), rgba(53, 53, 53, .45));
         padding: 10px 22px;
         font-size: 1rem;
         color: light-dark(#2D3748, #DEE1E7);
@@ -780,7 +786,7 @@
         font: 700 0.74rem 'Segoe UI', sans-serif;
         letter-spacing: .04em;
         text-transform: uppercase;
-        color: light-dark(#9AA5B4, #A1A5A9);
+        color: light-dark(#5F6B7A, #BCC0C4);
         padding: 2px 0 2px;
     }
 

@@ -5,7 +5,7 @@
     --fw-teal: #4AADA8;
     --fw-teal-light: #E8F6F5;
     --fw-text-dark: #2D3748;
-    --fw-text-muted: #9AA5B4;
+    --fw-text-muted: #5F6B7A;
     --fw-bg: #FFFFFF;
     --fw-divider: #E8ECF0;
     --fw-transition: 220ms ease;
@@ -108,7 +108,7 @@ body {
 
 .input-icon {
     margin-right: 10px;
-    color: #aaa;
+    color: #717171;
     font-size: 16px;
 }
 
@@ -122,11 +122,11 @@ body {
 }
 
     .input-field::placeholder {
-        color: #aaa;
+        color: #717171;
     }
 
 .field-error {
-    color: #e74c3c;
+    color: #D82C1B;
     font-size: 12px;
     margin-bottom: 8px;
     display: block;
@@ -134,7 +134,7 @@ body {
 
 .error-message {
     background: #fdecea;
-    color: #e74c3c;
+    color: #D82C1B;
     padding: 10px 14px;
     border-radius: 8px;
     font-size: 13px;
@@ -149,7 +149,7 @@ body {
 
     .forgot-password a {
         font-size: 13px;
-        color: #3ab5a4;
+        color: #287D71;
         text-decoration: none;
     }
 
@@ -161,7 +161,7 @@ body {
     margin: 18px 0 0;
     text-align: center;
     font-size: 12px;
-    color: #9aa5b4;
+    color: #5F6B7A;
     font-variant-numeric: tabular-nums;
 }
 
@@ -194,12 +194,12 @@ body {
 }
 
 .brand-wise {
-    color: #3ab5a4;
+    color: #287D71;
 }
 
 .brand-sub {
     font-size: 20px;
-    color: #888;
+    color: #717171;
     margin-bottom: 130px;
     font-weight: 400;
 }
@@ -223,7 +223,7 @@ body {
     padding: 0;
     font-size: 13px;
     font-family: inherit;
-    color: #3ab5a4;
+    color: #287D71;
     cursor: pointer;
 }
 
@@ -232,7 +232,7 @@ body {
     }
 
 .field-hint {
-    color: #8a94a6;
+    color: #667186;
     font-size: 12px;
     margin: -4px 0 12px;
 }
@@ -249,7 +249,7 @@ body {
 
 .step-hint {
     font-size: 14px;
-    color: #7b8494;
+    color: #697282;
     text-align: center;
     margin-bottom: 22px;
 }
@@ -296,7 +296,7 @@ body {
     border: none;
     background: none;
     padding: 0 0 0 8px;
-    color: #aaa;
+    color: #717171;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -309,7 +309,7 @@ body {
     }
 
     .eye:hover {
-        color: #3ab5a4;
+        color: #287D71;
     }
 
     /* The icon reports the state of the field rather than the action on offer: a slashed
@@ -342,7 +342,7 @@ body {
         align-items: center;
         gap: 7px;
         font-size: 12px;
-        color: #9aa3b2;
+        color: #667285;
         transition: color .15s ease;
     }
 
@@ -357,7 +357,7 @@ body {
     }
 
     .pw-rules li.met {
-        color: #2f8d7e;
+        color: #2A7E70;
     }
 
         .pw-rules li.met .dot {
@@ -366,7 +366,7 @@ body {
         }
 
 .link-button:disabled {
-    color: #9aa3b2;
+    color: #667285;
     cursor: default;
     text-decoration: none;
 }

@@ -4,7 +4,7 @@
         --db-teal: #4AADA8;
         --db-teal-light: light-dark(#E8F6F5, #354D4C);
         --db-text: light-dark(#2D3748, #DEE1E7);
-        --db-muted: light-dark(#9AA5B4, #A1A5A9);
+        --db-muted: light-dark(#5F6B7A, #BCC0C4);
         --db-border: light-dark(#E8ECF0, #4E4E4E);
         --db-bg: light-dark(#F8F9FA, #373737);
         --db-white: light-dark(#FFFFFF, #393939);
@@ -100,7 +100,7 @@
         padding: 8px 16px;
         border-radius: 30px;
         background: light-dark(#EAF7F5, #354D4A);
-        color: light-dark(#2e7d72, #82CFC2);
+        color: light-dark(#2D796F, #82CFC2);
         font-size: .86rem;
         font-weight: 700;
         font-family: 'Segoe UI', sans-serif;
@@ -243,22 +243,22 @@
 
         .db-stat-icon--green {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
         }
 
         .db-stat-icon--red {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
         }
 
         .db-stat-icon--blue {
         background: light-dark(#EAF3FF, #3D4958);
-        color: light-dark(#3B82F6, #98BFFE);
+        color: light-dark(#0B62F1, #98BFFE);
         }
 
         .db-stat-icon--pink {
         background: light-dark(#FDF0F8, #53424D);
-        color: light-dark(#D63384, #FB9CC1);
+        color: light-dark(#CA2978, #FB9CC1);
         }
 
         .db-stat-label {
@@ -285,11 +285,11 @@
         }
 
         .db-stat-delta--up {
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D8047, #7ED498);
         }
 
         .db-stat-delta--down {
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#D82C1B, #FFA193);
         }
 
         /* Middle row. */
@@ -333,17 +333,17 @@
 
         .db-card-icon--green {
         background: light-dark(#E8F8EE, #394D41);
-        color: light-dark(#27AE60, #7ED498);
+        color: light-dark(#1D7E46, #7ED498);
         }
 
         .db-card-icon--red {
         background: light-dark(#FEECEC, #574142);
-        color: light-dark(#E74C3C, #FFA193);
+        color: light-dark(#CF2A1A, #FFA193);
         }
 
         .db-card-icon--orange {
         background: light-dark(#FEF3E8, #534536);
-        color: light-dark(#F4723B, #FFA37F);
+        color: light-dark(#C3410B, #FFA37F);
         }
 
         .db-card-title {
@@ -687,7 +687,7 @@
     margin: 12px 0 0;
     text-align: center;
     font-size: .74rem;
-    color: light-dark(#9AA5B4, #A1A5A9);
+    color: light-dark(#5F6B7A, #BCC0C4);
     font-variant-numeric: tabular-nums;
 }
 

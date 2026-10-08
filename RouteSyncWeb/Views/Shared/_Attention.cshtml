@@ -1,0 +1,22 @@
+@model string
+@*
+    Needs-attention list, shared by the dashboard and the fleet map ("map" floats it over
+    the map). Filled by attention.js from Dispatch/Attention and FleetMap/Positions; both
+    need the routes permission, so nothing is drawn without it.
+*@
+@if (User.HasClaim("perm", "routes"))
+{
+    <details id="rsAttention" class="rs-attn@(Model == "map" ? " rs-attn--map" : "")" open
+             data-attention-url="@Url.Action("Attention", "Dispatch")"
+             data-positions-url="@Url.Action("Positions", "FleetMap")"
+             data-dispatch-url="@Url.Action("Index", "Dispatch")"
+             data-map-url="@Url.Action("Index", "FleetMap")">
+        <summary class="rs-attn__head">
+            <span class="rs-attn__title">Needs attention</span>
+            <span class="rs-attn__count"></span>
+        </summary>
+        <ul class="rs-attn__list" aria-live="polite"></ul>
+        <p class="rs-attn__clear">Nothing needs you right now.</p>
+    </details>
+    <script src="~/js/attention.js" asp-append-version="true" defer></script>
+}

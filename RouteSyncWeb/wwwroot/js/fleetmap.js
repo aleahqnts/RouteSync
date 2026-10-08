@@ -268,21 +268,36 @@
         document.getElementById('fmPanelUpdated').textContent = 'Last updated: ' + phClock(bus.timestamp);
     }
 
+    var panelReturnFocus = null;
+
     function openPanel(vehicleId) {
+        if (!panel.classList.contains('fm-panel--open')) panelReturnFocus = document.activeElement;
         selectedVehicleId = vehicleId;
         var marker = busMarkers[vehicleId];
         if (marker && marker._bus) fillPanel(marker._bus);
         panel.classList.add('fm-panel--open');
         panel.setAttribute('aria-hidden', 'false');
+        panelClose.focus();
     }
 
     function closePanel() {
         selectedVehicleId = null;
         panel.classList.remove('fm-panel--open');
         panel.setAttribute('aria-hidden', 'true');
+        if (panelReturnFocus && document.contains(panelReturnFocus)) panelReturnFocus.focus();
+        panelReturnFocus = null;
     }
 
     panelClose.addEventListener('click', closePanel);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && panel.classList.contains('fm-panel--open')) closePanel();
+    });
+
+    function escapeHtml(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
 
     // A reading older than this is where the bus was, not where it is. Only a trip
     // reports; a bus standing at its terminal is not reporting and is not late for it,
@@ -304,7 +319,7 @@
         return L.divIcon({
             className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : '') + (off ? ' fm-bus-marker--off' : '')
                 + (parked ? ' fm-bus-marker--parked' : ''),
-            html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + label + '</span>',
+            html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + escapeHtml(label) + '</span>',
             iconSize: [80, 28],
             iconAnchor: [40, 14]
         });
@@ -346,14 +361,14 @@
         var sc = statusColor(bus.status);
         return '<div class="fm-tooltip">' +
                 '<div class="fm-tooltip__header">' +
-                    '<span class="fm-tooltip__bus">' + bus.vehicleId + '</span>' +
-                    '<span class="fm-tooltip__route">' + bus.routeName + '</span>' +
+                    '<span class="fm-tooltip__bus">' + escapeHtml(bus.vehicleId) + '</span>' +
+                    '<span class="fm-tooltip__route">' + escapeHtml(bus.routeName) + '</span>' +
                 '</div>' +
-                '<div class="fm-tooltip__plate">' + bus.plateNumber + '</div>' +
-                '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + statusText(bus) + '</div>' +
-                '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + bus.passengers + '</strong></div>' +
+                '<div class="fm-tooltip__plate">' + escapeHtml(bus.plateNumber) + '</div>' +
+                '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + escapeHtml(statusText(bus)) + '</div>' +
+                '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + escapeHtml(bus.passengers) + '</strong></div>' +
                 (isStale(bus)
-                    ? '<div class="fm-tooltip__stale">Last heard from ' + relativeTime(bus.timestamp) + '</div>'
+                    ? '<div class="fm-tooltip__stale">Last heard from ' + escapeHtml(relativeTime(bus.timestamp)) + '</div>'
                     : '') +
             '</div>';
     }
@@ -364,7 +379,7 @@
 
     // Add a terminal name label above its parked-bus grid.
     function addTerminalLabel(lat, lng, name, count) {
-        var html = '<div class="fm-terminal-pill">🅿 ' + (name || 'Terminal') + ' · ' + count + '</div>';
+        var html = '<div class="fm-terminal-pill">🅿 ' + escapeHtml(name || 'Terminal') + ' · ' + count + '</div>';
         var label = L.marker(offsetPx(lat, lng, 0, -LABEL_RISE_PX), {
             icon: L.divIcon({ className: 'fm-terminal-label', html: html, iconSize: [200, 26], iconAnchor: [100, 13] }),
             zIndexOffset: -500
@@ -421,6 +436,8 @@
     }
 
     // Poll the live Positions endpoint, honouring the current Route/Status filters.
+    var askedBus = new URLSearchParams(location.search).get('bus');
+
     function fetchPositions() {
         // A search is a request for one specific bus, so it looks across the whole fleet.
         // Leaving the dropdowns applied meant a plate could not be found while a route was
@@ -529,6 +546,13 @@
                 applySearch();
                 drawRaw();
                 foldParked();
+
+                // Opened from the needs-attention list: centre on that bus and show it, once.
+                if (askedBus && busMarkers[askedBus]) {
+                    map.setView(busMarkers[askedBus].getLatLng(), 16);
+                    openPanel(askedBus);
+                    askedBus = null;
+                }
 
                 // Live-update the open side panel with the selected bus's newest data.
                 if (selectedVehicleId && busMarkers[selectedVehicleId]) {

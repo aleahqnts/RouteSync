@@ -256,11 +256,17 @@ namespace FleetWise.Controllers
             // Revenue, from finished trips only. The column is written when a trip
             // completes, so counting every row trusts the value over the trip's state.
             decimal todayRevenue = todayTrips.Where(Earned).Sum(t => t.EstimatedRevenue);
-            decimal yesterdayRevenue = yesterdayTrips.Where(Earned).Sum(t => t.EstimatedRevenue);
+
+            // Yesterday as it stood at this time of day. Against the whole of yesterday,
+            // every morning reads as a fall.
+            var sameTime = PhClock.Now.AddDays(-1);
+            decimal yesterdayRevenue = yesterdayTrips
+                .Where(t => Earned(t) && t.ActualEndTime is DateTime e && StoredTimes.FromWall(e) <= sameTime)
+                .Sum(t => t.EstimatedRevenue);
 
             // Passenger Count (from trips.total_boarded).
             int todayPassengers = todayTrips.Sum(t => t.TotalBoarded);
-            int yesterdayPassengers = yesterdayTrips.Sum(t => t.TotalBoarded);
+            int yesterdayPassengers = yesterdayTrips.Sum(t => BoardedBy(t, sameTime));
 
             // Routes dropdown, in name order.
             var routeRows = read.Rows<BusRoute>("routes");
@@ -283,6 +289,19 @@ namespace FleetWise.Controllers
             return new Figures(today, todayTrips, activeTrips, flaggedVehicles,
                 todayPassengers, yesterdayPassengers, todayRevenue, yesterdayRevenue,
                 routeRows, tripBreakdown);
+        }
+
+        /// <summary>How many a trip had boarded by a moment, Philippine time.</summary>
+        private static int BoardedBy(Trip t, DateTime at)
+        {
+            // The start time is not among the columns read, so the shift's own start stands in.
+            var start = t.ActualStartTime is DateTime s ? StoredTimes.FromWall(s) : TripStatus.StartOf(t);
+            if (start > at) return 0;
+            var end = t.ActualEndTime is DateTime e ? StoredTimes.FromWall(e) : TripStatus.ShiftEndAt(t);
+            if (end <= at) return t.TotalBoarded;
+            // ponytail: a running trip's count is shared out evenly over its run; boardings_by_hour gives the exact figure if this ever needs it.
+            var share = (at - start).TotalMinutes / Math.Max(1, (end - start).TotalMinutes);
+            return (int)Math.Round(t.TotalBoarded * share);
         }
 
         /// <summary>Every trip of a past day, kept for <see cref="YesterdayShared"/>.</summary>

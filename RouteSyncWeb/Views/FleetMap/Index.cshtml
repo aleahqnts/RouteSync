@@ -12,7 +12,7 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
             </span>
-            <input type="text" id="fmSearch" class="fm-search-input" placeholder="Search" />
+            <input type="text" id="fmSearch" class="fm-search-input" aria-label="Search buses by ID, plate, driver or route" placeholder="Search" />
         </div>
 
         <button id="fmFilterToggle" class="rs-filter-toggle" type="button"
@@ -123,6 +123,8 @@
             Fit to buses
         </button>
     </div>
+
+    @await Html.PartialAsync("_Attention", "map")
 
     <div id="fmConnBadge" class="fm-conn-badge">
         <span class="fm-conn-badge__dot"></span>Connection lost. Retrying…

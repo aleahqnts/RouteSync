@@ -2,7 +2,7 @@
     :root {
         --ro-teal: #4AADA8;
         --ro-text: light-dark(#2D3748, #DEE1E7);
-        --ro-muted: light-dark(#9AA5B4, #A1A5A9);
+        --ro-muted: light-dark(#5F6B7A, #BCC0C4);
         --ro-soft: light-dark(#5A6473, #C0C3C9);
         --ro-border: light-dark(#E8ECF0, #4E4E4E);
         --ro-bg: light-dark(#F8F9FA, #373737);
@@ -56,9 +56,9 @@
         font-weight: 700;
     }
 
-    .ro-chip--none { background: light-dark(#EEF1F5, #343434); color: light-dark(#6B7280, #B9BCC1); }
+    .ro-chip--none { background: light-dark(#EEF1F5, #343434); color: light-dark(#656C79, #B9BCC1); }
     .ro-chip--draft { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#7A6412, #D4BC72); }
-    .ro-chip--published { background: light-dark(#E6F4F3, #354D4C); color: light-dark(#2E7D72, #82CFC2); }
+    .ro-chip--published { background: light-dark(#E6F4F3, #354D4C); color: light-dark(#2C776D, #82CFC2); }
 
     .ro-saved {
         font-size: .78rem;
@@ -299,7 +299,7 @@
         padding: 2px 8px;
         border-radius: 999px;
         background: light-dark(#E6F4F3, #354D4C);
-        color: light-dark(#2E7D72, #82CFC2);
+        color: light-dark(#2C776D, #82CFC2);
         font-size: .74rem;
         font-weight: 600;
         white-space: nowrap;
@@ -630,7 +630,7 @@
         padding: 0 6px;
         border-radius: 999px;
         background: light-dark(#EAF6F5, #354D4B);
-        color: light-dark(#2E7D72, #82CFC2);
+        color: light-dark(#2D796F, #82CFC2);
         font-size: .72rem;
         font-weight: 700;
         line-height: 18px;
@@ -696,7 +696,7 @@
 
     .ro-box-grab {
         margin-left: auto;
-        color: light-dark(#B6C2CF, #94989D);
+        color: light-dark(#5C728B, #BCC0C4);
         font-size: 1.1rem;
         letter-spacing: -3px;
         line-height: 1;

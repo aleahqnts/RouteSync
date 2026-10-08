@@ -69,7 +69,7 @@
         return collator.compare(a.s !== undefined ? a.s : String(a.n), b.s !== undefined ? b.s : String(b.n));
     }
 
-    // Rows that stand for no record, such as "No users found." or a loading spinner, are
+    // Rows that stand for no record, such as "No users match." or a loading spinner, are
     // a single cell across the table and stay where they are.
     function records(tbody) {
         return Array.prototype.filter.call(tbody.rows, function (tr) {

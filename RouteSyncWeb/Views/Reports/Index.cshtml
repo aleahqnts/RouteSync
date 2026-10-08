@@ -128,7 +128,7 @@
                 </tr>
             </thead>
             <tbody id="tripsTableBody">
-                <tr><td colspan="9" style="text-align:center; padding:20px; color:#9AA5B4;">Loading…</td></tr>
+                <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--rp-muted);">Loading…</td></tr>
             </tbody>
         </table>
     </div>
@@ -835,7 +835,7 @@
     tbody.innerHTML = '';
 
     if (!table.rows || table.rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#9AA5B4;">No trips found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--rp-muted);">No trips on this day for these filters. Try another date or route.</td></tr>';
     } else {
     // Rows are built as elements rather than from an HTML string. Driver names, plate
     // numbers and route names are typed by administrators and arrive here straight from
