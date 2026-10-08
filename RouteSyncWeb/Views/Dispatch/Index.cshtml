@@ -468,13 +468,19 @@
         dpCloseMsg:         function () { dpCloseMsg(); }
     });
 
-    // Opened from the needs-attention list: /Dispatch?trip=ID shows that trip.
+    // Opened from the needs-attention list or the fleet map: /Dispatch?trip=ID shows that
+    // trip, and &do=reassign or &do=message presses that row's own button instead. A trip
+    // not on this board, or one that can no longer be reassigned, is shown instead.
     window.addEventListener('load', function () {
-        var askedTrip = new URLSearchParams(location.search).get('trip');
+        var params = new URLSearchParams(location.search);
+        var askedTrip = params.get('trip');
         if (!askedTrip) return;
         // Dropped from the address once shown, so a later reload does not open it again.
         history.replaceState(null, '', location.pathname);
-        openTripModal(askedTrip);
+        var sel = { reassign: '.dp-btn-reassign', message: '.dp-btn-msg' }[params.get('do')];
+        var btn = sel && document.querySelector(sel + '[data-trip-id="' + CSS.escape(askedTrip) + '"]');
+        if (btn && !btn.disabled) btn.click();
+        else openTripModal(askedTrip);
     });
 
     function dpShowMsg(messages, title) {

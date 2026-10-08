@@ -266,6 +266,15 @@
         // anything but UTF-8.
         document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
         document.getElementById('fmPanelUpdated').textContent = 'Last updated: ' + phClock(bus.timestamp);
+
+        var actions = document.getElementById('fmPanelActions');
+        actions.hidden = !bus.tripId;
+        if (bus.tripId) {
+            var base = '/Dispatch?trip=' + encodeURIComponent(bus.tripId) + '&do=';
+            document.getElementById('fmActView').href = base + 'view';
+            document.getElementById('fmActReassign').href = base + 'reassign';
+            document.getElementById('fmActMessage').href = base + 'message';
+        }
     }
 
     var panelReturnFocus = null;

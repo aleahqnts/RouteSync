@@ -186,6 +186,14 @@
         <div class="fm-panel__pad">
             <div class="fm-panel__updated" id="fmPanelUpdated">—</div>
         </div>
+
+        @* Dealt with on Dispatch, where each of these already lives. Shown only while the
+           bus is on a trip, since a parked bus has nothing to act on. *@
+        <nav class="fm-panel__actions" id="fmPanelActions" aria-label="Act on this trip" hidden>
+            <a class="fm-panel__act" id="fmActView">Open trip</a>
+            <a class="fm-panel__act" id="fmActReassign">Reassign</a>
+            <a class="fm-panel__act" id="fmActMessage">Message driver</a>
+        </nav>
     </aside>
 
     <div class="fm-legend" id="fmLegendBox">
