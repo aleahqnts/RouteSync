@@ -180,12 +180,10 @@
             {
                 <li class="dp-issue">
                     <div class="dp-issue-what">
-                        <div class="dp-issue-head">
-                            <strong class="dp-trip-id">@trip.TripId</strong>
-                            <span>@route.RouteName, @shift.ShiftType @shift.ShiftStartTime</span>
-                        </div>
-                        <p class="dp-issue-why">@(trip.AssignmentIssueReason ?? "Needs a replacement.")</p>
-                        <p class="dp-issue-now">Bus @trip.VehicleId · @trip.DriverName</p>
+                        <strong class="dp-trip-id">@trip.TripId</strong>
+                        <span class="dp-issue-route">@route.RouteName · @shift.ShiftType @shift.ShiftStartTime</span>
+                        <span class="dp-issue-why">@(trip.AssignmentIssueReason ?? "Needs a replacement")</span>
+                        <span class="dp-issue-now">Now: @trip.VehicleId · @trip.DriverName</span>
                     </div>
                     <div class="dp-issue-fix">
                         <partial name="_TripSuggestions" model="trip" />
