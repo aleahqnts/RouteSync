@@ -413,11 +413,15 @@
     }
 
     /* Hover tooltip. */
+    /* Leaflet writes opacity .9 onto every tooltip. A translucent parent stops
+       backdrop-filter from reaching the map behind it, so the glass would only fade,
+       never blur. */
     .fm-tooltip-wrap.leaflet-tooltip {
         background: transparent;
         border: none;
         box-shadow: none;
         padding: 0;
+        opacity: 1 !important;
     }
 
     .fm-tooltip-wrap.leaflet-tooltip::before {
@@ -425,9 +429,9 @@
     }
 
     .fm-tooltip {
-        background: color-mix(in srgb, var(--fm-white) 62%, transparent);
-        -webkit-backdrop-filter: blur(14px) saturate(160%);
-        backdrop-filter: blur(14px) saturate(160%);
+        background: color-mix(in srgb, var(--fm-white) 80%, transparent);
+        -webkit-backdrop-filter: blur(16px) saturate(160%);
+        backdrop-filter: blur(16px) saturate(160%);
         border: 1px solid light-dark(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));
         border-radius: 10px;
         box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
