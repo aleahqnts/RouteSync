@@ -1208,3 +1208,17 @@ th.rs-sortable:focus-visible {
 @media (min-width: 900px) {
     .rs-attn:not(.rs-attn--map) .rs-attn__list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
 }
+
+.rs-attn__icon { width: 18px; height: 18px; flex: none; color: light-dark(#8A5300, #F2C27A); }
+.rs-attn--clear .rs-attn__icon { color: light-dark(#5F6B7A, #BCC0C4); }
+
+/* Folded over the map: a small tab with the count, opening into the list. */
+.rs-attn--map:not([open]) {
+    width: auto;
+    padding: 8px 12px;
+    border-radius: 999px;
+    overflow: visible;
+}
+
+.rs-attn--map:not([open]) .rs-attn__head { gap: 6px; font-size: .84rem; }
+.rs-attn--map:not([open]) .rs-attn__head::after { display: none; }

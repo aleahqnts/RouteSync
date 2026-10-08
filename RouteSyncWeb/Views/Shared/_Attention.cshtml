@@ -6,12 +6,17 @@
 *@
 @if (User.HasClaim("perm", "routes"))
 {
-    <details id="rsAttention" class="rs-attn@(Model == "map" ? " rs-attn--map" : "")" open
+    @* Over the map it starts folded to a small tab with a count, so the map stays clear. *@
+    <details id="rsAttention" class="rs-attn@(Model == "map" ? " rs-attn--map" : "")" open="@(Model == "map" ? null : "open")"
              data-attention-url="@Url.Action("Attention", "Dispatch")"
              data-positions-url="@Url.Action("Positions", "FleetMap")"
              data-dispatch-url="@Url.Action("Index", "Dispatch")"
              data-map-url="@Url.Action("Index", "FleetMap")">
         <summary class="rs-attn__head">
+            <svg class="rs-attn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+            </svg>
             <span class="rs-attn__title">Needs attention</span>
             <span class="rs-attn__count"></span>
         </summary>
