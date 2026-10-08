@@ -3176,3 +3176,48 @@
         min-height: 44px;
     }
 }
+
+/* Issues queue: trips that cannot run as assigned, above the route tables. */
+.dp-issues { padding: 16px 20px; margin-bottom: 18px; }
+
+.dp-issues-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: light-dark(#2D3748, #DEE1E7);
+}
+
+.dp-issues-count {
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: light-dark(#B42318, #FFB4AE);
+    color: light-dark(#FFFFFF, #3A1F1D);
+    font-size: .75rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.dp-issues-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.dp-issue {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(240px, 1.2fr);
+    gap: 8px 24px;
+    padding: 12px 14px;
+    border: 1px solid light-dark(#E3E8EF, #4A4A4A);
+    border-radius: 10px;
+}
+
+.dp-issue-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: .86rem; color: light-dark(#2D3748, #DEE1E7); }
+.dp-issue-why { margin: 4px 0 0; font-size: .84rem; font-weight: 600; color: light-dark(#B42318, #FFB4AE); }
+.dp-issue-now { margin: 2px 0 0; font-size: .8rem; color: light-dark(#5F6B7A, #BCC0C4); }
+.dp-issue-fix .dp-suggest:first-child { margin-top: 0; }
+
+@media (max-width: 767px) {
+    .dp-issues { padding: 14px 16px; }
+    .dp-issue { grid-template-columns: 1fr; }
+}

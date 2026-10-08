@@ -28,6 +28,13 @@ namespace FleetWise.Controllers
         /// </remarks>
         private static readonly TimeSpan PulseShared = TimeSpan.FromSeconds(4);
 
+        /// <summary>How long one needs-attention read is shared between viewers.</summary>
+        /// <remarks>
+        /// The list reads eight tables. Each open dashboard and fleet map asks every thirty
+        /// seconds, so a room of them costs one read between them instead of one each.
+        /// </remarks>
+        private static readonly TimeSpan AttentionShared = TimeSpan.FromSeconds(20);
+
         public DispatchController(
             Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments,
             IMemoryCache cache)
@@ -302,7 +309,15 @@ namespace FleetWise.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Attention()
         {
-            var day = await ResolveDayAsync(PhClock.OperationalDay);
+            var today = PhClock.OperationalDay;
+            return Json(await SharedRead.GetAsync(_cache, $"dispatch:attention:{today:yyyy-MM-dd}", AttentionShared,
+                () => ReadAttentionAsync(today)));
+        }
+
+        /// <summary>The needs-attention list for one day, read from the database.</summary>
+        private async Task<List<object>> ReadAttentionAsync(DateTime today)
+        {
+            var day = await ResolveDayAsync(today);
             static string Name(UserModel u) =>
                 u == null ? "The driver" : $"{u.FirstName} {u.LastName}".Trim();
 
@@ -329,7 +344,7 @@ namespace FleetWise.Controllers
                     items.Add((h.Rank, t.ShiftStartTime, new { kind = h.Kind, tripId = t.TripId, vehicleId = t.VehicleId, text = h.Text }));
             }
 
-            return Json(items.OrderBy(i => i.Rank).ThenBy(i => i.Start).Select(i => i.Item));
+            return items.OrderBy(i => i.Rank).ThenBy(i => i.Start).Select(i => i.Item).ToList();
         }
 
         private sealed record BoardDay(

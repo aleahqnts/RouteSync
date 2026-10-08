@@ -1,0 +1,85 @@
+@model FleetWise.ViewModels.TripRow
+@* A trip's best-match driver and bus, or why there is none. Shown in the Issues queue. *@
+@{ var trip = Model; }
+    @* The rules' best match, one confirm away from assigned, with why
+       in one line. Only a pick that costs nothing is offered here;
+       picks with a cost wait in Reassign beside their warning. When
+       there is no free pick, the board says why in counts. A trip
+       with both a driver and a bus to replace links to Reassign once,
+       under the bus. *@
+    @{ var busBlock = trip.SuggestedVehicle is not null || trip.VehicleShortfall is not null; }
+    @if (trip.SuggestedDriver is not null)
+    {
+        <div class="dp-suggest" role="group" aria-label="Best match driver for @trip.TripId">
+            <div class="dp-suggest-head">
+                <span class="dp-suggest-label" title="Suggested by the scheduling rules">Best match</span>
+                <strong class="dp-suggest-name">@trip.SuggestedDriver.Name</strong>
+            </div>
+            <div class="dp-suggest-actions">
+                <button type="button" class="dp-btn-apply"
+                        aria-label="Assign @trip.SuggestedDriver.Name to @trip.TripId"
+                        data-trip-id="@trip.TripId"
+                        data-driver-id="@trip.SuggestedDriver.DriverId"
+                        data-name="@trip.SuggestedDriver.Name"
+                        data-reason="@trip.SuggestedDriverReason"
+                        data-note="@trip.SuggestedDriver.Warning"
+                        data-on="click:dpApplySuggestion">Assign</button>
+                @if (!busBlock)
+                {
+                    <button type="button" class="dp-suggest-more"
+                            aria-label="Other options for @trip.TripId"
+                            data-trip-id="@trip.TripId"
+                            data-on="click:dpOpenReassign">Other options</button>
+                }
+            </div>
+        </div>
+    }
+    else if (trip.DriverShortfall is not null)
+    {
+        <div class="dp-suggest dp-suggest--none">
+            <p class="dp-suggest-short"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span>@trip.DriverShortfall</span></p>
+            @if (!busBlock)
+            {
+                <div class="dp-suggest-actions">
+                    <button type="button" class="dp-suggest-more"
+                            data-trip-id="@trip.TripId"
+                            data-on="click:dpOpenReassign">Open Reassign</button>
+                </div>
+            }
+        </div>
+    }
+    @if (trip.SuggestedVehicle is not null)
+    {
+        <div class="dp-suggest" role="group" aria-label="Best match bus for @trip.TripId">
+            <div class="dp-suggest-head">
+                <span class="dp-suggest-label" title="Suggested by the scheduling rules">Best match</span>
+                <strong class="dp-suggest-name">@trip.SuggestedVehicle.VehicleId</strong>
+            </div>
+            <div class="dp-suggest-actions">
+                <button type="button" class="dp-btn-apply"
+                        aria-label="Assign bus @trip.SuggestedVehicle.VehicleId to @trip.TripId"
+                        data-trip-id="@trip.TripId"
+                        data-vehicle-id="@trip.SuggestedVehicle.VehicleId"
+                        data-name="@trip.SuggestedVehicle.VehicleId"
+                        data-plate="@trip.SuggestedVehicle.PlateNumber"
+                        data-reason="@trip.SuggestedVehicleReason"
+                        data-note="@trip.SuggestedVehicle.Warning"
+                        data-on="click:dpApplySuggestion">Assign</button>
+                <button type="button" class="dp-suggest-more"
+                        aria-label="Other options for @trip.TripId"
+                        data-trip-id="@trip.TripId"
+                        data-on="click:dpOpenReassign">Other options</button>
+            </div>
+        </div>
+    }
+    else if (trip.VehicleShortfall is not null)
+    {
+        <div class="dp-suggest dp-suggest--none">
+            <p class="dp-suggest-short"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span>@trip.VehicleShortfall</span></p>
+            <div class="dp-suggest-actions">
+                <button type="button" class="dp-suggest-more"
+                        data-trip-id="@trip.TripId"
+                        data-on="click:dpOpenReassign">Open Reassign</button>
+            </div>
+        </div>
+    }
