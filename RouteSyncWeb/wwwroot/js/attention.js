@@ -14,12 +14,12 @@
     var SHOWN = 5;
     // This many of one kind read as one line rather than a column of near-identical ones.
     var GROUP_AT = 3;
-    var LABELS = { relief: 'Relief', issue: "Can't run", late: 'Late', fault: 'Fault', signal: 'No signal' };
+    var LABELS = { relief: 'Relief', issue: 'Cannot run', late: 'Late', fault: 'Fault', signal: 'No signal' };
     var GROUPED = {
-        issue: function (n) { return n + " trips can't run as assigned"; },
-        late: function (n) { return n + " trips haven't started"; },
+        issue: function (n) { return n + ' trips cannot run as assigned'; },
+        late: function (n) { return n + ' trips have not started'; },
         fault: function (n) { return n + ' buses have an open fault'; },
-        signal: function (n) { return n + " buses on a trip haven't reported"; }
+        signal: function (n) { return n + ' buses on a trip have not reported'; }
     };
     var expanded = false;
 
@@ -41,12 +41,27 @@
         return m ? h + 'h ' + m + 'm' : h + 'h';
     }
 
-    function names(ids) {
-        var shown = ids.slice(0, 4).join(', ');
-        return ids.length > 4 ? shown + ' and ' + (ids.length - 4) + ' more' : shown;
+    // Buses as quiet pills. Past this many the rest are counted rather than shown.
+    var PILLS = 8;
+    function pills(ids) {
+        var row = document.createElement('span');
+        row.className = 'rs-attn__buses';
+        ids.slice(0, PILLS).forEach(function (id) {
+            var p = document.createElement('span');
+            p.className = 'rs-attn__bus';
+            p.textContent = id;
+            row.append(p);
+        });
+        if (ids.length > PILLS) {
+            var rest = document.createElement('span');
+            rest.className = 'rs-attn__bus rs-attn__bus--more';
+            rest.textContent = '+' + (ids.length - PILLS);
+            row.append(rest);
+        }
+        return row;
     }
 
-    function line(kind, text, sub, href) {
+    function line(kind, text, sub, href, buses) {
         var li = document.createElement('li');
         li.className = 'rs-attn__item rs-attn__item--' + kind;
         var a = document.createElement('a');
@@ -61,6 +76,7 @@
         msg.className = 'rs-attn__text';
         msg.textContent = text;
         body.append(msg);
+        if (buses) body.append(pills(buses));
         if (sub) {
             var s = document.createElement('span');
             s.className = 'rs-attn__sub';
@@ -92,15 +108,15 @@
             if (done[e.kind]) return;
             done[e.kind] = true;
             var ids = same.map(function (x) { return x.vehicleId; });
-            var sub = names(ids);
+            var sub = null;
             if (e.kind === 'late') {
                 var worst = Math.max.apply(null, same.map(function (x) { return x.minutes || 0; }));
-                sub += '. Longest ' + duration(worst) + ' late.';
+                sub = 'Longest ' + duration(worst) + ' late';
             }
             var href = e.kind === 'signal'
                 ? box.dataset.mapUrl
                 : tripsHref(same.map(function (x) { return x.tripId; }));
-            out.push(line(e.kind, GROUPED[e.kind](same.length), sub, href));
+            out.push(line(e.kind, GROUPED[e.kind](same.length), sub, href, ids));
         });
         return out;
     }
@@ -120,7 +136,7 @@
             if (b.status !== 'On Trip' || ms < SILENT_AFTER_MS) return;
             entries.push({
                 kind: 'signal', vehicleId: b.vehicleId,
-                text: b.vehicleId + " hasn't reported for " + duration(Math.round(ms / 60000)) + '.',
+                text: b.vehicleId + ' has not reported for ' + duration(Math.round(ms / 60000)) + '.',
                 href: box.dataset.mapUrl + '?bus=' + encodeURIComponent(b.vehicleId)
             });
         });

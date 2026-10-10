@@ -336,13 +336,13 @@ namespace FleetWise.Controllers
 
                 (int Rank, string Kind, string Text)? hit = null;
                 if (r.TripStatus == "Active" && r.DriverStatus == "Unavailable")
-                    hit = (0, "relief", $"{Name(r.Driver)} can't continue on {t.VehicleId}. Send relief.");
+                    hit = (0, "relief", $"{Name(r.Driver)} cannot continue on {t.VehicleId}. Send relief.");
                 else if (r.TripStatus == "Assignment Issue")
                     hit = r.Vehicle?.OutOfService == true
                         ? (1, "issue", $"{t.VehicleId} is grounded. The {t.ShiftType} trip needs another bus.")
-                        : (1, "issue", $"{Name(r.Driver)} can't drive. The {t.ShiftType} trip on {t.VehicleId} needs another driver.");
+                        : (1, "issue", $"{Name(r.Driver)} cannot drive. The {t.ShiftType} trip on {t.VehicleId} needs another driver.");
                 else if (r.Late is TimeSpan late)
-                    hit = (2, "late", $"{t.VehicleId} hasn't started. {LateText(late)} late.");
+                    hit = (2, "late", $"{t.VehicleId} has not started. {LateText(late)} late.");
                 else if (r.Flagged && r.TripStatus != "Active" && faultsSaid.Add(t.VehicleId))
                     hit = (3, "fault", $"{t.VehicleId} has an open fault. Check it before the {t.ShiftType} trip.");
 

@@ -525,6 +525,11 @@
         box-shadow: 0 8px 28px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         padding: 22px 0;
         font-family: 'Segoe UI', sans-serif;
+        /* A grid so each figure and its name share a line while staying two elements.
+           Everything else takes the width. */
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-content: start;
         transform: translateX(calc(100% + 24px));
         transition: transform .25s ease;
         overflow-y: auto;
@@ -534,13 +539,23 @@
         transform: translateX(0);
     }
 
+    .fm-panel > * {
+        grid-column: 1 / -1;
+    }
+
     .fm-panel__pad {
         padding: 0 22px;
     }
 
+    /* One hairline between sections, every one the same. The figures are one
+       section, so the rule that split passengers from revenue goes. */
     .fm-panel__divider {
         border-top: 1px solid var(--fm-border);
-        margin: 16px 0;
+        margin: 16px 22px;
+    }
+
+    .fm-panel__pax + .fm-panel__divider {
+        display: none;
     }
 
     .fm-panel__close {
@@ -613,8 +628,7 @@
         display: flex;
         align-items: center;
         gap: 14px;
-        background: light-dark(rgba(241, 243, 245, .55), rgba(53, 53, 53, .45));
-        padding: 14px 22px;
+        padding: 0 22px;
     }
 
     .fm-panel__avatar {
@@ -645,41 +659,40 @@
         color: var(--fm-muted);
     }
 
+    /* The two figures read the same way: the name at the left, the figure at the
+       right, on one line each. */
     .fm-panel__pax {
         display: flex;
-        align-items: center;
-        padding: 6px 22px;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 22px;
     }
 
-    .fm-panel__pax-label {
-        flex: 1;
-        text-align: center;
-        font-size: 1.05rem;
+    .fm-panel__pax-label,
+    .fm-panel__rev-head {
+        font-size: .92rem;
         color: light-dark(#4A5568, #D9DCE1);
-        line-height: 1.25;
     }
 
-    .fm-panel__pax-num {
-        flex: 1;
-        text-align: center;
-        font-size: 1.9rem;
+    .fm-panel__pax-num,
+    .fm-panel__rev-val {
+        font-size: 1.35rem;
         font-weight: 800;
         color: light-dark(#1A202C, #E3E6EB);
-        border-left: 1px solid var(--fm-border);
+        font-variant-numeric: tabular-nums;
     }
 
     .fm-panel__rev-head {
-        background: light-dark(rgba(241, 243, 245, .55), rgba(53, 53, 53, .45));
-        padding: 10px 22px;
-        font-size: 1rem;
-        color: light-dark(#2D3748, #DEE1E7);
+        grid-column: 1;
+        align-self: baseline;
+        padding: 12px 0 0 22px;
     }
 
-    .fm-panel__rev-val {
-        margin-top: 14px;
-        font-size: 1.35rem;
-        font-weight: 700;
-        color: light-dark(#1A202C, #E3E6EB);
+    .fm-panel__pad:has(.fm-panel__rev-val) {
+        grid-column: 2;
+        align-self: baseline;
+        padding: 12px 22px 0 0;
     }
 
     .fm-panel__updated {

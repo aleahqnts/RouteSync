@@ -1224,3 +1224,28 @@ th.rs-sortable:focus-visible {
 
 .rs-attn--map:not([open]) .rs-attn__head { gap: 6px; font-size: .84rem; }
 .rs-attn--map:not([open]) .rs-attn__head::after { display: none; }
+
+/* The list's heading set like the page titles: Poppins in capitals, tracked out a
+   little more because it runs much smaller than they do. */
+.rs-attn__title {
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.rs-attn__buses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+.rs-attn__bus {
+    padding: 1px 8px;
+    border: 1px solid light-dark(#DDE3EA, #4E545C);
+    border-radius: 999px;
+    background: light-dark(#F5F7FA, #42474E);
+    color: light-dark(#3F4756, #D3D8DF);
+    font-size: .74rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.rs-attn__bus--more { background: transparent; color: light-dark(#5F6B7A, #BCC0C4); }
