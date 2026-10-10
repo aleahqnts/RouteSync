@@ -61,7 +61,15 @@
         return row;
     }
 
-    function line(kind, text, sub, href, buses) {
+    // A bus named in a line's text, set as the same pill the grouped lines use.
+    function pill(id) {
+        var p = document.createElement('span');
+        p.className = 'rs-attn__bus rs-attn__bus--inline';
+        p.textContent = id;
+        return p;
+    }
+
+    function line(kind, text, sub, href, buses, bus) {
         var li = document.createElement('li');
         li.className = 'rs-attn__item rs-attn__item--' + kind;
         var a = document.createElement('a');
@@ -74,7 +82,14 @@
         body.className = 'rs-attn__body';
         var msg = document.createElement('span');
         msg.className = 'rs-attn__text';
-        msg.textContent = text;
+        if (bus) {
+            text.split(bus).forEach(function (part, i) {
+                if (i) msg.append(pill(bus));
+                msg.append(part);
+            });
+        } else {
+            msg.textContent = text;
+        }
         body.append(msg);
         if (buses) body.append(pills(buses));
         if (sub) {
@@ -102,7 +117,7 @@
         entries.forEach(function (e) {
             var same = byKind[e.kind];
             if (same.length < GROUP_AT || !GROUPED[e.kind]) {
-                out.push(line(e.kind, e.text, null, e.href));
+                out.push(line(e.kind, e.text, null, e.href, null, e.vehicleId));
                 return;
             }
             if (done[e.kind]) return;
