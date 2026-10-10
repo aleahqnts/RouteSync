@@ -338,7 +338,9 @@
             var known = bus.onRoute && !isStale(bus);
             document.getElementById('fmPanelPrev').textContent = known ? (bus.previousStop || 'None yet') : 'Not known';
             document.getElementById('fmPanelNext').textContent = known ? (bus.nextStop || 'None') : 'Not known';
-            document.getElementById('fmPanelEta').textContent = etaText(bus);
+            var eta = etaText(bus);
+            document.getElementById('fmPanelEta').textContent = eta;
+            document.getElementById('fmPanelEtaRow').hidden = !eta;
             document.getElementById('fmPanelDriver').textContent = bus.driverName;
             document.getElementById('fmPanelPax').textContent = bus.passengers;
             // Written as an escape rather than the sign itself: this file carries no

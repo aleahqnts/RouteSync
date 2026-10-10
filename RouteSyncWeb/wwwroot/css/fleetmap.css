@@ -667,13 +667,7 @@
     }
 
     .fm-panel__eta {
-        font-size: .78rem;
-        font-weight: 600;
         color: light-dark(#226964, #8FD8D2);
-    }
-
-    .fm-panel__eta:empty {
-        display: none;
     }
 
     /* Each figure on a line of its own: the name at the left, the figure at the right. */
@@ -684,6 +678,10 @@
         margin: 0;
         padding: 0 18px;
     }
+
+        .fm-panel__figs > div[hidden] {
+            display: none;
+        }
 
         .fm-panel__figs > div {
             display: flex;
@@ -1214,6 +1212,11 @@
 
     .fm-panel__day .fm-panel__figs {
         grid-template-columns: 1fr;
+    }
+
+    /* The time to the next stop leads the figures on a line of its own. */
+    #fmPanelEtaRow {
+        grid-column: 1 / -1;
     }
 
     .fm-panel__close {
