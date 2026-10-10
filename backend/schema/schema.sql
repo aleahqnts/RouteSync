@@ -823,6 +823,29 @@ COMMENT ON FUNCTION "public"."shift_start_context"("p_trip_id" character varying
 
 
 
+CREATE OR REPLACE FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer DEFAULT 30) RETURNS json
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
+    AS $$
+  select json_build_object('telemetry', coalesce((
+    select json_agg(x order by x.trip_id, x."timestamp")
+    from (
+      select distinct on (t.trip_id, floor(extract(epoch from t."timestamp") / greatest(p_every_seconds, 1)))
+             t.telemetry_id, t.trip_id, t.latitude, t.longitude, t.speed, t.heading, t.accuracy, t."timestamp"
+      from telemetry_data t
+      where t.trip_id = any (p_trip_ids)
+      order by t.trip_id, floor(extract(epoch from t."timestamp") / greatest(p_every_seconds, 1)), t."timestamp"
+    ) x), '[]'::json))
+$$;
+
+
+ALTER FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer) IS 'Readings of the given trips, the first in each p_every_seconds window per trip, for learning stop-to-stop speeds without reading every row.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."trips_closed_guard"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -1266,8 +1289,8 @@ CREATE OR REPLACE VIEW "public"."boarding_events_ph" AS
     ("device_timestamp" AT TIME ZONE 'Asia/Manila'::"text") AS "device_time_ph",
     ("synced_at" AT TIME ZONE 'Asia/Manila'::"text") AS "synced_ph",
     ("received_at" AT TIME ZONE 'Asia/Manila'::"text") AS "received_ph",
-    EXTRACT(epoch FROM ("received_at" - "device_timestamp")) AS "latency_seconds",
-    EXTRACT(epoch FROM ("received_at" - COALESCE("synced_at", "device_timestamp"))) AS "transit_seconds"
+    EXTRACT("epoch" FROM ("received_at" - "device_timestamp")) AS "latency_seconds",
+    EXTRACT("epoch" FROM ("received_at" - COALESCE("synced_at", "device_timestamp"))) AS "transit_seconds"
    FROM "public"."boarding_events";
 
 
@@ -1471,7 +1494,7 @@ CREATE TABLE IF NOT EXISTS "public"."driver_availability" (
     "availability_status" character varying(20) DEFAULT 'Available'::character varying NOT NULL,
     "updated_at" timestamp without time zone,
     "reason" "text",
-    CONSTRAINT "driver_availability_availability_status_check" CHECK ((("availability_status")::"text" = ANY ((ARRAY['Available'::character varying, 'Unavailable'::character varying])::"text"[])))
+    CONSTRAINT "driver_availability_availability_status_check" CHECK ((("availability_status")::"text" = ANY (ARRAY[('Available'::character varying)::"text", ('Unavailable'::character varying)::"text"])))
 );
 
 
@@ -1570,7 +1593,7 @@ CREATE TABLE IF NOT EXISTS "public"."leave_requests" (
     "withdraw_answer_note" "text",
     CONSTRAINT "leave_requests_leave_type_check" CHECK ((("leave_type")::"text" = ANY (ARRAY[('Vacation'::character varying)::"text", ('Sick'::character varying)::"text", ('Emergency'::character varying)::"text"]))),
     CONSTRAINT "leave_requests_range_check" CHECK (("end_date" >= "start_date")),
-    CONSTRAINT "leave_requests_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['Pending'::character varying, 'AwaitingChange'::character varying, 'Approved'::character varying, 'Rejected'::character varying, 'Cancelled'::character varying, 'Revoked'::character varying])::"text"[])))
+    CONSTRAINT "leave_requests_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('Pending'::character varying)::"text", ('AwaitingChange'::character varying)::"text", ('Approved'::character varying)::"text", ('Rejected'::character varying)::"text", ('Cancelled'::character varying)::"text", ('Revoked'::character varying)::"text"])))
 );
 
 
@@ -1773,7 +1796,7 @@ CREATE TABLE IF NOT EXISTS "public"."roster_gaps" (
     "month" "date" NOT NULL,
     "route_id" integer,
     "reason" "text" NOT NULL,
-    CONSTRAINT "roster_gaps_shift" CHECK ((("shift")::"text" = ANY ((ARRAY['Morning'::character varying, 'Afternoon'::character varying, 'Evening'::character varying])::"text"[])))
+    CONSTRAINT "roster_gaps_shift" CHECK ((("shift")::"text" = ANY (ARRAY[('Morning'::character varying)::"text", ('Afternoon'::character varying)::"text", ('Evening'::character varying)::"text"])))
 );
 
 
@@ -1824,7 +1847,7 @@ CREATE TABLE IF NOT EXISTS "public"."roster_skips" (
     "created_by" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "roster_skips_reason" CHECK (("reason" = ANY (ARRAY['Deleted'::"text", 'Not running'::"text"]))),
-    CONSTRAINT "roster_skips_shift" CHECK ((("shift")::"text" = ANY ((ARRAY['Morning'::character varying, 'Afternoon'::character varying, 'Evening'::character varying])::"text"[])))
+    CONSTRAINT "roster_skips_shift" CHECK ((("shift")::"text" = ANY (ARRAY[('Morning'::character varying)::"text", ('Afternoon'::character varying)::"text", ('Evening'::character varying)::"text"])))
 );
 
 
@@ -1846,7 +1869,7 @@ CREATE TABLE IF NOT EXISTS "public"."roster_slots" (
     CONSTRAINT "roster_slots_floater_has_driver" CHECK ((("kind" = 'Crew'::"text") OR ("driver_id" IS NOT NULL))),
     CONSTRAINT "roster_slots_kind" CHECK (("kind" = ANY (ARRAY['Crew'::"text", 'Floater'::"text"]))),
     CONSTRAINT "roster_slots_rest_weekday" CHECK ((("rest_weekday" >= 1) AND ("rest_weekday" <= 7))),
-    CONSTRAINT "roster_slots_shift" CHECK ((("shift")::"text" = ANY ((ARRAY['Morning'::character varying, 'Afternoon'::character varying, 'Evening'::character varying])::"text"[])))
+    CONSTRAINT "roster_slots_shift" CHECK ((("shift")::"text" = ANY (ARRAY[('Morning'::character varying)::"text", ('Afternoon'::character varying)::"text", ('Evening'::character varying)::"text"])))
 );
 
 
@@ -2077,7 +2100,7 @@ CREATE TABLE IF NOT EXISTS "public"."trips" (
     "break_start" time without time zone,
     "roster_month" "date",
     "hand_edited" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "trips_break_start_in_shift" CHECK ((("break_start" IS NULL) OR ((("break_start" = ("shift_start_time" + '03:00:00'::interval)) OR ("break_start" = ("shift_start_time" + '04:00:00'::interval))) OR ("break_start" = ("shift_start_time" + '05:00:00'::interval)))))
+    CONSTRAINT "trips_break_start_in_shift" CHECK ((("break_start" IS NULL) OR (("break_start" = ("shift_start_time" + '03:00:00'::interval)) OR ("break_start" = ("shift_start_time" + '04:00:00'::interval)) OR ("break_start" = ("shift_start_time" + '05:00:00'::interval)))))
 );
 
 
@@ -2377,6 +2400,14 @@ CREATE INDEX "idx_pwreset_time" ON "public"."password_reset_otp" USING "btree" (
 
 
 CREATE INDEX "idx_pwreset_user" ON "public"."password_reset_otp" USING "btree" ("user_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_telemetry_time" ON "public"."telemetry_data" USING "btree" ("timestamp");
+
+
+
+CREATE INDEX "idx_telemetry_trip_time" ON "public"."telemetry_data" USING "btree" ("trip_id", "timestamp");
 
 
 
@@ -2846,7 +2877,7 @@ CREATE POLICY "p_leave_driver_own" ON "public"."leave_requests" TO "app_driver" 
 
 
 
-CREATE POLICY "p_leave_driver_update" ON "public"."leave_requests" FOR UPDATE TO "app_driver" USING ((("user_id" = "public"."jwt_uid"()) AND (("status")::"text" = ANY ((ARRAY['Pending'::character varying, 'AwaitingChange'::character varying])::"text"[])))) WITH CHECK ((("user_id" = "public"."jwt_uid"()) AND (("status")::"text" = 'Cancelled'::"text")));
+CREATE POLICY "p_leave_driver_update" ON "public"."leave_requests" FOR UPDATE TO "app_driver" USING ((("user_id" = "public"."jwt_uid"()) AND (("status")::"text" = ANY (ARRAY[('Pending'::character varying)::"text", ('AwaitingChange'::character varying)::"text"])))) WITH CHECK ((("user_id" = "public"."jwt_uid"()) AND (("status")::"text" = 'Cancelled'::"text")));
 
 
 
@@ -3228,6 +3259,11 @@ GRANT ALL ON FUNCTION "public"."shift_start_context"("p_trip_id" character varyi
 GRANT ALL ON FUNCTION "public"."shift_start_context"("p_trip_id" character varying) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."shift_start_context"("p_trip_id" character varying) TO "service_role";
 GRANT ALL ON FUNCTION "public"."shift_start_context"("p_trip_id" character varying) TO "app_driver";
+
+
+
+REVOKE ALL ON FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer) TO "service_role";
 
 
 
@@ -3641,8 +3677,8 @@ GRANT UPDATE("counter_device_id") ON TABLE "public"."trips" TO "app_camera";
 
 
 
-GRANT ALL ON TABLE "public"."users" TO "service_role";
 GRANT SELECT ON TABLE "public"."users" TO "anon";
+GRANT ALL ON TABLE "public"."users" TO "service_role";
 
 
 
