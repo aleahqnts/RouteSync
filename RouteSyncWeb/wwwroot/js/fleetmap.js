@@ -256,12 +256,18 @@
     // The time to the next stop as a rough figure, never a clock time: it is an estimate
     // from how fast buses usually cover that stretch. Counted from the reading it was
     // worked out at, so it keeps falling between readings.
+    var ETA_ARRIVING_SECONDS = 30;
+
     function etaText(bus) {
         if (isStale(bus)) return 'No recent signal';
         if (!bus.nextStop) return bus.onRoute ? 'Past the last stop' : 'No estimate right now';
         if (bus.nextStopSeconds == null) return '';
         var left = bus.nextStopSeconds - readingAge(bus) / 1000;
-        if (left < 60) return 'Arriving';
+        // The last half minute is within the estimate's own error, so it is not counted.
+        if (left <= ETA_ARRIVING_SECONDS) return 'Arriving';
+        // Under a minute in steps of five seconds, so the figure does not flicker on
+        // every poll.
+        if (left <= 55) return 'About ' + Math.ceil(left / 5) * 5 + ' sec';
         return 'About ' + Math.round(left / 60) + ' min';
     }
 
