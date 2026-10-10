@@ -413,15 +413,16 @@
     }
 
     /* Hover tooltip. */
-    /* Leaflet writes opacity .9 onto every tooltip. A translucent parent stops
-       backdrop-filter from reaching the map behind it, so the glass would only fade,
-       never blur. */
+    /* Opened at full opacity (the bindTooltip option), since a translucent parent stops
+       backdrop-filter reaching the map and the glass would only fade, never blur. No
+       fade on close: Leaflet keeps a closed tooltip in the page for a moment, and a
+       fading copy of the last one trailed behind the next. */
     .fm-tooltip-wrap.leaflet-tooltip {
         background: transparent;
         border: none;
         box-shadow: none;
         padding: 0;
-        opacity: 1 !important;
+        transition: none;
     }
 
     .fm-tooltip-wrap.leaflet-tooltip::before {

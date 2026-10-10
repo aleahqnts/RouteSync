@@ -534,7 +534,7 @@
                         marker.setTooltipContent(tooltipHtml(bus));
                     } else {
                         marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off, parked) })
-                            .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap' })
+                            .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap', opacity: 1 })
                             .addTo(busLayer);
                         marker.on('click', function () { openPanel(this._bus.vehicleId); });
                         marker._iconKey = iconKey;
