@@ -430,7 +430,7 @@
     }
 
     .fm-tooltip {
-        background: color-mix(in srgb, var(--fm-white) 80%, transparent);
+        background: color-mix(in srgb, var(--fm-white) 75%, transparent);
         -webkit-backdrop-filter: blur(16px) saturate(160%);
         backdrop-filter: blur(16px) saturate(160%);
         border: 1px solid light-dark(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));
@@ -513,7 +513,11 @@
         bottom: 16px;
         width: 300px;
         z-index: 1100;
-        background: color-mix(in srgb, var(--fm-white) 62%, transparent);
+        /* The map is never themed, so what floats over it stays light in dark mode. */
+        color-scheme: light;
+        /* Hairlines that sit in the glass rather than cutting across it. */
+        --fm-border: rgba(45, 55, 72, .08);
+        background: color-mix(in srgb, var(--fm-white) 67%, transparent);
         -webkit-backdrop-filter: blur(14px) saturate(160%);
         backdrop-filter: blur(14px) saturate(160%);
         border: 1px solid light-dark(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));

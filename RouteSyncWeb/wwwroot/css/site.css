@@ -1164,8 +1164,10 @@ th.rs-sortable:focus-visible {
 .rs-attn--clear .rs-attn__clear { display: block; }
 .rs-attn--clear .rs-attn__list { display: none; }
 
-/* Over the map: under the zoom buttons, scrolling within itself. */
+/* Over the map: under the zoom buttons, scrolling within itself. Light in dark mode
+   too, like the map beneath it. */
 .rs-attn--map {
+    color-scheme: light;
     position: absolute;
     left: 10px;
     top: 92px;
