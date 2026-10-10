@@ -64,6 +64,20 @@ public class StopEtaTests
     }
 
     [Fact]
+    public void Progress_is_the_share_of_the_stretch_covered_including_round_the_end_of_a_loop()
+    {
+        var line = OutAndBack();
+        var places = StopEta.Place(line, new[] { StopAt("Start", 0), StopAt("Turn", 1000), StopAt("Back", 400) });
+
+        Assert.Equal(0.7, StopEta.Progress(line, places, StopEta.Locate(line, places, 700)!.Value)!.Value, 3);
+        Assert.Equal(0.75, StopEta.Progress(line, places, StopEta.Locate(line, places, 1900)!.Value)!.Value, 3);
+
+        var road = EastRoad();
+        var two = StopEta.Place(road, new[] { StopAt("A", 100), StopAt("B", 500) });
+        Assert.Null(StopEta.Progress(road, two, StopEta.Locate(road, two, 50)!.Value));
+    }
+
+    [Fact]
     public void Past_the_last_stop_of_a_line_that_is_not_a_loop_has_no_next_stop()
     {
         var line = EastRoad();

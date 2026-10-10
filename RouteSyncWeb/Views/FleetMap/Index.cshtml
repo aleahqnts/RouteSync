@@ -152,26 +152,31 @@
 
         @* A bus on a trip: where it is between two stops, and its trip so far. *@
         <section class="fm-panel__live" id="fmPanelLive" aria-label="Trip">
-            <div class="fm-panel__leg">
-                <div class="fm-panel__leg-stop">
-                    <span class="fm-panel__label">Last stop</span>
-                    <span class="fm-panel__leg-name" id="fmPanelPrev">—</span>
+            @* The stretch between the last stop and the next, drawn like the logo: two
+               rings joined by a line that fills up to the bus. *@
+            <div class="fm-panel__leg" id="fmPanelLeg">
+                <div class="fm-panel__eta" id="fmPanelEta"></div>
+                <div class="fm-panel__track" aria-hidden="true">
+                    <span class="fm-panel__done"></span>
+                    <span class="fm-panel__ring"></span>
+                    <span class="fm-panel__ring fm-panel__ring--next"></span>
+                    <span class="fm-panel__dot"></span>
                 </div>
-                <svg class="fm-panel__leg-arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-                <div class="fm-panel__leg-stop">
-                    <span class="fm-panel__label">Next stop</span>
-                    <span class="fm-panel__leg-name" id="fmPanelNext">—</span>
+                <div class="fm-panel__leg-ends">
+                    <div class="fm-panel__leg-stop">
+                        <span class="fm-panel__label">Last stop</span>
+                        <span class="fm-panel__leg-name" id="fmPanelPrev">—</span>
+                    </div>
+                    <div class="fm-panel__leg-stop fm-panel__leg-stop--next">
+                        <span class="fm-panel__label">Next stop</span>
+                        <span class="fm-panel__leg-name" id="fmPanelNext">—</span>
+                    </div>
                 </div>
             </div>
 
             <div class="fm-panel__divider"></div>
 
             <dl class="fm-panel__figs">
-                <div id="fmPanelEtaRow"><dt>Time to next stop</dt><dd class="fm-panel__eta" id="fmPanelEta"></dd></div>
                 <div><dt>Total passengers</dt><dd id="fmPanelPax">—</dd></div>
                 <div><dt>Revenue</dt><dd id="fmPanelRevenue">—</dd></div>
                 <div><dt>Driver</dt><dd id="fmPanelDriver">—</dd></div>

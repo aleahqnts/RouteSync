@@ -116,6 +116,21 @@
                 : null;
         }
 
+        /// <summary>
+        /// How far the bus has come from the last stop toward the next, from 0 to 1, or null
+        /// before the first stop of a line that is not a loop.
+        /// </summary>
+        public static double? Progress(RouteLine line, IReadOnlyList<StopPlace> places, StopLeg leg)
+        {
+            if (leg.Previous < 0)
+                return null;
+
+            var span = places[leg.Next].Along - places[leg.Previous].Along;
+            if (span <= 0)
+                span += line.Length; // round the end of a loop
+            return span <= 0 ? null : Math.Clamp(1 - leg.Metres / span, 0, 1);
+        }
+
         /// <summary>Seconds to cover the distance, at the first speed known.</summary>
         /// <param name="usual">The stretch's learned speed at this hour, if any.</param>
         /// <param name="recent">This bus's own recent speed, used only while it is moving.</param>

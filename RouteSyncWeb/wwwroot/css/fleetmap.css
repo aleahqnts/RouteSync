@@ -637,13 +637,110 @@
         color: var(--fm-muted);
     }
 
-    /* The stop behind the bus and the stop ahead, with the time to it. */
+    /* The stretch between the last stop and the next, drawn like the logo: two rings
+       joined by a straight line that fills navy to teal up to the bus. --fm-leg is how
+       far along it is, from 0 to 1. */
     .fm-panel__leg {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        align-items: start;
-        gap: 8px;
+        --fm-leg: 0;
+        --fm-leg-from: #18325F;
+        --fm-leg-to: #3AB39C;
         padding: 0 18px;
+    }
+
+    .fm-panel__eta {
+        min-height: 1.35em;
+        margin-bottom: 6px;
+        text-align: center;
+        font-size: .8rem;
+        font-weight: 600;
+        color: light-dark(#226964, #8FD8D2);
+    }
+
+    .fm-panel__track {
+        position: relative;
+        height: 18px;
+    }
+
+        /* The line, with the rings' centres at either end. */
+        .fm-panel__track::before,
+        .fm-panel__done {
+            content: "";
+            position: absolute;
+            left: 9px;
+            right: 9px;
+            top: 6px;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .fm-panel__track::before {
+            background: light-dark(#D5DCE4, #4A5059);
+        }
+
+    .fm-panel__done {
+        background: linear-gradient(90deg, var(--fm-leg-from), var(--fm-leg-to));
+        clip-path: inset(0 calc((1 - var(--fm-leg)) * 100%) 0 0 round 3px);
+        opacity: 0;
+        transition: clip-path .9s ease-out;
+    }
+
+    .fm-panel__ring {
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        width: 16px;
+        height: 16px;
+        box-sizing: border-box;
+        border: 4px solid var(--fm-leg-from);
+        border-radius: 50%;
+        background: light-dark(#FFFFFF, #2B2F36);
+    }
+
+    .fm-panel__ring--next {
+        left: auto;
+        right: 1px;
+        border-color: var(--fm-leg-to);
+    }
+
+    /* The bus, coloured where it stands on the line. */
+    .fm-panel__dot {
+        position: absolute;
+        top: 2px;
+        left: calc(9px + (100% - 18px) * var(--fm-leg));
+        width: 14px;
+        height: 14px;
+        margin-left: -7px;
+        box-sizing: border-box;
+        border: 3px solid light-dark(#FFFFFF, #2B2F36);
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--fm-leg-to) calc(var(--fm-leg) * 100%), var(--fm-leg-from));
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+        opacity: 0;
+        transition: left .9s ease-out, background-color .9s ease-out;
+    }
+
+    .fm-panel__leg--placed .fm-panel__done,
+    .fm-panel__leg--placed .fm-panel__dot {
+        opacity: 1;
+    }
+
+    .fm-panel__leg--jump .fm-panel__done,
+    .fm-panel__leg--jump .fm-panel__dot {
+        transition: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fm-panel__done,
+        .fm-panel__dot {
+            transition: none;
+        }
+    }
+
+    .fm-panel__leg-ends {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 6px;
     }
 
     .fm-panel__leg-stop {
@@ -653,21 +750,14 @@
         min-width: 0;
     }
 
-    .fm-panel__leg-arrow {
-        width: 14px;
-        height: 14px;
-        margin-top: 15px;
-        color: var(--fm-muted);
+    .fm-panel__leg-stop--next {
+        text-align: right;
     }
 
     .fm-panel__leg-name {
         font-size: .84rem;
         font-weight: 600;
         overflow-wrap: anywhere;
-    }
-
-    .fm-panel__eta {
-        color: light-dark(#226964, #8FD8D2);
     }
 
     /* Each figure on a line of its own: the name at the left, the figure at the right. */
@@ -678,10 +768,6 @@
         margin: 0;
         padding: 0 18px;
     }
-
-        .fm-panel__figs > div[hidden] {
-            display: none;
-        }
 
         .fm-panel__figs > div {
             display: flex;
@@ -1199,10 +1285,6 @@
         color: var(--fm-muted);
     }
 
-    .fm-panel__leg-arrow {
-        margin-top: 13px;
-    }
-
     /* The four figures of a trip two to a line, so the sheet stays short. */
     .fm-panel__figs {
         display: grid;
@@ -1212,11 +1294,6 @@
 
     .fm-panel__day .fm-panel__figs {
         grid-template-columns: 1fr;
-    }
-
-    /* The time to the next stop leads the figures on a line of its own. */
-    #fmPanelEtaRow {
-        grid-column: 1 / -1;
     }
 
     .fm-panel__close {

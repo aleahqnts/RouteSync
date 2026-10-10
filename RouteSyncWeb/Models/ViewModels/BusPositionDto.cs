@@ -90,6 +90,10 @@ public class BusPositionDto
     [JsonPropertyName("nextStopSeconds")]
     public int? NextStopSeconds { get; set; }
 
+    // How far the bus has come from the last stop toward the next, from 0 to 1.
+    [JsonPropertyName("nextStopProgress")]
+    public double? NextStopProgress { get; set; }
+
     // Everyone who has boarded this trip. Nobody is counted off again, so this only ever
     // climbs. Taken from the trip's own figure where the counter phone has already raised
     // it, since telemetry carries the driver app's copy of the same number and trails it.

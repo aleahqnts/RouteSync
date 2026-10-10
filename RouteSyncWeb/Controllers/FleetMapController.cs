@@ -400,6 +400,7 @@ namespace FleetWise.Controllers
                     PreviousStop = leg is { Previous: >= 0 } p ? stopPlaces![p.Previous].Name : null,
                     NextStop = leg is { } n ? stopPlaces![n.Next].Name : null,
                     NextStopSeconds = etaSeconds is double e ? (int)Math.Round(e) : null,
+                    NextStopProgress = leg is { } g ? StopEta.Progress(line!, stopPlaces!, g) : null,
                     Passengers = passengers,
                     Capacity = capacity,
                     EstimatedRevenue = _fareCalculator.Estimate(passengers, fareRate),

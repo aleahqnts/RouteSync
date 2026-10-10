@@ -321,6 +321,25 @@
             });
     }
 
+    // Fills the line between the two stops up to the bus. It glides between readings,
+    // but jumps when the bus passes a stop and the line starts over, or when the panel
+    // turns to another bus, rather than sweeping back across.
+    var legShown = { bus: null, at: 0 };
+
+    function placeOnLeg(progress, vehicleId) {
+        var leg = document.getElementById('fmPanelLeg');
+        var at = progress == null ? 0 : progress;
+        var jump = vehicleId !== legShown.bus || at < legShown.at - 0.01;
+        leg.classList.toggle('fm-panel__leg--placed', progress != null);
+        if (jump) leg.classList.add('fm-panel__leg--jump');
+        leg.style.setProperty('--fm-leg', at.toFixed(3));
+        if (jump) {
+            void leg.offsetWidth;
+            leg.classList.remove('fm-panel__leg--jump');
+        }
+        legShown = { bus: vehicleId, at: at };
+    }
+
     function fillPanel(bus) {
         var live = !!bus.tripId;
         document.getElementById('fmPanelBus').textContent = bus.vehicleId;
@@ -338,9 +357,8 @@
             var known = bus.onRoute && !isStale(bus);
             document.getElementById('fmPanelPrev').textContent = known ? (bus.previousStop || 'None yet') : 'Not known';
             document.getElementById('fmPanelNext').textContent = known ? (bus.nextStop || 'None') : 'Not known';
-            var eta = etaText(bus);
-            document.getElementById('fmPanelEta').textContent = eta;
-            document.getElementById('fmPanelEtaRow').hidden = !eta;
+            document.getElementById('fmPanelEta').textContent = etaText(bus);
+            placeOnLeg(known ? bus.nextStopProgress : null, bus.vehicleId);
             document.getElementById('fmPanelDriver').textContent = bus.driverName;
             document.getElementById('fmPanelPax').textContent = bus.passengers;
             // Written as an escape rather than the sign itself: this file carries no
