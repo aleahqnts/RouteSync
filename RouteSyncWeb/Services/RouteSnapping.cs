@@ -388,7 +388,12 @@ namespace FleetWise.Services
             public long LastId = long.MinValue;
             public SnapResult? Result;
             public DateTime TouchedUtc;
+            public double? StillAlong;
+            public DateTime StillSince;
         }
+
+        /// <summary>Metres a bus may drift on the line, from GPS jitter alone, and still count as standing.</summary>
+        private const double StandingRadius = 20;
 
         /// <summary>The measured line for a route, parsed again only when its data changes.</summary>
         public RouteLine? LineFor(int routeId, string? waypointsJson)
@@ -444,6 +449,12 @@ namespace FleetWise.Services
                     entry.Result = RouteSnapper.Next(line, entry.State, reading);
                     entry.LastAt = at;
                     entry.LastId = id;
+
+                    // Where the bus came to rest, kept until it moves on from there.
+                    if (line is null || entry.Result is not { OnRoute: true, Along: double along })
+                        entry.StillAlong = null;
+                    else if (entry.StillAlong is not double still || line.Apart(along, still) > StandingRadius)
+                        (entry.StillAlong, entry.StillSince) = (along, at);
                 }
 
                 entry.TouchedUtc = DateTime.UtcNow;
@@ -451,6 +462,18 @@ namespace FleetWise.Services
 
             Sweep();
             return entry.Result;
+        }
+
+        /// <summary>
+        /// How long the trip's bus has stood in one place on its line, up to its latest
+        /// reading. Zero while it is moving or off the line.
+        /// </summary>
+        public TimeSpan Standing(string tripId)
+        {
+            if (!_trips.TryGetValue(tripId, out var entry))
+                return TimeSpan.Zero;
+            lock (entry.Gate)
+                return entry.StillAlong is null ? TimeSpan.Zero : entry.LastAt - entry.StillSince;
         }
 
         /// <summary>Forgets trips nobody has asked about for a while, which have ended.</summary>

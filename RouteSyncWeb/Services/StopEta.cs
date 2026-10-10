@@ -122,6 +122,25 @@
         public static double Seconds(double metres, double? usual, double? recent) =>
             metres / (usual ?? (recent >= RouteSnapper.MovingSpeed ? recent : null) ?? DefaultSpeed);
 
+        /// <summary>A normal wait at a stop or a light, already inside the usual speeds.</summary>
+        public static readonly TimeSpan UsualWait = TimeSpan.FromSeconds(30);
+
+        /// <summary>The most a long standstill adds to the time to the next stop.</summary>
+        public static readonly TimeSpan LongestDelay = TimeSpan.FromMinutes(10);
+
+        /// <summary>
+        /// Seconds to add for a bus that has stood still longer than a normal wait: as long
+        /// again as it has stood past one, so the estimate grows while the bus is held up
+        /// instead of holding still.
+        /// </summary>
+        public static double Delay(TimeSpan standing)
+        {
+            // ponytail: a standstill is assumed to last as long again as it has so far. No
+            // knowledge of why the bus stopped; learn typical hold-ups per stretch if needed.
+            var extra = standing - UsualWait;
+            return extra <= TimeSpan.Zero ? 0 : Math.Min(extra.TotalSeconds, LongestDelay.TotalSeconds);
+        }
+
         /// <summary>Learns the median speed of each stop-to-stop stretch from past trips.</summary>
         /// <param name="trips">
         /// Each trip's places on the line while it was on it, in order, with the Philippine

@@ -99,6 +99,29 @@ public class StopEtaTests
     }
 
     [Fact]
+    public void A_standstill_past_a_normal_wait_adds_its_excess_up_to_a_cap()
+    {
+        Assert.Equal(0, StopEta.Delay(TimeSpan.FromSeconds(20)));
+        Assert.Equal(60, StopEta.Delay(TimeSpan.FromSeconds(90)));
+        Assert.Equal(StopEta.LongestDelay.TotalSeconds, StopEta.Delay(TimeSpan.FromHours(1)));
+    }
+
+    [Fact]
+    public void The_tracker_times_a_bus_standing_on_its_line_and_resets_when_it_moves()
+    {
+        var tracker = new RouteSnapTracker();
+        var line = EastRoad();
+        var t = new DateTime(2026, 10, 1, 8, 0, 0);
+        GpsReading At(double east, double speed) => new(Offset(Origin, 0, east), 90, speed, 5);
+
+        tracker.Advance("T", line, new[] { (1L, t, At(300, 0)), (2L, t.AddSeconds(40), At(305, 0)), (3L, t.AddSeconds(90), At(298, 0)) });
+        Assert.Equal(TimeSpan.FromSeconds(90), tracker.Standing("T"));
+
+        tracker.Advance("T", line, new[] { (4L, t.AddSeconds(100), At(400, 8)) });
+        Assert.Equal(TimeSpan.Zero, tracker.Standing("T"));
+    }
+
+    [Fact]
     public void A_gap_in_the_readings_is_not_timed_as_a_slow_run()
     {
         var line = EastRoad();

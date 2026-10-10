@@ -505,26 +505,32 @@
         color: var(--fm-text);
     }
 
-    /* Click side panel. */
+    /* Click side panel. As tall as what it holds, up to the height of the map. */
     .fm-panel {
         position: absolute;
         top: 16px;
         right: 16px;
-        bottom: 16px;
-        width: 300px;
+        max-height: calc(100% - 32px);
+        width: 288px;
+        box-sizing: border-box;
         z-index: 1100;
         /* The map is never themed, so what floats over it stays light in dark mode. */
         color-scheme: light;
         /* Hairlines that sit in the glass rather than cutting across it. */
         --fm-border: rgba(45, 55, 72, .08);
+        --fm-panel-ink: light-dark(#1A202C, #E3E6EB);
+        --fm-panel-soft: light-dark(#4A5568, #D9DCE1);
         background: color-mix(in srgb, var(--fm-white) 67%, transparent);
         -webkit-backdrop-filter: blur(14px) saturate(160%);
         backdrop-filter: blur(14px) saturate(160%);
         border: 1px solid light-dark(rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));
         border-radius: var(--fm-radius);
         box-shadow: 0 8px 28px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
-        padding: 22px 0;
+        padding: 16px 0;
         font-family: 'Segoe UI', sans-serif;
+        font-size: .82rem;
+        line-height: 1.35;
+        color: var(--fm-panel-ink);
         display: flex;
         flex-direction: column;
         transform: translateX(calc(100% + 24px));
@@ -537,23 +543,23 @@
     }
 
     .fm-panel__pad {
-        padding: 0 22px;
+        padding: 0 18px;
     }
 
-    /* One hairline between sections, every one the same. The figures are one
-       section, so the rule that split passengers from revenue goes. */
+    /* One hairline between sections, every one the same. */
     .fm-panel__divider {
+        flex-shrink: 0;
         border-top: 1px solid var(--fm-border);
-        margin: 16px 22px;
+        margin: 12px 18px;
     }
 
     .fm-panel__close {
         position: absolute;
-        top: 16px;
-        right: 18px;
+        top: 10px;
+        right: 12px;
         background: none;
         border: none;
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         line-height: 1;
         color: var(--fm-muted);
         cursor: pointer;
@@ -564,18 +570,25 @@
     }
 
     .fm-panel__title {
-        font-size: 1.6rem;
-        font-weight: 800;
-        color: light-dark(#1A202C, #E3E6EB);
-        letter-spacing: 0.01em;
-        margin-bottom: 10px;
+        font-family: 'Poppins', 'Segoe UI', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.2;
+        margin-bottom: 4px;
     }
 
     .fm-panel__meta {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
-        font-size: 0.92rem;
+        gap: 4px 6px;
+        font-size: .78rem;
+        color: var(--fm-panel-soft);
+    }
+
+    .fm-panel__plate {
+        font-weight: 600;
+        margin-right: 4px;
     }
 
     .fm-panel__meta-label {
@@ -583,58 +596,43 @@
     }
 
     .fm-panel__route-no {
-        font-weight: 800;
+        font-weight: 600;
         color: light-dark(#2563EB, #9CBEFF);
-        margin-right: 6px;
+        margin-right: 4px;
     }
 
     .fm-panel__shift {
-        font-weight: 700;
+        font-weight: 600;
+        font-size: .72rem;
         color: light-dark(#986212, #E8A33D);
         background: light-dark(#FCF3DF, #52462D);
-        border-radius: 6px;
-        padding: 2px 8px;
+        border-radius: 5px;
+        padding: 1px 6px;
     }
 
     .fm-panel__status {
-        margin-top: 12px;
+        margin-top: 8px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        font-size: 1rem;
-        font-weight: 700;
-        color: light-dark(#6A717F, #B9BCC1);
+        gap: 6px;
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--fm-panel-soft);
     }
 
     .fm-panel__status-dot {
-        width: 14px;
-        height: 14px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         background: #34C759;
         flex-shrink: 0;
     }
 
-    /* Under the bus and its route, not a section of its own. */
-    .fm-panel__meta {
-        flex-wrap: wrap;
-    }
-
-    .fm-panel__plate {
-        font-weight: 700;
-        color: light-dark(#4A5568, #D9DCE1);
-        margin-right: 6px;
-    }
-
-    .fm-panel__seats {
-        font-weight: 600;
-        color: light-dark(#4A5568, #D9DCE1);
-    }
-
     .fm-panel__label {
         display: block;
-        font-size: .72rem;
-        font-weight: 700;
-        letter-spacing: .04em;
+        font-size: .66rem;
+        font-weight: 600;
+        letter-spacing: .05em;
         text-transform: uppercase;
         color: var(--fm-muted);
     }
@@ -644,32 +642,33 @@
         display: grid;
         grid-template-columns: 1fr auto 1fr;
         align-items: start;
-        gap: 10px;
-        padding: 0 22px;
+        gap: 8px;
+        padding: 0 18px;
     }
 
     .fm-panel__leg-stop {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
         min-width: 0;
     }
 
     .fm-panel__leg-arrow {
-        margin-top: 18px;
+        width: 14px;
+        height: 14px;
+        margin-top: 15px;
         color: var(--fm-muted);
     }
 
     .fm-panel__leg-name {
-        font-size: .98rem;
-        font-weight: 700;
-        color: light-dark(#1A202C, #E3E6EB);
+        font-size: .84rem;
+        font-weight: 600;
         overflow-wrap: anywhere;
     }
 
     .fm-panel__eta {
-        font-size: .88rem;
-        font-weight: 700;
+        font-size: .78rem;
+        font-weight: 600;
         color: light-dark(#226964, #8FD8D2);
     }
 
@@ -681,9 +680,9 @@
     .fm-panel__figs {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 7px;
         margin: 0;
-        padding: 0 22px;
+        padding: 0 18px;
     }
 
         .fm-panel__figs > div {
@@ -694,31 +693,37 @@
         }
 
         .fm-panel__figs dt {
-            font-size: .92rem;
+            flex-shrink: 0;
             font-weight: 400;
-            color: light-dark(#4A5568, #D9DCE1);
+            color: var(--fm-panel-soft);
         }
 
         .fm-panel__figs dd {
             margin: 0;
-            font-size: 1.05rem;
-            font-weight: 800;
-            color: light-dark(#1A202C, #E3E6EB);
+            font-weight: 600;
             text-align: right;
             font-variant-numeric: tabular-nums;
         }
 
+    /* A second, quieter line under a figure, such as when an inspection was done. */
+    .fm-panel__sub {
+        display: block;
+        font-size: .74rem;
+        font-weight: 400;
+        color: var(--fm-muted);
+    }
+
     .fm-panel__trips,
     .fm-panel__faults {
         list-style: none;
-        margin: 8px 0 0;
-        padding: 0 22px;
+        margin: 6px 0 0;
+        padding: 0 18px;
     }
 
     .fm-panel__trips {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
     }
 
         /* The shift and its status on one line, its hours and riders under them. */
@@ -726,13 +731,15 @@
             display: grid;
             grid-template-columns: 1fr auto;
             align-items: baseline;
-            gap: 1px 10px;
-            font-size: .9rem;
-            color: light-dark(#1A202C, #E3E6EB);
+            column-gap: 10px;
         }
 
+            .fm-panel__trips li .fm-panel__muted {
+                font-size: .74rem;
+            }
+
     .fm-panel__trip-shift {
-        font-weight: 700;
+        font-weight: 600;
     }
 
     .fm-panel__trip-end {
@@ -740,12 +747,12 @@
     }
 
     .fm-panel__faults {
-        font-size: .85rem;
-        color: light-dark(#4A5568, #D9DCE1);
+        font-size: .78rem;
+        color: var(--fm-panel-soft);
     }
 
         .fm-panel__faults li + li {
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .fm-panel__faults:empty {
@@ -1157,7 +1164,7 @@
     }
 
     .fm-panel__title {
-        font-size: 1.05rem;
+        font-size: 1rem;
         margin-bottom: 2px;
     }
 
@@ -1178,11 +1185,6 @@
         font-size: .8rem;
     }
 
-    .fm-panel__status-dot {
-        width: 9px;
-        height: 9px;
-    }
-
     .fm-panel__leg,
     .fm-panel__figs,
     .fm-panel__trips,
@@ -1193,24 +1195,14 @@
     .fm-panel__label,
     .fm-panel__figs dt {
         font-size: .64rem;
-        font-weight: 700;
-        letter-spacing: .04em;
+        font-weight: 600;
+        letter-spacing: .05em;
         text-transform: uppercase;
         color: var(--fm-muted);
     }
 
-    .fm-panel__leg-name {
-        font-size: .85rem;
-    }
-
     .fm-panel__leg-arrow {
-        width: 14px;
-        height: 14px;
         margin-top: 13px;
-    }
-
-    .fm-panel__eta {
-        font-size: .8rem;
     }
 
     /* The four figures of a trip two to a line, so the sheet stays short. */
@@ -1220,20 +1212,8 @@
         gap: 6px 18px;
     }
 
-        .fm-panel__figs dd {
-            font-size: .85rem;
-        }
-
     .fm-panel__day .fm-panel__figs {
         grid-template-columns: 1fr;
-    }
-
-    .fm-panel__trips li {
-        font-size: .8rem;
-    }
-
-    .fm-panel__faults {
-        font-size: .76rem;
     }
 
     .fm-panel__close {
@@ -1248,19 +1228,19 @@
 .fm-panel__actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 14px 22px 0;
+    gap: 6px;
+    padding: 12px 18px 0;
 }
 
 .fm-panel__actions[hidden] { display: none; }
 
 .fm-panel__act {
     flex: 1 1 auto;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: 1px solid light-dark(#2F7F7A, #7ACFCA);
-    border-radius: 8px;
+    border-radius: 7px;
     color: light-dark(#226964, #8FD8D2);
-    font-size: .82rem;
+    font-size: .76rem;
     font-weight: 600;
     text-align: center;
     text-decoration: none;

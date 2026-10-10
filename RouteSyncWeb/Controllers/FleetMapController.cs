@@ -363,8 +363,9 @@ namespace FleetWise.Controllers
                     leg = StopEta.Locate(line, places, along);
                     if (leg is { } l)
                         etaSeconds = StopEta.Seconds(l.Metres,
-                            l.Previous >= 0 ? speeds.For(l.Previous, PhClock.Now.Hour) : null,
-                            telemetry.Speed is decimal sp ? (double)sp : null);
+                                l.Previous >= 0 ? speeds.For(l.Previous, PhClock.Now.Hour) : null,
+                                telemetry.Speed is decimal sp ? (double)sp : null)
+                            + StopEta.Delay(_snaps.Standing(trip.TripId));
                 }
 
                 // Two copies of one number. The counter phone writes the trip's figure

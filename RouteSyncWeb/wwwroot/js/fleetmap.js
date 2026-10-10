@@ -299,7 +299,9 @@
                     : '<li class="fm-panel__muted">No trips today</li>';
 
                 var insp = document.getElementById('fmPanelInspection');
-                insp.textContent = d.inspection ? d.inspection.result + ', ' + d.inspection.at : 'None on record';
+                insp.innerHTML = d.inspection
+                    ? escapeHtml(d.inspection.result) + '<span class="fm-panel__sub">' + escapeHtml(d.inspection.at) + '</span>'
+                    : 'None on record';
                 insp.classList.toggle('fm-panel__bad', !!d.inspection && d.inspection.result === 'Failed');
 
                 // The faults listed, or the open orders where none names its faults.
