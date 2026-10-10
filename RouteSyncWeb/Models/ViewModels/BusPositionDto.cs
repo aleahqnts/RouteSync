@@ -80,18 +80,23 @@ public class BusPositionDto
     public double Speed { get; set; }
 
     // The stops either side of the bus and the rounded seconds to the next, while it is on
-    // its route line. All null off it, or with no stop ahead.
+    // its route line. Left out when null, as they are for every parked bus, so the poll
+    // does not carry four empty fields per bus every two seconds.
     [JsonPropertyName("previousStop")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string PreviousStop { get; set; }
 
     [JsonPropertyName("nextStop")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string NextStop { get; set; }
 
     [JsonPropertyName("nextStopSeconds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? NextStopSeconds { get; set; }
 
     // How far the bus has come from the last stop toward the next, from 0 to 1.
     [JsonPropertyName("nextStopProgress")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? NextStopProgress { get; set; }
 
     // Everyone who has boarded this trip. Nobody is counted off again, so this only ever

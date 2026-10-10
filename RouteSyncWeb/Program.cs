@@ -174,6 +174,16 @@ builder.Services.AddHostedService<RosterCycleService>();
 // only: nothing here blocks anyone.
 builder.Services.AddHostedService<SecurityDetectorService>();
 
+// The map and the dashboard poll JSON every few seconds, and it shrinks to a fifth or less
+// compressed. Only JSON: compressing pages that carry the anti-forgery token beside text a
+// visitor can put there is what the BREACH attack reads secrets through, and the pages are
+// fetched once rather than every two seconds.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.MimeTypes = new[] { "application/json" };
+});
+
 var app = builder.Build();
 
 // Runs before anything reads the scheme or the caller address, so the rest of the pipeline
@@ -218,6 +228,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseResponseCompression();
 
 // Security headers. The content security policy is a backstop rather than a fix: the real
 // protection is not placing user-supplied values into markup. What the policy adds is a

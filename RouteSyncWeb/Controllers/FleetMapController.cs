@@ -57,11 +57,17 @@ namespace FleetWise.Controllers
         private static readonly TimeSpan LiveShared = TimeSpan.FromMilliseconds(1500);
 
         /// <summary>
-        /// How long the stop-to-stop speeds learned from past trips are reused. They move
-        /// with weeks of trips, not hours, and working them out reads every recent reading of
-        /// the route.
+        /// How long the stop-to-stop speeds learned from past trips are reused. They are
+        /// medians over two weeks of trips, which a day more or less does not move, and each
+        /// refresh reads the route's recent readings out of the database.
         /// </summary>
-        private static readonly TimeSpan SpeedsLifetime = TimeSpan.FromHours(6);
+        private static readonly TimeSpan SpeedsLifetime = TimeSpan.FromHours(24);
+
+        /// <summary>
+        /// Seconds between the readings the speeds are learned from. The phones report every
+        /// five, and one in thirty still places each stop crossing within a few seconds.
+        /// </summary>
+        private const int SpeedSampleSeconds = 30;
 
         /// <summary>Days of past trips the speeds are learned from, within the telemetry kept.</summary>
         private const int SpeedHistoryDays = 14;
@@ -497,8 +503,8 @@ namespace FleetWise.Controllers
         /// <summary>Learns a route's stop-to-stop speeds from its recent trips' readings.</summary>
         private async Task<SegmentSpeeds> LearnSpeedsAsync(int routeId, RouteLine line, IReadOnlyList<StopPlace> places)
         {
-            // ponytail: reads every reading of the route's last 60 trips each time the speeds
-            // expire. Keep a running tally per stretch instead if that read ever slows the map.
+            // ponytail: reads the route's last 60 trips again each day, thinned in the database.
+            // Read only trips not yet learned from if that ever weighs on the free tier.
             if (places.Count < 2)
                 return SegmentSpeeds.None;
 
@@ -513,14 +519,26 @@ namespace FleetWise.Controllers
                 .Take(SpeedHistoryTrips)
                 .ToList();
 
+            // Thinned in the database by telemetry_sample. Where the database has no such
+            // function yet, nothing is learned: reading every row instead is what it avoids.
             var readings = new List<TelemetryData>();
             foreach (var group in trips.Select(t => t.TripId).Chunk(20))
             {
-                var ids = group.Cast<object>().ToList();
-                readings.AddRange(await PagedRead.AllAsync(() => _supabase.From<TelemetryData>()
-                    .Select("telemetry_id,trip_id,latitude,longitude,speed,heading,accuracy,timestamp")
-                    .Filter("trip_id", Postgrest.Constants.Operator.In, ids)
-                    .Order("telemetry_id", Postgrest.Constants.Ordering.Ascending)));
+                Postgrest.Responses.BaseResponse sample;
+                try
+                {
+                    sample = await _supabase.Rpc("telemetry_sample", new Dictionary<string, object?>
+                    {
+                        ["p_trip_ids"] = group,
+                        ["p_every_seconds"] = SpeedSampleSeconds,
+                    });
+                }
+                catch (Postgrest.Exceptions.PostgrestException ex)
+                    when (RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+                {
+                    return SegmentSpeeds.None;
+                }
+                readings.AddRange(ReadBundle.Parse(sample.Content).Rows<TelemetryData>("telemetry"));
             }
 
             // Each trip replayed through the map's own snapping, keeping where it was on the
