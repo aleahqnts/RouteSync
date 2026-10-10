@@ -253,20 +253,104 @@
         return bus.onBreakUntil ? 'On Break until ' + bus.onBreakUntil : bus.status;
     }
 
+    // The time to the next stop as a rough figure, never a clock time: it is an estimate
+    // from how fast buses usually cover that stretch. Counted from the reading it was
+    // worked out at, so it keeps falling between readings.
+    function etaText(bus) {
+        if (isStale(bus)) return 'No recent signal';
+        if (!bus.nextStop) return bus.onRoute ? 'Past the last stop' : 'No estimate right now';
+        if (bus.nextStopSeconds == null) return '';
+        var left = bus.nextStopSeconds - readingAge(bus) / 1000;
+        if (left < 60) return 'Arriving';
+        return 'About ' + Math.round(left / 60) + ' min';
+    }
+
+    // The day sheet of the parked bus shown, read when the panel opens on it and again
+    // once it is a minute old.
+    var dayFor = null, dayAt = 0;
+
+    function loadDay(vehicleId) {
+        dayFor = vehicleId;
+        dayAt = Date.now();
+        var trips = document.getElementById('fmPanelTrips');
+        if (!trips.children.length) trips.innerHTML = '<li class="fm-panel__muted">Loading\u2026</li>';
+        fetch('/FleetMap/BusDetail?vehicleId=' + encodeURIComponent(vehicleId))
+            .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function (d) {
+                if (selectedVehicleId !== vehicleId) return;
+                var seats = document.getElementById('fmPanelSeats');
+                seats.textContent = d.seats + ' seats';
+                seats.hidden = !d.seats;
+
+                trips.innerHTML = d.trips.length
+                    ? d.trips.map(function (t) {
+                        return '<li><span class="fm-panel__trip-shift">' + escapeHtml(t.shift) + '</span>' +
+                            '<span class="fm-panel__trip-end">' + escapeHtml(t.status) + '</span>' +
+                            '<span class="fm-panel__muted">' + escapeHtml(t.window) + '</span>' +
+                            '<span class="fm-panel__muted fm-panel__trip-end">' +
+                            (t.boarded ? t.boarded + ' boarded' : '') + '</span></li>';
+                    }).join('')
+                    : '<li class="fm-panel__muted">No trips today</li>';
+
+                var insp = document.getElementById('fmPanelInspection');
+                insp.textContent = d.inspection ? d.inspection.result + ', ' + d.inspection.at : 'None on record';
+                insp.classList.toggle('fm-panel__bad', !!d.inspection && d.inspection.result === 'Failed');
+
+                // The faults listed, or the open orders where none names its faults.
+                var count = document.getElementById('fmPanelFaultCount');
+                count.textContent = d.faults.length || d.faultCount || 'None';
+                count.classList.toggle('fm-panel__bad', d.faultCount > 0);
+                var shown = d.faults.slice(0, 3);
+                document.getElementById('fmPanelFaults').innerHTML = shown.map(function (f) {
+                    return '<li>' + escapeHtml(f) + '</li>';
+                }).join('') + (d.faults.length > 3
+                    ? '<li class="fm-panel__muted">and ' + (d.faults.length - 3) + ' more</li>' : '');
+            })
+            .catch(function () {
+                if (selectedVehicleId !== vehicleId) return;
+                dayFor = null;
+                trips.innerHTML = '<li class="fm-panel__muted">Could not load this bus\u2019s day.</li>';
+            });
+    }
+
     function fillPanel(bus) {
+        var live = !!bus.tripId;
         document.getElementById('fmPanelBus').textContent = bus.vehicleId;
+        document.getElementById('fmPanelPlate').textContent = bus.plateNumber;
         document.getElementById('fmPanelRoute').textContent = String(bus.routeId).padStart(2, '0');
         document.getElementById('fmPanelShift').textContent = bus.shift;
+        document.getElementById('fmPanelShift').hidden = !live;
         document.getElementById('fmPanelStatus').textContent = statusText(bus);
         document.getElementById('fmPanelStatusDot').style.background = statusColor(bus.status);
-        document.getElementById('fmPanelDriver').textContent = bus.driverName;
-        document.getElementById('fmPanelPax').textContent = bus.passengers;
-        // Written as an escape rather than the sign itself: this file carries no
-        // byte order mark, so it is decoded as whatever the response says, and a
-        // peso sign is the one character here that would not survive being read as
-        // anything but UTF-8.
-        document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
-        document.getElementById('fmPanelUpdated').textContent = 'Last updated: ' + phClock(bus.timestamp);
+        document.getElementById('fmPanelLive').hidden = !live;
+        document.getElementById('fmPanelDay').hidden = live;
+
+        if (live) {
+            document.getElementById('fmPanelSeats').hidden = true;
+            var known = bus.onRoute && !isStale(bus);
+            document.getElementById('fmPanelPrev').textContent = known ? (bus.previousStop || 'None yet') : 'Not known';
+            document.getElementById('fmPanelNext').textContent = known ? (bus.nextStop || 'None') : 'Not known';
+            document.getElementById('fmPanelEta').textContent = etaText(bus);
+            document.getElementById('fmPanelDriver').textContent = bus.driverName;
+            document.getElementById('fmPanelPax').textContent = bus.passengers;
+            // Written as an escape rather than the sign itself: this file carries no
+            // byte order mark, so it is decoded as whatever the response says, and a
+            // peso sign is the one character here that would not survive being read as
+            // anything but UTF-8.
+            document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
+            var signal = document.getElementById('fmPanelSignal');
+            signal.textContent = relativeTime(bus.timestamp);
+            signal.title = phClock(bus.timestamp);
+        } else if (dayFor !== bus.vehicleId || Date.now() - dayAt > 60000) {
+            if (dayFor !== bus.vehicleId) {
+                document.getElementById('fmPanelTrips').innerHTML = '';
+                document.getElementById('fmPanelFaults').innerHTML = '';
+                document.getElementById('fmPanelInspection').textContent = '';
+                document.getElementById('fmPanelFaultCount').textContent = '';
+                document.getElementById('fmPanelSeats').hidden = true;
+            }
+            loadDay(bus.vehicleId);
+        }
 
         var actions = document.getElementById('fmPanelActions');
         actions.hidden = !bus.tripId;
@@ -292,6 +376,7 @@
 
     function closePanel() {
         selectedVehicleId = null;
+        dayFor = null;
         panel.classList.remove('fm-panel--open');
         panel.setAttribute('aria-hidden', 'true');
         if (panelReturnFocus && document.contains(panelReturnFocus)) panelReturnFocus.focus();

@@ -79,6 +79,17 @@ public class BusPositionDto
     [JsonPropertyName("speed")]
     public double Speed { get; set; }
 
+    // The stops either side of the bus and the rounded seconds to the next, while it is on
+    // its route line. All null off it, or with no stop ahead.
+    [JsonPropertyName("previousStop")]
+    public string PreviousStop { get; set; }
+
+    [JsonPropertyName("nextStop")]
+    public string NextStop { get; set; }
+
+    [JsonPropertyName("nextStopSeconds")]
+    public int? NextStopSeconds { get; set; }
+
     // Everyone who has boarded this trip. Nobody is counted off again, so this only ever
     // climbs. Taken from the trip's own figure where the counter phone has already raised
     // it, since telemetry carries the driver app's copy of the same number and trails it.

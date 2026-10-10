@@ -525,11 +525,8 @@
         box-shadow: 0 8px 28px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
         padding: 22px 0;
         font-family: 'Segoe UI', sans-serif;
-        /* A grid so each figure and its name share a line while staying two elements.
-           Everything else takes the width. */
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-content: start;
+        display: flex;
+        flex-direction: column;
         transform: translateX(calc(100% + 24px));
         transition: transform .25s ease;
         overflow-y: auto;
@@ -537,10 +534,6 @@
 
     .fm-panel--open {
         transform: translateX(0);
-    }
-
-    .fm-panel > * {
-        grid-column: 1 / -1;
     }
 
     .fm-panel__pad {
@@ -552,10 +545,6 @@
     .fm-panel__divider {
         border-top: 1px solid var(--fm-border);
         margin: 16px 22px;
-    }
-
-    .fm-panel__pax + .fm-panel__divider {
-        display: none;
     }
 
     .fm-panel__close {
@@ -608,6 +597,7 @@
     }
 
     .fm-panel__status {
+        margin-top: 12px;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -624,81 +614,152 @@
         flex-shrink: 0;
     }
 
-    .fm-panel__driver {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 0 22px;
+    /* Under the bus and its route, not a section of its own. */
+    .fm-panel__meta {
+        flex-wrap: wrap;
     }
 
-    .fm-panel__avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: #BFE0F2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        overflow: hidden;
+    .fm-panel__plate {
+        font-weight: 700;
+        color: light-dark(#4A5568, #D9DCE1);
+        margin-right: 6px;
     }
 
-    .fm-panel__driver-info {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .fm-panel__driver-name {
-        font-size: 1.05rem;
+    .fm-panel__seats {
         font-weight: 600;
-        color: light-dark(#1A202C, #E3E6EB);
-    }
-
-    .fm-panel__driver-sub {
-        font-size: 0.82rem;
-        color: var(--fm-muted);
-    }
-
-    /* The two figures read the same way: the name at the left, the figure at the
-       right, on one line each. */
-    .fm-panel__pax {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 0 22px;
-    }
-
-    .fm-panel__pax-label,
-    .fm-panel__rev-head {
-        font-size: .92rem;
         color: light-dark(#4A5568, #D9DCE1);
     }
 
-    .fm-panel__pax-num,
-    .fm-panel__rev-val {
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: light-dark(#1A202C, #E3E6EB);
-        font-variant-numeric: tabular-nums;
-    }
-
-    .fm-panel__rev-head {
-        grid-column: 1;
-        align-self: baseline;
-        padding: 12px 0 0 22px;
-    }
-
-    .fm-panel__pad:has(.fm-panel__rev-val) {
-        grid-column: 2;
-        align-self: baseline;
-        padding: 12px 22px 0 0;
-    }
-
-    .fm-panel__updated {
-        font-size: 0.85rem;
-        font-style: italic;
+    .fm-panel__label {
+        display: block;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
         color: var(--fm-muted);
+    }
+
+    /* The stop behind the bus and the stop ahead, with the time to it. */
+    .fm-panel__leg {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: start;
+        gap: 10px;
+        padding: 0 22px;
+    }
+
+    .fm-panel__leg-stop {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .fm-panel__leg-arrow {
+        margin-top: 18px;
+        color: var(--fm-muted);
+    }
+
+    .fm-panel__leg-name {
+        font-size: .98rem;
+        font-weight: 700;
+        color: light-dark(#1A202C, #E3E6EB);
+        overflow-wrap: anywhere;
+    }
+
+    .fm-panel__eta {
+        font-size: .88rem;
+        font-weight: 700;
+        color: light-dark(#226964, #8FD8D2);
+    }
+
+    .fm-panel__eta:empty {
+        display: none;
+    }
+
+    /* Each figure on a line of its own: the name at the left, the figure at the right. */
+    .fm-panel__figs {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin: 0;
+        padding: 0 22px;
+    }
+
+        .fm-panel__figs > div {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .fm-panel__figs dt {
+            font-size: .92rem;
+            font-weight: 400;
+            color: light-dark(#4A5568, #D9DCE1);
+        }
+
+        .fm-panel__figs dd {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: light-dark(#1A202C, #E3E6EB);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+    .fm-panel__trips,
+    .fm-panel__faults {
+        list-style: none;
+        margin: 8px 0 0;
+        padding: 0 22px;
+    }
+
+    .fm-panel__trips {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        /* The shift and its status on one line, its hours and riders under them. */
+        .fm-panel__trips li {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: baseline;
+            gap: 1px 10px;
+            font-size: .9rem;
+            color: light-dark(#1A202C, #E3E6EB);
+        }
+
+    .fm-panel__trip-shift {
+        font-weight: 700;
+    }
+
+    .fm-panel__trip-end {
+        text-align: right;
+    }
+
+    .fm-panel__faults {
+        font-size: .85rem;
+        color: light-dark(#4A5568, #D9DCE1);
+    }
+
+        .fm-panel__faults li + li {
+            margin-top: 4px;
+        }
+
+        .fm-panel__faults:empty {
+            display: none;
+        }
+
+    .fm-panel__muted {
+        font-weight: 400;
+        color: var(--fm-muted);
+    }
+
+    .fm-panel__bad,
+    .fm-panel__figs .fm-panel__bad {
+        color: light-dark(#B91C1C, #FCA5A5);
     }
 
     /* Stop markers, styled to be distinct from bus markers. */
@@ -1078,32 +1139,21 @@
        facts about one bus, each given a band of its own, filling half the screen the
        map is supposed to be on.
 
-       Everything comes down a step, the rules between the bands go, and the two that
-       pair up share a line. */
+       Everything comes down a step, and the figures of a trip pair up two to a
+       line. */
     .fm-panel {
-        /* A grid so the revenue and its figure can sit on one line while they stay
-           two elements. Everything else takes the width. */
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-content: start;
         /* The round button in the middle of the bar stands above it, so the last line
            of the sheet keeps clear of where it reaches. */
         padding: 10px 0 30px;
     }
 
-        .fm-panel > * {
-            grid-column: 1 / -1;
-        }
-
     .fm-panel__pad {
         padding: 0 16px;
     }
 
-    /* Five rules with sixteen pixels either side spend a third of the sheet keeping
-       six short facts apart. The blocks that need separating carry their own ground
-       instead. */
+    /* The same hairline between sections as the desk, set closer. */
     .fm-panel__divider {
-        display: none;
+        margin: 10px 16px;
     }
 
     .fm-panel__title {
@@ -1124,7 +1174,7 @@
     /* Under the bus rather than in a section of its own. */
     .fm-panel__status {
         gap: 7px;
-        padding: 7px 0 0;
+        margin-top: 7px;
         font-size: .8rem;
     }
 
@@ -1133,38 +1183,15 @@
         height: 9px;
     }
 
-    /* A driver is a name. The portrait of nobody beside it is forty-four pixels
-       saying so twice. */
-    .fm-panel__avatar {
-        display: none;
+    .fm-panel__leg,
+    .fm-panel__figs,
+    .fm-panel__trips,
+    .fm-panel__faults {
+        padding: 0 16px;
     }
 
-    .fm-panel__driver {
-        gap: 10px;
-        margin-top: 9px;
-        padding: 7px 16px;
-    }
-
-        /* Reversed, so the name it exists to give ends the line and the word for what
-           the name is starts it, as every other pair on a phone reads. */
-        .fm-panel__driver-info {
-            flex: 1;
-            flex-direction: row-reverse;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 10px;
-            min-width: 0;
-        }
-
-    .fm-panel__driver-name {
-        font-size: .85rem;
-        font-weight: 700;
-    }
-
-    /* The names of the figures, all set the same way. */
-    .fm-panel__driver-sub,
-    .fm-panel__pax-label,
-    .fm-panel__rev-head {
+    .fm-panel__label,
+    .fm-panel__figs dt {
         font-size: .64rem;
         font-weight: 700;
         letter-spacing: .04em;
@@ -1172,47 +1199,41 @@
         color: var(--fm-muted);
     }
 
-    /* A number and its name on a line, not a band split down the middle. */
-    .fm-panel__pax {
-        align-items: baseline;
-        gap: 10px;
-        padding: 10px 16px 0;
+    .fm-panel__leg-name {
+        font-size: .85rem;
     }
 
-    .fm-panel__pax-label {
-        flex: 0 0 auto;
-        text-align: left;
+    .fm-panel__leg-arrow {
+        width: 14px;
+        height: 14px;
+        margin-top: 13px;
     }
 
-    .fm-panel__pax-num {
-        flex: 1;
-        border-left: none;
-        text-align: right;
-        font-size: 1rem;
+    .fm-panel__eta {
+        font-size: .8rem;
     }
 
-    /* Beside its figure rather than above it, and without a ground of its own. */
-    .fm-panel__rev-head {
-        grid-column: 1;
-        align-self: baseline;
-        padding: 10px 0 0 16px;
-        background: none;
+    /* The four figures of a trip two to a line, so the sheet stays short. */
+    .fm-panel__figs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 18px;
     }
 
-    .fm-panel__pad:has(.fm-panel__rev-val) {
-        grid-column: 2;
-        align-self: baseline;
-        padding: 10px 16px 0 0;
+        .fm-panel__figs dd {
+            font-size: .85rem;
+        }
+
+    .fm-panel__day .fm-panel__figs {
+        grid-template-columns: 1fr;
     }
 
-    .fm-panel__rev-val {
-        margin-top: 0;
-        font-size: 1rem;
+    .fm-panel__trips li {
+        font-size: .8rem;
     }
 
-    .fm-panel__updated {
-        padding-top: 9px;
-        font-size: .7rem;
+    .fm-panel__faults {
+        font-size: .76rem;
     }
 
     .fm-panel__close {

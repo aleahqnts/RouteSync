@@ -48,6 +48,7 @@ namespace FleetWise.Controllers
         private static readonly RouteStops.Stop DefaultTerminal = new("EDSA-Ayala Terminal", 14.549272, 121.029103, true);
 
         private readonly RouteSnapTracker _snaps;
+        private readonly TripAssignments _assignments;
 
         /// <summary>
         /// How long one read of the live positions is shared, just under the map's
@@ -55,16 +56,30 @@ namespace FleetWise.Controllers
         /// </summary>
         private static readonly TimeSpan LiveShared = TimeSpan.FromMilliseconds(1500);
 
+        /// <summary>
+        /// How long the stop-to-stop speeds learned from past trips are reused. They move
+        /// with weeks of trips, not hours, and working them out reads every recent reading of
+        /// the route.
+        /// </summary>
+        private static readonly TimeSpan SpeedsLifetime = TimeSpan.FromHours(6);
+
+        /// <summary>Days of past trips the speeds are learned from, within the telemetry kept.</summary>
+        private const int SpeedHistoryDays = 14;
+
+        /// <summary>Most recent trips per route the speeds are learned from.</summary>
+        private const int SpeedHistoryTrips = 60;
+
         /// <summary>Set once the database is found to have no fleetmap_live that takes p_seen.</summary>
         private static volatile bool _seenUnsupported;
 
         public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache,
-            RouteSnapTracker snaps)
+            RouteSnapTracker snaps, TripAssignments assignments)
         {
             _supabase = supabase;
             _fareCalculator = fareCalculator;
             _cache = cache;
             _snaps = snaps;
+            _assignments = assignments;
         }
 
         /// <summary>The active trips, their readings since the last one used, and the fare, as sent.</summary>
@@ -294,6 +309,18 @@ namespace FleetWise.Controllers
             var positions = new List<BusPositionDto>();
             var movingVehicleIds = new HashSet<string>();
 
+            // Each route's stops on its line, and how fast its buses usually go between them.
+            var stopsByRoute = new Dictionary<int, (IReadOnlyList<StopPlace> Places, SegmentSpeeds Speeds)>();
+            (IReadOnlyList<StopPlace> Places, SegmentSpeeds Speeds) StopsOf(int id, RouteLine line, BusRoute? route)
+            {
+                if (!stopsByRoute.TryGetValue(id, out var found))
+                {
+                    var places = StopEta.Place(line, RouteStops.Parse(route?.StopsJson));
+                    stopsByRoute[id] = found = (places, SpeedsFor(id, line, places));
+                }
+                return found;
+            }
+
             // Moving buses: one marker per vehicle, positioned by its newest reading. A
             // vehicle can appear on more than one active trip in inconsistent data, so only
             // the latest reading is used and the marker does not jump between positions.
@@ -324,6 +351,22 @@ namespace FleetWise.Controllers
 
                 var capacity = vehicle?.Capacity ?? 0;
 
+                // The next stop and the time to it, only while the bus is on its line. Off
+                // it, the stop ahead is a guess.
+                StopLeg? leg = null;
+                IReadOnlyList<StopPlace>? stopPlaces = null;
+                double? etaSeconds = null;
+                if (line is not null && snap is { OnRoute: true, Along: double along })
+                {
+                    var (places, speeds) = StopsOf(trip.RouteId, line, route);
+                    stopPlaces = places;
+                    leg = StopEta.Locate(line, places, along);
+                    if (leg is { } l)
+                        etaSeconds = StopEta.Seconds(l.Metres,
+                            l.Previous >= 0 ? speeds.For(l.Previous, PhClock.Now.Hour) : null,
+                            telemetry.Speed is decimal sp ? (double)sp : null);
+                }
+
                 // Two copies of one number. The counter phone writes the trip's figure
                 // every few seconds; the driver app carries its own copy into telemetry and
                 // learns the new figure only on its next refresh, so it trails. Nobody is
@@ -353,6 +396,9 @@ namespace FleetWise.Controllers
                     Bearing = snap?.Bearing,
                     Heading = telemetry.Heading ?? 0,
                     Speed = (double)(telemetry.Speed ?? 0),
+                    PreviousStop = leg is { Previous: >= 0 } p ? stopPlaces![p.Previous].Name : null,
+                    NextStop = leg is { } n ? stopPlaces![n.Next].Name : null,
+                    NextStopSeconds = etaSeconds is double e ? (int)Math.Round(e) : null,
                     Passengers = passengers,
                     Capacity = capacity,
                     EstimatedRevenue = _fareCalculator.Estimate(passengers, fareRate),
@@ -432,6 +478,187 @@ namespace FleetWise.Controllers
                     string.Equals(p.Status, status, StringComparison.OrdinalIgnoreCase)).ToList();
 
             return Json(positions);
+        }
+
+        /// <summary>
+        /// The route's learned stop-to-stop speeds, or none while they are first being worked
+        /// out. A poll never waits for them: the first after they expire starts the read and
+        /// the polls after it pick up the answer.
+        /// </summary>
+        private SegmentSpeeds SpeedsFor(int routeId, RouteLine line, IReadOnlyList<StopPlace> places)
+        {
+            var read = SharedRead.GetAsync(_cache, $"fleetmap:speeds:{routeId}", SpeedsLifetime,
+                () => LearnSpeedsAsync(routeId, line, places));
+            return read.IsCompletedSuccessfully ? read.Result : SegmentSpeeds.None;
+        }
+
+        /// <summary>Learns a route's stop-to-stop speeds from its recent trips' readings.</summary>
+        private async Task<SegmentSpeeds> LearnSpeedsAsync(int routeId, RouteLine line, IReadOnlyList<StopPlace> places)
+        {
+            // ponytail: reads every reading of the route's last 60 trips each time the speeds
+            // expire. Keep a running tally per stretch instead if that read ever slows the map.
+            if (places.Count < 2)
+                return SegmentSpeeds.None;
+
+            var since = PhClock.OperationalDay.AddDays(-SpeedHistoryDays).ToString("yyyy-MM-dd");
+            var trips = (await _supabase.From<Trip>()
+                    .Select("trip_id,date,actual_start_time")
+                    .Filter("route_id", Postgrest.Constants.Operator.Equals, routeId.ToString())
+                    .Filter("date", Postgrest.Constants.Operator.GreaterThanOrEqual, since)
+                    .Order("date", Postgrest.Constants.Ordering.Descending)
+                    .Get()).Models
+                .Where(t => t.ActualStartTime is not null)
+                .Take(SpeedHistoryTrips)
+                .ToList();
+
+            var readings = new List<TelemetryData>();
+            foreach (var group in trips.Select(t => t.TripId).Chunk(20))
+            {
+                var ids = group.Cast<object>().ToList();
+                readings.AddRange(await PagedRead.AllAsync(() => _supabase.From<TelemetryData>()
+                    .Select("telemetry_id,trip_id,latitude,longitude,speed,heading,accuracy,timestamp")
+                    .Filter("trip_id", Postgrest.Constants.Operator.In, ids)
+                    .Order("telemetry_id", Postgrest.Constants.Ordering.Ascending)));
+            }
+
+            // Each trip replayed through the map's own snapping, keeping where it was on the
+            // line and when, on the Philippine clock its readings are stamped with.
+            var paths = readings
+                .GroupBy(r => r.TripId)
+                .Select(g =>
+                {
+                    var state = new SnapState();
+                    var path = new List<(DateTime At, double Along)>();
+                    foreach (var r in g.OrderBy(r => r.Timestamp).ThenBy(r => r.TelemetryId))
+                    {
+                        var snap = RouteSnapper.Next(line, state, ToReading(r));
+                        if (snap is { OnRoute: true, Along: double along })
+                            path.Add((StoredTimes.FromWall(r.Timestamp), along));
+                    }
+                    return (IReadOnlyList<(DateTime At, double Along)>)path;
+                });
+
+            return StopEta.Learn(line, places, paths);
+        }
+
+        /// <summary>
+        /// A parked bus's day: its trips this operational day with each one's status, its
+        /// last inspection, and its open faults.
+        /// </summary>
+        /// <remarks>
+        /// Trip status comes from <see cref="TripStatus.Resolve"/> with the inputs the dispatch
+        /// board gives it, leave included, so the two never disagree.
+        /// </remarks>
+        [RequirePermission("routes")]
+        public async Task<IActionResult> BusDetail(string vehicleId)
+        {
+            if (string.IsNullOrWhiteSpace(vehicleId))
+                return BadRequest();
+
+            var day = PhClock.OperationalDay;
+            var tripsTask = _supabase.From<Trip>()
+                .Filter("date", Postgrest.Constants.Operator.Equals, day.ToString("yyyy-MM-dd"))
+                .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
+                .Get();
+            var vehicleTask = _supabase.From<Vehicle>()
+                .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
+                .Get();
+            // The newest few, put in order below by when each was really submitted: the
+            // column holds two clock conventions, so its own order can be eight hours out.
+            var checklistsTask = _supabase.From<BusChecklist>()
+                .Select("checklist_id,trip_id,vehicle_id,submitted_at,checklist_status")
+                .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
+                .Order("checklist_id", Postgrest.Constants.Ordering.Descending)
+                .Limit(10)
+                .Get();
+            var faultsTask = _supabase.From<MaintenanceLog>()
+                .Select("log_id,checklist_id,vehicle_id,issue_details,created_at,resolved_at")
+                .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
+                .Filter<object>("resolved_at", Postgrest.Constants.Operator.Is, null)
+                .Get();
+            await Task.WhenAll(tripsTask, vehicleTask, checklistsTask, faultsTask);
+
+            var trips = tripsTask.Result.Models.Where(t => t.Date.Date == day).ToList();
+            var vehicle = vehicleTask.Result.Models.FirstOrDefault();
+            var faults = faultsTask.Result.Models.Where(l => l.ResolvedAt == null).ToList();
+
+            // What TripStatus needs about each trip: its driver, their availability and leave,
+            // and the trip's own inspection.
+            var driverIds = trips.Select(t => (object)t.DriverId.ToString()).Distinct().ToList();
+            var tripIds = trips.Select(t => (object)t.TripId).ToList();
+            var drivers = driverIds.Count == 0 ? new List<UserModel>()
+                : (await _supabase.From<UserModel>()
+                    .Select("user_id,first_name,last_name,account_status")
+                    .Filter("user_id", Postgrest.Constants.Operator.In, driverIds)
+                    .Get()).Models;
+            var availability = driverIds.Count == 0 ? new List<DriverAvailability>()
+                : (await _supabase.From<DriverAvailability>()
+                    .Filter("user_id", Postgrest.Constants.Operator.In, driverIds)
+                    .Get()).Models;
+            var tripChecklists = tripIds.Count == 0 ? new List<BusChecklist>()
+                : (await _supabase.From<BusChecklist>()
+                    .Select("checklist_id,trip_id,vehicle_id,submitted_at,checklist_status")
+                    .Filter("trip_id", Postgrest.Constants.Operator.In, tripIds)
+                    .Get()).Models;
+
+            var availabilityById = await _assignments.WithLeaveAsync(
+                availability.ToDictionary(a => a.UserId, a => a.AvailabilityStatus), day);
+            var driversById = drivers.ToDictionary(d => d.UserId);
+            var checklistByTrip = tripChecklists
+                .GroupBy(c => c.TripId)
+                .ToDictionary(g => g.Key, g => g.MaxBy(c => c.SubmittedAt));
+            var now = PhClock.Now;
+
+            var dayTrips = trips
+                .OrderBy(t => t.ShiftStartTime)
+                .Select(t =>
+                {
+                    driversById.TryGetValue(t.DriverId, out var driver);
+                    var view = TripStatus.Resolve(t, vehicle, driver,
+                        availabilityById.TryGetValue(t.DriverId, out var a) ? a : null,
+                        checklistByTrip.GetValueOrDefault(t.TripId), faults.Count > 0, now);
+                    return new
+                    {
+                        shift = t.ShiftType,
+                        window = FormatShift(t),
+                        status = view.TripStatus,
+                        boarded = t.TotalBoarded,
+                    };
+                })
+                .ToList();
+
+            // A skipped checklist records that no inspection took place, and a pending one
+            // that it has not yet; neither says how the bus last fared.
+            var last = checklistsTask.Result.Models
+                .Where(c => c.ChecklistStatus is not ("Skipped" or "Pending"))
+                .MaxBy(StoredTimes.Inspected);
+
+            return Json(new
+            {
+                seats = vehicle?.Capacity ?? 0,
+                trips = dayTrips,
+                inspection = last is null ? null : new
+                {
+                    result = last.ChecklistStatus,
+                    at = WhenSaid(StoredTimes.Inspected(last), now),
+                },
+                faults = faults
+                    .OrderByDescending(StoredTimes.Opened)
+                    .SelectMany(l => l.IssueDetails?.Issues ?? new List<string>())
+                    .Where(i => !string.IsNullOrWhiteSpace(i))
+                    .Distinct()
+                    .ToList(),
+                faultCount = faults.Count,
+            });
+        }
+
+        /// <summary>A Philippine clock time as "6:12 AM", with the day once it is not today.</summary>
+        private static string WhenSaid(DateTime ph, DateTime now)
+        {
+            var time = ph.ToString("h:mm tt", CultureInfo.InvariantCulture);
+            return ph.Date == now.Date ? time
+                : ph.Date == now.Date.AddDays(-1) ? "Yesterday, " + time
+                : ph.ToString("MMM d", CultureInfo.InvariantCulture) + ", " + time;
         }
 
         /// <summary>

@@ -136,16 +136,12 @@
         <div class="fm-panel__pad">
             <div class="fm-panel__title" id="fmPanelBus">—</div>
             <div class="fm-panel__meta">
+                <span class="fm-panel__plate" id="fmPanelPlate"></span>
                 <span class="fm-panel__meta-label">Route</span>
                 <span class="fm-panel__route-no" id="fmPanelRoute">—</span>
-                <span class="fm-panel__meta-label">Shift</span>
                 <span class="fm-panel__shift" id="fmPanelShift">—</span>
+                <span class="fm-panel__seats" id="fmPanelSeats" hidden></span>
             </div>
-        </div>
-
-        <div class="fm-panel__divider"></div>
-
-        <div class="fm-panel__pad">
             <div class="fm-panel__status">
                 <span class="fm-panel__status-dot" id="fmPanelStatusDot"></span>
                 <span id="fmPanelStatus">—</span>
@@ -154,38 +150,48 @@
 
         <div class="fm-panel__divider"></div>
 
-        <div class="fm-panel__driver">
-            <span class="fm-panel__avatar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" style="fill: light-dark(#3F4756, #DBDEE4)">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M12 14c-4.4 0-8 2.7-8 6v0h16v0c0-3.3-3.6-6-8-6z" />
+        @* A bus on a trip: where it is between two stops, and its trip so far. *@
+        <section class="fm-panel__live" id="fmPanelLive" aria-label="Trip">
+            <div class="fm-panel__leg">
+                <div class="fm-panel__leg-stop">
+                    <span class="fm-panel__label">Last stop</span>
+                    <span class="fm-panel__leg-name" id="fmPanelPrev">—</span>
+                </div>
+                <svg class="fm-panel__leg-arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
-            </span>
-            <span class="fm-panel__driver-info">
-                <span class="fm-panel__driver-name" id="fmPanelDriver">—</span>
-                <span class="fm-panel__driver-sub">Current Driver</span>
-            </span>
-        </div>
+                <div class="fm-panel__leg-stop">
+                    <span class="fm-panel__label">Next stop</span>
+                    <span class="fm-panel__leg-name" id="fmPanelNext">—</span>
+                    <span class="fm-panel__eta" id="fmPanelEta"></span>
+                </div>
+            </div>
 
-        <div class="fm-panel__divider"></div>
+            <div class="fm-panel__divider"></div>
 
-        <div class="fm-panel__pax">
-            <div class="fm-panel__pax-label">Total Passengers</div>
-            <div class="fm-panel__pax-num" id="fmPanelPax">—</div>
-        </div>
+            <dl class="fm-panel__figs">
+                <div><dt>Total passengers</dt><dd id="fmPanelPax">—</dd></div>
+                <div><dt>Revenue</dt><dd id="fmPanelRevenue">—</dd></div>
+                <div><dt>Driver</dt><dd id="fmPanelDriver">—</dd></div>
+                <div><dt>Signal</dt><dd id="fmPanelSignal">—</dd></div>
+            </dl>
+        </section>
 
-        <div class="fm-panel__divider"></div>
+        @* A parked bus: its day so far, read when the panel opens. *@
+        <section class="fm-panel__day" id="fmPanelDay" aria-label="Today" hidden>
+            <div class="fm-panel__label fm-panel__pad">Today</div>
+            <ul class="fm-panel__trips" id="fmPanelTrips"></ul>
 
-        <div class="fm-panel__rev-head">Estimated Revenue</div>
-        <div class="fm-panel__pad">
-            <div class="fm-panel__rev-val" id="fmPanelRevenue">—</div>
-        </div>
+            <div class="fm-panel__divider"></div>
 
-        <div class="fm-panel__divider"></div>
-
-        <div class="fm-panel__pad">
-            <div class="fm-panel__updated" id="fmPanelUpdated">—</div>
-        </div>
+            <dl class="fm-panel__figs">
+                <div><dt>Last inspection</dt><dd id="fmPanelInspection">—</dd></div>
+                <div><dt>Open faults</dt><dd id="fmPanelFaultCount">—</dd></div>
+            </dl>
+            <ul class="fm-panel__faults" id="fmPanelFaults"></ul>
+        </section>
 
         @* Dealt with on Dispatch, where each of these already lives. Shown only while the
            bus is on a trip, since a parked bus has nothing to act on. *@
