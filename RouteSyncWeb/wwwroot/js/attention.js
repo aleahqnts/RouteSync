@@ -167,6 +167,74 @@
 
         count.textContent = entries.length ? String(entries.length) : '';
         box.classList.toggle('rs-attn--clear', entries.length === 0);
+        setMood(entries);
+    }
+
+    // ---- Bao ----
+    var host = box.parentElement;
+    var baos = host.querySelectorAll('.bao');
+    var stage = host.querySelector('.bao-stage');
+    var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // A driver who cannot run or needs relief worries him; anything else listed
+    // only has his attention.
+    var WORRY = { issue: true, relief: true };
+
+    function setMood(entries) {
+        var mood = entries.some(function (e) { return WORRY[e.kind]; }) ? 'worried'
+            : entries.length ? 'focused' : 'relaxed';
+        box.dataset.mood = mood;
+        baos.forEach(function (svg) {
+            svg.classList.toggle('face-focused', mood === 'focused');
+            svg.classList.toggle('face-worried', mood === 'worried');
+        });
+    }
+
+    function replay(el, cls, ms) {
+        el.classList.remove(cls);
+        void el.getBoundingClientRect();
+        el.classList.add(cls);
+        setTimeout(function () { el.classList.remove(cls); }, ms);
+    }
+
+    // Poking him: a wiggle, or a nod while something needs attention.
+    baos.forEach(function (svg) {
+        svg.addEventListener('click', function () { replay(svg, 'bao--poke', 500); });
+    });
+
+    // His eyes follow the pointer. Pupil offsets are in drawing units.
+    var pupils = host.querySelectorAll('.bao-pupil');
+    var LOOK = 22;
+    var pointer = null, queued = false;
+    function look() {
+        queued = false;
+        pupils.forEach(function (p) {
+            var r = p.parentNode.getBoundingClientRect();
+            var dx = pointer.x - (r.left + r.width / 2), dy = pointer.y - (r.top + r.height / 2);
+            var d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160) * LOOK / d;
+            p.setAttribute('transform', 'translate(' + (dx * k).toFixed(1) + ' ' + (dy * k).toFixed(1) + ')');
+        });
+    }
+    if (pupils.length) {
+        document.addEventListener('pointermove', function (e) {
+            if (e.pointerType !== 'mouse') return;
+            pointer = { x: e.clientX, y: e.clientY };
+            if (!queued) { queued = true; requestAnimationFrame(look); }
+        });
+    }
+
+    // On the dashboard he works the caret: the panel folds or opens when his hand
+    // lands on it, a moment after the click. Clicks during the reach are ignored.
+    var REACH_MS = 200, TAP_MS = 560, tapping = false;
+    if (stage) {
+        box.querySelector('.rs-attn__head').addEventListener('click', function (e) {
+            if (calm.matches) return;
+            e.preventDefault();
+            if (tapping) return;
+            tapping = true;
+            replay(stage, 'bao-stage--tap', TAP_MS);
+            setTimeout(function () { box.open = !box.open; }, REACH_MS);
+            setTimeout(function () { tapping = false; }, TAP_MS);
+        });
     }
 
     more.addEventListener('click', function () {

@@ -1258,3 +1258,101 @@ th.rs-sortable:focus-visible {
 }
 
 .rs-attn__bus--more { background: transparent; color: light-dark(#5F6B7A, #BCC0C4); }
+
+/* ---------- Bao, the mascot (Views/Shared/_BaoBust, _BaoHead) ----------
+   The art keeps its own colours in both themes. Faces switch with a class on the svg:
+   face-focused, face-worried, face-sleepy; relaxed when none is set. */
+.bao { display: block; overflow: visible; }
+/* The bust is cut at the chest: what lies below its frame stays hidden, while the horns keep room to move. */
+.bao--bust { clip-path: inset(-25% -25% 0 -25%); }
+.bao .bao-brows,
+.bao .bao-lids-sleepy,
+.bao .bao-mouth-focused,
+.bao .bao-mouth-worried { display: none; }
+.bao.face-focused .bao-brows-focused,
+.bao.face-focused .bao-mouth-focused,
+.bao.face-worried .bao-brows-worried,
+.bao.face-worried .bao-mouth-worried,
+.bao.face-sleepy .bao-lids-sleepy { display: inline; }
+.bao.face-focused .bao-mouth-relaxed,
+.bao.face-worried .bao-mouth-relaxed,
+.bao.face-sleepy .bao-eye { display: none; }
+
+.bao .bao-eye {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bao-blink 5.4s infinite;
+}
+.bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
+.bao.bao--poke .bao-head { animation: bao-wiggle .45s ease-out; }
+.bao.bao--poke.face-focused .bao-head,
+.bao.bao--poke.face-worried .bao-head { animation: bao-nod .4s ease-out; }
+
+@keyframes bao-blink {
+    0%, 95%, 100% { transform: none; }
+    97% { transform: scaleY(.1); }
+}
+@keyframes bao-wiggle {
+    25% { transform: rotate(-5deg); }
+    60% { transform: rotate(4deg); }
+}
+@keyframes bao-nod {
+    40% { transform: translateY(3%); }
+}
+
+/* Dashboard: Bao stands behind the panel, cut off by its top edge at the chest. His
+   right hand sits behind the caret, so the reach drawing only has to appear in front
+   of the panel and press. */
+.rs-attn-host--bao { position: relative; margin-top: 88px; }
+.rs-attn-host--bao .rs-attn { position: relative; z-index: 1; }
+.bao-stage {
+    --bao-w: 112px;
+    position: absolute;
+    right: -2px;
+    bottom: 100%;
+    width: var(--bao-w);
+    height: calc(var(--bao-w) * 1380 / 1840);
+}
+.bao--bust { width: 100%; height: 100%; cursor: pointer; }
+.bao-reach {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1840 / 2120;
+    pointer-events: none;
+    /* only the forearm and hand, below the sleeve */
+    clip-path: inset(calc(var(--bao-w) * 1270 / 1840) 0 0 0);
+    opacity: 0;
+}
+.bao-stage--tap .bao-reach { animation: bao-reach .56s ease-in-out; }
+
+@keyframes bao-reach {
+    0% { opacity: 0; transform: translateY(-6px); }
+    15% { opacity: 1; transform: translateY(-6px); }
+    36% { opacity: 1; transform: translateY(3px); }
+    62% { opacity: 1; transform: translateY(-2px); }
+    100% { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Fleet map: Bao's head is the panel's icon, horns out past a disc tinted by his mood.
+   The map panel stays light in dark mode, so these are fixed light colours. */
+.rs-attn__bao {
+    position: relative;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    margin: -5px 4px -5px 0;
+    border-radius: 50%;
+    background: #E3F2F1;
+}
+.rs-attn__bao .bao { position: absolute; left: -10px; top: -3px; width: 50px; height: auto; }
+.rs-attn[data-mood="focused"] .rs-attn__bao { background: #FFF4DE; }
+.rs-attn[data-mood="worried"] .rs-attn__bao { background: #FDECEC; }
+
+@media (prefers-reduced-motion: reduce) {
+    .bao.bao--poke .bao-head,
+    .bao-stage--tap .bao-reach { animation: none; }
+}
