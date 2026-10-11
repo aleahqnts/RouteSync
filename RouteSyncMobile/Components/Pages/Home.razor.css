@@ -79,7 +79,7 @@
 .bao-card__bubble::before {
     content: "";
     position: absolute;
-    left: -7px;
+    left: -6px;
     top: 50%;
     margin-top: -7px;
     border: 7px solid transparent;
@@ -90,7 +90,8 @@
 .bao-card__who {
     margin: 0 0 2px;
     color: #18325F;
-    font-size: 13px;
+    font-family: 'Selawik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 15px;
     font-weight: 700;
 }
 

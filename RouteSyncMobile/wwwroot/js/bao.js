@@ -1,5 +1,5 @@
-// Poking Bao. A tap on any of his drawings makes him wiggle (a nod when he is
-// concerned) and glance toward where the tap landed. The pages that show him are
+// Poking Bao. A tap on any of his drawings startles him, and he glances toward where
+// the tap landed. The pages that show him are
 // rendered by Blazor, so one listener on the document covers every one of them.
 (function () {
     // How far a pupil moves, in drawing units, and how long he holds the glance.
@@ -12,7 +12,7 @@
         svg.classList.remove('bao--poke');
         void svg.getBoundingClientRect();
         svg.classList.add('bao--poke');
-        setTimeout(function () { svg.classList.remove('bao--poke'); }, 500);
+        setTimeout(function () { svg.classList.remove('bao--poke'); }, 650);
 
         var pupils = svg.querySelectorAll('.bao-pupil');
         pupils.forEach(function (p) {

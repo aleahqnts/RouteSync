@@ -225,7 +225,8 @@ h1:focus {
 .bao .bao-brows,
 .bao .bao-lids-sleepy,
 .bao .bao-mouth-focused,
-.bao .bao-mouth-worried { display: none; }
+.bao .bao-mouth-worried,
+.bao .bao-mouth-shock { display: none; }
 .bao.face-focused .bao-brows-focused,
 .bao.face-focused .bao-mouth-focused,
 .bao.face-worried .bao-brows-worried,
@@ -242,17 +243,25 @@ h1:focus {
 }
 .bao .bao-pupil { transition: transform .25s ease-out; }
 .bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
-.bao.bao--poke .bao-head { animation: bao-wiggle .45s ease-out; }
-.bao.bao--poke.face-focused .bao-head,
-.bao.bao--poke.face-worried .bao-head { animation: bao-nod .4s ease-out; }
+/* A poke startles him: he jolts up from his feet, brows thrown high, pupils small and
+   mouth a round "o", then settles back to the face he had. */
+.bao.bao--poke { transform-origin: 50% 100%; animation: bao-startle .5s cubic-bezier(.2, .9, .3, 1); }
+.bao.bao--poke .bao-brows,
+.bao.bao--poke .bao-mouth,
+.bao.bao--poke .bao-lids-sleepy { display: none; }
+.bao.bao--poke .bao-eye,
+.bao.bao--poke .bao-brows-shock,
+.bao.bao--poke .bao-mouth-shock { display: inline; }
+.bao.bao--poke .bao-pupil > ellipse { transform: scale(.7); transform-box: fill-box; transform-origin: center; }
 
 @keyframes bao-blink {
     0%, 95%, 100% { transform: none; }
     97% { transform: scaleY(.1); }
 }
-@keyframes bao-wiggle {
-    25% { transform: rotate(-5deg); }
-    60% { transform: rotate(4deg); }
+@keyframes bao-startle {
+    15% { transform: scale(.96, 1.07); }
+    40% { transform: scale(1.02, .98); }
+    65% { transform: none; }
 }
 @keyframes bao-nod {
     40% { transform: translateY(3%); }
@@ -260,7 +269,7 @@ h1:focus {
 
 @media (prefers-reduced-motion: reduce) {
     .bao .bao-eye,
-    .bao.bao--poke .bao-head { animation: none; }
+    .bao.bao--poke { animation: none; }
     .bao .bao-pupil { transition: none; }
 }
 

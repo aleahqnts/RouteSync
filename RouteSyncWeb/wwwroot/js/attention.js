@@ -196,9 +196,9 @@
         setTimeout(function () { el.classList.remove(cls); }, ms);
     }
 
-    // Poking him: a wiggle, or a nod while something needs attention.
+    // Poking him startles him.
     baos.forEach(function (svg) {
-        svg.addEventListener('click', function () { replay(svg, 'bao--poke', 500); });
+        svg.addEventListener('click', function () { replay(svg, 'bao--poke', 650); });
     });
 
     // His eyes follow the pointer. Pupil offsets are in drawing units.
@@ -224,7 +224,7 @@
 
     // On the dashboard he works the caret: the panel folds or opens when his hand
     // lands on it, a moment after the click. Clicks during the reach are ignored.
-    var REACH_MS = 200, TAP_MS = 560, tapping = false;
+    var REACH_MS = 430, TAP_MS = 900, tapping = false;
     if (stage) {
         box.querySelector('.rs-attn__head').addEventListener('click', function (e) {
             if (calm.matches) return;

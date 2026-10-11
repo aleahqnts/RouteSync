@@ -1268,7 +1268,8 @@ th.rs-sortable:focus-visible {
 .bao .bao-brows,
 .bao .bao-lids-sleepy,
 .bao .bao-mouth-focused,
-.bao .bao-mouth-worried { display: none; }
+.bao .bao-mouth-worried,
+.bao .bao-mouth-shock { display: none; }
 .bao.face-focused .bao-brows-focused,
 .bao.face-focused .bao-mouth-focused,
 .bao.face-worried .bao-brows-worried,
@@ -1284,25 +1285,31 @@ th.rs-sortable:focus-visible {
     animation: bao-blink 5.4s infinite;
 }
 .bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
-.bao.bao--poke .bao-head { animation: bao-wiggle .45s ease-out; }
-.bao.bao--poke.face-focused .bao-head,
-.bao.bao--poke.face-worried .bao-head { animation: bao-nod .4s ease-out; }
+/* A poke startles him: he jolts up from his feet, brows thrown high, pupils small and
+   mouth a round "o", then settles back to the face he had. */
+.bao.bao--poke { transform-origin: 50% 100%; animation: bao-startle .5s cubic-bezier(.2, .9, .3, 1); }
+.bao.bao--poke .bao-brows,
+.bao.bao--poke .bao-mouth,
+.bao.bao--poke .bao-lids-sleepy { display: none; }
+.bao.bao--poke .bao-eye,
+.bao.bao--poke .bao-brows-shock,
+.bao.bao--poke .bao-mouth-shock { display: inline; }
+.bao.bao--poke .bao-pupil > ellipse { transform: scale(.7); transform-box: fill-box; transform-origin: center; }
 
 @keyframes bao-blink {
     0%, 95%, 100% { transform: none; }
     97% { transform: scaleY(.1); }
 }
-@keyframes bao-wiggle {
-    25% { transform: rotate(-5deg); }
-    60% { transform: rotate(4deg); }
-}
-@keyframes bao-nod {
-    40% { transform: translateY(3%); }
+@keyframes bao-startle {
+    15% { transform: scale(.96, 1.07); }
+    40% { transform: scale(1.02, .98); }
+    65% { transform: none; }
 }
 
-/* Dashboard: Bao stands behind the panel, cut off by its top edge at the chest. His
-   right hand sits behind the caret, so the reach drawing only has to appear in front
-   of the panel and press. */
+/* Dashboard: Bao stands behind the panel, cut off by its top edge at the chest. To work
+   the caret his right hand comes up from behind the panel's edge, taps down on it, and
+   sinks back. The reach drawing is his forearm turned hand up, so whatever is not hand
+   stays behind the panel, which masks everything below its top edge. */
 .rs-attn-host--bao { position: relative; margin-top: 88px; }
 .rs-attn-host--bao .rs-attn { position: relative; z-index: 1; }
 .bao-stage {
@@ -1322,19 +1329,24 @@ th.rs-sortable:focus-visible {
     width: 100%;
     height: auto;
     aspect-ratio: 1840 / 2120;
+    overflow: visible;
     pointer-events: none;
-    /* only the forearm and hand, below the sleeve */
-    clip-path: inset(calc(var(--bao-w) * 1270 / 1840) 0 0 0);
-    opacity: 0;
+    /* The panel's top edge sits at 1380 of the drawing's 2120. */
+    clip-path: inset(-50% -50% 34.9% -50%);
+    visibility: hidden;
 }
-.bao-stage--tap .bao-reach { animation: bao-reach .56s ease-in-out; }
+/* Turned over about the middle of the hand, so the hand leads and the forearm trails. */
+.bao-reach .bao-arm-r { transform-box: view-box; transform-origin: 1340px 1670px; transform: translateY(260px) scaleY(-1); }
+.bao-stage--tap .bao-reach { visibility: visible; }
+.bao-stage--tap .bao-reach .bao-arm-r { animation: bao-reach .9s ease-in-out; }
 
+/* Distances are in drawing units: 260 below hides the hand, 440 above clears the edge
+   with a little wrist showing, and 330 rests it on the edge. */
 @keyframes bao-reach {
-    0% { opacity: 0; transform: translateY(-6px); }
-    15% { opacity: 1; transform: translateY(-6px); }
-    36% { opacity: 1; transform: translateY(3px); }
-    62% { opacity: 1; transform: translateY(-2px); }
-    100% { opacity: 0; transform: translateY(-6px); }
+    0%, 100% { transform: translateY(260px) scaleY(-1); }
+    35% { transform: translateY(-440px) scaleY(-1); }
+    48% { transform: translateY(-330px) scaleY(-1); }
+    60% { transform: translateY(-440px) scaleY(-1); }
 }
 
 /* Fleet map: Bao's head is the panel's icon, horns out past a disc tinted by his mood.
@@ -1354,6 +1366,6 @@ th.rs-sortable:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
     .bao .bao-eye,
-    .bao.bao--poke .bao-head,
-    .bao-stage--tap .bao-reach { animation: none; }
+    .bao.bao--poke,
+    .bao-stage--tap .bao-reach .bao-arm-r { animation: none; }
 }
