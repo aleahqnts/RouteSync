@@ -197,7 +197,7 @@ else
         {
             @if (lastTrip is not null)
             {
-                <div class="info-card row">
+                <div class="info-card info-card--row">
                     <div>
                         <p class="s-title">Today's Summary</p>
                         <p class="s-sub">@PhTime.Now.Date.ToString("MMMM d, yyyy")</p>
@@ -218,7 +218,7 @@ else
         @* The rest of the month, from the screen already showing one day of it. A driver
            looking at today's assignment is the one asking whether they are on next
            Thursday, and the answer was nowhere in the app. *@
-        <div class="info-card row">
+        <div class="info-card info-card--row">
             <div>
                 <p class="s-title">My Schedule</p>
                 <p class="s-sub">Your shifts, rest days and approved leave</p>

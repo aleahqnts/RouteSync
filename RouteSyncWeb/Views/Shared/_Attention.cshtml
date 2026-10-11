@@ -16,8 +16,9 @@
         {
             @await Html.PartialAsync("_BaoBust")
         }
-        @* Over the map it starts folded to a small tab with a count, so the map stays clear. *@
-        <details id="rsAttention" class="rs-attn@(onMap ? " rs-attn--map" : "")" open="@(onMap ? null : "open")"
+        @* It starts folded to its header and count, and over the map to a small tab, so the
+           page stays clear until someone opens it. *@
+        <details id="rsAttention" class="rs-attn@(onMap ? " rs-attn--map" : "")"
                  data-attention-url="@Url.Action("Attention", "Dispatch")"
                  data-positions-url="@Url.Action("Positions", "FleetMap")"
                  data-dispatch-url="@Url.Action("Index", "Dispatch")"

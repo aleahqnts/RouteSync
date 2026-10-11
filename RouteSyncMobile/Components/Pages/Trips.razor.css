@@ -35,6 +35,12 @@
 
 .tsum-bao ::deep .bao { width: 100%; height: auto; }
 
+.tsum-bao ::deep .bao-head { animation: bao-peek 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .tsum-bao ::deep .bao-head { animation: none; }
+}
+
 .tsum-paw {
     position: absolute;
     top: -8px;

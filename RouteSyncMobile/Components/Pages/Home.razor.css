@@ -66,6 +66,13 @@
 .bao-card__art ::deep .bao {
     width: 100%;
     height: auto;
+    /* The pivot is the cut line, so breathing and a poke never move him at the band's
+       bottom edge. */
+    transform-origin: 50% 160px;
+}
+
+.bao-card__art ::deep .bao:not(.bao--poke) {
+    animation-name: bao-breathe-tall;
 }
 
 .bao-card__bubble {
@@ -126,9 +133,10 @@
 
 /* A prompt reads as one line: what is being asked on the left, the control on the
    right. Without the row the control wraps underneath and stops looking like an
-   answer to the question above it. */
+   answer to the question above it. Not named .row: Bootstrap's grid class of that name
+   would pull the card wider than the others. */
 .prompt-card,
-.info-card.row {
+.info-card--row {
     display: flex;
     align-items: center;
     justify-content: space-between;

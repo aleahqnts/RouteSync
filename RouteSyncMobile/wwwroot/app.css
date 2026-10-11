@@ -287,9 +287,10 @@ h1:focus {
     .bao .bao-pupil { transition: none; }
 }
 
-/* Bao standing on a pale disc, for the moments that close a task: a jump when the
-   checklist passes, a nod when defects were reported, a wave when the shift ends.
-   Each plays once, after the screen settles. */
+/* Bao standing on a pale disc, for the moments that close a task. A passed checklist
+   and a finished shift are celebrations: he keeps hopping (and, at the end of a shift,
+   waving) until the driver leaves the screen. Defects get one calm nod. Distances are
+   in drawing units, so every part of him moves together. */
 .bao-stage { position: relative; width: 200px; height: 230px; margin: 0 auto 16px; }
 .bao-stage::before {
     content: "";
@@ -314,21 +315,37 @@ h1:focus {
 .bao-spark:nth-of-type(2) { right: 0; top: 24px; background: #18325F; }
 .bao-spark:nth-of-type(3) { right: -10px; top: 120px; }
 
-.bao-stage--jump .bao > g { animation: bao-jump .7s ease-out .35s 1; }
+.bao-stage--jump .bao > g,
+.bao-stage--celebrate .bao > g { animation: bao-jump 2.4s ease-out .35s infinite; }
 .bao-stage--nod .bao .bao-head { animation: bao-nod .7s ease-in-out .35s 2; }
-.bao-stage--wave .bao .bao-arm-r {
+.bao-stage--celebrate .bao .bao-arm-r {
     transform-box: view-box;
     transform-origin: 1290px 1180px;
-    animation: bao-wave 1.6s ease-in-out .35s 1;
+    animation: bao-jump-wave 2.4s ease-in-out .35s infinite;
 }
 @keyframes bao-jump {
-    35% { transform: translateY(-14%); }
-    60% { transform: none; }
-    75% { transform: translateY(-3%); }
+    12% { transform: translateY(-300px); }
+    24% { transform: none; }
+    30% { transform: translateY(-64px); }
+    36% { transform: none; }
 }
-@keyframes bao-wave {
-    20%, 60% { transform: rotate(-30deg); }
-    40%, 80% { transform: rotate(-14deg); }
+/* The right arm hops with him, then waves twice before the next hop. */
+@keyframes bao-jump-wave {
+    0%, 36%, 94%, 100% { transform: translateY(0) rotate(0deg); }
+    12% { transform: translateY(-300px) rotate(0deg); }
+    24% { transform: translateY(0) rotate(0deg); }
+    30% { transform: translateY(-64px) rotate(0deg); }
+    48%, 72% { transform: translateY(0) rotate(-30deg); }
+    60%, 84% { transform: translateY(0) rotate(-14deg); }
+}
+/* Upright breathing that leaves his waist where it is, for places that cut him there. */
+@keyframes bao-breathe-tall {
+    50% { transform: scaleY(1.02); }
+}
+/* An excited side to side sway, for his head peeking over an edge. */
+@keyframes bao-peek {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(6deg); }
 }
 
 /* What Bao says on those screens. */
