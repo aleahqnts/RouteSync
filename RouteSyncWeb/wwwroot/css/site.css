@@ -1353,6 +1353,7 @@ th.rs-sortable:focus-visible {
 .rs-attn[data-mood="worried"] .rs-attn__bao { background: #FDECEC; }
 
 @media (prefers-reduced-motion: reduce) {
+    .bao .bao-eye,
     .bao.bao--poke .bao-head,
     .bao-stage--tap .bao-reach { animation: none; }
 }

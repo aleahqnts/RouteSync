@@ -259,6 +259,7 @@ h1:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .bao .bao-eye,
     .bao.bao--poke .bao-head { animation: none; }
     .bao .bao-pupil { transition: none; }
 }
