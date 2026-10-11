@@ -21,11 +21,24 @@ else
     <div class="home">
         <div class="header">
             <div>
-                <p class="greet">@Greeting,</p>
+                <p class="greet">Hello,</p>
                 <h1 class="name">@Session.DisplayName</h1>
             </div>
             <img class="avatar" src="images/user-avatar.png" alt="" />
         </div>
+
+        @* Bao, the mascot, greets the driver with the one thing the day needs from them.
+           He stays out of the way while a trip runs and whenever something is wrong. *@
+        @if (BaoLine is { } baoLine)
+        {
+            <div class="bao-card">
+                <div class="bao-card__art"><BaoFull /></div>
+                <div class="bao-card__bubble">
+                    <p class="bao-card__who">Bao</p>
+                    <p class="bao-card__say">@baoLine</p>
+                </div>
+            </div>
+        }
 
         @if (!string.IsNullOrEmpty(statusMsg))
         {
@@ -405,7 +418,31 @@ else
         get
         {
             var h = PhTime.Now.Hour;
-            return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening";
+            return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+        }
+    }
+
+    /// <summary>What Bao says on the card under the greeting, or null when he stays out of it.</summary>
+    /// <remarks>
+    /// Silent while a trip is running, and when the driver cannot drive or the bus is
+    /// grounded: those screens carry their own message, and a mascot beside a problem
+    /// reads as making light of it.
+    /// </remarks>
+    private string? BaoLine
+    {
+        get
+        {
+            if (leaveToday is not null)
+                return $"{Greeting}. Pahinga muna. Dispatch will not assign you while you are on leave.";
+            if (!IsAvailable) return null;
+            if (assignment is null)
+                return $"{Greeting}. No trip assigned yet. Dispatch will notify you.";
+            if (assignment.TripStatus == "Active" || endPending || VehicleGrounded) return null;
+            if (!ChecklistCleared)
+                return $"{Greeting}. Please complete the checklist for Bus {vehicle?.VehicleId ?? assignment.VehicleId} before your trip.";
+            return PhTime.Now < ShiftStart
+                ? $"{Greeting}. Checklist complete. Your shift starts at {ShiftStart:h:mm tt}."
+                : $"{Greeting}. Checklist complete. Start your shift when you are ready.";
         }
     }
 

@@ -202,3 +202,50 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+/* ---------- Bao, the mascot (Components/BaoBust, BaoHead, BaoFull) ----------
+   Faces switch with a class on the svg: face-focused, face-worried, face-sleepy;
+   relaxed when none is set. A tap pokes him (js/bao.js). */
+.bao { display: block; overflow: visible; }
+/* The bust is cut at the chest: what lies below its frame stays hidden, while the horns keep room to move. */
+.bao--bust { clip-path: inset(-25% -25% 0 -25%); }
+.bao .bao-brows,
+.bao .bao-lids-sleepy,
+.bao .bao-mouth-focused,
+.bao .bao-mouth-worried { display: none; }
+.bao.face-focused .bao-brows-focused,
+.bao.face-focused .bao-mouth-focused,
+.bao.face-worried .bao-brows-worried,
+.bao.face-worried .bao-mouth-worried,
+.bao.face-sleepy .bao-lids-sleepy { display: inline; }
+.bao.face-focused .bao-mouth-relaxed,
+.bao.face-worried .bao-mouth-relaxed,
+.bao.face-sleepy .bao-eye { display: none; }
+
+.bao .bao-eye {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bao-blink 5.4s infinite;
+}
+.bao .bao-pupil { transition: transform .25s ease-out; }
+.bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
+.bao.bao--poke .bao-head { animation: bao-wiggle .45s ease-out; }
+.bao.bao--poke.face-focused .bao-head,
+.bao.bao--poke.face-worried .bao-head { animation: bao-nod .4s ease-out; }
+
+@keyframes bao-blink {
+    0%, 95%, 100% { transform: none; }
+    97% { transform: scaleY(.1); }
+}
+@keyframes bao-wiggle {
+    25% { transform: rotate(-5deg); }
+    60% { transform: rotate(4deg); }
+}
+@keyframes bao-nod {
+    40% { transform: translateY(3%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bao.bao--poke .bao-head { animation: none; }
+    .bao .bao-pupil { transition: none; }
+}

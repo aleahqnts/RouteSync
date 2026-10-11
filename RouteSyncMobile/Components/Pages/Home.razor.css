@@ -39,6 +39,65 @@
     object-fit: cover;
 }
 
+/* Bao's card: a full-width teal band, Bao standing in it with his head above its top
+   edge and the bottom edge cutting him off wherever the text leaves it, and what he
+   says in a bubble beside him. */
+.bao-card {
+    position: relative;
+    clip-path: inset(-80px 0 0 0);
+    display: flex;
+    align-items: center;
+    min-height: 88px;
+    margin: 56px -24px 18px;
+    padding: 12px 16px 12px 154px;
+    background: #4AADA8;
+}
+
+.bao-card__art {
+    position: absolute;
+    left: 8px;
+    top: -40px;
+    width: 140px;
+}
+
+.bao-card__art ::deep .bao {
+    width: 100%;
+    height: auto;
+}
+
+.bao-card__bubble {
+    position: relative;
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.bao-card__bubble::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    margin-top: -7px;
+    border: 7px solid transparent;
+    border-left: 0;
+    border-right-color: #fff;
+}
+
+.bao-card__who {
+    margin: 0 0 2px;
+    color: #18325F;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.bao-card__say {
+    margin: 0;
+    color: #3a4256;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
 .status-card,
 .prompt-card,
 .info-card,
