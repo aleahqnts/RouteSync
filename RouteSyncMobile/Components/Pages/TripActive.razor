@@ -17,6 +17,30 @@ else if (trip is null)
 {
     <div class="ta"><p class="ta-empty">Trip not found.</p></div>
 }
+else if (doneAt is DateTime endedAt)
+{
+    @* The driver ended the shift from this phone. Bao waves them off with the day's tally. *@
+    <div class="ta-closed">
+        <div class="bao-stage bao-stage--wave"><BaoFull /></div>
+        <h1>Shift complete</h1>
+        <p class="bao-line">Salamat sa pagbiyahe.</p>
+
+        <div class="c-card">
+            <div class="c-grid2">
+                <div><p class="c-k">Start Time</p><p class="c-v">@StartLabel</p></div>
+                <div><p class="c-k">End Time</p><p class="c-v">@endedAt.ToString("h:mm tt")</p></div>
+            </div>
+            <div class="c-div"></div>
+            <div class="c-grid2">
+                <div><p class="c-k">Total Passengers</p><p class="c-v">@doneTotal</p></div>
+                <div><p class="c-k">Estimated Revenue</p><p class="c-v">&#8369;@doneRevenue.ToString("N2")</p></div>
+            </div>
+        </div>
+
+        <button class="btn-home" @onclick="@(() => Nav.NavigateTo("/home", new NavigationOptions { ReplaceHistoryEntry = true }))">Back to Home</button>
+        <button class="btn-report" @onclick="@(() => Nav.NavigateTo($"/trip-report/{TripId}", new NavigationOptions { ReplaceHistoryEntry = true }))">View Trip Report</button>
+    </div>
+}
 @* Closed by something other than this phone, usually the next shift starting on the bus.
    The counter is taken away entirely rather than covered, so there is nothing left to tap
    into a trip that no longer takes counts. *@
@@ -270,6 +294,10 @@ else
     private bool loading = true;
     private bool showConfirm;
     private bool ending;
+    // Set once this phone ends the shift; the page then shows the shift complete screen.
+    private DateTime? doneAt;
+    private int doneTotal;
+    private decimal doneRevenue;
     private string? msg;
     private int total;
     private decimal fare;
@@ -866,7 +894,10 @@ else
             SecureStorage.Default.Remove(ActiveKey);
 
             await Queue.FlushAsync(); // completes immediately when online; queued if offline
-            Nav.NavigateTo("/home");
+            doneTotal = finalTotal;
+            doneRevenue = finalRevenue;
+            doneAt = PhTime.Now;
+            showConfirm = false;
         }
         catch (Exception ex)
         {
@@ -878,6 +909,11 @@ else
 
     private bool HandleHardwareBack()
     {
+        if (doneAt is not null)
+        {
+            InvokeAsync(() => Nav.NavigateTo("/home", new NavigationOptions { ReplaceHistoryEntry = true }));
+            return true;
+        }
         if (askLeave) { InvokeAsync(() => { askLeave = false; StateHasChanged(); }); return true; }
         InvokeAsync(() => { askLeave = true; StateHasChanged(); });
         return true;

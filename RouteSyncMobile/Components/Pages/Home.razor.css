@@ -39,25 +39,28 @@
     object-fit: cover;
 }
 
-/* Bao's card: a full-width teal band, Bao standing in it with his head above its top
-   edge and the bottom edge cutting him off wherever the text leaves it, and what he
-   says in a bubble beside him. */
+/* Bao's card: a full-width teal band with Bao set into it, his head above its top edge,
+   its bottom edge cutting him at the waist and the screen edge hiding part of him, and
+   what he says in a bubble beside him. The art window is pinned to the band's bottom and
+   is exactly as tall as Bao down to his waist, so the cut stays at the waist however many
+   lines the text takes. */
 .bao-card {
     position: relative;
-    clip-path: inset(-80px 0 0 0);
     display: flex;
     align-items: center;
-    min-height: 88px;
+    min-height: 112px;
     margin: 56px -24px 18px;
-    padding: 12px 16px 12px 154px;
+    padding: 10px 16px 10px 134px;
     background: #4AADA8;
 }
 
 .bao-card__art {
     position: absolute;
-    left: 8px;
-    top: -40px;
-    width: 140px;
+    left: -24px;
+    bottom: 0;
+    width: 176px;
+    height: 160px;
+    clip-path: inset(-24px -24px 0 -24px);
 }
 
 .bao-card__art ::deep .bao {

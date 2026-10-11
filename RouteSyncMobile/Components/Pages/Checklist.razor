@@ -40,21 +40,19 @@ else if (submitted)
         }
         else if (hasDefects)
         {
-            <div class="confirm-check warn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#d99b1a" stroke-width="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 7v6" /><path d="M12 16.5v.5" /></svg>
-            </div>
+            <div class="bao-stage bao-stage--nod"><BaoFull Face="focused" /></div>
             <h2>Checklist Submitted</h2>
-            <p class="confirm-sub">
-                Defects were reported and your operator will review them. Nothing critical
-                failed, so you can start your trip.
-            </p>
+            <p class="confirm-sub">Nothing critical failed, so you can start your trip.</p>
+            <p class="bao-line">Thank you for reporting. Your operator will review the defects.</p>
         }
         else
         {
-            <div class="confirm-check">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#3aaf5d" stroke-width="2.5"><circle cx="12" cy="12" r="10" /><path d="M7 12.5l3 3 6-7" /></svg>
+            <div class="bao-stage bao-stage--jump">
+                <i class="bao-spark"></i><i class="bao-spark"></i><i class="bao-spark"></i>
+                <BaoFull />
             </div>
             <h2>Bus Checklist Submitted!</h2>
+            <p class="bao-line">Checklist complete. Ingat sa biyahe.</p>
         }
 
         <div class="confirm-card">
