@@ -1,5 +1,5 @@
 ﻿.trips {
-    padding: 52px 22px 28px;
+    padding: 64px 22px 28px;
 }
 
 .trips-title {
@@ -13,6 +13,7 @@
 
 /* Header surface: "darker white", distinct from the #fff trip cards below. */
 .tsum {
+    position: relative;
     display: flex;
     background: #edf0f6;
     border: 1px solid #dde2ec;
@@ -20,6 +21,30 @@
     padding: 14px 18px;
     margin-bottom: 8px;
 }
+
+/* Bao peeking over the card's top right corner: his head in a window ending at the
+   card's top edge, so the card hides his chin, and his paws gripping that edge. */
+.tsum-bao {
+    position: absolute;
+    right: 12px;
+    bottom: 100%;
+    width: 96px;
+    height: 48px;
+    clip-path: inset(-20px -20px 0 -20px);
+}
+
+.tsum-bao ::deep .bao { width: 100%; height: auto; }
+
+.tsum-paw {
+    position: absolute;
+    top: -8px;
+    width: 19px;
+}
+
+.tsum-paw--l { right: 84px; transform: scaleX(-1); }
+.tsum-paw--r { right: 20px; }
+
+.tsum-paw ::deep .bao-paw { display: block; width: 100%; height: auto; }
 
 .tsum-item { flex: 1; }
 

@@ -196,9 +196,13 @@
         setTimeout(function () { el.classList.remove(cls); }, ms);
     }
 
-    // Poking him startles him.
+    // Poking him shoves him away from the side the click landed on.
     baos.forEach(function (svg) {
-        svg.addEventListener('click', function () { replay(svg, 'bao--poke', 650); });
+        svg.addEventListener('click', function (e) {
+            var r = svg.getBoundingClientRect();
+            svg.style.setProperty('--bao-shove', e.clientX < r.left + r.width / 2 ? 1 : -1);
+            replay(svg, 'bao--poke', 650);
+        });
     });
 
     // His eyes follow the pointer. Pupil offsets are in drawing units.

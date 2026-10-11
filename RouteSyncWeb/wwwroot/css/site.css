@@ -1268,8 +1268,7 @@ th.rs-sortable:focus-visible {
 .bao .bao-brows,
 .bao .bao-lids-sleepy,
 .bao .bao-mouth-focused,
-.bao .bao-mouth-worried,
-.bao .bao-mouth-shock { display: none; }
+.bao .bao-mouth-worried { display: none; }
 .bao.face-focused .bao-brows-focused,
 .bao.face-focused .bao-mouth-focused,
 .bao.face-worried .bao-brows-worried,
@@ -1285,25 +1284,34 @@ th.rs-sortable:focus-visible {
     animation: bao-blink 5.4s infinite;
 }
 .bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
-/* A poke startles him: he jolts up from his feet, brows thrown high, pupils small and
-   mouth a round "o", then settles back to the face he had. */
-.bao.bao--poke { transform-origin: 50% 100%; animation: bao-startle .5s cubic-bezier(.2, .9, .3, 1); }
-.bao.bao--poke .bao-brows,
-.bao.bao--poke .bao-mouth,
-.bao.bao--poke .bao-lids-sleepy { display: none; }
-.bao.bao--poke .bao-eye,
-.bao.bao--poke .bao-brows-shock,
-.bao.bao--poke .bao-mouth-shock { display: inline; }
-.bao.bao--poke .bao-pupil > ellipse { transform: scale(.7); transform-box: fill-box; transform-origin: center; }
+/* A poke shoves him: he leans away from the click and flinches with a blink. The bust
+   slides and tilts its head instead of rocking, so its cut edge stays on the panel.
+   js/attention.js sets --bao-shove to 1 or -1 for the direction. */
+.bao.bao--poke { transform-origin: 50% 100%; animation: bao-shove .55s ease-out; }
+.bao--bust.bao--poke { animation: bao-nudge .55s ease-out; }
+.bao--bust.bao--poke .bao-head { animation: bao-tilt .55s ease-out; }
+.bao.bao--poke .bao-eye { animation: bao-flinch .55s ease-out; }
 
 @keyframes bao-blink {
     0%, 95%, 100% { transform: none; }
     97% { transform: scaleY(.1); }
 }
-@keyframes bao-startle {
-    15% { transform: scale(.96, 1.07); }
-    40% { transform: scale(1.02, .98); }
-    65% { transform: none; }
+@keyframes bao-shove {
+    20% { transform: rotate(calc(var(--bao-shove, 1) * 5deg)); }
+    50% { transform: rotate(calc(var(--bao-shove, 1) * -2deg)); }
+    75% { transform: rotate(calc(var(--bao-shove, 1) * 1deg)); }
+}
+@keyframes bao-flinch {
+    10%, 35% { transform: scaleY(.12); }
+    55% { transform: none; }
+}
+@keyframes bao-nudge {
+    20% { transform: translateX(calc(var(--bao-shove, 1) * 4px)); }
+    55% { transform: translateX(calc(var(--bao-shove, 1) * -1px)); }
+}
+@keyframes bao-tilt {
+    20% { transform: rotate(calc(var(--bao-shove, 1) * 6deg)); }
+    55% { transform: rotate(calc(var(--bao-shove, 1) * -2deg)); }
 }
 
 /* Dashboard: Bao stands behind the panel, cut off by its top edge at the chest. To work
@@ -1367,5 +1375,7 @@ th.rs-sortable:focus-visible {
 @media (prefers-reduced-motion: reduce) {
     .bao .bao-eye,
     .bao.bao--poke,
+    .bao.bao--poke .bao-eye,
+    .bao--bust.bao--poke .bao-head,
     .bao-stage--tap .bao-reach .bao-arm-r { animation: none; }
 }

@@ -25,6 +25,9 @@ else
         @if (trips.Any())
         {
             <div class="tsum">
+                <span class="tsum-bao"><BaoHead /></span>
+                <span class="tsum-paw tsum-paw--l"><BaoPaw /></span>
+                <span class="tsum-paw tsum-paw--r"><BaoPaw /></span>
                 <div class="tsum-item">
                     <p class="tsum-n">@Figures.Compact(MonthTrips)</p>
                     <p class="tsum-l">Trips this month</p>

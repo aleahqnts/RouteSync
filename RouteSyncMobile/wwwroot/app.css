@@ -219,14 +219,16 @@ h1:focus {
 /* ---------- Bao, the mascot (Components/BaoBust, BaoHead, BaoFull) ----------
    Faces switch with a class on the svg: face-focused, face-worried, face-sleepy;
    relaxed when none is set. A tap pokes him (js/bao.js). */
-.bao { display: block; overflow: visible; }
+/* At rest he breathes, sways his head a little and swishes his tail, on top of the blink,
+   so he never sits still like a sticker. */
+.bao { display: block; overflow: visible; transform-origin: 50% 100%; animation: bao-breathe 3.6s ease-in-out infinite; }
+.bao .bao-tail { transform-box: view-box; transform-origin: 1440px 1760px; animation: bao-swish 2.8s ease-in-out infinite; }
 /* The bust is cut at the chest: what lies below its frame stays hidden, while the horns keep room to move. */
 .bao--bust { clip-path: inset(-25% -25% 0 -25%); }
 .bao .bao-brows,
 .bao .bao-lids-sleepy,
 .bao .bao-mouth-focused,
-.bao .bao-mouth-worried,
-.bao .bao-mouth-shock { display: none; }
+.bao .bao-mouth-worried { display: none; }
 .bao.face-focused .bao-brows-focused,
 .bao.face-focused .bao-mouth-focused,
 .bao.face-worried .bao-brows-worried,
@@ -242,34 +244,46 @@ h1:focus {
     animation: bao-blink 5.4s infinite;
 }
 .bao .bao-pupil { transition: transform .25s ease-out; }
-.bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
-/* A poke startles him: he jolts up from his feet, brows thrown high, pupils small and
-   mouth a round "o", then settles back to the face he had. */
-.bao.bao--poke { transform-origin: 50% 100%; animation: bao-startle .5s cubic-bezier(.2, .9, .3, 1); }
-.bao.bao--poke .bao-brows,
-.bao.bao--poke .bao-mouth,
-.bao.bao--poke .bao-lids-sleepy { display: none; }
-.bao.bao--poke .bao-eye,
-.bao.bao--poke .bao-brows-shock,
-.bao.bao--poke .bao-mouth-shock { display: inline; }
-.bao.bao--poke .bao-pupil > ellipse { transform: scale(.7); transform-box: fill-box; transform-origin: center; }
+.bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; animation: bao-sway 7s ease-in-out infinite; }
+/* A poke shoves him: he rocks away from the tap on his feet, flinches with a blink and
+   settles. js/bao.js sets --bao-shove to 1 or -1 for the direction. */
+.bao.bao--poke { animation: bao-shove .55s ease-out; }
+.bao.bao--poke .bao-eye { animation: bao-flinch .55s ease-out; }
 
 @keyframes bao-blink {
     0%, 95%, 100% { transform: none; }
     97% { transform: scaleY(.1); }
 }
-@keyframes bao-startle {
-    15% { transform: scale(.96, 1.07); }
-    40% { transform: scale(1.02, .98); }
-    65% { transform: none; }
+@keyframes bao-shove {
+    20% { transform: rotate(calc(var(--bao-shove, 1) * 5deg)); }
+    50% { transform: rotate(calc(var(--bao-shove, 1) * -2deg)); }
+    75% { transform: rotate(calc(var(--bao-shove, 1) * 1deg)); }
+}
+@keyframes bao-flinch {
+    10%, 35% { transform: scaleY(.12); }
+    55% { transform: none; }
+}
+@keyframes bao-breathe {
+    50% { transform: scale(1.012, 1.025); }
+}
+@keyframes bao-sway {
+    25% { transform: rotate(1.5deg); }
+    75% { transform: rotate(-1.5deg); }
+}
+@keyframes bao-swish {
+    50% { transform: rotate(7deg); }
 }
 @keyframes bao-nod {
     40% { transform: translateY(3%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .bao,
     .bao .bao-eye,
-    .bao.bao--poke { animation: none; }
+    .bao .bao-head,
+    .bao .bao-tail,
+    .bao.bao--poke,
+    .bao.bao--poke .bao-eye { animation: none; }
     .bao .bao-pupil { transition: none; }
 }
 
