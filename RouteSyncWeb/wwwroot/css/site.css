@@ -1164,8 +1164,8 @@ th.rs-sortable:focus-visible {
 .rs-attn--clear .rs-attn__clear { display: block; }
 .rs-attn--clear .rs-attn__list { display: none; }
 
-/* Over the map: under the zoom buttons, scrolling within itself. Light in dark mode
-   too, like the map beneath it. */
+/* Over the map: under the zoom buttons, the list scrolling within itself so Bao's coin
+   can sit over the panel's top edge. Light in dark mode too, like the map beneath it. */
 .rs-attn--map {
     color-scheme: light;
     position: absolute;
@@ -1173,10 +1173,9 @@ th.rs-sortable:focus-visible {
     top: 92px;
     z-index: 1000;
     width: min(340px, calc(100% - 20px));
-    max-height: 45vh;
-    overflow: auto;
     margin: 0;
 }
+.rs-attn--map .rs-attn__list { max-height: calc(45vh - 60px); overflow: auto; }
 
 @media (prefers-reduced-motion: reduce) {
     .rs-attn__head::after { transition: none; }
@@ -1214,16 +1213,20 @@ th.rs-sortable:focus-visible {
 .rs-attn__icon { width: 18px; height: 18px; flex: none; color: light-dark(#8A5300, #F2C27A); }
 .rs-attn--clear .rs-attn__icon { color: light-dark(#5F6B7A, #BCC0C4); }
 
-/* Folded over the map: a small tab with the count, opening into the list. */
+/* Folded over the map: Bao's coin with a speech bubble holding the title and count.
+   Open, the bubble becomes the list's card and the coin stays where it was, perched
+   on the card's top edge. */
 .rs-attn--map:not([open]) {
     width: auto;
-    padding: 8px 12px;
-    border-radius: 999px;
-    overflow: visible;
+    padding: 7px 14px 7px 0;
+    margin-left: 18px;
+    border-radius: 0 14px 14px 0;
 }
 
-.rs-attn--map:not([open]) .rs-attn__head { gap: 6px; font-size: .84rem; }
+.rs-attn--map:not([open]) .rs-attn__head { gap: 8px; font-size: .84rem; }
 .rs-attn--map:not([open]) .rs-attn__head::after { display: none; }
+.rs-attn--map[open] { margin-top: 21px; padding-top: 10px; }
+.rs-attn--map[open] .rs-attn__head { min-height: 26px; padding-left: 66px; }
 
 /* The list's heading set like the page titles: Poppins in capitals, tracked out a
    little more because it runs much smaller than they do. */
@@ -1385,20 +1388,24 @@ th.rs-sortable:focus-visible {
     31%, 74% { clip-path: var(--bao-free); }
 }
 
-/* Fleet map: Bao's head is the panel's icon, horns out past a disc tinted by his mood.
-   The map panel stays light in dark mode, so these are fixed light colours. */
+/* Fleet map: Bao's head on a white coin, horns breaking out past it, ringed in a colour
+   for his mood so he never sits straight on the map. The map panel stays light in dark
+   mode, so these are fixed light colours. */
 .rs-attn__bao {
     position: relative;
+    z-index: 1;
     flex: none;
-    width: 30px;
-    height: 30px;
-    margin: -5px 4px -5px 0;
+    width: 50px;
+    height: 50px;
+    margin: -12px 0 -12px -12px;
     border-radius: 50%;
-    background: #E3F2F1;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px #A9DCD8, 0 3px 12px rgba(16, 24, 40, .22);
 }
-.rs-attn__bao .bao { position: absolute; left: -10px; top: -3px; width: 50px; height: auto; }
-.rs-attn[data-mood="focused"] .rs-attn__bao { background: #FFF4DE; }
-.rs-attn[data-mood="worried"] .rs-attn__bao { background: #FDECEC; }
+.rs-attn__bao .bao { position: absolute; left: -15px; top: -5px; width: 80px; height: auto; }
+.rs-attn--map[open] .rs-attn__bao { position: absolute; left: 6px; top: -26px; margin: 0; }
+.rs-attn[data-mood="focused"] .rs-attn__bao { box-shadow: 0 0 0 3px #F6D38E, 0 3px 12px rgba(16, 24, 40, .22); }
+.rs-attn[data-mood="worried"] .rs-attn__bao { box-shadow: 0 0 0 3px #F4B4AE, 0 3px 12px rgba(16, 24, 40, .22); }
 
 @media (prefers-reduced-motion: reduce) {
     .bao .bao-eye,
