@@ -228,7 +228,7 @@
 
     // On the dashboard he works the caret: the panel folds or opens when his hand
     // lands on it, a moment after the click. Clicks during the reach are ignored.
-    var REACH_MS = 570, TAP_MS = 1100, tapping = false;
+    var REACH_MS = 450, TAP_MS = 900, tapping = false;
     if (stage) {
         box.querySelector('.rs-attn__head').addEventListener('click', function (e) {
             if (calm.matches) return;
