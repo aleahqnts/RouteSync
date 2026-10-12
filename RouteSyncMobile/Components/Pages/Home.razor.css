@@ -133,13 +133,18 @@
 
 /* A prompt reads as one line: what is being asked on the left, the control on the
    right. Without the row the control wraps underneath and stops looking like an
-   answer to the question above it. Not named .row: Bootstrap's grid class of that name
-   would pull the card wider than the others. */
-.prompt-card,
-.info-card--row {
+   answer to the question above it. */
+.prompt-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+/* A card that leads somewhere: what it is, then a full-width button to go there. */
+.info-card--action .link-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .green-bg {

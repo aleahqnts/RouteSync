@@ -27,18 +27,15 @@ else
             <img class="avatar" src="images/user-avatar.png" alt="" />
         </div>
 
-        @* Bao, the mascot, greets the driver with the one thing the day needs from them.
-           He stays out of the way while a trip runs and whenever something is wrong. *@
-        @if (BaoLine is { } baoLine)
-        {
-            <div class="bao-card">
-                <div class="bao-card__art"><BaoFull /></div>
-                <div class="bao-card__bubble">
-                    <p class="bao-card__who">Bao</p>
-                    <p class="bao-card__say">@baoLine</p>
-                </div>
+        @* Bao, the mascot, greets the driver with the one thing the day needs from them,
+           whatever state the day is in. *@
+        <div class="bao-card">
+            <div class="bao-card__art"><BaoFull Face="@BaoFace" /></div>
+            <div class="bao-card__bubble">
+                <p class="bao-card__who">Bao</p>
+                <p class="bao-card__say">@BaoLine</p>
             </div>
-        }
+        </div>
 
         @if (!string.IsNullOrEmpty(statusMsg))
         {
@@ -197,7 +194,7 @@ else
         {
             @if (lastTrip is not null)
             {
-                <div class="info-card info-card--row">
+                <div class="info-card info-card--action">
                     <div>
                         <p class="s-title">Today's Summary</p>
                         <p class="s-sub">@PhTime.Now.Date.ToString("MMMM d, yyyy")</p>
@@ -218,7 +215,7 @@ else
         @* The rest of the month, from the screen already showing one day of it. A driver
            looking at today's assignment is the one asking whether they are on next
            Thursday, and the answer was nowhere in the app. *@
-        <div class="info-card info-card--row">
+        <div class="info-card info-card--action">
             <div>
                 <p class="s-title">My Schedule</p>
                 <p class="s-sub">Your shifts, rest days and approved leave</p>
@@ -422,29 +419,122 @@ else
         }
     }
 
-    /// <summary>What Bao says on the card under the greeting, or null when he stays out of it.</summary>
+    /// <summary>What Bao says on the card under the greeting, for each state of the day.</summary>
     /// <remarks>
-    /// Silent while a trip is running, and when the driver cannot drive or the bus is
-    /// grounded: those screens carry their own message, and a mascot beside a problem
-    /// reads as making light of it.
+    /// Each state has two English wordings and two in casual Taglish, so he does not
+    /// repeat himself and sounds like a coworker rather than a system. When something is
+    /// wrong he says plainly what happens next and his face shows concern (see
+    /// <see cref="BaoFace"/>). The bus is a thing, never a person: "ang Bus", not "si Bus".
     /// </remarks>
-    private string? BaoLine
+    private string BaoLine
     {
         get
         {
+            var bus = vehicle?.VehicleId ?? assignment?.VehicleId;
             if (leaveToday is not null)
-                return $"{Greeting}. Pahinga muna. Dispatch will not assign you while you are on leave.";
-            if (!IsAvailable) return null;
+                return Say("Enjoy your day off. Dispatch will not assign you today.",
+                           "Rest well. You are on leave today.",
+                           "Day off mo today. Enjoy!",
+                           "On leave ka today, so no shifts. Pahinga muna.");
+            if (!IsAvailable)
+                return assignment?.TripStatus == "Active"
+                    ? Say($"Please stay with Bus {bus} until your relief arrives.",
+                          $"Please wait with Bus {bus} until someone takes over.",
+                          $"Stay muna with Bus {bus} until your relief arrives.",
+                          $"Bantayan mo muna ang Bus {bus}. Your relief driver is on the way.")
+                    : Say("Take care of yourself. No shifts until you are ready.",
+                          "Rest up. Tell dispatch when you can drive again.",
+                          "Pahinga ka muna. No shifts until you are ready.",
+                          "Ingat ka, ha. Just tell dispatch when you can drive again.");
+            if (assignment is null && lastTrip?.Date.Date == PhTime.Now.AddHours(-6).Date)
+                return Say("Your shift today is done. Thank you for driving.",
+                           "Shift done for today. Rest well.",
+                           "Salamat sa pagbiyahe! Tapos na ang shift mo today.",
+                           "Shift done for today. Pahinga well!");
             if (assignment is null)
-                return $"{Greeting}. No trip assigned yet. Dispatch will notify you.";
-            if (assignment.TripStatus == "Active" || endPending || VehicleGrounded) return null;
+                return Say("No shift assigned yet. Dispatch will notify you.",
+                           "Nothing assigned yet. You will be notified.",
+                           "Wala pang shift ngayon. Dispatch will notify you.",
+                           "No shift yet. Abangan mo lang, dispatch will let you know.");
+            if (endPending)
+                return Say("Your shift has ended. The record will send once you are online.",
+                           "Shift ended. Your record is saved and will send when connected.",
+                           "Salamat sa pagbiyahe! Your record will send once may signal na.",
+                           "Shift done. Naka-save na, it will send when you are online.");
+            if (assignment.TripStatus == "Active" && PhTime.Now >= ShiftEnd - TimeSpan.FromMinutes(30))
+                return Say($"Your shift ends at {ShiftEnd:h:mm tt}. The next driver takes over Bus {bus}.",
+                           $"Almost done. Your shift on Bus {bus} ends at {ShiftEnd:h:mm tt}.",
+                           $"Malapit na matapos ang shift mo, {ShiftEnd:h:mm tt}. Ready na for the handover.",
+                           $"Konting push na lang. Your shift ends at {ShiftEnd:h:mm tt}.");
+            if (assignment.TripStatus == "Active")
+                return Say($"Your shift on Bus {bus} is in progress. Tap Resume Shift to continue.",
+                           "Shift in progress. Tap Resume Shift to keep counting.",
+                           $"Your shift on Bus {bus} is still on. Tap Resume Shift to keep counting.",
+                           "Tuloy ang shift mo. Resume Shift lang to get back to counting.");
+            if (VehicleGrounded)
+                return checklistBlocked
+                    ? Say($"Bus {bus} failed its inspection. Please wait here for a reassignment.",
+                          $"Bus {bus} cannot run today. Please wait for a reassignment.",
+                          $"Out of service muna ang Bus {bus}. Please wait here for a new assignment.",
+                          $"Hindi muna pwede ang Bus {bus} today. Wait lang for a reassignment.")
+                    : Say($"Bus {bus} is out of service. Please ask dispatch for a reassignment.",
+                          $"Bus {bus} is off the road. Please check with dispatch for another bus.",
+                          $"Bus {bus} is out of service. Ask dispatch for another bus, ha.",
+                          $"Out of service muna ang Bus {bus}. Check with dispatch for a reassignment.");
+            if (!ChecklistOpen)
+                return Say($"Your next shift is on Bus {bus}. The checklist opens before it starts.",
+                           $"Next up is Bus {bus}. The checklist opens closer to your shift.",
+                           $"Sa Bus {bus} ang next shift mo. The checklist opens before your shift.",
+                           $"Next shift mo is on Bus {bus}. Rest muna until the checklist opens.");
             if (!ChecklistCleared)
-                return $"{Greeting}. Please complete the checklist for Bus {vehicle?.VehicleId ?? assignment.VehicleId} before your trip.";
+                return Say($"Please complete the checklist for Bus {bus} before your shift.",
+                           $"Start with the checklist for Bus {bus}.",
+                           $"Checklist muna for Bus {bus} before your shift.",
+                           $"Bus {bus} ang hawak mo today. Checklist muna tayo.");
+            // The bus is still out on the shift before this one; this driver takes it over
+            // when that shift ends, wherever the handover happens. Once that shift is past
+            // its rostered end a takeover is possible, but it is the last resort for when that
+            // driver cannot end their shift, so Bao asks for patience and does not offer it.
+            if (HasOpenTrip && CanStart)
+                return Say($"Bus {bus} is running late. Please wait for the previous driver to end their shift.",
+                           $"Late ang balik ng Bus {bus}. Wait lang until the previous driver ends their shift.",
+                           "Wait lang muna for the previous driver. Take over only if they cannot end their shift.");
+            if (HasOpenTrip)
+                return Say($"Bus {bus} is still out until {OpenTripEndLabel}. You take over when it comes back.",
+                           $"Bus {bus} is on another shift until {OpenTripEndLabel}. Your turn comes after.",
+                           $"Nasa biyahe pa ang Bus {bus} until {OpenTripEndLabel}. Wait lang for the handover.",
+                           $"Hindi pa bumabalik ang Bus {bus}. You take over after {OpenTripEndLabel}.");
             return PhTime.Now < ShiftStart
-                ? $"{Greeting}. Checklist complete. Your shift starts at {ShiftStart:h:mm tt}."
-                : $"{Greeting}. Checklist complete. Start your shift when you are ready.";
+                ? Say($"Checklist complete. Your shift starts at {ShiftStart:h:mm tt}.",
+                      $"All set. Your shift starts at {ShiftStart:h:mm tt}.",
+                      $"Checklist done! See you at {ShiftStart:h:mm tt}.",
+                      $"Ready na ang Bus {bus}. Your shift starts at {ShiftStart:h:mm tt}.")
+                : Say("Checklist complete. Start your shift when you are ready.",
+                      "All set. Tap Start Shift when you are ready.",
+                      "All set! Tap Start Shift kapag ready ka na.",
+                      "Ready na lahat. Ingat sa biyahe!");
         }
     }
+
+    /// <summary>
+    /// The greeting and one of a state's wordings. The pick follows the service day (from
+    /// 6:00 AM) and the driver, so a line holds through the day's refreshes and drivers
+    /// on the same day do not all read the same one.
+    /// </summary>
+    private string Say(params string[] lines)
+    {
+        var day = PhTime.Now.AddHours(-6).DayOfYear;
+        var seed = day + (Session.CurrentUser?.UserId ?? 0);
+        return $"{Greeting}. {lines[seed % lines.Length]}";
+    }
+
+    /// <summary>Bao's face on the Home card: concerned when the driver cannot drive or the
+    /// bus is out of service, attentive while a shift runs, relaxed otherwise.</summary>
+    private string? BaoFace =>
+        leaveToday is not null ? null
+        : !IsAvailable || (VehicleGrounded && assignment?.TripStatus != "Active") ? "worried"
+        : assignment?.TripStatus == "Active" && !endPending ? "focused"
+        : null;
 
     private string DateLabel
     {
@@ -482,6 +572,12 @@ else
     private DateTime ShiftStart => assignment is null
         ? DateTime.MinValue
         : assignment.Date.Date + assignment.ShiftStartTime;
+
+    /// <summary>When the assigned shift is rostered to end, on the next day for an overnight shift.</summary>
+    private DateTime ShiftEnd => assignment is null
+        ? DateTime.MinValue
+        : assignment.Date.Date + assignment.ShiftEndTime
+          + (assignment.ShiftEndTime <= assignment.ShiftStartTime ? TimeSpan.FromDays(1) : TimeSpan.Zero);
 
     private DateTime ChecklistOpensAt => ShiftStart - TimeSpan.FromHours(ChecklistLeadHours);
 
