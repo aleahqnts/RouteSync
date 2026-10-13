@@ -659,38 +659,56 @@ else
         try { await Queue.FlushAsync(); } catch { /* offline: stays queued */ }
         await Load();
         _ = PollLoop(); // background: new assignments appear without pull-to-refresh
+        App.Returned += OnReturned;
     }
 
     // A trip assigned by a dispatcher has to appear without the driver doing anything, so
-    // the page re-fetches every five seconds with no spinner and no flicker.
+    // the page re-fetches every fifteen seconds with no spinner and no flicker. Each pass
+    // is several reads, and an assignment is hours ahead of the shift it is for, so a
+    // faster pace would cost far more than it shows.
     private readonly CancellationTokenSource pollCts = new();
 
     private async Task PollLoop()
     {
         try
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
             while (await timer.WaitForNextTickAsync(pollCts.Token))
             {
-                // Never replace state mid-interaction, with a modal open or a toggle in flight.
-                if (toggling || showUnavailModal || showTakeoverModal || loading) continue;
+                // Nobody is reading the page while the app is in the background.
+                if (!App.InForeground) continue;
 
-                // Queued work goes out before the page is re-read, because this loop is
-                // what notices the connection coming back. Flushing only in
-                // OnInitializedAsync ran it at the one moment the phone was certain to
-                // still be offline, so a trip ended in a dead zone stayed active on the
-                // server and was offered back as a resume for as long as the driver
-                // stayed on this page.
-                try { await Queue.FlushAsync(); } catch { /* offline: stays queued */ }
-
-                await InvokeAsync(async () =>
-                {
-                    await Load(silent: true);
-                    StateHasChanged();
-                });
+                await RefreshAsync();
             }
         }
         catch (OperationCanceledException) { /* page closed */ }
+    }
+
+    // The page was not refreshed while the app was in the background, so it is read again
+    // the moment the driver comes back rather than on the next tick.
+    private void OnReturned() => _ = RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        // Never replace state mid-interaction, with a modal open or a toggle in flight.
+        if (toggling || showUnavailModal || showTakeoverModal || loading) return;
+
+        // Queued work goes out before the page is re-read, because this refresh is what
+        // notices the connection coming back. Flushing only in OnInitializedAsync ran it
+        // at the one moment the phone was certain to still be offline, so a trip ended in a
+        // dead zone stayed active on the server and was offered back as a resume for as
+        // long as the driver stayed on this page.
+        try { await Queue.FlushAsync(); } catch { /* offline: stays queued */ }
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await Load(silent: true);
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException) { /* page closed while reading */ }
     }
 
     private async Task Load(bool silent = false)
@@ -875,6 +893,7 @@ else
 
     public void Dispose()
     {
+        App.Returned -= OnReturned;
         pollCts.Cancel();
         pollCts.Dispose();
         _ptrRef?.Dispose();

@@ -126,16 +126,21 @@ else
         finally { markingAll = false; }
     }
 
-    // Compact age for the card heading: minutes, then hours, then a clock time. The
-    // group heading carries the date.
-    private static string When(MessageModel n)
+    /// <summary>
+    /// Compact age for a message heading: minutes, then hours, then a clock time.
+    /// </summary>
+    /// <param name="withDate">
+    /// Whether an older message also gives its date. The tab's group heading carries the
+    /// date, so its cards leave it out; a popup stands alone and needs it.
+    /// </param>
+    public static string When(MessageModel n, bool withDate = false)
     {
         var t = PhTime.Raw(n.CreatedAt);
         var age = PhTime.Now - t;
         if (age < TimeSpan.FromMinutes(1)) return "now";
         if (age < TimeSpan.FromHours(1)) return $"{(int)age.TotalMinutes}m";
         if (age < TimeSpan.FromHours(24)) return $"{(int)age.TotalHours}h";
-        return t.ToString("h:mm tt");
+        return t.ToString(withDate ? "MMM d, h:mm tt" : "h:mm tt");
     }
 
     private static bool IsHighPriority(MessageModel n) =>

@@ -22,7 +22,15 @@ public class MessageWatch
     private readonly ILocalNotifier _notifier;
 
     private const string SeenTsKey = "msg_seen_ts";
-    private const int PollMs = 5000;
+
+    /// <summary>How often messages are checked.</summary>
+    /// <remarks>
+    /// Runs for the whole session, in the background too, since it raises the system
+    /// notification, so it is the app's most frequent request. A message waits at most this
+    /// long for its badge and notification. The notifications tab reads on its own while it
+    /// is open, and pull to refresh checks at once.
+    /// </remarks>
+    private const int PollMs = 15000;
 
     private System.Threading.Timer? _timer;
     private int _userId;
@@ -39,6 +47,10 @@ public class MessageWatch
     {
         _data = data;
         _notifier = notifier;
+
+        // Android can freeze an app left in the background, timer and all, so messages are
+        // checked the moment the driver comes back rather than on the next tick.
+        App.Returned += () => { if (_timer is not null) _ = Poll(); };
     }
 
     public void Start(int userId)
