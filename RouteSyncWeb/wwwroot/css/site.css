@@ -1355,6 +1355,8 @@ th.rs-sortable:focus-visible {
 .bao-stage {
     --bao-w: 112px;
     position: absolute;
+    /* Over the panel: breathing transforms the stage, so its layers stack inside it. */
+    z-index: 2;
     right: -2px;
     bottom: 100%;
     width: var(--bao-w);
