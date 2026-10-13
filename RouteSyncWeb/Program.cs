@@ -148,6 +148,11 @@ builder.Services.AddSingleton(provider => {
     var url = config["Supabase:Url"];  // reads from appsettings.json
     var key = config["Supabase:Key"];  // reads from appsettings.json
 
+    // Before the client's first request, after which its handler cannot be changed.
+    if (!CompressedReads.Enable())
+        provider.GetRequiredService<ILoggerFactory>().CreateLogger("Supabase")
+            .LogWarning("Database answers are not compressed: the postgrest client's handler could not be reached.");
+
     var client = new Supabase.Client(url, key);
     client.InitializeAsync().Wait();   // actually opens the connection
     return client;

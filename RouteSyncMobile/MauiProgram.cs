@@ -20,7 +20,9 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
-		// A single shared Supabase client, matching the dashboard's setup.
+		// A single shared Supabase client, matching the dashboard's setup, asking for
+		// compressed answers from its first request.
+		Services.CompressedReads.Enable();
 		var supabase = new Supabase.Client(SupabaseConfig.Url, SupabaseConfig.Key);
 		supabase.InitializeAsync().Wait();
 
