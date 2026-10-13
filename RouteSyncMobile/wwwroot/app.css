@@ -264,11 +264,11 @@ h1:focus {
     55% { transform: none; }
 }
 @keyframes bao-breathe {
-    50% { transform: scale(1.012, 1.025); }
+    50% { transform: scale(1.02, 1.04); }
 }
 @keyframes bao-sway {
-    25% { transform: rotate(1.5deg); }
-    75% { transform: rotate(-1.5deg); }
+    25% { transform: rotate(2.5deg); }
+    75% { transform: rotate(-2.5deg); }
 }
 @keyframes bao-swish {
     50% { transform: rotate(7deg); }
@@ -340,7 +340,7 @@ h1:focus {
 }
 /* Upright breathing that leaves his waist where it is, for places that cut him there. */
 @keyframes bao-breathe-tall {
-    50% { transform: scaleY(1.02); }
+    50% { transform: scaleY(1.04); }
 }
 /* An excited side to side sway, for his head peeking over an edge. */
 @keyframes bao-peek {
