@@ -1286,7 +1286,26 @@ th.rs-sortable:focus-visible {
     transform-origin: center;
     animation: bao-blink 5.4s infinite;
 }
-.bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; }
+.bao .bao-pupil { transition: transform .25s ease-out; }
+/* Idle: he breathes and his head sways. The bust breathes through its stage so the reach
+   drawing moves with it, anchored at the panel's edge. */
+.bao .bao-head { transform-box: fill-box; transform-origin: 50% 100%; animation: bao-sway 7s ease-in-out infinite; }
+.bao--head,
+.bao-stage { transform-origin: 50% 100%; animation: bao-breathe 3.6s ease-in-out infinite; }
+/* Head turn: js/attention.js sets --bao-lx and --bao-ly (-1 to 1) toward the pointer. The
+   face moves furthest, the head and horns less, so it reads as the head turning rather than
+   the features sliding. Distances in drawing units. */
+.bao .bao-face,
+.bao .bao-head-base,
+.bao .bao-ear-inner-l,
+.bao .bao-ear-inner-r,
+.bao .bao-horns { --bao-turn: 0; transition: transform .35s cubic-bezier(.2, .7, .3, 1);
+    transform: translate(calc(var(--bao-lx, 0) * var(--bao-turn) * 1px), calc(var(--bao-ly, 0) * var(--bao-turn) * .7px)); }
+.bao .bao-face { --bao-turn: 70; }
+.bao .bao-head-base,
+.bao .bao-ear-inner-l,
+.bao .bao-ear-inner-r { --bao-turn: 20; }
+.bao .bao-horns { --bao-turn: 10; }
 /* A poke shoves him: he leans away from the click and flinches with a blink. The bust
    slides and tilts its head instead of rocking, so its cut edge stays on the panel.
    js/attention.js sets --bao-shove to 1 or -1 for the direction. */
@@ -1315,6 +1334,13 @@ th.rs-sortable:focus-visible {
 @keyframes bao-tilt {
     20% { transform: rotate(calc(var(--bao-shove, 1) * 6deg)); }
     55% { transform: rotate(calc(var(--bao-shove, 1) * -2deg)); }
+}
+@keyframes bao-breathe {
+    50% { transform: scale(1.02, 1.04); }
+}
+@keyframes bao-sway {
+    25% { transform: rotate(2.5deg); }
+    75% { transform: rotate(-2.5deg); }
 }
 
 /* Dashboard: Bao stands behind the panel, cut off by its top edge at the chest. To work
@@ -1409,6 +1435,9 @@ th.rs-sortable:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
     .bao .bao-eye,
+    .bao .bao-head,
+    .bao--head,
+    .bao-stage,
     .bao.bao--poke,
     .bao.bao--poke .bao-eye,
     .bao--bust.bao--poke .bao-head,

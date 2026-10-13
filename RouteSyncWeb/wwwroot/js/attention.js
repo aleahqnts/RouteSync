@@ -205,17 +205,27 @@
         });
     });
 
-    // His eyes follow the pointer. Pupil offsets are in drawing units.
+    // His eyes follow the pointer and his head turns toward it. Pupil offsets are in
+    // drawing units; the head turn is a -1 to 1 vector that site.css scales per part.
     var pupils = host.querySelectorAll('.bao-pupil');
     var LOOK = 22;
     var pointer = null, queued = false;
+    function toward(r, fy) {
+        var dx = pointer.x - (r.left + r.width / 2), dy = pointer.y - (r.top + r.height * fy);
+        var d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160) / d;
+        return [dx * k, dy * k];
+    }
     function look() {
         queued = false;
         pupils.forEach(function (p) {
-            var r = p.parentNode.getBoundingClientRect();
-            var dx = pointer.x - (r.left + r.width / 2), dy = pointer.y - (r.top + r.height / 2);
-            var d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160) * LOOK / d;
-            p.setAttribute('transform', 'translate(' + (dx * k).toFixed(1) + ' ' + (dy * k).toFixed(1) + ')');
+            var v = toward(p.parentNode.getBoundingClientRect(), .5);
+            p.setAttribute('transform', 'translate(' + (v[0] * LOOK).toFixed(1) + ' ' + (v[1] * LOOK).toFixed(1) + ')');
+        });
+        if (calm.matches) return;
+        baos.forEach(function (svg) {
+            var v = toward(svg.querySelector('.bao-head-base').getBoundingClientRect(), .45);
+            svg.style.setProperty('--bao-lx', v[0].toFixed(3));
+            svg.style.setProperty('--bao-ly', v[1].toFixed(3));
         });
     }
     if (pupils.length) {
@@ -223,6 +233,14 @@
             if (e.pointerType !== 'mouse') return;
             pointer = { x: e.clientX, y: e.clientY };
             if (!queued) { queued = true; requestAnimationFrame(look); }
+        });
+        // When the pointer leaves the window he looks ahead again.
+        document.documentElement.addEventListener('mouseleave', function () {
+            pupils.forEach(function (p) { p.removeAttribute('transform'); });
+            baos.forEach(function (svg) {
+                svg.style.removeProperty('--bao-lx');
+                svg.style.removeProperty('--bao-ly');
+            });
         });
     }
 
