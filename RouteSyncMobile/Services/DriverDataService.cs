@@ -50,8 +50,12 @@ public class DriverDataService
 
     // Twenty seconds, not the hundred a HttpClient starts with. A phone that has drifted
     // out of signal holds the socket open with nothing coming back, and every page that
-    // waits on one of these shows a skeleton for as long as it waits.
-    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20) };
+    // waits on one of these shows a skeleton for as long as it waits. Answers are asked for
+    // compressed, as the postgrest client's are (see CompressedReads).
+    private static readonly HttpClient _http = new(new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+    }) { Timeout = TimeSpan.FromSeconds(20) };
 
     /// <summary>Sends a PATCH straight to the REST endpoint.</summary>
     /// <remarks>
@@ -197,6 +201,56 @@ public class DriverDataService
 
     public Task<DeviceStatusDto?> GetDeviceStatusAsync(string deviceId)
         => GetJsonAsync<DeviceStatusDto>($"device_status?device_id=eq.{Uri.EscapeDataString(deviceId)}");
+
+    /// <summary>What the running trip screen checks, as one answer.</summary>
+    /// <param name="Trip">
+    /// The trip's status, route, bus, break, count, heartbeat, revenue and end time. The
+    /// other columns are left at their defaults. Null when the trip cannot be read.
+    /// </param>
+    /// <param name="CounterDeviceId">The counter phone paired to the trip's bus, if any.</param>
+    /// <param name="Device">That phone's status, readable only while the trip is running.</param>
+    public sealed record TripPoll(Trip? Trip, string? CounterDeviceId, DeviceStatusDto? Device);
+
+    // The trip is read with the settings the postgrest client uses for a table read, so its
+    // dates and times come out exactly as they would from GetTripAsync.
+    private static readonly Newtonsoft.Json.JsonSerializerSettings RowSettings =
+        Postgrest.Client.SerializerSettings(new Postgrest.ClientOptions());
+
+    /// <summary>
+    /// The trip, its bus's counter phone and that phone's status, in one request.
+    /// </summary>
+    /// <remarks>
+    /// The running trip screen asks every five seconds for each bus on the road, so the
+    /// three reads it needs are answered together by trip_active_poll, and only with the
+    /// columns it reads. The function runs under the driver's row policies, the same as
+    /// the separate reads did.
+    /// </remarks>
+    public async Task<TripPoll> PollTripAsync(string tripId)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post,
+            $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/rpc/trip_active_poll");
+        req.Headers.TryAddWithoutValidation("apikey", FleetWiseMobile.SupabaseConfig.Key);
+        req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {FleetWiseMobile.SupabaseConfig.Bearer}");
+        req.Content = new StringContent(JsonSerializer.Serialize(new { p_trip_id = tripId }), Encoding.UTF8, "application/json");
+
+        var res = await _http.SendAsync(req);
+        await ThrowIfRefusedAsync(res);
+
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+
+        Trip? trip = root.TryGetProperty("trip", out var t) && t.ValueKind == JsonValueKind.Object
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<Trip>(t.GetRawText(), RowSettings)
+            : null;
+        string? counter = root.TryGetProperty("counter_device_id", out var c) && c.ValueKind == JsonValueKind.String
+            ? c.GetString()
+            : null;
+        DeviceStatusDto? device = root.TryGetProperty("device", out var d) && d.ValueKind == JsonValueKind.Object
+            ? d.Deserialize<DeviceStatusDto>()
+            : null;
+
+        return new TripPoll(trip, counter, device);
+    }
 
     public Task PatchDeviceConfigAsync(string deviceId, object body)
         => PatchAsync($"device_config?device_id=eq.{Uri.EscapeDataString(deviceId)}", body);
