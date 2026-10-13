@@ -18,7 +18,8 @@ namespace FleetWise.Controllers
         private readonly IMemoryCache _cache;
 
         /// <summary>
-        /// How long the fleet, route and staff lists are reused between position reads.
+        /// How long the fleet, staff and open fault lists are reused between position reads.
+        /// The routes are held longer, see <see cref="RoutesLifetime"/>.
         /// </summary>
         /// <remarks>
         /// Only the trips and their positions change while a bus is running. Registering a
@@ -28,6 +29,17 @@ namespace FleetWise.Controllers
         /// look live affordable at all.
         /// </remarks>
         private static readonly TimeSpan ReferenceLifetime = TimeSpan.FromSeconds(60);
+
+        /// <summary>
+        /// How long the routes are reused, map paths included.
+        /// </summary>
+        /// <remarks>
+        /// Each route carries its stops and its line, about sixteen kilobytes, which makes the
+        /// route list the largest of the reference reads by far. Routes are drawn once and
+        /// edited in the database by hand, so ten minutes of staleness after an edit costs
+        /// nothing, while a read a minute would be a gigabyte a month at full service.
+        /// </remarks>
+        private static readonly TimeSpan RoutesLifetime = TimeSpan.FromMinutes(10);
 
         /// <summary>
         /// How recent a telemetry reading must be to count as live.
@@ -74,6 +86,14 @@ namespace FleetWise.Controllers
 
         /// <summary>Most recent trips per route the speeds are learned from.</summary>
         private const int SpeedHistoryTrips = 60;
+
+        /// <summary>
+        /// How long a finished trip's thinned readings are kept for learning: the history
+        /// window and a day, after which the trip is too old to be learned from anyway.
+        /// </summary>
+        private static readonly TimeSpan SampleLifetime = TimeSpan.FromDays(SpeedHistoryDays + 1);
+
+        private static string SampleKey(string tripId) => $"fleetmap:sample:{tripId}";
 
         /// <summary>Set once the database is found to have no fleetmap_live that takes p_seen.</summary>
         private static volatile bool _seenUnsupported;
@@ -124,17 +144,21 @@ namespace FleetWise.Controllers
         /// </summary>
         private static DateTime ForMap(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
 
-        /// <summary>Reads a reference list, reusing the last one for <see cref="ReferenceLifetime"/>.</summary>
-        private async Task<List<T>> ReferenceAsync<T>(string key, Func<Task<List<T>>> read)
+        /// <summary>Reads a reference list, reusing the last one for <see cref="ReferenceLifetime"/> or the lifetime given.</summary>
+        private async Task<List<T>> ReferenceAsync<T>(string key, Func<Task<List<T>>> read, TimeSpan? lifetime = null)
             where T : Postgrest.Models.BaseModel, new()
         {
             if (_cache.TryGetValue(key, out List<T>? cached) && cached is not null)
                 return cached;
 
             var fresh = await read();
-            _cache.Set(key, fresh, ReferenceLifetime);
+            _cache.Set(key, fresh, lifetime ?? ReferenceLifetime);
             return fresh;
         }
+
+        /// <summary>Every route in full, reused for <see cref="RoutesLifetime"/>.</summary>
+        private Task<List<BusRoute>> RoutesAsync() =>
+            ReferenceAsync("fleetmap:routes", async () => (await _supabase.From<BusRoute>().Get()).Models, RoutesLifetime);
 
         // Only the full map page requires the routes permission. The read-only endpoints
         // below stay available to any signed-in user, so the dashboard's map preview works
@@ -270,8 +294,7 @@ namespace FleetWise.Controllers
                     .Select("vehicle_id,plate_number,capacity,route_id,vehicle_status,out_of_service,retired_at")
                     .Get()).Models);
 
-            var routes = await ReferenceAsync("fleetmap:routes", async () =>
-                (await _supabase.From<BusRoute>().Get()).Models);
+            var routes = await RoutesAsync();
 
             var users = await ReferenceAsync("fleetmap:users", async () =>
                 (await _supabase.From<UserModel>()
@@ -503,14 +526,12 @@ namespace FleetWise.Controllers
         /// <summary>Learns a route's stop-to-stop speeds from its recent trips' readings.</summary>
         private async Task<SegmentSpeeds> LearnSpeedsAsync(int routeId, RouteLine line, IReadOnlyList<StopPlace> places)
         {
-            // ponytail: reads the route's last 60 trips again each day, thinned in the database.
-            // Read only trips not yet learned from if that ever weighs on the free tier.
             if (places.Count < 2)
                 return SegmentSpeeds.None;
 
             var since = PhClock.OperationalDay.AddDays(-SpeedHistoryDays).ToString("yyyy-MM-dd");
             var trips = (await _supabase.From<Trip>()
-                    .Select("trip_id,date,actual_start_time")
+                    .Select("trip_id,date,actual_start_time,trip_status")
                     .Filter("route_id", Postgrest.Constants.Operator.Equals, routeId.ToString())
                     .Filter("date", Postgrest.Constants.Operator.GreaterThanOrEqual, since)
                     .Order("date", Postgrest.Constants.Ordering.Descending)
@@ -519,10 +540,22 @@ namespace FleetWise.Controllers
                 .Take(SpeedHistoryTrips)
                 .ToList();
 
+            // A finished trip's readings never change, so they are kept from one day's learning
+            // to the next and only trips not yet read are asked for.
+            var readings = new List<TelemetryData>();
+            var unread = new List<string>();
+            foreach (var trip in trips)
+            {
+                if (_cache.TryGetValue(SampleKey(trip.TripId), out List<TelemetryData>? held) && held is not null)
+                    readings.AddRange(held);
+                else
+                    unread.Add(trip.TripId);
+            }
+            var finished = trips.Where(t => t.TripStatus == "Completed").Select(t => t.TripId).ToHashSet();
+
             // Thinned in the database by telemetry_sample. Where the database has no such
             // function yet, nothing is learned: reading every row instead is what it avoids.
-            var readings = new List<TelemetryData>();
-            foreach (var group in trips.Select(t => t.TripId).Chunk(20))
+            foreach (var group in unread.Chunk(20))
             {
                 Postgrest.Responses.BaseResponse sample;
                 try
@@ -538,7 +571,12 @@ namespace FleetWise.Controllers
                 {
                     return SegmentSpeeds.None;
                 }
-                readings.AddRange(ReadBundle.Parse(sample.Content).Rows<TelemetryData>("telemetry"));
+                var rows = ReadBundle.Parse(sample.Content).Rows<TelemetryData>("telemetry");
+                readings.AddRange(rows);
+
+                var byTrip = rows.ToLookup(r => r.TripId);
+                foreach (var tripId in group.Where(finished.Contains))
+                    _cache.Set(SampleKey(tripId), byTrip[tripId].ToList(), SampleLifetime);
             }
 
             // Each trip replayed through the map's own snapping, keeping where it was on the
@@ -748,8 +786,7 @@ namespace FleetWise.Controllers
             }
             var byTrip = readings.GroupBy(r => r.TripId).ToDictionary(g => g.Key, g => g.ToList());
 
-            var routes = await ReferenceAsync("fleetmap:routes", async () =>
-                (await _supabase.From<BusRoute>().Get()).Models);
+            var routes = await RoutesAsync();
             var users = await ReferenceAsync("fleetmap:users", async () =>
                 (await _supabase.From<UserModel>()
                     .Select("user_id,first_name,last_name")

@@ -85,12 +85,14 @@ public class TelemetryRetentionService : BackgroundService
         var cutoff = PhClock.NowForDb.AddMinutes(-_retentionMinutes);
 
         // The timestamp filter is required: PostgREST rejects an unfiltered delete, and it
-        // also keeps the cut strictly to rows past the retention window.
+        // also keeps the cut strictly to rows past the retention window. The deleted rows are
+        // not sent back: by default a delete returns every row it removed, which for a sweep
+        // is half a day of readings carried out of the database for nothing.
         await _supabase
             .From<TelemetryData>()
             .Filter("timestamp", Postgrest.Constants.Operator.LessThan,
                     cutoff.ToString("yyyy-MM-dd HH:mm:ss"))
-            .Delete();
+            .Delete(new Postgrest.QueryOptions { Returning = Postgrest.QueryOptions.ReturnType.Minimal });
 
         _logger.LogInformation(
             "Telemetry retention sweep complete: removed rows older than {Cutoff:yyyy-MM-dd HH:mm} ({Minutes}m).",
