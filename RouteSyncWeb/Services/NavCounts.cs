@@ -122,9 +122,26 @@ namespace FleetWise.Services
         ///
         /// This is the only thing watching for work filed somewhere the dashboard cannot
         /// see. A driver's leave request arrives without any page here being told, so the
-        /// rail is what notices, whichever page its reader happens to be on.
+        /// rail is what notices, whichever page its reader happens to be on, within
+        /// <see cref="SlowFreshness"/>.
         /// </remarks>
         private static readonly TimeSpan Freshness = TimeSpan.FromSeconds(5);
+
+        private const string SlowKey = "nav_badge_slow";
+
+        /// <summary>
+        /// How long the leave requests and the roster stand before they are read again.
+        /// </summary>
+        /// <remarks>
+        /// They change at human pace and are the larger half of what the badges are counted
+        /// from, so they are read once a minute while the rest keeps the rail's five-second
+        /// pace. A write made here drops them with the rest of the counts, so only leave filed
+        /// from a phone waits, and at most this long.
+        /// </remarks>
+        private static readonly TimeSpan SlowFreshness = TimeSpan.FromSeconds(60);
+
+        /// <summary>Set once the database is found to have no nav_badge_inputs that takes p_sections.</summary>
+        private static volatile bool _sectionsUnsupported;
 
         /// <summary>
         /// How close a shift has to be before a request against it is urgent.
@@ -166,6 +183,7 @@ namespace FleetWise.Services
         public void Invalidate()
         {
             _cache.Remove(Key);
+            _cache.Remove(SlowKey);
             _cache.Remove(ProjectedKey);
         }
 
@@ -205,15 +223,9 @@ namespace FleetWise.Services
             // of the fleet and the roster; and only the open incidents and the leave that is
             // waiting, asked back, or taking somebody off today, since those two tables grow
             // with the age of the fleet. The roster's rows and the security incidents come in
-            // sections of their own, read and failing apart from the rest.
-            var response = await _supabase.Rpc("nav_badge_inputs", new Dictionary<string, object?>
-            {
-                ["p_today"] = today.ToString("yyyy-MM-dd"),
-                ["p_this_month"] = RosterPublisher.FirstOf(today).ToString("yyyy-MM-dd"),
-                ["p_next_month"] = RosterPublisher.FirstOf(today).AddMonths(1).ToString("yyyy-MM-dd"),
-                ["p_open_statuses"] = LeaveEntitlement.OpenStatuses.ToList(),
-            });
-            var read = ReadBundle.Parse(response.Content);
+            // sections of their own, read and failing apart from the rest. The leave and the
+            // roster are read on their own slower pace, see SlowFreshness.
+            var (read, slow) = await ReadInputsAsync(today);
 
             var trips = read.Rows<Trip>("trips");
             var vehicles = read.Rows<Vehicle>("vehicles");
@@ -242,7 +254,7 @@ namespace FleetWise.Services
 
             // Asked again of each row rather than left to the dates the query matched on,
             // because a day inside an approved span can have been handed back since.
-            var offToday = read.Rows<LeaveRequest>("leave_today")
+            var offToday = slow.Rows<LeaveRequest>("leave_today")
                 .Where(l => LeaveEntitlement.CoversDay(l, today))
                 .Select(l => l.UserId)
                 .ToHashSet();
@@ -257,14 +269,14 @@ namespace FleetWise.Services
                      || offToday.Contains(t.DriverId)))
                 || TripStatus.LateBy(t, now) is not null);
 
-            var waiting = read.Rows<LeaveRequest>("leave_open");
+            var waiting = slow.Rows<LeaveRequest>("leave_open");
 
             // Counted once each. A request can be waiting on an answer and carry an
             // unanswered asking at the same time, and it is one thing on the queue either
             // way.
             var openCount = waiting
                 .Select(l => l.RequestId)
-                .Concat(read.Rows<LeaveRequest>("leave_asked").Select(l => l.RequestId))
+                .Concat(slow.Rows<LeaveRequest>("leave_asked").Select(l => l.RequestId))
                 .Distinct()
                 .Count();
 
@@ -303,8 +315,55 @@ namespace FleetWise.Services
                 new NavBadge(dispatch, dispatch > 0),
                 new NavBadge(openCount, urgent),
                 new NavBadge(flagged.Count, false),
-                await CountRosterAsync(today, read.Section("roster")),
+                await CountRosterAsync(today, slow.Section("roster")),
                 CountAudit(read));
+        }
+
+        /// <summary>
+        /// The badge inputs: the fast part read now, and the leave and roster part as held for
+        /// <see cref="SlowFreshness"/>. Both are the one full answer on a database whose
+        /// nav_badge_inputs cannot be asked for a part.
+        /// </summary>
+        private async Task<(ReadBundle Fast, ReadBundle Slow)> ReadInputsAsync(DateTime today)
+        {
+            if (!_sectionsUnsupported)
+            {
+                try
+                {
+                    var fast = await ReadSectionsAsync(today, "fast");
+                    if (!_cache.TryGetValue<ReadBundle>(SlowKey, out var slow) || slow is null)
+                    {
+                        slow = await ReadSectionsAsync(today, "slow");
+                        _cache.Set(SlowKey, slow, SlowFreshness);
+                    }
+                    return (fast, slow);
+                }
+                catch (Postgrest.Exceptions.PostgrestException ex)
+                    when (RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+                {
+                    // Read in full every time, as before, until the dashboard restarts.
+                    _sectionsUnsupported = true;
+                }
+            }
+
+            var all = await ReadSectionsAsync(today, null);
+            return (all, all);
+        }
+
+        private async Task<ReadBundle> ReadSectionsAsync(DateTime today, string? sections)
+        {
+            var args = new Dictionary<string, object?>
+            {
+                ["p_today"] = today.ToString("yyyy-MM-dd"),
+                ["p_this_month"] = RosterPublisher.FirstOf(today).ToString("yyyy-MM-dd"),
+                ["p_next_month"] = RosterPublisher.FirstOf(today).AddMonths(1).ToString("yyyy-MM-dd"),
+                ["p_open_statuses"] = LeaveEntitlement.OpenStatuses.ToList(),
+            };
+            if (sections is not null)
+                args["p_sections"] = sections;
+
+            var response = await _supabase.Rpc("nav_badge_inputs", args);
+            return ReadBundle.Parse(response.Content);
         }
 
         /// <summary>Security incidents waiting for somebody to look at them.</summary>
