@@ -13,7 +13,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +23,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
@@ -192,10 +198,14 @@ fun RsTextField(
     isError: Boolean = false,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    secret: Boolean = false
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    // Only a hardware keyboard reports the lock state. On-screen keyboards send no key
+    // events for ordinary typing, so on those the warning never appears.
+    var capsLock by remember { mutableStateOf(false) }
 
     Column(modifier) {
         RsFieldBox(focused = focused, error = isError) {
@@ -212,7 +222,10 @@ fun RsTextField(
                 visualTransformation = visualTransformation,
                 keyboardOptions = keyboardOptions,
                 keyboardActions = keyboardActions,
-                modifier = Modifier.weight(1f).padding(vertical = 13.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 13.dp)
+                    .onPreviewKeyEvent { capsLock = it.nativeKeyEvent.isCapsLockOn; false },
                 decorationBox = { inner ->
                     if (value.isEmpty()) {
                         Text(placeholder, color = RsColor.Muted, fontSize = 15.sp)
@@ -221,6 +234,17 @@ fun RsTextField(
                 }
             )
             if (trailing != null) trailing()
+        }
+        if (secret && focused && capsLock) {
+            Text(
+                "Caps Lock is on",
+                color = RsColor.Navy,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(top = 6.dp, start = 2.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite }
+            )
         }
     }
 }

@@ -254,7 +254,8 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
             visualTransformation =
                 if (showPasscode) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { submitPasscode() })
+            keyboardActions = KeyboardActions(onDone = { submitPasscode() }),
+            secret = true
         )
         if (!passOk) RsHint("Enter the fleet passcode to load the bus list.")
         Spacer(Modifier.height(14.dp))
@@ -578,7 +579,8 @@ private fun UnbindDialog(vm: CounterViewModel, dismiss: () -> Unit) {
                     trailing = { PasscodeReveal(showPasscode) { showPasscode = !showPasscode } },
                     isError = error,
                     visualTransformation =
-                        if (showPasscode) VisualTransformation.None else PasswordVisualTransformation()
+                        if (showPasscode) VisualTransformation.None else PasswordVisualTransformation(),
+                    secret = true
                 )
                 if (error) RsHint("Wrong passcode.", error = true)
             }

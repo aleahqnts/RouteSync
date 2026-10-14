@@ -431,3 +431,22 @@ body {
         white-space: nowrap;
     }
 }
+
+/* Caps Lock warning, placed under the focused password field by password-ui.js. */
+.caps-warn {
+    position: fixed;
+    z-index: 2000;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #F0C36D;
+    background: #FFF6DD;
+    color: #6B4400;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(27, 42, 86, .12);
+}
+
+.caps-warn:empty { display: none; }
