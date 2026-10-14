@@ -268,7 +268,7 @@
                     ctx.font = '600 11px Segoe UI';
                     ctx.textBaseline = 'top';
                     ctx.textAlign = 'center';
-                    ctx.fillStyle = rsTheme.pick('#9AA5B4', '#A1A5A9');
+                    ctx.fillStyle = rsTheme.pick('#5F6B7A', '#A1A5A9');
                     ctx.fillText(s.name, (left(s.from) + right(s.to)) / 2, area.top + 4);
                 });
 
@@ -361,15 +361,15 @@
                 },
                 scales: {
                     x: {
-                        title: { display: true, text: 'Hour of day (PHT)', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
+                        title: { display: true, text: 'Hour of day (PHT)', color: () => rsTheme.pick('#5F6B7A', '#9AA5B4'), font: { size: 11, family: 'Segoe UI' } },
                         grid: { display: false },
-                        ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' }
+                        ticks: { font: { size: 11, family: 'Segoe UI' }, color: () => rsTheme.pick('#5F6B7A', '#9AA5B4') }
                     },
                     y: {
                         beginAtZero: true,
                         suggestedMax: dbYMax(dbFirst),
-                        title: { display: true, text: 'Passengers', color: '#9AA5B4', font: { size: 11, family: 'Segoe UI' } },
-                        ticks: { precision: 0, font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' },
+                        title: { display: true, text: 'Passengers', color: () => rsTheme.pick('#5F6B7A', '#9AA5B4'), font: { size: 11, family: 'Segoe UI' } },
+                        ticks: { precision: 0, font: { size: 11, family: 'Segoe UI' }, color: () => rsTheme.pick('#5F6B7A', '#9AA5B4') },
                         grid: { color: () => rsTheme.pick('#F0F0F0', '#4D4D4D') }
                     }
                 }

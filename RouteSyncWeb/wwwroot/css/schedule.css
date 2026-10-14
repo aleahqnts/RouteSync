@@ -36,7 +36,7 @@
     .sch-btn-save { margin-left:auto; padding:9px 22px; border:none; border-radius:9px; background:#4AADA8; color:#fff; font-weight:700; font-size:.88rem; cursor:pointer; }
     .sch-btn-save:hover { background:#3d9490; }
     .sch-btn-save:disabled { background:#9AA5B4; cursor:not-allowed; }
-    .sch-hint { font-size:.8rem; color:light-dark(#9AA5B4, #A1A5A9); margin:0 0 18px; }
+    .sch-hint { font-size:.8rem; color:light-dark(#5F6B7A, #A1A5A9); margin:0 0 18px; }
 
     /* Which days a roster covers, and what editing them means. Kept on a phone, unlike
        the hint above: it is about this week, not about how the page works. */
@@ -111,7 +111,7 @@
     .sch-table thead th { background:light-dark(#FBFCFD, #383838); font-size:.78rem; color:light-dark(#4A5568, #D9DCE1); }
     .sch-shift-body { border-top:2px solid light-dark(#E8ECF0, #4E4E4E); }
     .sch-day-name { font-weight:700; color:light-dark(#2D3748, #DEE1E7); }
-    .sch-day-num { font-size:.72rem; color:light-dark(#9AA5B4, #A1A5A9); }
+    .sch-day-num { font-size:.72rem; color:light-dark(#5F6B7A, #A1A5A9); }
     .sch-today { background:light-dark(#EAF7F5, #354D4A) !important; }
     /* Above the conflict figures, which are drawn on the cells and would otherwise pass
        over the top of this column as the grid is scrolled sideways: both stood at the same
@@ -191,12 +191,12 @@
     .sch-cell.sch-dirty--found::before { transform: scale(1.6); }
     .sch-locked { display:flex; flex-direction:column; gap:4px; align-items:center; padding:6px; }
     .sch-lock-badge { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:20px; background:light-dark(#F0F2F5, #353535); color:light-dark(#5F6E83, #B4B8BD); }
-    .sch-lock-txt { font-size:.72rem; color:light-dark(#6B7C93, #B4B8BD); }
+    .sch-lock-txt { font-size:.72rem; color:light-dark(#5F6B7A, #B4B8BD); }
 
     /* A slot on a shift that finished with nothing rostered on it. Held apart from a blank
        cell that can still be filled, which is drawn with pickers, and quieter than a slot
        that carries a trip, since there is nothing here to read. */
-    .sch-locked--empty { opacity:.55; }
+    :root[data-theme="dark"] .sch-locked--empty { opacity:.55; }
     .sch-locked--empty .sch-lock-txt { font-style:italic; }
 
 
@@ -281,7 +281,7 @@
     .sch-modal-head { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
     .sch-modal-ico { font-size:1.4rem; color:light-dark(#E74C3C, #FFA193); }
     .sch-modal-head h3 { margin:0; font-size:1.1rem; color:light-dark(#1a2a4a, #E1E4E9); font-weight:800; }
-    .sch-modal-sub { margin:0 0 12px; font-size:.85rem; color:light-dark(#6B7C93, #B4B8BD); }
+    .sch-modal-sub { margin:0 0 12px; font-size:.85rem; color:light-dark(#5F6B7A, #B4B8BD); }
     /* Numbered rather than bulleted, and the figure is drawn rather than counted by the
        list, so the same one can be printed on the cells the line is about. */
     .sch-modal-list { margin:0 0 18px; padding:0; list-style:none; display:flex; flex-direction:column; gap:9px; }
@@ -511,7 +511,7 @@
 
         .sch-day-chip--on { border-color: #4AADA8; background: light-dark(#EAF7F5, #354D4A); color: light-dark(#26706c, #86CDC8); }
         .sch-chip-name { font-size: .76rem; font-weight: 700; }
-        .sch-chip-num { font-size: .64rem; color: light-dark(#9AA5B4, #A1A5A9); }
+        .sch-chip-num { font-size: .64rem; color: light-dark(#5F6B7A, #A1A5A9); }
         .sch-day-chip--on .sch-chip-num { color: light-dark(#4d8a86, #B1B8B7); }
         .sch-day-chip--all { justify-content: center; font-size: .76rem; font-weight: 700; }
 

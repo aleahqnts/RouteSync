@@ -68,7 +68,7 @@
     .dp-btn-refresh:hover { background:light-dark(#EAF7F5, #354D4A); }
     .dp-btn-refresh.spinning i { animation:dpSpin .7s linear infinite; }
     @keyframes dpSpin { to { transform:rotate(360deg); } }
-    .dp-updated { font-size:.78rem; color:light-dark(#8a98a3, #A7ACAF); }
+    .dp-updated { font-size:.78rem; color:light-dark(#5F6B7A, #A7ACAF); }
 
     .dp-msg-overlay { position:fixed; inset:0; background:rgba(13,28,40,.5); z-index:3000; display:flex; align-items:center; justify-content:center; padding:24px; }
     .dp-msg-box { background:light-dark(#fff, #393939); border-radius:16px; width:100%; max-width:440px; padding:24px; box-shadow:0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .432)); font-family:'Segoe UI',sans-serif; }
@@ -101,7 +101,7 @@
     .dp-apply-text { margin:0 0 8px; font-size:.9rem; color:light-dark(#1a2a4a, #E1E4E9); line-height:1.45; }
     .dp-apply-reason { margin:0 0 8px; font-size:.82rem; color:light-dark(#5A6473, #C0C3C9); line-height:1.4; }
     .dp-apply-note { margin:0 0 8px; font-size:.82rem; color:light-dark(#5F6F85, #BBBEC3); line-height:1.4; }
-    .dp-apply-source { margin:0; font-size:.76rem; color:light-dark(#8a98a3, #A7ACAF); }
+    .dp-apply-source { margin:0; font-size:.76rem; color:light-dark(#5F6B7A, #A7ACAF); }
     .dp-apply-actions { display:flex; gap:10px; margin-top:16px; }
     .dp-apply-actions .dp-msg-btn { flex:1; }
     .dp-apply-cancel { flex:1; border:1px solid light-dark(#E2E8F0, #4E4E4E); border-radius:10px; padding:11px; font-size:.9rem; font-weight:700; color:light-dark(#41505e, #D9DDE2); background:light-dark(#fff, #393939); cursor:pointer; }
@@ -2634,7 +2634,7 @@
         height: 19px;
         padding: 0 5px;
         border-radius: 999px;
-        background: #94A3B8;
+        background: light-dark(#5F6B7A, #94A3B8);
         color: #fff;
         font-size: .66rem;
         font-weight: 700;

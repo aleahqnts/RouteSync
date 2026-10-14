@@ -456,9 +456,9 @@
 
         .vh-item-dismiss:hover { color: light-dark(#C0392B, #FFA192); }
 
-    .vh-item-edit[data-state="fixed"] .vh-item-label { text-decoration: line-through; color: light-dark(#9AA3B2, #A2A5AA); }
+    .vh-item-edit[data-state="fixed"] .vh-item-label { text-decoration: line-through; color: light-dark(#5F6B7A, #A2A5AA); }
 
-    .vh-item-edit[data-state="dismissed"] .vh-item-label { text-decoration: line-through; color: light-dark(#9AA3B2, #A2A5AA); }
+    .vh-item-edit[data-state="dismissed"] .vh-item-label { text-decoration: line-through; color: light-dark(#5F6B7A, #A2A5AA); }
 
     .vh-item-edit[data-state="dismissed"] .vh-item-dismiss { color: light-dark(#C0392B, #FFA192); font-weight: 600; }
 
@@ -519,7 +519,7 @@
         font-weight: 700;
     }
 
-    .vh-page-gap { color: light-dark(#9AA3B2, #A2A5AA); font-size: 0.76rem; padding: 0 2px; }
+    .vh-page-gap { color: light-dark(#5F6B7A, #A2A5AA); font-size: 0.76rem; padding: 0 2px; }
 
     /* Everything recorded against a bus, newest first. */
     .vh-history {

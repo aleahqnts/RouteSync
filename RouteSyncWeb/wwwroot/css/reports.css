@@ -98,7 +98,7 @@
     .rp-refresh-ico { display: flex; align-items: center; font-size: 1rem; line-height: 1; }
     .rp-btn-refresh.spinning .rp-refresh-ico { animation:rpSpin .7s linear infinite; }
     @keyframes rpSpin { to { transform:rotate(360deg); } }
-    .rp-updated { font-size:.78rem; color:light-dark(#8a98a3, #A7ACAF); }
+    .rp-updated { font-size:.78rem; color:light-dark(#5F6B7A, #A7ACAF); }
     .rp-hidden-date { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 
     /* Stat grid. */

@@ -741,14 +741,14 @@
     display: true,
     grid: { display: false },
     border: { display: false },
-    ticks: { font: { size: 10, family: 'Segoe UI' }, color: '#9AA5B4', maxRotation: 0 }
+    ticks: { font: { size: 10, family: 'Segoe UI' }, color: () => rsTheme.pick('#5F6B7A', '#9AA5B4'), maxRotation: 0 }
     },
     y: {
     display: true,
     position: 'left',
     grid: { color: () => rsTheme.pick('#F0F0F0', '#4D4D4D') },
     border: { display: false },
-    ticks: { font: { size: 10, family: 'Segoe UI' }, color: '#9AA5B4', maxTicksLimit: 5 },
+    ticks: { font: { size: 10, family: 'Segoe UI' }, color: () => rsTheme.pick('#5F6B7A', '#9AA5B4'), maxTicksLimit: 5 },
     // Counts and takings are never negative, so the axis starts at zero even when a
     // period has nothing in it yet.
     beginAtZero: true,
@@ -791,8 +791,8 @@
     }
     },
     scales: {
-    x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' } },
-    y: { grid: { color: () => rsTheme.pick('#F0F0F0', '#4D4D4D') }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: '#9AA5B4' } }
+    x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: () => rsTheme.pick('#5F6B7A', '#9AA5B4') } },
+    y: { grid: { color: () => rsTheme.pick('#F0F0F0', '#4D4D4D') }, ticks: { font: { size: 11, family: 'Segoe UI' }, color: () => rsTheme.pick('#5F6B7A', '#9AA5B4') } }
     }
     }
     });
@@ -1501,7 +1501,7 @@
     td.colSpan = group.columns.length;
     td.textContent = 'No records.';
     td.style.textAlign = 'center';
-    td.style.color = '#9AA5B4';
+    td.style.color = 'light-dark(#5F6B7A, #9AA5B4)';
     tr.appendChild(td);
     tbody.appendChild(tr);
     } else {
