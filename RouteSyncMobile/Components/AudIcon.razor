@@ -1,0 +1,18 @@
+@* Who a message went to, as an icon: everyone, the driver's route, or the driver alone. *@
+@switch (Audience)
+{
+    case "all":
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z" /><path d="M15 8a5 5 0 0 1 0 8" /></svg>
+        break;
+    case "route":
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+        break;
+    default:
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+        break;
+}
+
+@code {
+    /// <summary>The message's target audience, lower case: all, route or driver.</summary>
+    [Parameter] public string? Audience { get; set; }
+}

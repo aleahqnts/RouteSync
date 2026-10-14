@@ -32,13 +32,24 @@ public class DriverDataService
     private sealed record AccountStart(int UserId, DateTime CreatedAt);
     private volatile AccountStart? _accountStart;
 
-    // The driver's messages as last read in full, and when. Between full reads only
-    // messages newer than the newest held are asked for. Messages are only ever added,
-    // so the full read is there to let the oldest fall out of the fourteen days.
+    // The driver's messages. Read in full once per session, and again on a pull to refresh;
+    // between those only messages newer than the newest held are asked for, and the oldest
+    // are dropped here as they age out. Messages are only ever added, so nothing a full read
+    // would bring back is missed.
     private readonly object _messagesGate = new();
     private int _messagesUser;
     private List<MessageModel> _messages = new();
-    private DateTime _messagesReadAt = DateTime.MinValue;
+
+    // How far back the list reaches once the driver has asked for older messages, which
+    // keeps them from being dropped again; null until then.
+    private DateTime? _messagesFloor;
+
+    /// <summary>How many days of messages a session starts with.</summary>
+    /// <remarks>Never shown to the driver: older ones are a tap away.</remarks>
+    private const int MessageDays = 30;
+
+    /// <summary>How many older messages one "Show older messages" brings.</summary>
+    public const int OlderMessagePage = 30;
 
     /// <summary>The columns the trip list and the driver's figures read.</summary>
     private const string TripListColumns =
@@ -532,49 +543,45 @@ public class DriverDataService
     /// they run, and messages addressed to them directly.
     /// </summary>
     /// <remarks>
-    /// Limited to the last 14 days to keep the history small. Which messages a driver may
-    /// read is decided by the database as it answers, from the trips they have run, so a
-    /// message to a route the driver was put on a moment ago is returned straight away.
+    /// A session starts with the last <see cref="MessageDays"/> days; older ones come from
+    /// <see cref="GetOlderMessagesAsync"/>. Which messages a driver may read is decided by
+    /// the database as it answers, from the trips they have run, so a message to a route
+    /// the driver was put on a moment ago is returned straight away.
     ///
-    /// Asked for every few seconds, so only messages newer than the newest one held are
-    /// read, which on most checks is none. The fourteen days are read whole every
-    /// <see cref="HeldFor"/>, which lets the oldest drop off the end.
+    /// Asked for every few seconds, so after the first read only messages newer than the
+    /// newest one held are read, which on most checks is none. The whole list is read again
+    /// only when <paramref name="full"/> asks for it, as a pull to refresh does. Reading it
+    /// again on a timer only to let the oldest fall off cost the most data of any check the
+    /// app made, so the oldest are dropped here instead.
     /// </remarks>
-    public async Task<List<MessageModel>> GetMessagesAsync(int userId)
+    public async Task<List<MessageModel>> GetMessagesAsync(int userId, bool full = false)
     {
-        var cutoff = PhTime.Now.AddDays(-14);
+        var cutoff = PhTime.Now.AddDays(-MessageDays);
+
+        long newestHeld;
+        lock (_messagesGate)
+        {
+            if (_messagesUser != userId)
+            {
+                full = true;
+                _messagesFloor = null;
+            }
+            if (_messagesFloor is DateTime floor && floor < cutoff) cutoff = floor;
+            newestHeld = full || _messages.Count == 0 ? 0 : _messages.Max(m => m.MessageId);
+        }
 
         // Messages sent before the account existed are never shown. Broadcasts match
         // every driver and route messages match any route they are assigned to, so
-        // without this clamp a new driver would inherit the entire 14-day backlog.
+        // without this clamp a new driver would inherit the entire backlog.
         var createdAt = await AccountCreatedAsync(userId);
         if (createdAt > cutoff) cutoff = createdAt;
-
-        long newestHeld;
-        bool full;
-        lock (_messagesGate)
-        {
-            full = _messagesUser != userId || DateTime.UtcNow - _messagesReadAt >= HeldFor;
-            newestHeld = full || _messages.Count == 0 ? 0 : _messages.Max(m => m.MessageId);
-        }
 
         Postgrest.Interfaces.IPostgrestTable<MessageModel> query = _supabase.From<MessageModel>()
             .Filter("created_at", Operator.GreaterThanOrEqual, cutoff.ToString("yyyy-MM-dd HH:mm:ss"));
         if (!full)
             query = query.Filter("message_id", Operator.GreaterThan, newestHeld.ToString());
         var r = await query.Order("created_at", Ordering.Descending).Get();
-
-        // Route messages are already only those for the driver's routes. A message to
-        // another driver is never returned either; this keeps it so if the app is ever
-        // signed in some other way.
-        var me = userId.ToString();
-        var mine = r.Models.Where(m => (m.TargetAudience ?? "").ToLowerInvariant() switch
-        {
-            "all"    => true,
-            "route"  => true,
-            "driver" => m.TargetId == me,
-            _        => false
-        }).ToList();
+        var mine = Mine(r.Models, userId);
 
         lock (_messagesGate)
         {
@@ -582,21 +589,82 @@ public class DriverDataService
             {
                 _messagesUser = userId;
                 _messages = mine;
-                _messagesReadAt = DateTime.UtcNow;
             }
             else if (_messagesUser == userId)
             {
-                // Two checks running at once can both bring back the same new message.
-                var held = _messages.Select(m => m.MessageId).ToHashSet();
-                _messages = mine.Where(m => held.Add(m.MessageId))
-                    .Concat(_messages)
-                    .OrderByDescending(m => m.CreatedAt)
-                    .ThenByDescending(m => m.MessageId)
-                    .ToList();
+                _messages = Merge(_messages, mine);
             }
+
+            // Those that have aged out of the window, as a full read would have left them.
+            _messages.RemoveAll(m => PhTime.Raw(m.CreatedAt) < cutoff);
 
             return _messages.ToList();
         }
+    }
+
+    /// <summary>
+    /// The next <see cref="OlderMessagePage"/> messages before the oldest one held, added to
+    /// the list, and whether there is anything older still.
+    /// </summary>
+    /// <remarks>
+    /// Paged by count rather than by days, so a quiet month costs one small read and a busy
+    /// one never more than a page. Messages from before the account was made are not
+    /// fetched, the same as for the first read.
+    /// </remarks>
+    public async Task<(List<MessageModel> Messages, bool More)> GetOlderMessagesAsync(int userId)
+    {
+        long? oldestHeld;
+        lock (_messagesGate)
+            oldestHeld = _messagesUser == userId && _messages.Count > 0 ? _messages.Min(m => m.MessageId) : null;
+
+        var createdAt = await AccountCreatedAsync(userId);
+        Postgrest.Interfaces.IPostgrestTable<MessageModel> query = _supabase.From<MessageModel>()
+            .Filter("created_at", Operator.GreaterThanOrEqual, createdAt.ToString("yyyy-MM-dd HH:mm:ss"));
+        query = oldestHeld is long id
+            ? query.Filter("message_id", Operator.LessThan, id.ToString())
+            : query.Filter("created_at", Operator.LessThan, PhTime.Now.AddDays(-MessageDays).ToString("yyyy-MM-dd HH:mm:ss"));
+        var r = await query.Order("message_id", Ordering.Descending).Limit(OlderMessagePage).Get();
+        var older = Mine(r.Models, userId);
+
+        lock (_messagesGate)
+        {
+            if (_messagesUser != userId) return (_messages.ToList(), false);
+
+            _messages = Merge(_messages, older);
+            if (_messages.Count > 0)
+            {
+                var floor = _messages.Min(m => PhTime.Raw(m.CreatedAt));
+                if (_messagesFloor is not DateTime held || floor < held) _messagesFloor = floor;
+            }
+            return (_messages.ToList(), r.Models.Count == OlderMessagePage);
+        }
+    }
+
+    // Route messages are already only those for the driver's routes. A message to another
+    // driver is never returned either; this keeps it so if the app is ever signed in some
+    // other way.
+    private static List<MessageModel> Mine(IEnumerable<MessageModel> rows, int userId)
+    {
+        var me = userId.ToString();
+        return rows.Where(m => (m.TargetAudience ?? "").ToLowerInvariant() switch
+        {
+            "all"    => true,
+            "route"  => true,
+            "driver" => m.TargetId == me,
+            _        => false
+        }).ToList();
+    }
+
+    // Newest first. Two checks running at once can both bring back the same message, and
+    // the copy already held is kept, so a read mark made on it is not lost.
+    private static List<MessageModel> Merge(List<MessageModel> held, List<MessageModel> fresh)
+    {
+        var ids = held.Select(m => m.MessageId).ToHashSet();
+        return fresh.Where(m => ids.Add(m.MessageId))
+            .Concat(held)
+            .OrderByDescending(m => m.CreatedAt)
+            .ThenByDescending(m => m.MessageId)
+            .ToList();
     }
 
     /// <summary>When the account was made, read once per driver.</summary>

@@ -1,4 +1,4 @@
-﻿@page "/notifications"
+@page "/notifications"
 @implements IDisposable
 @inject SessionService Session
 @inject DriverDataService Data
@@ -20,13 +20,7 @@ else
 {
     <div class="notif">
         <div class="nbar">
-            <div>
-                <h1 class="ntitle">Notifications</h1>
-                @if (UnreadCount > 0)
-                {
-                    <p class="nsub">@UnreadCount unread</p>
-                }
-            </div>
+            <h1 class="ntitle">Notifications</h1>
             @if (UnreadCount > 0)
             {
                 <button class="nmark" @onclick="MarkAllRead" disabled="@markingAll">
@@ -35,95 +29,186 @@ else
             }
         </div>
 
+        <div class="nchips" role="tablist" aria-label="Show">
+            <button role="tab" class="nchip @(unreadOnly ? "" : "on")" aria-selected="@(!unreadOnly)"
+                    @onclick="() => unreadOnly = false">All</button>
+            <button role="tab" class="nchip @(unreadOnly ? "on" : "")" aria-selected="@unreadOnly"
+                    @onclick="() => unreadOnly = true">
+                Unread
+                @if (UnreadCount > 0)
+                {
+                    <span class="ncount">@(UnreadCount > 99 ? "99+" : UnreadCount.ToString())</span>
+                }
+            </button>
+        </div>
+
         @if (!items.Any())
         {
             <div class="nempty">
                 <div class="bao-disc"><BaoHead Face="sleepy" /></div>
+                <p class="nempty-t">No messages yet</p>
+                <p class="nempty-s">Messages from dispatch will show up here.</p>
+            </div>
+        }
+        else if (unreadOnly && UnreadCount == 0)
+        {
+            <div class="nempty">
+                <div class="bao-disc"><BaoHead /></div>
                 <p class="nempty-t">All caught up</p>
-                <p class="nempty-s">No messages in the last 2 weeks.</p>
+                <p class="nempty-s">You have read every message.</p>
+                <button class="nsee" @onclick="() => unreadOnly = false">See All Messages</button>
             </div>
         }
         else
         {
+            @if (unreadOnly)
+            {
+                @foreach (var n in Pinned)
+                {
+                    <div class="npin" @key="n.MessageId" @onclick="() => Open(n)">
+                        <div class="npin-head">
+                            <span class="npin-tag">Urgent</span>
+                            <span class="npin-scope">@ScopeLabel(n)</span>
+                            <span class="npin-when">@When(n)</span>
+                        </div>
+                        <p class="npin-t">@n.Subject</p>
+                        <p class="npin-p">@n.Body</p>
+                        <button class="npin-ack" @onclick="() => Acknowledge(n)" @onclick:stopPropagation="true">Got It</button>
+                    </div>
+                }
+            }
+
             @foreach (var g in Grouped)
             {
                 <h2 class="ngroup">@g.Key</h2>
                 @foreach (var n in g)
                 {
-                    <div class="ncard @(IsUnread(n) ? "unread" : "")" @onclick="@(() => Toggle(n))">
-                        <span class="nicon @IconClass(n)">
-                            @switch (Aud(n))
+                    var unread = Watch.IsUnread(n);
+                    <button class="nrow @(unread ? "unread" : "") @(IsHighPriority(n) ? "urgent" : "")"
+                            @key="n.MessageId" @onclick="() => Open(n)">
+                        <span class="nicon @AudClass(n)"><AudIcon Audience="@Aud(n)" /></span>
+                        <span class="nbody">
+                            <span class="nt">@n.Subject</span>
+                            <span class="np">@n.Body</span>
+                        </span>
+                        <span class="nside">
+                            <span class="nwhen">@When(n)</span>
+                            @if (unread)
                             {
-                                case "all":
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z" /><path d="M15 8a5 5 0 0 1 0 8" /></svg>
-                                    break;
-                                case "route":
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
-                                    break;
-                                default:
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                                    break;
+                                <span class="ndot" aria-label="Unread"></span>
                             }
                         </span>
-                        <div class="nbody">
-                            <div class="nhead">
-                                <span class="nscope @ScopeClass(n)">@ScopeLabel(n)</span>
-                                @if (IsHighPriority(n))
-                                {
-                                    <span class="nprio">High priority</span>
-                                }
-                            </div>
-                            <p class="nt">@n.Subject <span class="nwhen">· @When(n)</span></p>
-                            @if (expandedId == n.MessageId)
-                            {
-                                <p class="np full">@n.Body</p>
-                                <p class="ntime">@PhTime.Raw(n.CreatedAt).ToString("MMM d, yyyy · h:mm tt")</p>
-                            }
-                            else
-                            {
-                                <p class="np">@n.Body</p>
-                            }
-                        </div>
-                        @if (IsUnread(n))
-                        {
-                            <span class="ndot"></span>
-                        }
-                    </div>
+                    </button>
+                }
+            }
+
+            @if (!unreadOnly)
+            {
+                @if (olderMore)
+                {
+                    <button class="nolder" @onclick="LoadOlder" disabled="@loadingOlder">
+                        @(loadingOlder ? "Loading…" : "Show older messages")
+                    </button>
+                }
+                else
+                {
+                    <p class="nend">That is everything</p>
                 }
             }
         }
     </div>
+
+    @if (open is not null)
+    {
+        <div class="nscrim" @onclick="Close"></div>
+        <div class="nsheet" role="dialog" aria-modal="true" aria-labelledby="nsheet-title">
+            <div class="ngrab"></div>
+            <div class="nsheet-head">
+                <span class="nicon @AudClass(open)"><AudIcon Audience="@Aud(open)" /></span>
+                <div>
+                    <p class="nsheet-scope">
+                        @ScopeLabel(open)
+                        @if (IsHighPriority(open))
+                        {
+                            <span class="npin-tag">Urgent</span>
+                        }
+                    </p>
+                    <p class="nsheet-sent">@PhTime.Raw(open.CreatedAt).ToString("ddd, MMM d, yyyy · h:mm tt")</p>
+                </div>
+            </div>
+            <h2 id="nsheet-title" class="nsheet-t">@open.Subject</h2>
+            <p class="nsheet-b">@open.Body</p>
+            <button class="nclose" @onclick="Close">Close</button>
+        </div>
+    }
 }
 
 @code {
     private bool loading = true;
     private List<MessageModel> items = new();
 
+    private bool unreadOnly;
+    private MessageModel? open;
+
+    private bool olderMore = true;
+    private bool loadingOlder;
+
+    // Urgent messages still waiting are pinned above the Unread list, each with its own
+    // acknowledgement, and left out of the day groups beneath it.
+    private IEnumerable<MessageModel> Pinned =>
+        items.Where(n => Watch.IsUnread(n) && IsHighPriority(n));
+
     private IEnumerable<IGrouping<string, MessageModel>> Grouped =>
-        items.GroupBy(n => Label(PhTime.Raw(n.CreatedAt)));
+        (unreadOnly ? items.Where(n => Watch.IsUnread(n) && !IsHighPriority(n)) : items)
+            .GroupBy(n => Label(PhTime.Raw(n.CreatedAt)));
 
     private static string Aud(MessageModel n) => (n.TargetAudience ?? "").ToLowerInvariant();
 
-    // The unread dot and mark-as-read apply only to messages with a single recipient.
-    private static bool IsUnread(MessageModel n) => Aud(n) == "driver" && !n.IsRead;
-
-    private int UnreadCount => items.Count(IsUnread);
+    private int UnreadCount => items.Count(Watch.IsUnread);
     private bool markingAll;
 
     private async Task MarkAllRead()
     {
         markingAll = true;
+        try { await Watch.MarkReadAsync(items); }
+        finally { markingAll = false; }
+    }
+
+    // Opening a message is reading it.
+    private async Task Open(MessageModel n)
+    {
+        open = n;
+        BackNavigation.PageHandler = HandleHardwareBack;
+        await Watch.MarkReadAsync(n);
+    }
+
+    private async Task Acknowledge(MessageModel n) => await Watch.MarkReadAsync(n);
+
+    private void Close()
+    {
+        open = null;
+        if (BackNavigation.PageHandler == HandleHardwareBack) BackNavigation.PageHandler = null;
+    }
+
+    // The back button closes an open message before it leaves the tab.
+    private bool HandleHardwareBack()
+    {
+        if (open is null) return false;
+        InvokeAsync(() => { Close(); StateHasChanged(); });
+        return true;
+    }
+
+    private async Task LoadOlder()
+    {
+        loadingOlder = true;
         try
         {
-            foreach (var n in items.Where(IsUnread))
-            {
-                await Data.MarkMessageReadAsync(n.MessageId);
-                n.IsRead = true;
-            }
-            await Watch.RefreshNow();
+            var (all, more) = await Data.GetOlderMessagesAsync(Session.CurrentUser!.UserId);
+            items = all;
+            olderMore = more;
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Msg.MarkAll] {ex}"); }
-        finally { markingAll = false; }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Notifications.Older] {ex}"); }
+        finally { loadingOlder = false; }
     }
 
     /// <summary>
@@ -131,7 +216,7 @@ else
     /// </summary>
     /// <param name="withDate">
     /// Whether an older message also gives its date. The tab's group heading carries the
-    /// date, so its cards leave it out; a popup stands alone and needs it.
+    /// date, so its rows leave it out; a popup stands alone and needs it.
     /// </param>
     public static string When(MessageModel n, bool withDate = false)
     {
@@ -148,24 +233,16 @@ else
 
     private static string ScopeLabel(MessageModel n) => Aud(n) switch
     {
-        "all"   => "Broadcast · All drivers",
-        "route" => "Route message",
-        _       => "Direct message"
+        "all"   => "All drivers",
+        "route" => "Your route",
+        _       => "For you"
     };
 
-    private static string ScopeClass(MessageModel n) => Aud(n) switch
+    private static string AudClass(MessageModel n) => Aud(n) switch
     {
-        "all"   => "scope-all",
-        "route" => "scope-route",
-        _       => "scope-driver"
-    };
-
-    // The icon reflects the audience and stays uniform. Priority is shown by the tag instead.
-    private static string IconClass(MessageModel n) => Aud(n) switch
-    {
-        "all"   => "completed",
-        "route" => "assigned",
-        _       => "message"
+        "all"   => "aud-all",
+        "route" => "aud-route",
+        _       => "aud-driver"
     };
 
     private static string Label(DateTime d)
@@ -173,7 +250,7 @@ else
         var dd = d.Date;
         if (dd == PhTime.Now.Date) return "Today";
         if (dd == PhTime.Now.Date.AddDays(-1)) return "Yesterday";
-        return dd.ToString("MMMM d, yyyy");
+        return dd.ToString(dd.Year == PhTime.Now.Year ? "dddd, MMMM d" : "MMMM d, yyyy");
     }
 
     protected override async Task OnInitializedAsync()
@@ -186,13 +263,15 @@ else
             System.Diagnostics.Debug.WriteLine($"[Notifications.Load] {ex}");
         }
         finally { loading = false; }
-        await Watch.RefreshNow();   // sync Watch cache w/ DB (authoritative is_read)
-        Watch.MarkSeenNow();        // opening the tab clears broadcast/route from the badge
+        Watch.Changed += OnWatchChanged;
         _ = PollLoop();             // background: new messages appear without pull-to-refresh
     }
 
+    // The badge and the read marks belong to the watch, so the rows follow it.
+    private void OnWatchChanged() => InvokeAsync(StateHasChanged);
+
     // Re-fetches every five seconds while the tab is open, so new messages appear on their
-    // own. The badge is kept clear at the same time, since the driver is reading the list.
+    // own. Each check asks only for messages newer than the newest held.
     private readonly CancellationTokenSource pollCts = new();
 
     private async Task PollLoop()
@@ -208,7 +287,6 @@ else
                     await InvokeAsync(() =>
                     {
                         items = fresh;
-                        Watch.MarkSeenNow();
                         StateHasChanged();
                     });
                 }
@@ -216,19 +294,6 @@ else
             }
         }
         catch (OperationCanceledException) { /* page closed */ }
-    }
-
-    private long? expandedId;
-
-    private async Task Toggle(MessageModel n)
-    {
-        expandedId = expandedId == n.MessageId ? null : n.MessageId;
-        if (IsUnread(n))
-        {
-            n.IsRead = true;
-            try { await Data.MarkMessageReadAsync(n.MessageId); await Watch.RefreshNow(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Msg.Read] {ex}"); }
-        }
     }
 
     private DotNetObjectReference<Notifications>? _ptrRef;
@@ -240,14 +305,19 @@ else
             await JS.InvokeVoidAsync("ptr.set", _ptrRef);
         }
     }
+
+    // A pull reads the whole list again, the one time it is read in full after the first.
     [JSInvokable] public async Task Refresh()
     {
-        items = await Data.GetMessagesAsync(Session.CurrentUser!.UserId);
-        Watch.MarkSeenNow();
+        items = await Data.GetMessagesAsync(Session.CurrentUser!.UserId, full: true);
+        await Watch.RefreshNow();
         StateHasChanged();
     }
+
     public void Dispose()
     {
+        Watch.Changed -= OnWatchChanged;
+        if (BackNavigation.PageHandler == HandleHardwareBack) BackNavigation.PageHandler = null;
         pollCts.Cancel();
         pollCts.Dispose();
         _ptrRef?.Dispose();

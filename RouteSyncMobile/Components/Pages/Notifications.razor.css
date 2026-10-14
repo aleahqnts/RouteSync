@@ -1,13 +1,3 @@
-﻿.page-loading {
-    min-height: 80vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #8a93a2;
-}
-
-.muted { color: #8a93a2; }
-
 .notif {
     padding: 64px 22px 28px;
 }
@@ -16,7 +6,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    gap: 12px;
 }
 
 .ntitle {
@@ -26,37 +16,60 @@
     color: #1b2a56;
 }
 
-.nsub {
-    margin: 2px 0 0;
-    font-size: 12px;
-    font-weight: 700;
-    color: #2e9e8f;
-}
-
 .nmark {
-    border: 1px solid #cfe5df;
-    background: #e8f5f1;
+    border: none;
+    background: none;
     color: #2e9e8f;
-    border-radius: 999px;
-    padding: 7px 14px;
-    font-size: 12.5px;
+    padding: 6px 0;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
 }
 
 .nmark:disabled { opacity: 0.6; }
 
-.nwhen {
-    color: #9aa3b2;
-    font-size: 12px;
+/* All and Unread. */
+.nchips {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 6px;
+}
+
+.nchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 16px;
+    background: #eef0f4;
+    color: #3b4660;
+    font-size: 13px;
     font-weight: 600;
+    cursor: pointer;
+}
+
+.nchip.on {
+    background: #1b2a56;
+    color: #fff;
+}
+
+.ncount {
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #2e9e8f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
 }
 
 .nempty {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 60px 20px;
+    padding: 56px 20px;
     text-align: center;
 }
 
@@ -73,119 +86,273 @@
     color: #8a93a2;
 }
 
-.ngroup {
-    margin: 18px 0 10px;
-    font-size: 16px;
-    font-weight: 800;
+.nsee {
+    margin-top: 16px;
+    border: 1px solid #cfd5e1;
+    background: #fff;
     color: #1b2a56;
-}
-
-.ncard {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid #e6e8ee;
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
 }
 
-/* Opened out. A notice carries the decision, then a blank line, then whatever the
-   dispatcher wrote, and pre-line is what keeps the two apart on screen. Collapsed the
-   body is one clipped line, so the break only matters here. */
-.np.full {
-    white-space: pre-line;
-    overflow: visible;
-    line-height: 1.45;
+.ngroup {
+    margin: 18px 0 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8a93a2;
 }
 
-.ntime {
-    margin: 8px 0 0;
-    color: #9aa3b2;
-    font-size: 12px;
+/* One message. Unread is said twice and no more: a bold title and a dot. */
+.nrow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 2px;
+    border: none;
+    border-bottom: 1px solid #eceef3;
+    background: none;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
 }
 
 .nicon {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    flex: 0 0 42px;
+    flex: 0 0 38px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.nicon svg { width: 22px; height: 22px; }
+.nicon ::deep svg { width: 20px; height: 20px; }
 
-.nicon.completed { background: #e3f7ea; color: #3aaf5d; }
-.nicon.assigned { background: #e4f0fb; color: #3b82c4; }
-.nicon.message { background: #efeaff; color: #7a5cf0; }
-.nicon.alert { background: #fff0e0; color: #e8902a; }
+.nicon.aud-all { background: #eef0f4; color: #59627a; }
+.nicon.aud-route { background: #eaeefa; color: #3b5bb5; }
+.nicon.aud-driver { background: #e6f6f2; color: #2e9e8f; }
+.nrow.urgent .nicon { background: #fdeff0; color: #d0494b; }
 
-.ncard.unread {
-    background: #e6f6f2;
-    border-color: #7fcbbd;
-    border-left: 4px solid #2e9e8f;
-    box-shadow: 0 1px 4px rgba(46, 158, 143, .12);
+.nbody {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 
-.ncard.unread .nt { color: #14463f; }
+.nt {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #3b4660;
+    line-height: 1.3;
+}
+
+.nrow.unread .nt {
+    font-weight: 800;
+    color: #1b2a56;
+}
+
+.np {
+    margin-top: 2px;
+    font-size: 13px;
+    color: #6b7487;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.nside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 7px;
+    flex: 0 0 auto;
+    padding-top: 2px;
+}
+
+.nwhen {
+    color: #9aa3b2;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
 
 .ndot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
     background: #2e9e8f;
-    flex: 0 0 9px;
-    margin-left: auto;
 }
 
-.nbody { min-width: 0; flex: 1; }
+.nrow.urgent .ndot { background: #d0494b; }
 
-.nt {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 800;
-    color: #1b2a56;
+/* Urgent and still waiting, held at the top of Unread until acknowledged. */
+.npin {
+    margin: 10px 0 4px;
+    padding: 12px 14px;
+    border: 1px solid #f2d3d5;
+    border-radius: 16px;
+    background: #fdeff0;
+    cursor: pointer;
 }
 
-.np {
-    margin: 2px 0 0;
-    font-size: 13px;
-    color: #8a93a2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.nhead {
+.npin-head {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 3px;
+    gap: 8px;
 }
 
-.nscope {
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: .3px;
-    text-transform: uppercase;
+.npin-tag {
+    display: inline-block;
     padding: 2px 8px;
     border-radius: 999px;
+    background: #d0494b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    vertical-align: 1px;
 }
 
-.nscope.scope-all { background: #e3f7ea; color: #2c8c4c; }
-.nscope.scope-route { background: #e4f0fb; color: #2f6fb0; }
-.nscope.scope-driver { background: #efeaff; color: #6a4cd8; }
+.npin-scope { font-size: 12px; color: #8a4a4c; }
+.npin-when { margin-left: auto; font-size: 12px; color: #8a4a4c; }
 
-.nprio {
-    font-size: 10.5px;
+.npin-t {
+    margin: 8px 0 0;
+    font-size: 15px;
     font-weight: 800;
-    letter-spacing: .3px;
-    text-transform: uppercase;
-    padding: 2px 8px;
+    color: #5e1c1e;
+}
+
+.npin-p {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: #8a4a4c;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.npin-ack {
+    margin-top: 10px;
+    border: none;
     border-radius: 999px;
-    background: #fdecec;
-    color: #d23b3b;
+    padding: 6px 16px;
+    background: #d0494b;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.nolder {
+    display: block;
+    margin: 18px auto 0;
+    border: none;
+    background: none;
+    color: #2e9e8f;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.nolder:disabled { color: #8a93a2; }
+
+.nend {
+    margin: 18px 0 0;
+    text-align: center;
+    font-size: 12px;
+    color: #9aa3b2;
+}
+
+/* A message opened in full, as a sheet over the list. */
+.nscrim {
+    position: fixed;
+    inset: 0;
+    z-index: 8000;
+    background: rgba(20, 30, 55, .45);
+    animation: fade-in 0.18s ease-out;
+}
+
+.nsheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 8001;
+    max-height: 82vh;
+    overflow-y: auto;
+    padding: 10px 22px calc(22px + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    background: #fff;
+    animation: sheet-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.ngrab {
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: #d5d9e2;
+    margin: 0 auto 16px;
+}
+
+.nsheet-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nsheet-scope {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #3b4660;
+}
+
+.nsheet-sent {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: #8a93a2;
+}
+
+.nsheet-t {
+    margin: 16px 0 8px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1b2a56;
+    line-height: 1.3;
+}
+
+/* A notice carries the decision, then a blank line, then whatever the dispatcher wrote,
+   and pre-line is what keeps the two apart on screen. */
+.nsheet-b {
+    margin: 0;
+    font-size: 14.5px;
+    color: #3b4660;
+    line-height: 1.55;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.nclose {
+    display: block;
+    width: 100%;
+    margin-top: 22px;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    background: #1b2a56;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
 }
