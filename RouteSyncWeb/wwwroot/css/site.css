@@ -1363,6 +1363,25 @@ th.rs-sortable:focus-visible {
     height: calc(var(--bao-w) * 1380 / 1840);
 }
 .bao--bust { position: relative; z-index: 3; width: 100%; height: 100%; cursor: pointer; }
+.bao-defs { position: absolute; }
+/* His dark body would vanish on the dark page and panel, so dark mode outlines him. The
+   outline goes round the whole stage, not each drawing, so the reaching arm and the body
+   share one silhouette with no line where the sleeve meets the shirt. The stage's own
+   clip, applied after the filter, cuts the outline at the panel edge the same way the
+   reach drawing is cut (its shapes in stage units, the panel edge at 100%), so a hand
+   behind the panel has no line under it. While the arm is over the panel nothing is cut;
+   the filter itself leaves out the line under his shirt. */
+:root[data-theme="dark"] .bao-stage {
+    --bao-stage-behind: polygon(-50% -50%, 150% -50%, 150% 300%, 98.21% 300%, 98.21% 114.28%, 96.77% 107.14%, 92.85% 101.91%, 87.5% 100%, -50% 100%);
+    --bao-stage-free: polygon(-50% -50%, 150% -50%, 150% 300%, 98.21% 300%, 98.21% 300%, 96.77% 300%, 92.85% 300%, 87.5% 300%, -50% 300%);
+    filter: url(#bao-outline);
+    clip-path: var(--bao-stage-behind);
+}
+:root[data-theme="dark"] .bao-stage--tap { animation: bao-breathe 3.6s ease-in-out infinite, bao-stage-mask .9s ease-in-out; }
+@keyframes bao-stage-mask {
+    0%, 30%, 75%, 100% { clip-path: var(--bao-stage-behind); }
+    31%, 74% { clip-path: var(--bao-stage-free); }
+}
 .bao-reach {
     position: absolute;
     left: 0;
@@ -1440,6 +1459,7 @@ th.rs-sortable:focus-visible {
     .bao .bao-head,
     .bao--head,
     .bao-stage,
+    :root[data-theme="dark"] .bao-stage--tap,
     .bao.bao--poke,
     .bao.bao--poke .bao-eye,
     .bao--bust.bao--poke .bao-head,

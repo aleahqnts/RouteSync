@@ -15,6 +15,24 @@
         @if (!onMap)
         {
             @await Html.PartialAsync("_BaoBust")
+            @* Bao's outline in dark mode: his alpha grown by 1.25px, filled light, with
+               the art drawn over it. site.css applies it to his stage under the dark
+               theme only. The region is sized for the reaching arm, which hangs well below
+               the stage's box.
+
+               The strip is the 2px under his shirt, in the stage's pixels (112 by 84).
+               The shirt is cut flat at the panel edge, which is not an edge of his, so no
+               outline is drawn there; the reaching arm keeps its own outline below it. *@
+            <svg class="bao-defs" width="0" height="0" aria-hidden="true" focusable="false">
+                <filter id="bao-outline" x="-25%" y="-25%" width="150%" height="200%">
+                    <feMorphology in="SourceAlpha" operator="dilate" radius="1.25" result="grown" />
+                    <feFlood flood-color="#D5D9E0" />
+                    <feComposite operator="in" in2="grown" result="line" />
+                    <feFlood x="-30" y="84" width="106.6" height="2" result="strip" />
+                    <feComposite in="line" in2="strip" operator="out" />
+                    <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+            </svg>
         }
         @* It starts folded to its header and count, and over the map to a small tab, so the
            page stays clear until someone opens it. *@
