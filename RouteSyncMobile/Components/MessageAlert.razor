@@ -1,78 +1,53 @@
 @implements IDisposable
 @inject MessageWatch Watch
-@inject DriverDataService Data
 @using FleetWiseMobile.Models
 
-@* Non-blocking message toasts, stacked newest on top, at most MaxShown at once. Messages
-   arrive in batches when several are sent between checks, so they show together rather
-   than one after another; any beyond the stack wait and take the next free place. Normal
-   messages hide themselves after 8 seconds; urgent ones stay until acknowledged. Tapping a
-   card expands its body in place, so the screen underneath is not replaced. Positioning is
-   inlined so a stale scoped-css cache can never bury the stack off-screen. *@
-@if (_shown.Count > 0)
+@* One message at a time across the top of the screen, like a phone's own notification.
+   Messages that arrive together wait their turn. Normal messages hide themselves after
+   8 seconds; urgent ones stay until acknowledged. Tapping expands the body in place, so
+   the screen underneath is not replaced. The box is styled inline so a stale scoped-css
+   cache can never bury it off-screen. *@
+@if (current is not null)
 {
     <div style="position:fixed; top:52px; left:14px; right:14px; z-index:9000;
-                display:flex; flex-direction:column; gap:8px;
-                max-height:calc(100vh - 70px); overflow-y:auto;">
-        @foreach (var toast in _shown.OrderByDescending(t => t.Message.CreatedAt))
-        {
-            var m = toast.Message;
-            <div @key="m.MessageId"
-                 style="background:@(IsHigh(m) ? "#fdeff0" : "#eef0f4");
-                        border:1px solid @(IsHigh(m) ? "#f2d3d5" : "#e2e5ec");
-                        border-radius:16px; padding:13px 15px; flex:0 0 auto;
-                        box-shadow:0 12px 36px rgba(20,30,55,0.38); cursor:pointer;"
-                 @onclick="() => ToggleExpand(toast)">
-                <div style="display:flex; align-items:center; gap:7px; margin-bottom:6px;">
-                    <span style="width:7px; height:7px; border-radius:50%; flex:0 0 7px;
-                                 background:@(IsHigh(m) ? "#d0494b" : "#2e9e8f");"></span>
-                    <span style="font:700 11px sans-serif; letter-spacing:.2px; text-transform:uppercase; color:#6a7386;">
-                        @ScopeLabel(m)
-                    </span>
-                    @if (IsHigh(m))
-                    {
-                        <span style="font:800 10px sans-serif; text-transform:uppercase; padding:2px 8px;
-                                     border-radius:999px; background:#d0494b; color:#fff;">Urgent</span>
-                    }
-                    <span style="margin-left:auto; font:600 11px sans-serif; color:#9aa3b2;">@Pages.Notifications.When(m, withDate: true)</span>
-                    <button @onclick="() => Dismiss(toast)" @onclick:stopPropagation="true"
-                            style="flex:0 0 auto; border:none; cursor:pointer; font-weight:800; line-height:1;
-                                   @(IsHigh(m)
-                                     ? "padding:5px 12px; border-radius:999px; background:#d0494b; color:#fff; font-size:12px;"
-                                     : "width:24px; height:24px; padding:0; border-radius:50%; background:rgba(20,30,55,.08); color:#59627a; font-size:12px;")">
-                        @(IsHigh(m) ? "Got It" : "✕")
-                    </button>
-                </div>
-                <p style="margin:0; font:800 15px sans-serif; color:#1b2a56; line-height:1.25;">@m.Subject</p>
-                <p style="margin:3px 0 0; font:13px sans-serif; color:#5a6473; line-height:1.4;
-                          @(toast.Expanded ? "" : "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;")">
-                    @m.Body
-                </p>
-            </div>
-        }
-        @if (_queue.Count > 0)
-        {
-            <p style="margin:0; align-self:center; padding:4px 12px; border-radius:999px;
-                      background:rgba(20,30,55,.72); color:#fff; font:700 11px sans-serif;">
-                @(_queue.Count == 1 ? "1 more message waiting" : $"{_queue.Count} more messages waiting")
-            </p>
-        }
+                background:@(IsHigh(current) ? "#fdeff0" : "#eef0f4");
+                border:1px solid @(IsHigh(current) ? "#f2d3d5" : "#e2e5ec");
+                border-radius:16px; padding:13px 15px;
+                box-shadow:0 12px 36px rgba(20,30,55,0.38); cursor:pointer;"
+         @onclick="ToggleExpand">
+        <div style="display:flex; align-items:center; gap:7px; margin-bottom:6px;">
+            <span style="width:7px; height:7px; border-radius:50%; flex:0 0 7px;
+                         background:@(IsHigh(current) ? "#d0494b" : "#2e9e8f");"></span>
+            <span style="font:700 11px sans-serif; letter-spacing:.2px; text-transform:uppercase; color:#6a7386;">
+                @ScopeLabel(current)
+            </span>
+            @if (IsHigh(current))
+            {
+                <span style="font:800 10px sans-serif; text-transform:uppercase; padding:2px 8px;
+                             border-radius:999px; background:#d0494b; color:#fff;">Urgent</span>
+            }
+            <span style="margin-left:auto; font:600 11px sans-serif; color:#9aa3b2;">@Pages.Notifications.When(current, withDate: true)</span>
+            <button @onclick="Dismiss" @onclick:stopPropagation="true"
+                    style="flex:0 0 auto; border:none; cursor:pointer; font-weight:800; line-height:1;
+                           @(IsHigh(current)
+                             ? "padding:5px 12px; border-radius:999px; background:#d0494b; color:#fff; font-size:12px;"
+                             : "width:24px; height:24px; padding:0; border-radius:50%; background:rgba(20,30,55,.08); color:#59627a; font-size:12px;")">
+                @(IsHigh(current) ? "Got It" : "✕")
+            </button>
+        </div>
+        <p style="margin:0; font:800 15px sans-serif; color:#1b2a56; line-height:1.25;">@current.Subject</p>
+        <p style="margin:3px 0 0; font:13px sans-serif; color:#5a6473; line-height:1.4;
+                  @(expanded ? "" : "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;")">
+            @current.Body
+        </p>
     </div>
 }
 
 @code {
-    /// <summary>The most cards on screen at once.</summary>
-    private const int MaxShown = 3;
-
-    private sealed class Toast
-    {
-        public required MessageModel Message { get; init; }
-        public bool Expanded { get; set; }
-        public System.Timers.Timer? Auto { get; set; }
-    }
-
-    private readonly List<Toast> _shown = new();
     private readonly Queue<MessageModel> _queue = new();
+    private MessageModel? current;
+    private bool expanded;
+    private System.Timers.Timer? _auto;
 
     protected override void OnInitialized()
     {
@@ -81,66 +56,63 @@
 
     private void OnNew(MessageModel m)
     {
-        InvokeAsync(() =>
-        {
-            if (_shown.Any(t => t.Message.MessageId == m.MessageId)
-                || _queue.Any(q => q.MessageId == m.MessageId)) return;
-            _queue.Enqueue(m);
-            Fill();
-        });
+        _queue.Enqueue(m);
+        InvokeAsync(() => { StateHasChanged(); ShowNext(); });
     }
 
-    // Moves waiting messages into free places on the stack.
-    private void Fill()
+    private void ShowNext()
     {
-        while (_shown.Count < MaxShown && _queue.Count > 0)
-        {
-            var toast = new Toast { Message = _queue.Dequeue() };
+        if (current is not null || _queue.Count == 0) return;
+        current = _queue.Dequeue();
+        expanded = false;
 
-            // Normal messages hide themselves after 8 seconds and stay unread, so the tab
-            // badge still shows them. Urgent messages stay until acknowledged.
-            if (!IsHigh(toast.Message))
-            {
-                toast.Auto = new System.Timers.Timer(8000) { AutoReset = false };
-                toast.Auto.Elapsed += (_, _) => InvokeAsync(() => Remove(toast));
-                toast.Auto.Start();
-            }
-            _shown.Add(toast);
+        _auto?.Dispose();
+        _auto = null;
+        // Normal messages hide themselves after 8 seconds and stay unread, so the tab
+        // badge still shows them. High priority messages stay until acknowledged.
+        if (!IsHigh(current))
+        {
+            _auto = new System.Timers.Timer(8000) { AutoReset = false };
+            _auto.Elapsed += (_, _) => InvokeAsync(AutoHide);
+            _auto.Start();
         }
         StateHasChanged();
     }
 
-    // Expanding means the driver is reading, so that card's auto-hide is cancelled.
-    private void ToggleExpand(Toast toast)
+    // Expanding means the driver is reading, so the auto-hide is cancelled.
+    private void ToggleExpand()
     {
-        toast.Expanded = !toast.Expanded;
-        if (toast.Expanded)
+        expanded = !expanded;
+        if (expanded)
         {
-            toast.Auto?.Dispose();
-            toast.Auto = null;
+            _auto?.Dispose();
+            _auto = null;
         }
     }
 
     // Hiding on the timer does not mark the message read, so an unseen toast keeps its badge.
-    private void Remove(Toast toast)
+    private void AutoHide()
     {
-        toast.Auto?.Dispose();
-        toast.Auto = null;
-        if (_shown.Remove(toast)) Fill();
+        current = null;
+        expanded = false;
+        _auto?.Dispose();
+        _auto = null;
+        StateHasChanged();
+        ShowNext();
     }
 
-    // An explicit dismissal is an acknowledgement, so direct messages are marked read.
-    private async Task Dismiss(Toast toast)
+    // An explicit dismissal is an acknowledgement, so the message is marked read.
+    private async Task Dismiss()
     {
-        Remove(toast);
+        var m = current;
+        current = null;
+        expanded = false;
+        _auto?.Dispose();
+        _auto = null;
+        StateHasChanged();
+        ShowNext();
 
-        var m = toast.Message;
-        if ((m.TargetAudience ?? "").ToLowerInvariant() == "driver" && !m.IsRead)
-        {
-            m.IsRead = true;
-            try { await Data.MarkMessageReadAsync(m.MessageId); await Watch.RefreshNow(); }
-            catch { Watch.Recompute(); /* offline: badge refreshes on next poll */ }
-        }
+        if (m is not null) await Watch.MarkReadAsync(m);
     }
 
     private static bool IsHigh(MessageModel m) =>
@@ -156,6 +128,6 @@
     public void Dispose()
     {
         Watch.NewMessage -= OnNew;
-        foreach (var t in _shown) t.Auto?.Dispose();
+        _auto?.Dispose();
     }
 }
