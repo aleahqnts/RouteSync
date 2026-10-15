@@ -120,9 +120,9 @@
 
     private static string ScopeLabel(MessageModel m) => (m.TargetAudience ?? "").ToLowerInvariant() switch
     {
-        "all"   => "Broadcast · All drivers",
-        "route" => "Route message",
-        _       => "Direct message"
+        "all"   => "Broadcast Message",
+        "route" => "Route Message",
+        _       => "Direct Message"
     };
 
     public void Dispose()

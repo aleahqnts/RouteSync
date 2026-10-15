@@ -1,5 +1,16 @@
 .notif {
-    padding: 64px 22px 28px;
+    padding: 0 22px 28px;
+}
+
+/* Title and the All/Unread chips stay in reach while the list scrolls under them. */
+.nhead {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0 -22px;
+    padding: 64px 22px 6px;
+    background: #fff;
+    border-bottom: 1px solid #eef0f4;
 }
 
 .nbar {
@@ -291,7 +302,7 @@
     z-index: 8001;
     max-height: 82vh;
     overflow-y: auto;
-    padding: 10px 22px calc(22px + env(safe-area-inset-bottom));
+    padding: 12px 24px calc(24px + env(safe-area-inset-bottom));
     border-radius: 22px 22px 0 0;
     background: #fff;
     animation: sheet-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -302,31 +313,41 @@
     height: 4px;
     border-radius: 2px;
     background: #d5d9e2;
-    margin: 0 auto 16px;
+    margin: 0 auto 20px;
 }
 
 .nsheet-head {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
 }
 
 .nsheet-scope {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
     margin: 0;
-    font-size: 12.5px;
+    font-size: 15px;
     font-weight: 700;
     color: #3b4660;
 }
 
-.nsheet-sent {
-    margin: 2px 0 0;
+.nsheet-scope .npin-tag {
+    padding: 3px 10px;
     font-size: 12px;
-    color: #8a93a2;
+    letter-spacing: .04em;
+}
+
+.nsheet-sent {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6a7386;
 }
 
 .nsheet-t {
-    margin: 16px 0 8px;
-    font-size: 18px;
+    margin: 26px 0 8px;
+    font-size: 20px;
     font-weight: 800;
     color: #1b2a56;
     line-height: 1.3;
@@ -336,9 +357,9 @@
    and pre-line is what keeps the two apart on screen. */
 .nsheet-b {
     margin: 0;
-    font-size: 14.5px;
+    font-size: 16px;
     color: #3b4660;
-    line-height: 1.55;
+    line-height: 1.6;
     white-space: pre-line;
     overflow-wrap: anywhere;
 }
@@ -346,13 +367,13 @@
 .nclose {
     display: block;
     width: 100%;
-    margin-top: 22px;
+    margin-top: 28px;
     border: none;
-    border-radius: 12px;
-    padding: 13px;
+    border-radius: 14px;
+    padding: 15px;
     background: #1b2a56;
     color: #fff;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
 }

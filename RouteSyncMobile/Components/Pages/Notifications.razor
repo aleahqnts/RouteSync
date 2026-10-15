@@ -19,27 +19,29 @@
 else
 {
     <div class="notif">
-        <div class="nbar">
-            <h1 class="ntitle">Notifications</h1>
-            @if (UnreadCount > 0)
-            {
-                <button class="nmark" @onclick="MarkAllRead" disabled="@markingAll">
-                    @(markingAll ? "Marking…" : "Mark All Read")
-                </button>
-            }
-        </div>
-
-        <div class="nchips" role="tablist" aria-label="Show">
-            <button role="tab" class="nchip @(unreadOnly ? "" : "on")" aria-selected="@(!unreadOnly)"
-                    @onclick="() => unreadOnly = false">All</button>
-            <button role="tab" class="nchip @(unreadOnly ? "on" : "")" aria-selected="@unreadOnly"
-                    @onclick="() => unreadOnly = true">
-                Unread
+        <div class="nhead">
+            <div class="nbar">
+                <h1 class="ntitle">Notifications</h1>
                 @if (UnreadCount > 0)
                 {
-                    <span class="ncount">@(UnreadCount > 99 ? "99+" : UnreadCount.ToString())</span>
+                    <button class="nmark" @onclick="MarkAllRead" disabled="@markingAll">
+                        @(markingAll ? "Marking…" : "Mark All Read")
+                    </button>
                 }
-            </button>
+            </div>
+
+            <div class="nchips" role="tablist" aria-label="Show">
+                <button role="tab" class="nchip @(unreadOnly ? "" : "on")" aria-selected="@(!unreadOnly)"
+                        @onclick="() => unreadOnly = false">All</button>
+                <button role="tab" class="nchip @(unreadOnly ? "on" : "")" aria-selected="@unreadOnly"
+                        @onclick="() => unreadOnly = true">
+                    Unread
+                    @if (UnreadCount > 0)
+                    {
+                        <span class="ncount">@(UnreadCount > 99 ? "99+" : UnreadCount.ToString())</span>
+                    }
+                </button>
+            </div>
         </div>
 
         @if (!items.Any())
@@ -233,9 +235,9 @@ else
 
     private static string ScopeLabel(MessageModel n) => Aud(n) switch
     {
-        "all"   => "All drivers",
-        "route" => "Your route",
-        _       => "For you"
+        "all"   => "Broadcast Message",
+        "route" => "Route Message",
+        _       => "Direct Message"
     };
 
     private static string AudClass(MessageModel n) => Aud(n) switch
