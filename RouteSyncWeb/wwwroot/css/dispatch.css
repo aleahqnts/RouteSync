@@ -1633,6 +1633,19 @@
             cursor: not-allowed;
         }
 
+    /* A value the dialog sets itself, shown as text in line with the fields. */
+    .atm-static {
+        padding: 0 14px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: light-dark(#2D3748, #DEE1E7);
+    }
+
+        .atm-static--empty {
+            font-weight: 400;
+            color: light-dark(#5F6B7A, #BCC0C4);
+        }
+
     .atm-hint {
         font-size: 0.75rem;
         color: light-dark(#D82C1B, #FFA193);

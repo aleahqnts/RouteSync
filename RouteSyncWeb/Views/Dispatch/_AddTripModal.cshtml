@@ -28,12 +28,9 @@
                     </div>
                 </div>
                 <div class="atm-field">
-                    <label class="atm-label" for="atm-shift-time">Hours<span class="fw-req" aria-hidden="true">*</span></label>
-                    <div class="atm-select-wrap">
-                        <select id="atm-shift-time" class="atm-select" disabled>
-                            <option value="">Select shift type first…</option>
-                        </select>
-                    </div>
+                    @* Each shift has fixed hours, so they are shown, not picked. *@
+                    <span class="atm-label">Hours</span>
+                    <span class="atm-static atm-static--empty" id="atm-shift-time">Set by the shift</span>
                 </div>
                 <div class="atm-field">
                     <label class="atm-label" for="atm-route">Route<span class="fw-req" aria-hidden="true">*</span></label>
@@ -154,8 +151,7 @@
     // Reset.
     function resetAddTripModal() {
         document.getElementById('atm-shift-type').value = '';
-        setShiftTimeOptions([]);
-        document.getElementById('atm-shift-time').disabled = true;
+        showShiftHours(null);
         document.getElementById('atm-route').innerHTML = '<option value="">Loading…</option>';
         setVehicleOptions([]);
         setDriverOptions([]);
@@ -197,35 +193,29 @@
             if (!o.value) return;
             const gone = closed.indexOf(o.value) !== -1;
             o.disabled = gone;
-            o.textContent = o.value + ' Shift' + (gone ? ' (already finished)' : '');
+            o.textContent = o.value + ' Shift' + (gone ? ' · Ended' : '');
         });
     }
 
     // Shift type change.
     function onShiftChange() {
         _atmShift = document.getElementById('atm-shift-type').value;
-        const timeSel = document.getElementById('atm-shift-time');
+        showShiftHours(SHIFT_TIMES[_atmShift]);
 
         if (!_atmShift) {
-            setShiftTimeOptions([]);
-            timeSel.disabled = true;
             setVehicleOptions([]);
             setDriverOptions([]);
             return;
         }
 
-        const t = SHIFT_TIMES[_atmShift];
-        setShiftTimeOptions(t ? [{ label: t.label, start: t.start, end: t.end }] : []);
-        timeSel.disabled = false;
         refreshVehicles();
         refreshDrivers();
     }
 
-    function setShiftTimeOptions(times) {
-        const sel = document.getElementById('atm-shift-time');
-        sel.innerHTML = times.length === 0
-            ? '<option value="">Select shift type first…</option>'
-            : times.map(t => `<option value="${t.start}|${t.end}">${t.label}</option>`).join('');
+    function showShiftHours(t) {
+        const el = document.getElementById('atm-shift-time');
+        el.textContent = t ? t.label : 'Set by the shift';
+        el.classList.toggle('atm-static--empty', !t);
     }
 
    
@@ -357,18 +347,17 @@
 
     async function submitAddTrip(force) {
         const shiftType  = document.getElementById('atm-shift-type').value;
-        const shiftTime  = document.getElementById('atm-shift-time').value;   // "HH:mm|HH:mm"
+        const hours      = SHIFT_TIMES[shiftType];
         const routeId    = parseInt(document.getElementById('atm-route').value);
         const vehicleId  = document.getElementById('atm-vehicle-id').value;
         const driverId   = parseInt(document.getElementById('atm-driver').value);
 
-        if (!shiftType || !shiftTime || !routeId || !vehicleId || !driverId) {
+        if (!shiftType || !hours || !routeId || !vehicleId || !driverId) {
             dpShowMsg(['Please fill in all fields before creating the trip.'], 'Incomplete trip');
             return;
         }
 
-        const [startTime, endTime] = shiftTime.split('|');
-        const payload = { shiftType, shiftStartTime: startTime, shiftEndTime: endTime, routeId, vehicleId, driverId, override: !!force };
+        const payload = { shiftType, shiftStartTime: hours.start, shiftEndTime: hours.end, routeId, vehicleId, driverId, override: !!force };
 
         const btn = document.getElementById('atm-create-btn');
         btn.disabled = true;
