@@ -1633,18 +1633,14 @@
             cursor: not-allowed;
         }
 
-    /* A value the dialog sets itself, shown as text in line with the fields. */
-    .atm-static {
-        padding: 0 14px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: light-dark(#2D3748, #DEE1E7);
+    /* A value the dialog sets itself: a field that cannot be typed into. */
+    .atm-readonly,
+    .atm-readonly:focus {
+        padding-right: 14px;
+        background: light-dark(#F8F9FA, #373737);
+        border-color: light-dark(#E2E8F0, #4E4E4E);
+        cursor: default;
     }
-
-        .atm-static--empty {
-            font-weight: 400;
-            color: light-dark(#5F6B7A, #BCC0C4);
-        }
 
     .atm-hint {
         font-size: 0.75rem;

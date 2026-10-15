@@ -29,8 +29,9 @@
                 </div>
                 <div class="atm-field">
                     @* Each shift has fixed hours, so they are shown, not picked. *@
-                    <span class="atm-label">Hours</span>
-                    <span class="atm-static atm-static--empty" id="atm-shift-time">Set by the shift</span>
+                    <label class="atm-label" for="atm-shift-time">Hours</label>
+                    <input id="atm-shift-time" class="atm-select atm-readonly" type="text" readonly
+                           tabindex="-1" placeholder="Select shift first…" />
                 </div>
                 <div class="atm-field">
                     <label class="atm-label" for="atm-route">Route<span class="fw-req" aria-hidden="true">*</span></label>
@@ -213,9 +214,7 @@
     }
 
     function showShiftHours(t) {
-        const el = document.getElementById('atm-shift-time');
-        el.textContent = t ? t.label : 'Set by the shift';
-        el.classList.toggle('atm-static--empty', !t);
+        document.getElementById('atm-shift-time').value = t ? t.label : '';
     }
 
    
