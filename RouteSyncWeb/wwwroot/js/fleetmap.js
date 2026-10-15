@@ -366,9 +366,9 @@
             // peso sign is the one character here that would not survive being read as
             // anything but UTF-8.
             document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
-            var signal = document.getElementById('fmPanelSignal');
-            signal.textContent = relativeTime(bus.timestamp);
-            signal.title = phClock(bus.timestamp);
+            var updated = document.getElementById('fmPanelUpdated');
+            updated.textContent = phClock(bus.timestamp);
+            updated.title = relativeTime(bus.timestamp);
         } else if (dayFor !== bus.vehicleId || Date.now() - dayAt > 60000) {
             if (dayFor !== bus.vehicleId) {
                 document.getElementById('fmPanelTrips').innerHTML = '';
