@@ -28,3 +28,15 @@
         }, HOLD_MS);
     });
 })();
+
+// Shift-complete sparkles: each star moves to a new random spot around Bao's disc, at a
+// new size and colour, every time it finishes a twinkle, so no two cycles look alike.
+document.addEventListener('animationiteration', function (e) {
+    var star = e.target;
+    if (!star.parentNode || !star.parentNode.classList || !star.parentNode.classList.contains('twinkle')) return;
+    var a = Math.random() * 2 * Math.PI, d = 82 + Math.random() * 44;
+    star.style.left = Math.round(Math.cos(a) * d) + 'px';
+    star.style.top = Math.round(Math.sin(a) * d) + 'px';
+    star.style.setProperty('--s', Math.round(18 + Math.random() * 14) + 'px');
+    star.style.background = Math.random() < 0.35 ? '#4AADA8' : '#F5A623';
+});

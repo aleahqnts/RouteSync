@@ -464,6 +464,83 @@
     text-align: center;
 }
 
+/* Party poppers fire from the bottom corners of the screen, behind everything on it;
+   the card is solid, so nothing shows through the shift's figures. Each piece is two
+   boxes: the outer one drifts sideways, the inner one rises and falls, which together
+   trace the arc. */
+.ta-closed { position: relative; }
+.ta-closed > :not(.poppers) { position: relative; z-index: 1; }
+.ta-closed .c-card { background: #fff; }
+
+.poppers {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.poppers i {
+    position: absolute;
+    bottom: -10px;
+    width: 0;
+    height: 0;
+    animation: popper-x var(--t) cubic-bezier(.15, .6, .4, 1) var(--d) both;
+}
+
+.poppers b {
+    position: absolute;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    background: inherit;
+    opacity: 0;
+    animation: popper-y var(--t) linear var(--d) both;
+}
+
+.poppers i:nth-child(3n) b { width: 10px; height: 6px; }
+.poppers i:nth-child(4n) b { width: 8px; height: 8px; border-radius: 50%; }
+
+@keyframes popper-x {
+    to { transform: translateX(var(--dx)); }
+}
+
+@keyframes popper-y {
+    0% { opacity: 1; transform: translateY(0) rotate(0); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+    35% { opacity: 1; transform: translateY(var(--up)) rotate(calc(var(--r) * .4)); animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+    85% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(calc(var(--up) * .2)) rotate(var(--r)); }
+}
+
+/* Sparkles peeking out from behind Bao's disc, each on its own cycle. The stage is a
+   stacking context, so z-index -1 puts them under the disc and under him. */
+.twinkle {
+    position: absolute;
+    z-index: -1;
+    left: 100px;
+    top: 131px;
+    width: 0;
+    height: 0;
+}
+
+.twinkle i {
+    position: absolute;
+    width: var(--s);
+    height: var(--s);
+    margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    opacity: 0;
+    animation: twinkle var(--t) ease-in-out var(--d) infinite both;
+}
+
+@keyframes twinkle {
+    0%, 60%, 100% { opacity: 0; transform: scale(.2) rotate(0); }
+    25% { opacity: 1; transform: scale(1) rotate(45deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .poppers, .twinkle { display: none; }
+}
+
 .ta-closed h1 {
     margin: 0 0 6px;
     font-size: 20px;

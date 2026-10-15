@@ -22,7 +22,21 @@ else if (doneAt is DateTime endedAt)
     @* The driver ended the shift from this phone. Bao celebrates and waves them off with the
        day's tally. *@
     <div class="ta-closed">
-        <div class="bao-stage bao-stage--celebrate"><BaoFull /></div>
+        <div class="poppers" aria-hidden="true">
+            @for (var i = 0; i < PopperPieces; i++)
+            {
+                <i style="@Popper(i)"><b></b></i>
+            }
+        </div>
+        <div class="bao-stage bao-stage--celebrate">
+            <BaoFull />
+            <div class="twinkle" aria-hidden="true">
+                @for (var i = 0; i < TwinkleStars; i++)
+                {
+                    <i style="@Twinkle(i)"></i>
+                }
+            </div>
+        </div>
         <h1>Shift complete</h1>
         <p class="bao-line">Salamat sa pagbiyahe.</p>
 
@@ -290,6 +304,38 @@ else
 }
 
 @code {
+    // Two party poppers fire once from the bottom corners as the screen opens, then
+    // sparkles keep twinkling behind Bao and his disc while he waves. Spread comes from a fixed
+    // hash of each piece's index, so it looks scattered without randomness; the stars run
+    // on uneven cycles and js/bao.js moves each to a random spot after every twinkle.
+    private const int PopperPieces = 56;
+    private const int TwinkleStars = 12;
+    private static readonly string[] CelebrateColours = { "#4AADA8", "#18325F", "#A7E399", "#F5A623" };
+
+    /// <summary>A stable value from 0 to 1 for piece <paramref name="i"/>, one per salt.</summary>
+    private static double Spread(int i, int salt) => (uint)((i + 1) * 2654435761u ^ (uint)salt * 40503u) % 1000 / 1000.0;
+
+    private static string Css(params FormattableString[] parts) =>
+        string.Concat(parts.Select(FormattableString.Invariant));
+
+    private static string Popper(int i)
+    {
+        var side = i % 2 == 0 ? 1 : -1;
+        return Css(
+            $"{(side == 1 ? "left" : "right")}:-6px;background:{CelebrateColours[i % 4]};",
+            $"--dx:{side * (40 + Spread(i, 1) * 240):0}px;--up:{-(72 + Spread(i, 2) * 22):0}vh;",
+            $"--r:{side * (360 + Spread(i, 3) * 540):0}deg;--t:{2.2 + Spread(i, 4) * 0.8:0.00}s;--d:{Spread(i, 5) * 0.15:0.00}s");
+    }
+
+    private static string Twinkle(int i)
+    {
+        var a = Spread(i, 6) * 2 * Math.PI;
+        var d = 82 + Spread(i, 7) * 44;
+        return Css(
+            $"background:{(i % 3 == 0 ? "#4AADA8" : "#F5A623")};left:{Math.Cos(a) * d:0}px;top:{Math.Sin(a) * d:0}px;",
+            $"--s:{18 + Spread(i, 8) * 14:0}px;--t:{1.6 + Spread(i, 9) * 1.8:0.00}s;--d:{0.6 + Spread(i, 10) * 2.4:0.00}s");
+    }
+
     [Parameter] public string TripId { get; set; } = "";
 
     private bool loading = true;

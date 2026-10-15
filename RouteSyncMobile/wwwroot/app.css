@@ -325,13 +325,16 @@ h1:focus {
 .bao-spark:nth-of-type(2) { right: 0; top: 24px; background: #18325F; }
 .bao-spark:nth-of-type(3) { right: -10px; top: 120px; }
 
-.bao-stage--jump .bao > g,
-.bao-stage--celebrate .bao > g { animation: bao-jump 2.4s ease-out .35s infinite; }
+.bao-stage--jump .bao > g { animation: bao-jump 2.4s ease-out .35s infinite; }
+.bao-stage--celebrate .bao > g { animation: bao-celebrate-jump 3.2s ease-out .35s infinite; }
 .bao-stage--nod .bao .bao-head { animation: bao-nod .7s ease-in-out .35s 2; }
-.bao-stage--celebrate .bao .bao-arm-r {
+/* The sleeve turns with the arm about the shoulder, so the arm never leaves it. The easing
+   matches the hop, so the arm rides the jump with the body instead of lagging behind it. */
+.bao-stage--celebrate .bao .bao-arm-r,
+.bao-stage--celebrate .bao .bao-sleeve-r {
     transform-box: view-box;
     transform-origin: 1290px 1180px;
-    animation: bao-jump-wave 2.4s ease-in-out .35s infinite;
+    animation: bao-jump-wave 3.2s ease-out .35s infinite;
 }
 @keyframes bao-jump {
     12% { transform: translateY(-300px); }
@@ -339,14 +342,21 @@ h1:focus {
     30% { transform: translateY(-64px); }
     36% { transform: none; }
 }
-/* The right arm hops with him, then waves twice before the next hop. */
+/* At the end of a shift he hops, then raises his right arm over his head and waves
+   before the next hop. The hop keeps the bao-jump timings at the longer 3.2s loop. */
+@keyframes bao-celebrate-jump {
+    9% { transform: translateY(-300px); }
+    18% { transform: none; }
+    23% { transform: translateY(-64px); }
+    27% { transform: none; }
+}
 @keyframes bao-jump-wave {
-    0%, 36%, 94%, 100% { transform: translateY(0) rotate(0deg); }
-    12% { transform: translateY(-300px) rotate(0deg); }
-    24% { transform: translateY(0) rotate(0deg); }
-    30% { transform: translateY(-64px) rotate(0deg); }
-    48%, 72% { transform: translateY(0) rotate(-30deg); }
-    60%, 84% { transform: translateY(0) rotate(-14deg); }
+    0%, 27%, 92%, 100% { transform: translateY(0) rotate(0deg); }
+    9% { transform: translateY(-300px) rotate(0deg); }
+    18% { transform: translateY(0) rotate(0deg); }
+    23% { transform: translateY(-64px) rotate(0deg); }
+    40%, 64%, 80% { transform: translateY(0) rotate(-120deg); }
+    52%, 72% { transform: translateY(0) rotate(-102deg); }
 }
 /* Upright breathing that leaves his waist where it is, for places that cut him there. */
 @keyframes bao-breathe-tall {
@@ -392,7 +402,8 @@ h1:focus {
 @media (prefers-reduced-motion: reduce) {
     .bao-stage .bao > g,
     .bao-stage .bao .bao-head,
-    .bao-stage .bao .bao-arm-r { animation: none; }
+    .bao-stage .bao .bao-arm-r,
+    .bao-stage .bao .bao-sleeve-r { animation: none; }
 }
 
 /* Caps Lock warning, placed under the focused password field by password-ui.js. */
