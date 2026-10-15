@@ -221,7 +221,7 @@
         var then = new Date(ts + 'Z').getTime();
         if (isNaN(then)) return '';
         var secs = Math.max(0, Math.round((Date.now() - then) / 1000));
-        if (secs < 10) return 'just now';
+        if (secs === 1) return '1 second ago';
         if (secs < 60) return secs + ' seconds ago';
         var mins = Math.round(secs / 60);
         if (mins === 1) return '1 minute ago';
@@ -367,8 +367,8 @@
             // anything but UTF-8.
             document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
             var updated = document.getElementById('fmPanelUpdated');
-            updated.textContent = phClock(bus.timestamp);
-            updated.title = relativeTime(bus.timestamp);
+            updated.textContent = relativeTime(bus.timestamp);
+            updated.title = phClock(bus.timestamp);
         } else if (dayFor !== bus.vehicleId || Date.now() - dayAt > 60000) {
             if (dayFor !== bus.vehicleId) {
                 document.getElementById('fmPanelTrips').innerHTML = '';
