@@ -14,6 +14,16 @@ html, body {
     font-weight: 600 900;
     font-display: block;
 }
+.btn-green, .btn-teal, .btn-end {
+    /* A shift's main action reads the same on every screen: one bundled face in caps,
+       rather than whatever the WebView picks for a button. */
+    font-family: 'Selawik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
 h1, .cl-confirm h2 {
     font-family: 'Selawik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

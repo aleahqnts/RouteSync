@@ -204,7 +204,6 @@
 }
 
 .i.cal { color: #3b82c4; }
-.i.sun { color: #f5a623; }
 .i.clock { color: #7a8494; }
 .i.pin { color: #e0556b; }
 
@@ -264,17 +263,15 @@
     border: 1px solid #cdeede;
     border-radius: 10px;
     padding: 10px 12px;
-    margin: 14px 0;
+    margin: 10px 0;
 }
 
 .btn-teal, .btn-green {
     width: 100%;
     border: none;
     border-radius: 10px;
-    padding: 14px;
+    padding: 15px;
     color: #fff;
-    font-size: 16px;
-    font-weight: 700;
     cursor: pointer;
     margin-top: 6px;
 }

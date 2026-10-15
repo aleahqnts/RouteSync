@@ -33,7 +33,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 90px 24px;
+    justify-content: center;
+    /* Fills the screen under the header, so the wait sits in the middle of it. The bottom
+       padding offsets the header's height for an optical center. */
+    min-height: calc(100vh - 126px - env(safe-area-inset-bottom));
+    padding: 0 24px 60px;
+    box-sizing: border-box;
     text-align: center;
 }
 

@@ -248,8 +248,6 @@
     padding: clamp(11px, 2vh, 16px);
     background: #d0494b;
     color: #fff;
-    font-size: 17px;
-    font-weight: 700;
     cursor: pointer;
 }
 
