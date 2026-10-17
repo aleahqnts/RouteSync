@@ -279,6 +279,34 @@
                     ctx.fillRect(from, area.top + 20, area.right - from, area.bottom - area.top - 20);
                 }
                 ctx.restore();
+            },
+            // The present moment as a faint line through the hour, at its minute, with the
+            // time in small type beside its top; on the left of it when the right has no room.
+            // Drawn over the bars so a tall bar never hides it. Philippine time is a whole
+            // hour off UTC, so the UTC minute is the minute on its clock.
+            afterDatasetsDraw(chart) {
+                const now = dbReadHourly().now;
+                if (now < 0 || now >= chartLabels.length) return;
+                const { ctx, chartArea: area, scales: { x } } = chart;
+                const slot = x.getPixelForValue(1) - x.getPixelForValue(0);
+                const at = x.getPixelForValue(now) - slot / 2 + slot * new Date().getUTCMinutes() / 60;
+                const text = rsTime.now();
+
+                ctx.save();
+                ctx.strokeStyle = rsTheme.pick('rgba(45,55,72,0.35)', 'rgba(226,232,240,0.35)');
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(at, area.top + 20);
+                ctx.lineTo(at, area.bottom);
+                ctx.stroke();
+
+                ctx.font = '600 10px Segoe UI';
+                const flip = at + 4 + ctx.measureText(text).width > area.right;
+                ctx.textAlign = flip ? 'right' : 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillStyle = rsTheme.pick('#5F6B7A', '#A1A5A9');
+                ctx.fillText(text, flip ? at - 4 : at + 4, area.top + 22);
+                ctx.restore();
             }
         };
 
