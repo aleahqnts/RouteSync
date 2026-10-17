@@ -428,3 +428,26 @@ h1:focus {
 }
 
 .caps-warn:empty { display: none; }
+
+/* ---------- Action buttons: a key with a lip ----------
+   The action buttons stand on a 3px lip and catch light along their top edge. The lip is a
+   translucent dark bottom border over the button's own fill, so it is always a deeper
+   shade of that button's colour. Pressed, the lip goes and the key drops onto it. Written
+   stronger than a page's scoped rules, which would otherwise take it back. */
+html:root :is(.btn-teal, .btn-green, .btn-confirm, .btn-cancel, .btn-signin, .btn-end, .btn-endred,
+    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .cc-btn) {
+    border-bottom: 3px solid rgba(0, 0, 0, .2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 4px 6px -3px rgba(16, 24, 40, .28);
+    transition: transform .07s, border-color .07s, box-shadow .07s;
+}
+html:root :is(.btn-teal, .btn-green, .btn-confirm, .btn-cancel, .btn-signin, .btn-end, .btn-endred,
+    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .cc-btn):active:not(:disabled) {
+    border-bottom-color: transparent;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .12);
+    transform: translateY(2px);
+}
+html:root :is(.btn-teal, .btn-green, .btn-confirm, .btn-cancel, .btn-signin, .btn-end, .btn-endred,
+    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .cc-btn):disabled {
+    border-bottom-color: rgba(0, 0, 0, .08);
+    box-shadow: none;
+}

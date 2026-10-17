@@ -1483,3 +1483,61 @@ th.rs-sortable:focus-visible {
     .bao-stage--tap .bao-reach .bao-hand-r,
     .bao-stage--tap .bao-reach .bao-sleeve-r { animation: none; }
 }
+
+/* ---------- Action buttons: a key with a lip ----------
+   Every page's own action buttons, in their own colours and sizes, stand on a 3px lip and
+   catch light along their top edge. The lip is a translucent dark bottom border laid over
+   the button's own fill, so it is always a deeper shade of whatever colour the page gave
+   the button, hover included. Pressed, the lip goes and the key drops onto it.
+   Chips, toggles, close and icon buttons are left flat. */
+:root :is(.sch-btn-save, .sch-btn-ghost, .sch-modal-btn,
+    .us-btn--primary, .us-btn--outline, .us-btn--danger,
+    .vh-btn--primary, .vh-btn--outline, .vh-btn--danger, .vh-btn--resolve,
+    .ro-btn--primary, .ro-btn--ghost, .ro-btn--dark,
+    .pf-btn--primary, .pf-btn--ghost,
+    .rq-btn--primary, .rq-btn--outline, .rq-btn--approve, .rq-btn--reject,
+    .gc-btn--primary, .gc-btn--outline,
+    .au-btn--primary, .au-btn--outline,
+    .dp-btn-primary, .dp-btn-secondary, .dp-btn-apply, .dp-btn-reassign, .dp-btn-refresh,
+    .db-btn-refresh, .rp-btn-refresh, .rp-btn-view, .rg-btn-download, .rg-btn-cancel,
+    .rtm-btn-save, .rtm-btn-cancel, .rtm-btn-danger, .rtm-btn-override,
+    .atm-btn-create, .atm-btn-cancel, .atm-btn-override,
+    .bm-btn-send, .bm-btn-cancel, .cam-btn--save) {
+    border-bottom: 3px solid rgba(0, 0, 0, .2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 4px 6px -3px light-dark(rgba(16, 24, 40, .28), rgba(0, 0, 0, .5));
+    transition: transform .07s, border-color .07s, box-shadow .07s, background-color .15s, color .15s;
+}
+:root :is(.sch-btn-save, .sch-btn-ghost, .sch-modal-btn,
+    .us-btn--primary, .us-btn--outline, .us-btn--danger,
+    .vh-btn--primary, .vh-btn--outline, .vh-btn--danger, .vh-btn--resolve,
+    .ro-btn--primary, .ro-btn--ghost, .ro-btn--dark,
+    .pf-btn--primary, .pf-btn--ghost,
+    .rq-btn--primary, .rq-btn--outline, .rq-btn--approve, .rq-btn--reject,
+    .gc-btn--primary, .gc-btn--outline,
+    .au-btn--primary, .au-btn--outline,
+    .dp-btn-primary, .dp-btn-secondary, .dp-btn-apply, .dp-btn-reassign, .dp-btn-refresh,
+    .db-btn-refresh, .rp-btn-refresh, .rp-btn-view, .rg-btn-download, .rg-btn-cancel,
+    .rtm-btn-save, .rtm-btn-cancel, .rtm-btn-danger, .rtm-btn-override,
+    .atm-btn-create, .atm-btn-cancel, .atm-btn-override,
+    .bm-btn-send, .bm-btn-cancel, .cam-btn--save):active:not(:disabled) {
+    border-bottom-color: transparent;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .12);
+    transform: translateY(2px);
+}
+:root :is(.sch-btn-save, .sch-btn-ghost, .sch-modal-btn,
+    .us-btn--primary, .us-btn--outline, .us-btn--danger,
+    .vh-btn--primary, .vh-btn--outline, .vh-btn--danger, .vh-btn--resolve,
+    .ro-btn--primary, .ro-btn--ghost, .ro-btn--dark,
+    .pf-btn--primary, .pf-btn--ghost,
+    .rq-btn--primary, .rq-btn--outline, .rq-btn--approve, .rq-btn--reject,
+    .gc-btn--primary, .gc-btn--outline,
+    .au-btn--primary, .au-btn--outline,
+    .dp-btn-primary, .dp-btn-secondary, .dp-btn-apply, .dp-btn-reassign, .dp-btn-refresh,
+    .db-btn-refresh, .rp-btn-refresh, .rp-btn-view, .rg-btn-download, .rg-btn-cancel,
+    .rtm-btn-save, .rtm-btn-cancel, .rtm-btn-danger, .rtm-btn-override,
+    .atm-btn-create, .atm-btn-cancel, .atm-btn-override,
+    .bm-btn-send, .bm-btn-cancel, .cam-btn--save):disabled {
+    border-bottom-color: rgba(0, 0, 0, .08);
+    box-shadow: none;
+}
+
