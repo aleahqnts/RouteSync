@@ -175,17 +175,17 @@
     var baos = host.querySelectorAll('.bao');
     var stage = host.querySelector('.bao-stage');
     var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
-    // A driver who cannot run or needs relief worries him; anything else listed
-    // only has his attention.
-    var WORRY = { issue: true, relief: true };
+    // A driver who cannot run or needs relief distresses him; anything else listed
+    // worries him.
+    var DISTRESS = { issue: true, relief: true };
 
     function setMood(entries) {
-        var mood = entries.some(function (e) { return WORRY[e.kind]; }) ? 'worried'
-            : entries.length ? 'focused' : 'relaxed';
+        var mood = entries.some(function (e) { return DISTRESS[e.kind]; }) ? 'distressed'
+            : entries.length ? 'worried' : 'relaxed';
         box.dataset.mood = mood;
         baos.forEach(function (svg) {
-            svg.classList.toggle('face-focused', mood === 'focused');
             svg.classList.toggle('face-worried', mood === 'worried');
+            svg.classList.toggle('face-distressed', mood === 'distressed');
         });
     }
 

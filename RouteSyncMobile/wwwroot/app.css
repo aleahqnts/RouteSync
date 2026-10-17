@@ -227,7 +227,7 @@ h1:focus {
 }
 
 /* ---------- Bao, the mascot (Components/BaoBust, BaoHead, BaoFull) ----------
-   Faces switch with a class on the svg: face-focused, face-worried, face-sleepy;
+   Faces switch with a class on the svg: face-worried, face-cheeky, face-chill, face-sleepy;
    relaxed when none is set. A tap pokes him (js/bao.js). */
 /* At rest he breathes, sways his head a little and swishes his tail, on top of the blink,
    so he never sits still like a sticker. */
@@ -236,16 +236,20 @@ h1:focus {
 /* The bust is cut at the chest: what lies below its frame stays hidden, while the horns keep room to move. */
 .bao--bust { clip-path: inset(-25% -25% 0 -25%); }
 .bao .bao-brows,
-.bao .bao-lids-sleepy,
-.bao .bao-mouth-focused,
-.bao .bao-mouth-worried { display: none; }
-.bao.face-focused .bao-brows-focused,
-.bao.face-focused .bao-mouth-focused,
+.bao .bao-lids,
+.bao .bao-sweat,
+.bao .bao-mouth:not(.bao-mouth-relaxed) { display: none; }
 .bao.face-worried .bao-brows-worried,
 .bao.face-worried .bao-mouth-worried,
+.bao.face-cheeky .bao-brows-cheeky,
+.bao.face-cheeky .bao-mouth-cheeky,
+.bao.face-chill .bao-lids-chill,
+.bao.face-chill .bao-brows-chill,
+.bao.face-chill .bao-mouth-chill,
 .bao.face-sleepy .bao-lids-sleepy { display: inline; }
-.bao.face-focused .bao-mouth-relaxed,
 .bao.face-worried .bao-mouth-relaxed,
+.bao.face-cheeky .bao-mouth-relaxed,
+.bao.face-chill .bao-mouth-relaxed,
 .bao.face-sleepy .bao-eye { display: none; }
 
 .bao .bao-eye {

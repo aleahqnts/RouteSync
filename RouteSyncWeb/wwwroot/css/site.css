@@ -1264,22 +1264,21 @@ th.rs-sortable:focus-visible {
 
 /* ---------- Bao, the mascot (Views/Shared/_BaoBust, _BaoHead) ----------
    The art keeps its own colours in both themes. Faces switch with a class on the svg:
-   face-focused, face-worried, face-sleepy; relaxed when none is set. */
+   face-worried, face-distressed; relaxed when none is set. */
 .bao { display: block; overflow: visible; }
 /* The bust is cut at the chest: what lies below its frame stays hidden, while the horns keep room to move. */
 .bao--bust { clip-path: inset(-25% -25% 0 -25%); }
 .bao .bao-brows,
-.bao .bao-lids-sleepy,
-.bao .bao-mouth-focused,
-.bao .bao-mouth-worried { display: none; }
-.bao.face-focused .bao-brows-focused,
-.bao.face-focused .bao-mouth-focused,
+.bao .bao-lids,
+.bao .bao-sweat,
+.bao .bao-mouth:not(.bao-mouth-relaxed) { display: none; }
 .bao.face-worried .bao-brows-worried,
 .bao.face-worried .bao-mouth-worried,
-.bao.face-sleepy .bao-lids-sleepy { display: inline; }
-.bao.face-focused .bao-mouth-relaxed,
+.bao.face-distressed .bao-brows-distressed,
+.bao.face-distressed .bao-mouth-distressed,
+.bao.face-distressed .bao-sweat-distressed { display: inline; }
 .bao.face-worried .bao-mouth-relaxed,
-.bao.face-sleepy .bao-eye { display: none; }
+.bao.face-distressed .bao-mouth-relaxed { display: none; }
 
 .bao .bao-eye {
     transform-box: fill-box;
@@ -1451,8 +1450,8 @@ th.rs-sortable:focus-visible {
 }
 .rs-attn__bao .bao { position: absolute; left: -15px; top: -5px; width: 80px; height: auto; }
 .rs-attn--map[open] .rs-attn__bao { position: absolute; left: 6px; top: -26px; margin: 0; }
-.rs-attn[data-mood="focused"] .rs-attn__bao { box-shadow: 0 0 0 3px #F6D38E, 0 3px 12px rgba(16, 24, 40, .22); }
-.rs-attn[data-mood="worried"] .rs-attn__bao { box-shadow: 0 0 0 3px #F4B4AE, 0 3px 12px rgba(16, 24, 40, .22); }
+.rs-attn[data-mood="worried"] .rs-attn__bao { box-shadow: 0 0 0 3px #F6D38E, 0 3px 12px rgba(16, 24, 40, .22); }
+.rs-attn[data-mood="distressed"] .rs-attn__bao { box-shadow: 0 0 0 3px #F4B4AE, 0 3px 12px rgba(16, 24, 40, .22); }
 
 @media (prefers-reduced-motion: reduce) {
     .bao .bao-eye,
