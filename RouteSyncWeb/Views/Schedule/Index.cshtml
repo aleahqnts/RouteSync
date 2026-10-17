@@ -49,10 +49,10 @@
 
     @* Toolbar *@
     <div class="sch-toolbar">
-        <a class="sch-btn-ghost" href="/Dispatch">&#8592; Back to Dispatch</a>
+        <a class="sch-btn-ghost" href="/Dispatch"><i class="ti ti-chevron-left" aria-hidden="true"></i>Back to Dispatch</a>
         <div class="sch-week-nav">
-            <a class="sch-btn-ghost" href="/Schedule?start=@Model.PrevWeekStart">&#8249; Prev</a>
-            <a class="sch-btn-ghost" href="/Schedule?start=@Model.NextWeekStart">Next &#8250;</a>
+            <a class="sch-btn-ghost" href="/Schedule?start=@Model.PrevWeekStart"><i class="ti ti-chevron-left" aria-hidden="true"></i>Prev</a>
+            <a class="sch-btn-ghost" href="/Schedule?start=@Model.NextWeekStart">Next<i class="ti ti-chevron-right" aria-hidden="true"></i></a>
         </div>
         @* Next week is last week with edits, which is why the rotation is monthly.
            Fills the blanks in the week on screen and writes nothing until Save. Not

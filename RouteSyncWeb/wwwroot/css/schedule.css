@@ -25,7 +25,7 @@
     .sch-week-label { margin-left:auto; font-weight:700; color:light-dark(#1a2a4a, #E1E4E9); font-size:.95rem; }
     .sch-pick { display:flex; align-items:center; gap:8px; font-size:.85rem; color:light-dark(#4A5568, #D9DCE1); }
     .sch-pick input[type=date] { padding:7px 10px; border:1.5px solid light-dark(#E2E8F0, #4E4E4E); border-radius:8px; font-size:.85rem; }
-    .sch-btn-ghost { padding:7px 14px; border:1.5px solid light-dark(#E2E8F0, #4E4E4E); border-radius:8px; background:light-dark(#fff, #393939); color:light-dark(#2D3748, #DEE1E7); font-weight:600; font-size:.85rem; cursor:pointer; text-decoration:none; }
+    .sch-btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 14px; border:1.5px solid light-dark(#E2E8F0, #4E4E4E); border-radius:8px; background:light-dark(#fff, #393939); color:light-dark(#2D3748, #DEE1E7); font-weight:600; font-size:.85rem; cursor:pointer; text-decoration:none; }
     .sch-btn-ghost:hover { border-color:#4AADA8; color:light-dark(#4AADA8, #70D1CC); }
 
     /* The way to the Roster page, carrying what the roster needs from a person. */

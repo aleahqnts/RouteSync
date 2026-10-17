@@ -42,9 +42,9 @@
         </div>
 
         <div class="ro-toolbar">
-            <a class="ro-btn ro-btn--ghost" href="/Schedule">&#8592; Back to Edit Schedule</a>
-            <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.PrevMonthKey">&#8249; @Model.Month.AddMonths(-1).ToString("MMM")</a>
-            <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.NextMonthKey">@Model.Month.AddMonths(1).ToString("MMM") &#8250;</a>
+            <a class="ro-btn ro-btn--ghost" href="/Schedule"><i class="ti ti-chevron-left" aria-hidden="true"></i>Back to Edit Schedule</a>
+            <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.PrevMonthKey"><i class="ti ti-chevron-left" aria-hidden="true"></i>@Model.Month.AddMonths(-1).ToString("MMM")</a>
+            <a class="ro-btn ro-btn--ghost" href="/Roster?month=@Model.NextMonthKey">@Model.Month.AddMonths(1).ToString("MMM")<i class="ti ti-chevron-right" aria-hidden="true"></i></a>
             <span class="ro-toolbar-gap"></span>
             @if (Model.ReadOnly)
             {
