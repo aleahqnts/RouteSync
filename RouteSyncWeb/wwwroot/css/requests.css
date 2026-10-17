@@ -792,12 +792,12 @@
     .rq-btn--approve:hover { background: #219653; border-color: #219653; }
 
     .rq-btn--reject {
-        background: light-dark(#FDECEC, #574142);
-        border-color: light-dark(#F3B7B7, #775253);
-        color: light-dark(#C0392B, #FFA192);
+        background: #E53E3E;
+        border-color: #E53E3E;
+        color: #fff;
     }
 
-    .rq-btn--reject:hover { background: light-dark(#FADBD8, #603D3A); border-color: #E53E3E; color: light-dark(#C41A1A, #FFA098); }
+    .rq-btn--reject:hover { background: #C53030; border-color: #C53030; }
 
     .rq-btn--primary {
         background: var(--rq-teal);
