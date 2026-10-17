@@ -56,9 +56,12 @@
                 <span class="rs-attn__title">Needs attention</span>
                 <span class="rs-attn__count"></span>
             </summary>
-            <ul class="rs-attn__list" aria-live="polite"></ul>
-            <button type="button" class="rs-attn__more" aria-expanded="false" hidden></button>
-            <p class="rs-attn__clear">Nothing needs you right now.</p>
+            @* On the dashboard this drops over the page, so opening it moves nothing below. *@
+            <div class="rs-attn__drop">
+                <ul class="rs-attn__list" aria-live="polite"></ul>
+                <button type="button" class="rs-attn__more" aria-expanded="false" hidden></button>
+                <p class="rs-attn__clear">Nothing needs you right now.</p>
+            </div>
         </details>
     </div>
     <script src="~/js/attention.js" asp-append-version="true" defer></script>

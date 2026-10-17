@@ -1351,6 +1351,22 @@ th.rs-sortable:focus-visible {
    The bust hides its own arm and sleeve while the reach moves. */
 .rs-attn-host--bao { position: relative; margin-top: 88px; }
 .rs-attn-host--bao .rs-attn { position: relative; z-index: 1; }
+/* Open, the list hangs below the header as one card with it, over the page, so the
+   sections below never move. */
+.rs-attn-host--bao .rs-attn[open] { border-bottom-color: transparent; border-radius: 12px 12px 0 0; }
+.rs-attn-host--bao .rs-attn__drop {
+    position: absolute;
+    /* Over the header's own bottom padding, so the gap above the list stays the same. */
+    top: calc(100% - 12px);
+    left: -1px;
+    right: -1px;
+    padding: 0 16px 12px;
+    border: 1px solid light-dark(#E3E8EF, #4A4A4A);
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+    background: light-dark(#FFFFFF, #393939);
+    box-shadow: 0 10px 18px -6px light-dark(rgba(16, 24, 40, .14), rgba(0, 0, 0, .4));
+}
 .bao-stage {
     --bao-w: 112px;
     position: absolute;
