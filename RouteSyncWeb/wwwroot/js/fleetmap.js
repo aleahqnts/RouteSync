@@ -119,9 +119,16 @@
     // keeps the count; clicking the label zooms in to them.
     var PARKED_MIN_ZOOM = 17;
 
+    // Further out still, a terminal's full name covers the routes and the next terminal's,
+    // so the label shrinks to the parking mark and its count, with the name on hover. A
+    // phone has less room across, so there the full name waits for the parked grid.
+    var NAMED_MIN_ZOOM = window.matchMedia('(max-width: 599px)').matches ? PARKED_MIN_ZOOM : 16;
+
     // A search is for one bus, so a parked bus that matches is shown at any zoom.
     function foldParked() {
-        map.getContainer().classList.toggle('fm-map--far', map.getZoom() < PARKED_MIN_ZOOM && !searchTerm);
+        var z = map.getZoom(), box = map.getContainer();
+        box.classList.toggle('fm-map--far', z < PARKED_MIN_ZOOM && !searchTerm);
+        box.classList.toggle('fm-map--compact', z < NAMED_MIN_ZOOM);
     }
     var parkedSlots = {};     // vehicleId -> { lat, lng, i }: its terminal and place in the grid
 
@@ -502,7 +509,10 @@
 
     // Add a terminal name label above its parked-bus grid.
     function addTerminalLabel(lat, lng, name, count) {
-        var html = '<div class="fm-terminal-pill">🅿 ' + escapeHtml(name || 'Terminal') + ' · ' + count + '</div>';
+        var safe = escapeHtml(name || 'Terminal');
+        var html = '<div class="fm-terminal-pill" title="' + safe + ' · ' + count + ' parked">'
+                 + '<span class="fm-terminal-p" aria-hidden="true">P</span>'
+                 + '<span class="fm-terminal-name">' + safe + ' · </span>' + count + '</div>';
         var label = L.marker(offsetPx(lat, lng, 0, -LABEL_RISE_PX), {
             icon: L.divIcon({ className: 'fm-terminal-label', html: html, iconSize: [200, 26], iconAnchor: [100, 13] }),
             zIndexOffset: -500

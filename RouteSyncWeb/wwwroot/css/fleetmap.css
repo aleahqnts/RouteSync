@@ -318,6 +318,7 @@
         background: transparent !important;
         border: none !important;
         cursor: pointer;
+        text-align: center;
     }
 
     /* Zoomed out, parked buses fold into their terminal's label, which carries the count
@@ -339,6 +340,26 @@
         box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, .25), rgba(0, 0, 0, .39));
         font-family: 'Segoe UI', sans-serif;
     }
+
+    /* The parking mark, drawn rather than taken from an emoji, which some fonts lack. */
+    .fm-terminal-p {
+        display: inline-grid;
+        place-items: center;
+        width: 15px;
+        height: 15px;
+        margin-right: 6px;
+        border-radius: 4px;
+        background: #2563EB;
+        color: #fff;
+        font-size: 0.66rem;
+        font-weight: 800;
+        vertical-align: -2px;
+    }
+
+    /* Zoomed out, the label is the mark and the count only. */
+    .fm-map--compact .fm-terminal-name { display: none; }
+    .fm-map--compact .fm-terminal-pill { padding: 3px 8px 3px 4px; font-size: 0.68rem; }
+    .fm-map--compact .fm-terminal-p { margin-right: 4px; }
 
     /* Bus markers. */
     .fm-bus-marker {
