@@ -1862,12 +1862,15 @@
             if (byX) scroller.scrollTo({ left: scroller.scrollLeft + byX, behavior: 'smooth' });
         }
 
-        // Down the page, clear of the bar, the toolbar and this card's own heading.
+        // Down the page, clear of the bar, the toolbar, this card's own heading and, where
+        // the grid fits and they are held too, its day names.
         const card = el.closest('.sch-card');
         const head = card ? card.querySelector('.sch-card-head') : null;
+        const days = card && card.classList.contains('sch-card--fits') ? card.querySelector('.sch-table thead') : null;
 
         const cover = px('--rs-bar') + px('--sch-top')
-                    + (head ? head.getBoundingClientRect().height : 0);
+                    + (head ? head.getBoundingClientRect().height : 0)
+                    + (days ? days.getBoundingClientRect().height : 0);
 
         const want = el.getBoundingClientRect().top + window.scrollY - cover - GAP;
         window.scrollTo({ top: Math.max(0, want), behavior: 'smooth' });
