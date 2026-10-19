@@ -75,7 +75,8 @@
         function moveBus(marker, bus) {
             var line = routeLines[bus.routeId];
             if (bus.status === 'On Trip' && bus.onRoute && bus.along != null && line) {
-                RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp, bus.speed);
+                RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp, bus.speed,
+                    bus.atStopAlong);
             } else {
                 RouteMotion.release(marker);
                 marker.setLatLng([bus.lat, bus.lng]);

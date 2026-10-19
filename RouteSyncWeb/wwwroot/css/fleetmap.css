@@ -421,6 +421,33 @@
         padding: 3px 10px;
     }
 
+    /* Zoomed out, buses whose pills would cover each other are drawn as the front one
+       with their count; the rest are tucked away until the map is zoomed in. A count of
+       buses from different routes is drawn grey, since no one route's colour is right. */
+    .fm-bus-count {
+        display: inline-grid;
+        place-items: center;
+        min-width: 16px;
+        height: 16px;
+        margin-left: 6px;
+        padding: 0 4px;
+        border-radius: 8px;
+        background: #fff;
+        color: #1F2937;
+        font-size: 0.66rem;
+        font-weight: 800;
+        vertical-align: 1px;
+    }
+
+    .fm-bus-count:empty,
+    .fm-bus-marker--tucked {
+        display: none;
+    }
+
+    .fm-bus-marker--mixed span {
+        background: #6B7280 !important;
+    }
+
     /* Readings arrive every few seconds. A bus off its route, drawn where its phone is,
        would jump from one to the next; given the crossing to travel, it runs. A bus on
        its route is driven along the road by the script instead. */

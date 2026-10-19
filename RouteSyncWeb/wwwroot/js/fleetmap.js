@@ -263,14 +263,15 @@
     // The time to the next stop as a rough figure, never a clock time: it is an estimate
     // from how fast buses usually cover that stretch. Counted from the reading it was
     // worked out at, so it keeps falling between readings.
-    var ETA_ARRIVING_SECONDS = 30;
+    var ETA_ARRIVING_SECONDS = 10;
 
     function etaText(bus) {
         if (isStale(bus)) return 'No recent signal';
+        if (bus.atStop) return 'At ' + bus.atStop;
         if (!bus.nextStop) return bus.onRoute ? 'Past the last stop' : 'No estimate right now';
         if (bus.nextStopSeconds == null) return '';
         var left = bus.nextStopSeconds - readingAge(bus) / 1000;
-        // The last half minute is within the estimate's own error, so it is not counted.
+        // The last few seconds are within the estimate's own error, so they are not counted.
         if (left <= ETA_ARRIVING_SECONDS) return 'Arriving';
         // Under a minute in steps of five seconds, so the figure does not flicker on
         // every poll.
@@ -450,7 +451,8 @@
         return L.divIcon({
             className: 'fm-bus-marker' + (stale ? ' fm-bus-marker--stale' : '') + (off ? ' fm-bus-marker--off' : '')
                 + (parked ? ' fm-bus-marker--parked' : ''),
-            html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + escapeHtml(label) + '</span>',
+            html: '<span style="background:' + color + '">' + RouteMotion.arrowHtml + escapeHtml(label)
+                + '<b class="fm-bus-count"></b></span>',
             iconSize: [80, 28],
             iconAnchor: [40, 14]
         });
@@ -478,7 +480,8 @@
 
         if (onRoad) {
             setGlide(marker, false);
-            RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp, bus.speed);
+            RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp, bus.speed,
+                bus.atStopAlong);
         } else {
             RouteMotion.release(marker);
             setGlide(marker, true);
@@ -487,6 +490,136 @@
         }
         return !!onRoad;
     }
+
+    // Buses on their route are laid out together, every frame, from where the motion
+    // script has each one on its line. Buses that would cover each other on the screen,
+    // going the same way, queue one pill behind another along their own route lines, in
+    // the order they came together: at a shared stop the first to arrive sits on the stop.
+    // A moving bus keeps a few pixels to the right of the road, as traffic does here, so
+    // buses passing the other way on a two-way road do not cover each other.
+    //
+    // Zoomed out, where a pill is a block or more of road, buses that would cover each
+    // other are drawn as one pill with their count, at the front bus, which zooms in to
+    // them when clicked. Each bus keeps moving at every zoom; only the drawing changes.
+    //
+    // Only the buses shown count, so the route and status filters and the search lay the
+    // queues out again without the buses they hide.
+    var KEEP_RIGHT_PX = 6;
+    var SAME_WAY_DEG = 60;
+    map._rmLaysOut = true;
+
+    function angleApart(a, b) {
+        return Math.abs(((a - b) % 360 + 540) % 360 - 180);
+    }
+
+    function metresPerPixel(lat) {
+        return 40075016.686 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom() + 8);
+    }
+
+    function layoutRoad() {
+        var merging = map.getZoom() < NAMED_MIN_ZOOM;
+        var items = [];
+        Object.keys(busMarkers).forEach(function (id) {
+            var m = busMarkers[id];
+            if (!m._rmLine || m._rmBase == null || !busLayer.hasLayer(m)) return;
+            var ll = L.latLng(m._rmLine.pointAt(m._rmBase));
+            items.push({
+                id: id, m: m, ll: ll, pt: map.latLngToLayerPoint(ll),
+                bearing: m._rmLine.bearingAt(m._rmBase),
+                standingSince: m._bus && m._bus.atStop ? m._bus.atStopSince : null
+            });
+        });
+
+        // Buses whose pills would touch, going the same way, or any way when zoomed out.
+        var root = items.map(function (_, i) { return i; });
+        function find(i) { while (root[i] !== i) i = root[i] = root[root[i]]; return i; }
+        for (var i = 0; i < items.length; i++) {
+            for (var j = i + 1; j < items.length; j++) {
+                if (items[i].pt.distanceTo(items[j].pt) < SLOT_W_PX
+                    && (merging || angleApart(items[i].bearing, items[j].bearing) <= SAME_WAY_DEG))
+                    root[find(j)] = find(i);
+            }
+        }
+        var groups = {};
+        items.forEach(function (it, i) { (groups[find(i)] = groups[find(i)] || []).push(it); });
+
+        var now = Date.now();
+        Object.keys(groups).forEach(function (key) {
+            var group = groups[key];
+
+            // The order is set when a bus joins and kept while the group lasts, so a bus
+            // drawn behind another is never drawn back past it. Buses joining together go
+            // in the order they reached the stop, then front to back along the road.
+            if (group.length > 1) {
+                var joining = group.filter(function (it) { return it.m._rmJoined == null; });
+                joining.sort(function (a, b) {
+                    if (a.standingSince && b.standingSince && a.standingSince !== b.standingSince)
+                        return a.standingSince < b.standingSince ? -1 : 1;
+                    if (!!a.standingSince !== !!b.standingSince) return a.standingSince ? -1 : 1;
+                    var r = a.bearing * Math.PI / 180;
+                    var ahead = (b.pt.x - a.pt.x) * Math.sin(r) - (b.pt.y - a.pt.y) * Math.cos(r);
+                    return ahead > 0 ? 1 : -1;
+                });
+                joining.forEach(function (it, k) { it.m._rmJoined = now + k / 1000; });
+                group.sort(function (a, b) { return a.m._rmJoined - b.m._rmJoined; });
+            } else {
+                group[0].m._rmJoined = null;
+            }
+
+            var routes = {};
+            group.forEach(function (it) { routes[it.m._bus ? it.m._bus.routeId : ''] = true; });
+            var mixed = Object.keys(routes).length > 1;
+
+            group.forEach(function (it, rank) {
+                var m = it.m, el = m.getElement();
+                var lead = rank === 0;
+                var ll = it.ll;
+
+                // Behind the front bus by a pill per place in the queue, counting what the
+                // bus is already behind it, so a bus a pill or more back is not moved.
+                if (!merging && rank > 0) {
+                    var front = group[0], d = it.bearing * Math.PI / 180;
+                    var behindPx = (front.pt.x - it.pt.x) * Math.sin(d) - (front.pt.y - it.pt.y) * Math.cos(d);
+                    var backPx = Math.max(0, rank * SLOT_W_PX - behindPx);
+                    if (backPx > 0) ll = L.latLng(m._rmLine.pointAt(m._rmBase - backPx * metresPerPixel(it.ll.lat)));
+                }
+                if (!merging && m._rmMoving && !it.standingSince) {
+                    var r = m._rmLine.bearingAt(m._rmBase) * Math.PI / 180;
+                    var p = map.latLngToLayerPoint(ll);
+                    ll = map.layerPointToLatLng([p.x + KEEP_RIGHT_PX * Math.cos(r), p.y + KEEP_RIGHT_PX * Math.sin(r)]);
+                }
+
+                var size = merging && lead ? group.length : 1;
+                if (el) {
+                    el.classList.toggle('fm-bus-marker--tucked', merging && !lead);
+                    el.classList.toggle('fm-bus-marker--mixed', size > 1 && mixed);
+                    var count = el.querySelector('.fm-bus-count');
+                    var text = size > 1 ? String(size) : '';
+                    if (count && count.textContent !== text) count.textContent = text;
+                }
+                if (m._rmGroupSize !== size) {
+                    m._rmGroupSize = size;
+                    m.setTooltipContent(size > 1
+                        ? '<div class="fm-tooltip"><div class="fm-tooltip__header"><span class="fm-tooltip__bus">'
+                            + size + ' buses</span></div>' + group.map(function (g) {
+                                return '<div class="fm-tooltip__plate">' + escapeHtml(g.id) + ' &middot; '
+                                    + escapeHtml(g.m._bus ? g.m._bus.routeName : '') + '</div>';
+                            }).join('') + '</div>'
+                        : tooltipHtml(m._bus));
+                }
+
+                var was = m.getLatLng();
+                if (!was || Math.abs(was.lat - ll.lat) > 1e-8 || Math.abs(was.lng - ll.lng) > 1e-8)
+                    m.setLatLng(ll);
+            });
+        });
+    }
+
+    // Asked for again before laying out, so one frame that fails does not stop the rest.
+    (function layoutLoop() {
+        requestAnimationFrame(layoutLoop);
+        if (!map._rmZooming) layoutRoad();
+    })();
 
     function tooltipHtml(bus) {
         var sc = statusColor(bus.status);
@@ -655,12 +788,19 @@
                             RouteMotion.repoint(marker);
                         }
                         moveBus(marker, bus, pos);
-                        marker.setTooltipContent(tooltipHtml(bus));
+                        if (!(marker._rmGroupSize > 1)) marker.setTooltipContent(tooltipHtml(bus));
                     } else {
                         marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off, parked) })
                             .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap', opacity: 1 })
                             .addTo(busLayer);
-                        marker.on('click', function () { openPanel(this._bus.vehicleId); });
+                        marker.on('click', function () {
+                            // A pill standing for several buses zoomed out opens onto them.
+                            if (this._rmGroupSize > 1) {
+                                map.setView(this.getLatLng(), Math.max(map.getZoom() + 2, NAMED_MIN_ZOOM));
+                                return;
+                            }
+                            openPanel(this._bus.vehicleId);
+                        });
                         marker._iconKey = iconKey;
                         busMarkers[bus.vehicleId] = marker;
                         moveBus(marker, bus, pos);

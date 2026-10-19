@@ -30,8 +30,12 @@
     var FASTEST_FACTOR = 2;
     var SLOWEST_TOP_SPEED = 4;
 
-    // A bus the server says really did turn back is glided back over this long.
-    var REVERSE_MS = 1000;
+    // A bus the server says really did turn back is glided back over this long, and one
+    // that stopped short of a stop is glided forward onto it.
+    var GLIDE_MS = 1000;
+
+    // A stop further ahead of the marker than this is not the one the bus is standing at.
+    var STOP_REACH_M = 60;
 
     // Ends this close together make the line a loop, as on the server.
     var LOOP_CLOSURE_M = 30;
@@ -160,7 +164,10 @@
     // ahead or behind, and never sent backwards. Only a bus the server has moved back,
     // because it really turned round, is glided back. A reading already taken is ignored,
     // since the map asks more often than the phone reports.
-    function drive(marker, map, line, along, moving, readingAt, speed) {
+    //
+    // A bus standing at a stop is drawn on it: stopAlong says where along the line the stop
+    // is, or is null while the bus is not at one.
+    function drive(marker, map, line, along, moving, readingAt, speed, stopAlong) {
         if (readingAt && readingAt === marker._rmReading && marker._rmLine === line) return;
 
         var now = Date.now();
@@ -173,12 +180,14 @@
         // A reading with no speed is one the server ignored as not from the GPS; the bus
         // is still going at the speed it last reported.
         marker._rmSpeed = !moving ? 0 : speed > 0 ? speed : (marker._rmSpeed || 0);
+        marker._rmStop = stopAlong == null ? null : stopAlong;
         // The server repeats the last place for a reading that fell behind it. For a moving
         // bus that says nothing new about where it is, so it is still carried on from the
         // time of the place, not of the repeat. A bus that was standing was there until
         // now, so its time starts again from this reading.
         if (!fresh && along === marker._rmAnchor && wasMoving) {
             marker._rmMoving = moving;
+            onToStop(marker, line);
             run(marker, map);
             return;
         }
@@ -186,14 +195,31 @@
         marker._rmSeenMs = now;
         marker._rmLagMs = at == null ? 0 : Math.min(Math.max(now - at, 0), LONGEST_LAG_MS);
         marker._rmMoving = moving;
-        marker._rmBack = null;
+        marker._rmGlide = null;
 
         if (fresh || Math.abs(line.ahead(marker._rmAlong, along)) > LONGEST_GLIDE_M) {
             place(marker, line, along, moving);
         } else if (turnedBack) {
-            marker._rmBack = { from: marker._rmAlong, by: line.ahead(marker._rmAlong, along), start: null };
+            marker._rmGlide = { from: marker._rmAlong, by: line.ahead(marker._rmAlong, along), start: null };
         }
+        onToStop(marker, line);
         run(marker, map);
+    }
+
+    // A bus standing at a stop it stopped short of is glided forward onto it. One that
+    // stopped past it stays where it is, since the marker never goes back.
+    function onToStop(marker, line) {
+        if (marker._rmStop == null || marker._rmGlide) return;
+        var by = line.ahead(marker._rmAlong, marker._rmStop);
+        if (by > 0.5 && by <= STOP_REACH_M)
+            marker._rmGlide = { from: marker._rmAlong, by: by, start: null };
+    }
+
+    // Puts a marker at a place on its line, or, on a map that lays its markers out itself,
+    // leaves the place for it to draw from.
+    function draw(marker, map, line, along) {
+        marker._rmBase = along;
+        if (!map._rmLaysOut && !map._rmZooming) marker.setLatLng(line.pointAt(along));
     }
 
     function run(marker, map) {
@@ -206,12 +232,12 @@
             var dt = last == null ? 0 : Math.min((now - last) / 1000, 0.25);
             last = now;
 
-            var a, settled = false, back = marker._rmBack;
-            if (back) {
-                if (back.start == null) back.start = now;
-                var k = Math.min(1, (now - back.start) / REVERSE_MS);
-                a = line.wrap(back.from + back.by * k);
-                if (k >= 1) marker._rmBack = null;
+            var a, settled = false, glide = marker._rmGlide;
+            if (glide) {
+                if (glide.start == null) glide.start = now;
+                var k = Math.min(1, (now - glide.start) / GLIDE_MS);
+                a = line.wrap(glide.from + glide.by * k);
+                if (k >= 1) marker._rmGlide = null;
             } else {
                 var age = Date.now() - marker._rmSeenMs + marker._rmLagMs;
                 var next = follow(line, marker._rmAlong, marker._rmAnchor, marker._rmSpeed, age, dt);
@@ -222,7 +248,7 @@
             marker._rmAlong = a;
             // Leaflet is repositioning every marker while the map zooms; it gets the final
             // word, and the marker carries on from where the zoom leaves it.
-            if (!map._rmZooming) marker.setLatLng(line.pointAt(a));
+            draw(marker, map, line, a);
             point(marker, marker._rmMoving ? line.bearingAt(a) : null);
             marker._rmFrame = settled ? null : requestAnimationFrame(step);
         }
@@ -233,6 +259,7 @@
         stop(marker);
         marker._rmLine = line;
         marker._rmAlong = along;
+        marker._rmBase = along;
         marker.setLatLng(line.pointAt(along));
         point(marker, moving ? line.bearingAt(along) : null);
     }
@@ -244,7 +271,9 @@
         marker._rmAlong = null;
         marker._rmReading = null;
         marker._rmAnchor = null;
-        marker._rmBack = null;
+        marker._rmGlide = null;
+        marker._rmStop = null;
+        marker._rmBase = null;
     }
 
     // Lets glides stand aside while the map zooms.
