@@ -429,10 +429,11 @@
         });
     }
 
-    // A reading older than this is where the bus was, not where it is. Only a trip
-    // reports; a bus standing at its terminal is not reporting and is not late for it,
-    // and the timestamp it is given is the moment the board was drawn.
-    var STALE_AFTER_MS = 2 * 60 * 1000;
+    // A reading older than this is where the bus was, not where it is. A phone on a trip
+    // reports at least every thirty seconds even standing still, so this is three missed
+    // in a row. Only a trip reports; a bus standing at its terminal is not reporting and is
+    // not late for it, and the timestamp it is given is the moment the board was drawn.
+    var STALE_AFTER_MS = 90 * 1000;
 
     function readingAge(bus) {
         var then = new Date(bus.timestamp + 'Z').getTime();
@@ -477,7 +478,7 @@
 
         if (onRoad) {
             setGlide(marker, false);
-            RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp);
+            RouteMotion.drive(marker, map, line, bus.along, bus.bearing != null, bus.timestamp, bus.speed);
         } else {
             RouteMotion.release(marker);
             setGlide(marker, true);
