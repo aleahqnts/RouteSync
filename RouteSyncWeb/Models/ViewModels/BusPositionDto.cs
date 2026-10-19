@@ -99,6 +99,22 @@ public class BusPositionDto
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? NextStopProgress { get; set; }
 
+    // The stop the bus is standing at, if it is within one's zone.
+    [JsonPropertyName("atStop")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string AtStop { get; set; }
+
+    // Where along the route line that stop is, so the marker can be drawn on it.
+    [JsonPropertyName("atStopAlong")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? AtStopAlong { get; set; }
+
+    // When the bus came to rest there, so buses sharing a stop queue in the order they
+    // arrived.
+    [JsonPropertyName("atStopSince")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? AtStopSince { get; set; }
+
     // Everyone who has boarded this trip. Nobody is counted off again, so this only ever
     // climbs. Taken from the trip's own figure where the counter phone has already raised
     // it, since telemetry carries the driver app's copy of the same number and trails it.

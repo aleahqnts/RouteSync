@@ -63,6 +63,53 @@ public class StopEtaTests
         Assert.Equal(("Back", "Start", 100.0), (places[wrap.Previous].Name, places[wrap.Next].Name, Math.Round(wrap.Metres)));
     }
 
+    [Theory]
+    [InlineData(369, -1)]
+    [InlineData(371, 1)]
+    [InlineData(400, 1)]
+    [InlineData(419, 1)]
+    [InlineData(421, -1)]
+    public void A_stop_is_the_stretch_from_30_m_before_to_20_m_after_it(double along, int zone)
+    {
+        var road = EastRoad();
+        var places = StopEta.Place(road, new[] { StopAt("A", 0), StopAt("B", 400), StopAt("C", 900) });
+
+        Assert.Equal(zone, StopEta.ZoneAt(road, places, along));
+    }
+
+    [Fact]
+    public void Driving_through_a_stop_passes_it_only_on_leaving_its_zone()
+    {
+        var road = EastRoad();
+        var places = StopEta.Place(road, new[] { StopAt("A", 0), StopAt("B", 400), StopAt("C", 900) });
+
+        var inZone = StopEta.Follow(road, places, 410, standing: false, stoodAt: null);
+        Assert.Equal(-1, inZone.AtStop);
+        Assert.Equal(("A", "B"), (places[inZone.Leg!.Value.Previous].Name, places[inZone.Leg!.Value.Next].Name));
+        Assert.Equal(0, inZone.Leg!.Value.Metres);
+
+        var past = StopEta.Follow(road, places, 425, standing: false, stoodAt: null);
+        Assert.Equal(("B", "C"), (places[past.Leg!.Value.Previous].Name, places[past.Leg!.Value.Next].Name));
+    }
+
+    [Fact]
+    public void Standing_in_a_stop_zone_is_at_the_stop_and_has_passed_it_until_the_zone_is_left()
+    {
+        var road = EastRoad();
+        var places = StopEta.Place(road, new[] { StopAt("A", 0), StopAt("B", 400), StopAt("C", 900) });
+
+        var standing = StopEta.Follow(road, places, 385, standing: true, stoodAt: null);
+        Assert.Equal(1, standing.AtStop);
+        Assert.Equal(("B", "C"), (places[standing.Leg!.Value.Previous].Name, places[standing.Leg!.Value.Next].Name));
+
+        var pulling = StopEta.Follow(road, places, 395, standing: false, standing.StoodAt);
+        Assert.Equal(-1, pulling.AtStop);
+        Assert.Equal("B", places[pulling.Leg!.Value.Previous].Name);
+
+        var gone = StopEta.Follow(road, places, 500, standing: false, pulling.StoodAt);
+        Assert.Null(gone.StoodAt);
+    }
+
     [Fact]
     public void Progress_is_the_share_of_the_stretch_covered_including_round_the_end_of_a_loop()
     {

@@ -3,6 +3,12 @@
     /// <summary>A stop placed on its route line, in metres from the line's start.</summary>
     public readonly record struct StopPlace(string Name, double Along);
 
+    /// <summary>Where a bus is among its route's stops.</summary>
+    /// <param name="Leg">The stops either side of it, or null with no stop ahead.</param>
+    /// <param name="AtStop">Index of the stop it is standing at, or -1.</param>
+    /// <param name="StoodAt">Where along the line the stop it has stood at and not yet left is, if any.</param>
+    public readonly record struct StopState(StopLeg? Leg, int AtStop, double? StoodAt);
+
     /// <summary>Where a bus is between two stops.</summary>
     /// <param name="Previous">Index of the last stop passed, or -1 before the first stop of a line that is not a loop.</param>
     /// <param name="Next">Index of the next stop.</param>
@@ -95,19 +101,72 @@
             return places.OrderBy(p => p.Along).ToList();
         }
 
+        /// <summary>Metres before a stop, along the route, where a bus counts as at it.</summary>
+        public const double ZoneBefore = 30;
+
+        /// <summary>Metres after a stop, along the route, where a bus still counts as at it.</summary>
+        public const double ZoneAfter = 20;
+
+        /// <summary>
+        /// The stop whose zone holds a place on the line, or -1. A stop is a stretch of road
+        /// rather than a point: a bus is twelve metres long, drivers stop a little short or
+        /// long, and GPS wanders by a few metres.
+        /// </summary>
+        public static int ZoneAt(RouteLine line, IReadOnlyList<StopPlace> places, double along)
+        {
+            var best = -1;
+            var bestOff = double.MaxValue;
+            for (var i = 0; i < places.Count; i++)
+            {
+                var off = line.Ahead(places[i].Along, along);
+                if (off >= -ZoneBefore && off <= ZoneAfter && Math.Abs(off) < bestOff)
+                    (best, bestOff) = (i, Math.Abs(off));
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Where a bus is among its stops after a reading. A bus standing in a stop's zone is
+        /// at that stop, and counts as having passed it from then on, until it leaves the zone.
+        /// </summary>
+        /// <param name="standing">The bus is standing still.</param>
+        /// <param name="stoodAt">What the last reading returned as <see cref="StopState.StoodAt"/>.</param>
+        public static StopState Follow(RouteLine line, IReadOnlyList<StopPlace> places, double along,
+            bool standing, double? stoodAt)
+        {
+            var zone = ZoneAt(line, places, along);
+            if (stoodAt is double stood && (zone < 0 || places[zone].Along != stood))
+                stoodAt = null;
+
+            var atStop = -1;
+            if (zone >= 0 && standing)
+            {
+                atStop = zone;
+                stoodAt = places[zone].Along;
+            }
+            return new StopState(Locate(line, places, along, stoodAt), atStop, stoodAt);
+        }
+
         /// <summary>
         /// The stops either side of a place on the line, or null when there is no stop ahead:
         /// past the last stop of a line that is not a loop, or a route with no stops on it.
         /// </summary>
-        public static StopLeg? Locate(RouteLine line, IReadOnlyList<StopPlace> places, double along)
+        /// <remarks>
+        /// A stop counts as passed once the bus leaves its zone, not when it crosses the
+        /// stop's point, or as soon as the bus has stood at it.
+        /// </remarks>
+        /// <param name="stoodAt">Where along the line the stop the bus has stood at is, if any.</param>
+        public static StopLeg? Locate(RouteLine line, IReadOnlyList<StopPlace> places, double along, double? stoodAt = null)
         {
             if (places.Count == 0)
                 return null;
 
             for (var i = 0; i < places.Count; i++)
             {
-                if (places[i].Along > along)
-                    return new StopLeg(i > 0 ? i - 1 : line.IsLoop ? places.Count - 1 : -1, i, places[i].Along - along);
+                var passed = places[i].Along + ZoneAfter < along || places[i].Along == stoodAt;
+                if (!passed)
+                    return new StopLeg(i > 0 ? i - 1 : line.IsLoop ? places.Count - 1 : -1, i,
+                        Math.Max(0, places[i].Along - along));
             }
 
             // Past the last stop. Round a loop the next is the first again.

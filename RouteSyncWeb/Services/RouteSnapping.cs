@@ -483,6 +483,7 @@ namespace FleetWise.Services
             public DateTime TouchedUtc;
             public double? StillAlong;
             public DateTime StillSince;
+            public double? StoodAt;
         }
 
         /// <summary>Metres a bus may drift on the line, from GPS jitter alone, and still count as standing.</summary>
@@ -570,6 +571,38 @@ namespace FleetWise.Services
                 return TimeSpan.Zero;
             lock (entry.Gate)
                 return entry.StillAlong is null ? TimeSpan.Zero : entry.LastAt - entry.StillSince;
+        }
+
+        /// <summary>
+        /// When the trip's bus came to rest where it now stands, by the phone's clock, or
+        /// null while it is moving or off the line.
+        /// </summary>
+        public DateTime? StandingSince(string tripId)
+        {
+            if (!_trips.TryGetValue(tripId, out var entry))
+                return null;
+            lock (entry.Gate)
+                return entry.StillAlong is null ? null : entry.StillSince;
+        }
+
+        /// <summary>
+        /// Where along the line the stop is that the trip's bus has stood at and not yet left
+        /// the zone of, or null.
+        /// </summary>
+        public double? StoodAt(string tripId)
+        {
+            if (!_trips.TryGetValue(tripId, out var entry))
+                return null;
+            lock (entry.Gate)
+                return entry.StoodAt;
+        }
+
+        /// <summary>Records the stop the trip's bus has stood at, or clears it with null.</summary>
+        public void NoteStoodAt(string tripId, double? stopAlong)
+        {
+            if (_trips.TryGetValue(tripId, out var entry))
+                lock (entry.Gate)
+                    entry.StoodAt = stopAlong;
         }
 
         /// <summary>Forgets trips nobody has asked about for a while, which have ended.</summary>

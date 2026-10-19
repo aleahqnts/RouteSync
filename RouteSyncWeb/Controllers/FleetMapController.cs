@@ -388,11 +388,18 @@ namespace FleetWise.Controllers
                 StopLeg? leg = null;
                 IReadOnlyList<StopPlace>? stopPlaces = null;
                 double? etaSeconds = null;
+                int atStop = -1;
                 if (line is not null && snap is { OnRoute: true, Along: double along })
                 {
                     var (places, speeds) = StopsOf(trip.RouteId, line, route);
                     stopPlaces = places;
-                    leg = StopEta.Locate(line, places, along);
+
+                    // The snapper gives a standing bus no bearing.
+                    var stops = StopEta.Follow(line, places, along, standing: snap.Bearing is null,
+                        _snaps.StoodAt(trip.TripId));
+                    _snaps.NoteStoodAt(trip.TripId, stops.StoodAt);
+                    leg = stops.Leg;
+                    atStop = stops.AtStop;
                     if (leg is { } l)
                         etaSeconds = StopEta.Seconds(l.Metres,
                                 l.Previous >= 0 ? speeds.For(l.Previous, PhClock.Now.Hour) : null,
@@ -433,6 +440,11 @@ namespace FleetWise.Controllers
                     NextStop = leg is { } n ? stopPlaces![n.Next].Name : null,
                     NextStopSeconds = etaSeconds is double e ? (int)Math.Round(e) : null,
                     NextStopProgress = leg is { } g ? StopEta.Progress(line!, stopPlaces!, g) : null,
+                    AtStop = atStop >= 0 ? stopPlaces![atStop].Name : null,
+                    AtStopAlong = atStop >= 0 ? stopPlaces![atStop].Along : null,
+                    AtStopSince = atStop >= 0 && _snaps.StandingSince(trip.TripId) is DateTime since
+                        ? ForMap(StoredTimes.WallAsUtc(since))
+                        : null,
                     Passengers = passengers,
                     Capacity = capacity,
                     EstimatedRevenue = _fareCalculator.Estimate(passengers, fareRate),

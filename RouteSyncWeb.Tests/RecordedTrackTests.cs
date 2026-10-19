@@ -142,15 +142,31 @@ public class RecordedTrackTests
         }
     }
 
+    /// <summary>Where the bus stood among its stops after each reading, as the map works it out.</summary>
+    private static List<StopState> StopStates()
+    {
+        var places = StopEta.Place(Loop, Stops);
+        var states = new List<StopState>();
+        double? stoodAt = null;
+        foreach (var (_, result) in Replay())
+        {
+            var state = StopEta.Follow(Loop, places, result.Along!.Value, result.Bearing is null, stoodAt);
+            stoodAt = state.StoodAt;
+            states.Add(state);
+        }
+        return states;
+    }
+
     [Fact]
     public void The_trip_starts_at_its_terminal()
     {
         var first = Replay()[0].Result;
-        var leg = StopEta.Locate(Loop, StopEta.Place(Loop, Stops), first.Along!.Value)!.Value;
+        var state = StopStates()[0];
 
         Assert.Equal(0, first.Along!.Value, 3);
-        Assert.Equal(Terminal, leg.Previous);
-        Assert.Equal(Second, leg.Next);
+        Assert.Equal(Terminal, state.AtStop);
+        Assert.Equal(Terminal, state.Leg!.Value.Previous);
+        Assert.Equal(Second, state.Leg!.Value.Next);
     }
 
     [Fact]
@@ -165,11 +181,10 @@ public class RecordedTrackTests
     [Fact]
     public void The_stops_pass_in_route_order_round_both_laps()
     {
-        var places = StopEta.Place(Loop, Stops);
         var passed = new List<int>();
-        foreach (var (_, result) in Replay())
+        foreach (var state in StopStates())
         {
-            var previous = StopEta.Locate(Loop, places, result.Along!.Value)!.Value.Previous;
+            var previous = state.Leg!.Value.Previous;
             if (passed.Count == 0 || passed[^1] != previous)
                 passed.Add(previous);
         }
