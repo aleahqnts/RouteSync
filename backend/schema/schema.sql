@@ -852,6 +852,39 @@ COMMENT ON FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_
 
 
 
+CREATE OR REPLACE FUNCTION "public"."telemetry_thin"("p_before" timestamp with time zone, "p_every_seconds" integer DEFAULT 30) RETURNS integer
+    LANGUAGE "sql"
+    SET "search_path" TO 'public'
+    AS $$
+  with ranked as (
+    select t.telemetry_id,
+           row_number() over (
+             partition by t.trip_id, floor(extract(epoch from t."timestamp") / greatest(p_every_seconds, 1))
+             order by t."timestamp", t.telemetry_id) as nth,
+           t.total_passengers is distinct from lag(t.total_passengers) over (
+             partition by t.trip_id
+             order by t."timestamp", t.telemetry_id) as count_changed
+    from telemetry_data t
+    where t."timestamp" < p_before
+  ), gone as (
+    delete from telemetry_data d
+    using ranked r
+    where d.telemetry_id = r.telemetry_id
+      and r.nth > 1
+      and not r.count_changed
+    returning 1
+  )
+  select count(*)::integer from gone
+$$;
+
+
+ALTER FUNCTION "public"."telemetry_thin"("p_before" timestamp with time zone, "p_every_seconds" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."telemetry_thin"("p_before" timestamp with time zone, "p_every_seconds" integer) IS 'Removes readings older than p_before except the first in each p_every_seconds window per trip (the windows telemetry_sample uses) and those where the passenger count changed. Returns the number removed.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."trip_active_poll"("p_trip_id" character varying) RETURNS json
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
@@ -3301,6 +3334,11 @@ GRANT ALL ON FUNCTION "public"."shift_start_context"("p_trip_id" character varyi
 
 REVOKE ALL ON FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."telemetry_sample"("p_trip_ids" "text"[], "p_every_seconds" integer) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."telemetry_thin"("p_before" timestamp with time zone, "p_every_seconds" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."telemetry_thin"("p_before" timestamp with time zone, "p_every_seconds" integer) TO "service_role";
 
 
 
