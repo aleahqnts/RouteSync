@@ -12,7 +12,10 @@ public static class PhTime
 {
     private static readonly TimeZoneInfo Tz = Resolve();
 
-    public static DateTime Now => TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Tz).DateTime;
+    public static DateTime Now => At(DateTimeOffset.UtcNow);
+
+    /// <summary>A moment, such as when a GPS fix was taken, on the Philippine clock.</summary>
+    public static DateTime At(DateTimeOffset moment) => TimeZoneInfo.ConvertTime(moment, Tz).DateTime;
 
     /// <summary>When a service day begins.</summary>
     public static readonly TimeSpan DayStartTime = TimeSpan.FromHours(6);

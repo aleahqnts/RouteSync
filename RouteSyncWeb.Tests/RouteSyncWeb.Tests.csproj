@@ -17,6 +17,12 @@
     <ProjectReference Include="..\RouteSyncWeb\FleetWise.csproj" />
   </ItemGroup>
 
+  <!-- The driver app's send rule is plain C#, so it is tested here rather than in a test
+       project of its own that would have to build against Android. -->
+  <ItemGroup>
+    <Compile Include="..\RouteSyncMobile\Services\TelemetrySendRule.cs" Link="Linked\TelemetrySendRule.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
