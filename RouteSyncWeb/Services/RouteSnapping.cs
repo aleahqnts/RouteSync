@@ -149,6 +149,40 @@ namespace FleetWise.Services
             return IsLoop ? Math.Min(d, Length - d) : d;
         }
 
+        /// <summary>
+        /// How far ahead one place on the line is of another, going the shorter way round a
+        /// loop. Negative when it is behind.
+        /// </summary>
+        public double Ahead(double from, double to)
+        {
+            var d = to - from;
+            if (!IsLoop || Length <= 0)
+                return d;
+            d = (d % Length + Length) % Length;
+            return d <= Length / 2 ? d : d - Length;
+        }
+
+        /// <summary>
+        /// Where the line first passes within the radius of a point, or null when it never
+        /// does. A loop's start and end are the same place, and this names it as the start.
+        /// </summary>
+        public double? FirstPass(GeoPoint point, double radius)
+        {
+            double? first = null;
+            foreach (var place in Near(point, radius))
+                if (first is not double f || place.Along < f)
+                    first = place.Along;
+            return first;
+        }
+
+        /// <summary>Metres between two points, on the same flat projection as the line.</summary>
+        public double Between(GeoPoint a, GeoPoint b)
+        {
+            var (ax, ay) = Project(a);
+            var (bx, by) = Project(b);
+            return Distance(ax, ay, bx, by);
+        }
+
         private LinePlace Nearest(int i, double px, double py)
         {
             double ax = _x[i], ay = _y[i], bx = _x[i + 1], by = _y[i + 1];
@@ -230,6 +264,15 @@ namespace FleetWise.Services
 
         /// <summary>Readings in a row beyond the snap radius.</summary>
         internal int OffStreak { get; set; }
+
+        /// <summary>Readings in a row that placed the bus well behind where it already was.</summary>
+        internal int BehindStreak { get; set; }
+
+        /// <summary>
+        /// The terminal the trip starts from, if its route has one. A bus standing near it
+        /// on the trip's first reading is placed at it.
+        /// </summary>
+        public GeoPoint? Terminal { get; set; }
     }
 
     /// <summary>Places a bus on its route line, the way a navigation app does.</summary>
@@ -247,9 +290,19 @@ namespace FleetWise.Services
     /// road. Once off, it is drawn where it really is, which is also what a phone far from
     /// any route shows, such as one being tested outside BGC.</para>
     ///
-    /// <para>A reading less accurate than <see cref="PoorAccuracy"/> leaves the bus where it
-    /// was. The first reading of a trip is used whatever its accuracy, since the bus has to
-    /// be drawn somewhere.</para>
+    /// <para>A reading less accurate than <see cref="PoorAccuracy"/>, or one with no speed,
+    /// leaves the bus where it was. A phone's GPS always reports a speed, zero when standing;
+    /// a fix without one came from cell towers and wifi, which can place a bus tens of metres
+    /// from where it is while claiming to be accurate. The first reading of a trip is used
+    /// whatever it is, since the bus has to be drawn somewhere.</para>
+    ///
+    /// <para>Progress along the line only goes forward. A reading that places the bus behind
+    /// where it was leaves it there; only <see cref="ReverseAfter"/> readings in a row well
+    /// behind it, a bus that really did turn back, move it backwards.</para>
+    ///
+    /// <para>A trip whose first reading is a bus standing within <see cref="TerminalReach"/>
+    /// of its route's terminal starts at the terminal, so the stop it last passed is the
+    /// terminal rather than the stop before it round a loop.</para>
     /// </remarks>
     public static class RouteSnapper
     {
@@ -257,7 +310,19 @@ namespace FleetWise.Services
         public const double SnapRadius = 50;
 
         /// <summary>Accuracy radius, in metres, beyond which a reading does not move the bus.</summary>
-        public const double PoorAccuracy = 50;
+        public const double PoorAccuracy = 25;
+
+        /// <summary>
+        /// Metres behind where the bus was that count as GPS wander rather than the bus
+        /// going back. Wander leaves the bus where it is without counting toward a reverse.
+        /// </summary>
+        public const double Wander = 20;
+
+        /// <summary>Readings in a row well behind the bus before it is moved back to them.</summary>
+        public const int ReverseAfter = 3;
+
+        /// <summary>Metres from its terminal within which a trip's first reading starts it there.</summary>
+        public const double TerminalReach = 100;
 
         /// <summary>Readings in a row beyond the snap radius before the bus is shown off route.</summary>
         public const int OffRouteAfter = 2;
@@ -292,7 +357,17 @@ namespace FleetWise.Services
 
             var distance = line.DistanceTo(reading.Position);
 
-            if (reading.Accuracy > PoorAccuracy && state.Last is not null)
+            if (state.Last is null && !moving && state.Terminal is GeoPoint terminal
+                && line.Between(reading.Position, terminal) <= TerminalReach
+                && line.FirstPass(terminal, TerminalReach) is double start)
+            {
+                state.Along = start;
+                return state.Last = new SnapResult(line.PointAt(start), reading.Position, reading.Accuracy,
+                    OnRoute: true, OffRoute: false, Held: false, Ignored: false,
+                    Along: start, Bearing: null, DistanceToRoute: distance);
+            }
+
+            if ((reading.Accuracy > PoorAccuracy || reading.Speed is null) && state.Last is not null)
             {
                 return state.Last with
                 {
@@ -305,6 +380,24 @@ namespace FleetWise.Services
             if (places.Count > 0)
             {
                 var pick = Choose(line, places, heading, state.Along);
+
+                if (state.Along is double was && state.Last is { } shown)
+                {
+                    var ahead = line.Ahead(was, pick.Along);
+                    state.BehindStreak = ahead < -Wander ? state.BehindStreak + 1 : 0;
+                    if (ahead < 0 && (ahead >= -Wander || state.BehindStreak < ReverseAfter))
+                    {
+                        state.OffStreak = 0;
+                        return state.Last = shown with
+                        {
+                            Raw = reading.Position, Accuracy = reading.Accuracy,
+                            OnRoute = true, OffRoute = false, Held = false, Ignored = false,
+                            Bearing = moving ? shown.Bearing : null, DistanceToRoute = distance
+                        };
+                    }
+                }
+
+                state.BehindStreak = 0;
                 state.Along = pick.Along;
                 state.OffStreak = 0;
                 return state.Last = new SnapResult(pick.Point, reading.Position, reading.Accuracy,
@@ -426,8 +519,9 @@ namespace FleetWise.Services
         /// when the trip has no reading yet.
         /// </summary>
         /// <param name="readings">Any readings of the trip; those already used are skipped.</param>
+        /// <param name="terminal">The terminal the trip's route starts from, if it has one.</param>
         public SnapResult? Advance(string tripId, RouteLine? line,
-            IEnumerable<(long Id, DateTime At, GpsReading Reading)> readings)
+            IEnumerable<(long Id, DateTime At, GpsReading Reading)> readings, GeoPoint? terminal = null)
         {
             var entry = _trips.GetOrAdd(tripId, _ => new Entry());
 
@@ -440,6 +534,8 @@ namespace FleetWise.Services
                     entry.Line = line;
                     entry.State = new SnapState();
                 }
+                if (entry.State.Last is null)
+                    entry.State.Terminal = terminal;
 
                 foreach (var (id, at, reading) in readings.OrderBy(r => r.At).ThenBy(r => r.Id))
                 {

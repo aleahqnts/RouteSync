@@ -7,6 +7,7 @@
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     var day = Model.Date.ToString("yyyy-MM-dd", inv);
     var radius = RouteSnapper.SnapRadius.ToString("0", inv);
+    var poor = RouteSnapper.PoorAccuracy.ToString("0", inv);
 
     // An empty cell is a figure that does not exist for the trip, such as an accuracy from a
     // build that did not send one, not a zero.
@@ -57,7 +58,7 @@
     <div class="gc-stat">
         <span class="gc-stat-label">Ignored</span>
         <span class="gc-stat-value">@Model.Totals.Ignored.ToString("N0", inv)</span>
-        <span class="gc-stat-note">accuracy worse than @radius&nbsp;m</span>
+        <span class="gc-stat-note">worse than @poor&nbsp;m, or not from the GPS</span>
     </div>
 </div>
 
@@ -126,7 +127,7 @@
     <dt>Off route</dt>
     <dd>Drawn where the phone was, after two readings in a row more than @radius&nbsp;m from the route.</dd>
     <dt>Ignored</dt>
-    <dd>The phone said the fix could be more than @radius&nbsp;m out, so it did not move the bus.</dd>
+    <dd>The phone said the fix could be more than @poor&nbsp;m out, or the fix had no speed, which means it came from cell towers or wifi rather than the GPS. Either way it did not move the bus.</dd>
     <dt>Avg and worst to road</dt>
     <dd>How far the on-road readings were from the line before they were drawn on it.</dd>
     <dt>Median accuracy</dt>

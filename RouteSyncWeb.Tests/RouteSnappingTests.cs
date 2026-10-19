@@ -124,6 +124,78 @@ public class RouteSnappingTests
     }
 
     [Fact]
+    public void A_reading_behind_the_bus_leaves_it_where_it_was()
+    {
+        var road = EastRoad();
+        var state = new SnapState();
+        RouteSnapper.Next(road, state, Moving(Offset(Origin, 5, 400), 90));
+
+        var behind = RouteSnapper.Next(road, state, Moving(Offset(Origin, 5, 350), 90));
+
+        Assert.Equal(400, behind.Along!.Value, 1);
+        Assert.True(behind.OnRoute);
+    }
+
+    [Fact]
+    public void Three_readings_in_a_row_well_behind_move_the_bus_back()
+    {
+        var road = EastRoad();
+        var state = new SnapState();
+        RouteSnapper.Next(road, state, Moving(Offset(Origin, 5, 400), 90));
+
+        Assert.Equal(400, RouteSnapper.Next(road, state, Stopped(Offset(Origin, 5, 340))).Along!.Value, 1);
+        Assert.Equal(400, RouteSnapper.Next(road, state, Stopped(Offset(Origin, 5, 340))).Along!.Value, 1);
+        Assert.Equal(340, RouteSnapper.Next(road, state, Stopped(Offset(Origin, 5, 340))).Along!.Value, 1);
+    }
+
+    [Fact]
+    public void Wander_just_behind_never_adds_up_to_a_reverse()
+    {
+        var road = EastRoad();
+        var state = new SnapState();
+        RouteSnapper.Next(road, state, Stopped(Offset(Origin, 5, 400)));
+
+        for (var i = 0; i < 6; i++)
+            Assert.Equal(400, RouteSnapper.Next(road, state, Stopped(Offset(Origin, 5, 390))).Along!.Value, 1);
+    }
+
+    [Fact]
+    public void A_fix_with_no_speed_does_not_move_the_bus()
+    {
+        var road = EastRoad();
+        var state = new SnapState();
+        RouteSnapper.Next(road, state, Moving(Offset(Origin, 5, 400), 90));
+
+        var network = RouteSnapper.Next(road, state, new GpsReading(Offset(Origin, 5, 500), null, null, 12));
+
+        Assert.True(network.Ignored);
+        Assert.Equal(400, network.Along!.Value, 1);
+    }
+
+    [Fact]
+    public void A_trip_that_starts_moving_near_its_terminal_snaps_where_it_is()
+    {
+        var road = EastRoad();
+        var state = new SnapState { Terminal = Origin };
+
+        var r = RouteSnapper.Next(road, state, Moving(Offset(Origin, 5, 60), 90));
+
+        Assert.Equal(60, r.Along!.Value, 1);
+    }
+
+    [Fact]
+    public void A_trip_that_starts_standing_near_its_terminal_starts_at_it()
+    {
+        var road = EastRoad();
+        var state = new SnapState { Terminal = Offset(Origin, 0, 100) };
+
+        var r = RouteSnapper.Next(road, state, Stopped(Offset(Origin, 5, 160)));
+
+        Assert.Equal(100, r.Along!.Value, 1);
+        Assert.Null(r.Bearing);
+    }
+
+    [Fact]
     public void The_first_fix_of_a_trip_is_used_however_inaccurate()
     {
         var r = RouteSnapper.Next(EastRoad(), new SnapState(), Moving(Offset(Origin, 5, 400), 90, accuracy: 200));

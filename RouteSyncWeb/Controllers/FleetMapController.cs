@@ -78,8 +78,9 @@ namespace FleetWise.Controllers
         /// <summary>
         /// Seconds between the readings the speeds are learned from. The phones report every
         /// five, and one in thirty still places each stop crossing within a few seconds.
+        /// Older readings are thinned to these same windows, so they stay readable here.
         /// </summary>
-        private const int SpeedSampleSeconds = 30;
+        public const int SpeedSampleSeconds = 30;
 
         /// <summary>Days of past trips the speeds are learned from, within the telemetry kept.</summary>
         private const int SpeedHistoryDays = 14;
@@ -374,8 +375,10 @@ namespace FleetWise.Controllers
 
                 // On its route line within the snap radius, where it really is otherwise.
                 var line = _snaps.LineFor(trip.RouteId, route?.WaypointsJson);
+                var terminal = RouteStops.Terminal(route?.StopsJson, route?.WaypointsJson);
                 var snap = _snaps.Advance(trip.TripId, line,
-                    readingsByTrip[trip.TripId].Select(r => (r.TelemetryId, r.Timestamp, ToReading(r))));
+                    readingsByTrip[trip.TripId].Select(r => (r.TelemetryId, r.Timestamp, ToReading(r))),
+                    terminal is null ? null : new GeoPoint(terminal.Lat, terminal.Lng));
                 var shown = snap?.Shown ?? new GeoPoint((double)telemetry.Latitude, (double)telemetry.Longitude);
 
                 var capacity = vehicle?.Capacity ?? 0;
