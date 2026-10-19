@@ -97,5 +97,34 @@ public class TelemetryRetentionService : BackgroundService
         _logger.LogInformation(
             "Telemetry retention sweep complete: removed rows older than {Cutoff:yyyy-MM-dd HH:mm} ({Minutes}m).",
             cutoff, _retentionMinutes);
+
+        if (_retentionMinutes > ThinAfter.TotalMinutes)
+            await ThinAsync();
+    }
+
+    // Readings past the first two days are cut down to the first in each window the stop
+    // speeds are learned from, plus every change in the passenger count. The live map and
+    // any replay of a recent trip still have every reading.
+    private static readonly TimeSpan ThinAfter = TimeSpan.FromHours(48);
+
+    private async Task ThinAsync()
+    {
+        var before = PhClock.NowForDb - ThinAfter;
+        try
+        {
+            var result = await _supabase.Rpc("telemetry_thin", new Dictionary<string, object?>
+            {
+                ["p_before"] = before.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["p_every_seconds"] = FleetWise.Controllers.FleetMapController.SpeedSampleSeconds,
+            });
+            _logger.LogInformation(
+                "Telemetry thinned: removed {Removed} readings older than {Before:yyyy-MM-dd HH:mm}.",
+                result.Content, before);
+        }
+        catch (Postgrest.Exceptions.PostgrestException ex)
+            when (RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+        {
+            _logger.LogInformation("Telemetry thinning unavailable: the database has no telemetry_thin function.");
+        }
     }
 }
