@@ -117,7 +117,13 @@
             arrow.hidden = true;
         } else {
             arrow.hidden = false;
-            arrow.style.transform = 'rotate(' + Math.round(bearing) + 'deg)';
+            // Turned the short way round. The arrow eases into each new direction, and
+            // eased from 270 to 0 degrees it would swing back through south, turning left
+            // for a right turn, so the turn is counted on from the last one instead.
+            var was = marker._rmTurn;
+            var turn = was == null ? bearing : was + ((bearing - was) % 360 + 540) % 360 - 180;
+            marker._rmTurn = turn;
+            arrow.style.transform = 'rotate(' + Math.round(turn) + 'deg)';
         }
     }
 
@@ -288,7 +294,8 @@
         release: release,
         point: point,
         // Puts the arrow back after a marker's icon is replaced, which builds a new one.
-        repoint: function (marker) { point(marker, marker._rmBearing); },
+        // A new arrow starts from no turn at all, so it is turned from the plain direction.
+        repoint: function (marker) { marker._rmTurn = null; point(marker, marker._rmBearing); },
         watch: watch,
         arrowHtml: ARROW_HTML,
         // The motion itself, without a map, for checking.
