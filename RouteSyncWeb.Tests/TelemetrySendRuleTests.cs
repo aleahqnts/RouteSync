@@ -36,7 +36,7 @@ public class TelemetrySendRuleTests
     [Fact]
     public void A_bus_pulling_away_is_sent_at_once()
     {
-        Assert.True(TelemetrySendRule.ShouldWrite(Fix(0, 0), Fix(1, 2.5)));
+        Assert.True(TelemetrySendRule.ShouldWrite(Fix(0, 0), Fix(12, 2.5)));
     }
 
     [Fact]
@@ -46,10 +46,16 @@ public class TelemetrySendRuleTests
     }
 
     [Fact]
-    public void Braking_to_a_stop_waits_for_the_standing_interval()
+    public void A_bus_coming_to_a_stop_is_sent_at_once()
     {
-        Assert.False(TelemetrySendRule.ShouldWrite(Fix(0, 5), Fix(6, 0)));
-        Assert.True(TelemetrySendRule.ShouldWrite(Fix(0, 5), Fix(30, 0)));
+        Assert.True(TelemetrySendRule.ShouldWrite(Fix(0, 5), Fix(2, 0.4)));
+    }
+
+    [Fact]
+    public void A_bus_crawling_on_and_off_is_not_sent_every_second()
+    {
+        Assert.False(TelemetrySendRule.ShouldWrite(Fix(0, 1.2), Fix(1, 0.8)));
+        Assert.False(TelemetrySendRule.ShouldWrite(Fix(0, 0.8), Fix(1, 1.2)));
     }
 
     [Theory]

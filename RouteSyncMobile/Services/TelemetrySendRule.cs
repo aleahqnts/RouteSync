@@ -14,8 +14,9 @@ public readonly record struct TelemetryFix(DateTime At, double? Speed, double? A
 /// at a stop or in traffic, is reported every <see cref="StandingEverySeconds"/>: its
 /// position is not changing, and every row is kept for days.</para>
 ///
-/// <para>A bus that pulls away is reported at once rather than at the end of its standing
-/// interval, and so is a change in the passenger count, which is audit evidence.</para>
+/// <para>A bus that pulls away or comes to a stop is reported at once, so the map starts or
+/// stops its marker within a second of the bus. So is a change in the passenger count,
+/// which is audit evidence.</para>
 ///
 /// <para>Only a fix from the GPS itself is sent. It always carries a speed, zero when
 /// standing. A fix with no speed came from cell towers or wifi, which can place a bus tens
@@ -26,6 +27,12 @@ public static class TelemetrySendRule
 {
     public const double MovingEverySeconds = 5;
     public const double StandingEverySeconds = 30;
+
+    /// <summary>
+    /// Seconds after the last row before pulling away or stopping is reported, so a bus
+    /// crawling in traffic at about walking pace is not reported every second.
+    /// </summary>
+    public const double ChangeAfterSeconds = 2;
 
     /// <summary>Metres per second at or above which the bus counts as moving, as on the fleet map.</summary>
     public const double MovingSpeed = 1.0;
@@ -52,11 +59,12 @@ public static class TelemetrySendRule
         if (fix.Count != was.Count)
             return true;
 
+        var since = (fix.At - was.At).TotalSeconds;
         var moving = fix.Speed >= MovingSpeed;
-        if (moving && !(was.Speed >= MovingSpeed))
+        if (moving != was.Speed >= MovingSpeed && since >= ChangeAfterSeconds - Slack)
             return true;
 
         var every = moving ? MovingEverySeconds : StandingEverySeconds;
-        return (fix.At - was.At).TotalSeconds >= every - Slack;
+        return since >= every - Slack;
     }
 }
