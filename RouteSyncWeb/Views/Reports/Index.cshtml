@@ -235,6 +235,11 @@
                 </div>
             </div>
         </div>
+
+        <div class="rp-bar-section">
+            <div class="rp-bar-title">Revenue per Trip by Route</div>
+            <canvas id="revenueRouteChart" class="rp-bar-canvas"></canvas>
+        </div>
     </div>
 
 </div>
@@ -635,7 +640,7 @@
     let currentPage = 1;
     // The trip table's order, chosen from its headings. Empty is the server's own order.
     let tripSort = { key: '', dir: 'asc' };
-    let passengerChart, revenueChart, passengerBarChart;
+    let passengerChart, revenueChart, passengerBarChart, revenueRouteChart;
 
     function getFilters() {
     return {
@@ -774,14 +779,15 @@
     return `${formatNumber(n)} ${n === 1 ? 'trip' : 'trips'}`;
     }
 
-    function initBarChart(labels, data, revenue) {
-    return new Chart(document.getElementById('passengerBarChart').getContext('2d'), {
+    // A route ranking. extra holds a second figure per bar for the tooltip.
+    function initBarChart(id, labels, data, extra, tooltipLabel) {
+    return new Chart(document.getElementById(id).getContext('2d'), {
     type: 'bar',
     data: {
     labels: labels,
     datasets: [{
     data: data,
-    revenue: revenue,
+    extra: extra,
     backgroundColor: ['#7C6FE0', '#4AADA8', '#4DB6C4'],
     borderRadius: 6,
     borderSkipped: false
@@ -800,7 +806,7 @@
     borderWidth: 1,
     padding: 10,
     callbacks: {
-    label: (item) => ` ${item.parsed.y.toLocaleString()} passengers, ${formatCurrencyCompact(item.dataset.revenue?.[item.dataIndex])}`
+    label: (item) => ' ' + tooltipLabel(item.parsed.y, item.dataset.extra?.[item.dataIndex])
     }
     }
     },
@@ -956,12 +962,10 @@
     const values = routes.map(r => r.value);
     const revenue = routes.map(r => r.revenue);
     if (!passengerBarChart) {
-    passengerBarChart = initBarChart(labels, values, revenue);
+    passengerBarChart = initBarChart('passengerBarChart', labels, values, revenue,
+    (v, rev) => `${v.toLocaleString()} passengers, ${formatCurrencyCompact(rev)}`);
     } else {
-    passengerBarChart.data.labels = labels;
-    passengerBarChart.data.datasets[0].data = values;
-    passengerBarChart.data.datasets[0].revenue = revenue;
-    passengerBarChart.update();
+    updateBarChart(passengerBarChart, labels, values, revenue);
     }
     }
 
@@ -976,6 +980,24 @@
     const perTripFmt = v => `${formatCurrencyCompact(v)} per trip`;
     if (!revenueChart) revenueChart = miniBarChart('revenueMiniChart', summary, '#4AADA8', perTripFmt);
     else updateMiniBarChart(revenueChart, summary);
+
+    const routes = summary.perTripByRoute || [];
+    const labels = routes.map(r => r.name);
+    const values = routes.map(r => r.value);
+    const trips = routes.map(r => r.trips);
+    if (!revenueRouteChart) {
+    revenueRouteChart = initBarChart('revenueRouteChart', labels, values, trips,
+    (v, n) => `${perTripFmt(v)}, ${tripsLine(n)}`);
+    } else {
+    updateBarChart(revenueRouteChart, labels, values, trips);
+    }
+    }
+
+    function updateBarChart(chart, labels, values, extra) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = values;
+    chart.data.datasets[0].extra = extra;
+    chart.update();
     }
 
     /* Replacement suggestions card. Loaded beside the main data rather than inside it,

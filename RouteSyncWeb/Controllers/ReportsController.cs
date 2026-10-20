@@ -317,14 +317,27 @@ namespace FleetWise.Controllers
                     : b.trips.Count == 0 ? 0 : Math.Round(Figure(b.trips) / b.trips.Count, 2),
             }).ToList();
 
-            // The passenger card ranks the routes; revenue is fare times riders, so a second
-            // ranking by takings would repeat it.
+            // The passenger card ranks the routes by riders. Revenue is fare times riders, so
+            // the revenue card ranks them by takings per trip instead: which route's runs pay.
+            string RouteName(int id) => routeNames.TryGetValue(id, out var rn) ? rn : $"Route {id:00}";
+            var perTripByRoute = isPassenger || current.Count == 0 ? null : current
+                .GroupBy(t => t.RouteId)
+                .Select(g => new
+                {
+                    routeId = g.Key,
+                    name = RouteName(g.Key),
+                    trips = g.Count(),
+                    value = Math.Round(g.Sum(t => t.EstimatedRevenue) / g.Count(), 2),
+                })
+                .OrderByDescending(r => r.value)
+                .ToList();
+
             var topRoutes = !isPassenger || total == 0 ? null : current
                 .GroupBy(t => t.RouteId)
                 .Select(g => new
                 {
                     routeId = g.Key,
-                    name = routeNames.TryGetValue(g.Key, out var rn) ? rn : $"Route {g.Key:00}",
+                    name = RouteName(g.Key),
                     value = (decimal)g.Sum(passengers),
                     revenue = g.Sum(t => t.EstimatedRevenue),
                 })
@@ -343,7 +356,8 @@ namespace FleetWise.Controllers
                 seriesLabels = series.Select(s => s.label),
                 seriesData = series.Select(s => s.value),
                 seriesTrips = series.Select(s => s.trips),
-                topRoutes
+                topRoutes,
+                perTripByRoute
             };
         }
 
