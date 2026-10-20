@@ -175,9 +175,10 @@
         <div class="rp-summary-body">
             <div class="rp-summary-left">
                 <div class="rp-summary-sublabel">Total Passengers</div>
-                <div class="rp-summary-big" id="passengerSummaryTotal">14,230</div>
-                <div class="rp-delta-row rp-delta--up" id="passengerSummaryDelta">&#x25B4; 12.4%</div>
-                <div class="rp-vs-label" id="passengerSummaryVsLabel">vs Last Week</div>
+                <div class="rp-summary-big" id="passengerSummaryTotal">&nbsp;</div>
+                <div class="rp-delta-row" id="passengerSummaryDelta"></div>
+                <div class="rp-vs-label" id="passengerSummaryVsLabel"></div>
+                <div class="rp-vs-label" id="passengerSummaryTrips"></div>
             </div>
             <div class="rp-summary-right">
                 <div class="rp-mini-chart-wrap">
@@ -223,22 +224,15 @@
         <div class="rp-summary-body">
             <div class="rp-summary-left">
                 <div class="rp-summary-sublabel">Total Revenue</div>
-                <div class="rp-summary-big" id="revenueSummaryTotal">&#8369;245,680.00</div>
-                <div class="rp-delta-row rp-delta--up" id="revenueSummaryDelta">&#x25B4; 18.6%</div>
-                <div class="rp-vs-label" id="revenueSummaryVsLabel">vs Last Week</div>
+                <div class="rp-summary-big" id="revenueSummaryTotal">&nbsp;</div>
+                <div class="rp-delta-row" id="revenueSummaryDelta"></div>
+                <div class="rp-vs-label" id="revenueSummaryVsLabel"></div>
+                <div class="rp-vs-label" id="revenueSummaryPerTrip"></div>
             </div>
             <div class="rp-summary-right">
                 <div class="rp-mini-chart-wrap">
                     <canvas id="revenueMiniChart"></canvas>
                 </div>
-            </div>
-        </div>
-
-        @* Top Earning Routes *@
-        <div class="rp-bar-section">
-            <div class="rp-bar-title">Top Earning Routes</div>
-            <div class="rp-route-bars" id="topEarningRoutes">
-                @* rows rendered by JS *@
             </div>
         </div>
     </div>
@@ -691,37 +685,38 @@
     return value >= 0 ? '&#x25B4;' : '&#x25BE;';
     }
 
-    function deltaClass(value) {
-    return value >= 0 ? 'rp-delta--up' : 'rp-delta--down';
+    // Grey either way: more or fewer riders is not good or bad by itself.
+    function deltaClass() {
+    return 'rp-delta--flat';
+    }
+
+    // The change against the matching days before, or a note when those had nothing.
+    function renderDelta(el, pct) {
+    el.className = 'rp-delta-row ' + deltaClass();
+    el.innerHTML = pct === null ? 'No data last period' : `${deltaArrow(pct)} ${Math.abs(pct)}%`;
     }
 
     /* Charts. */
-    function miniLineChart(id, labels, data, color, tooltipFmt) {
-    const fmt = tooltipFmt || (v => v);
+    // One bar per day, or per shift for a single day. A bar still ahead is null and left
+    // empty; a day with no trips draws a short grey stub so it reads as no service rather
+    // than as a day nobody rode.
+    function miniBarChart(id, summary, color, valueFmt) {
     return new Chart(document.getElementById(id).getContext('2d'), {
-    type: 'line',
+    type: 'bar',
     data: {
-    labels: labels,
+    labels: summary.seriesLabels,
     datasets: [{
-    data: data,
-    borderColor: color,
-    borderWidth: 1.8,
-    pointRadius: 3,
-    pointHoverRadius: 6,
-    pointHitRadius: 20,
-    pointBackgroundColor: () => rsTheme.pick('#fff', '#393939'),
-    pointBorderColor: color,
-    pointBorderWidth: 1.5,
-    pointHoverBackgroundColor: color,
-    pointHoverBorderColor: () => rsTheme.pick('#fff', '#393939'),
-    tension: 0.35,
-    fill: false
+    data: summary.seriesData,
+    trips: summary.seriesTrips,
+    backgroundColor: (ctx) => ctx.dataset.trips?.[ctx.dataIndex] === 0 ? rsTheme.pick('#CBD2DA', '#5A5A5A') : color,
+    borderRadius: 3,
+    minBarLength: 3,
+    maxBarThickness: 28
     }]
     },
     options: {
     responsive: true,
     maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
     plugins: {
     legend: { display: false },
     tooltip: {
@@ -733,7 +728,14 @@
     borderWidth: 1,
     padding: 10,
     displayColors: false,
-    callbacks: { label: (item) => ' ' + fmt(item.parsed.y) }
+    filter: (item) => item.raw !== null,
+    callbacks: {
+    label: (item) => {
+    const trips = item.dataset.trips?.[item.dataIndex] ?? 0;
+    if (trips === 0) return ' No service';
+    return ` ${valueFmt(item.parsed.y)}, ${tripsLine(trips)}`;
+    }
+    }
     }
     },
     scales: {
@@ -761,13 +763,25 @@
     });
     }
 
-    function initBarChart(labels, data) {
+    function updateMiniBarChart(chart, summary) {
+    chart.data.labels = summary.seriesLabels;
+    chart.data.datasets[0].data = summary.seriesData;
+    chart.data.datasets[0].trips = summary.seriesTrips;
+    chart.update();
+    }
+
+    function tripsLine(n) {
+    return `${formatNumber(n)} ${n === 1 ? 'trip' : 'trips'}`;
+    }
+
+    function initBarChart(labels, data, revenue) {
     return new Chart(document.getElementById('passengerBarChart').getContext('2d'), {
     type: 'bar',
     data: {
     labels: labels,
     datasets: [{
     data: data,
+    revenue: revenue,
     backgroundColor: ['#7C6FE0', '#4AADA8', '#4DB6C4'],
     borderRadius: 6,
     borderSkipped: false
@@ -786,7 +800,7 @@
     borderWidth: 1,
     padding: 10,
     callbacks: {
-    label: (item) => ` ${item.parsed.y.toLocaleString()} passengers`
+    label: (item) => ` ${item.parsed.y.toLocaleString()} passengers, ${formatCurrencyCompact(item.dataset.revenue?.[item.dataIndex])}`
     }
     }
     },
@@ -822,12 +836,12 @@
     });
 
     const pEl = document.getElementById('statPassengerDelta');
-    pEl.className = 'rp-stat-delta ' + deltaClass(stats.passengerDelta);
-    pEl.innerHTML = `${deltaArrow(stats.passengerDelta)} ${stats.passengerDelta >= 0 ? '+' : ''}${formatNumber(stats.passengerDelta)} vs yesterday`;
+    pEl.className = 'rp-stat-delta ' + deltaClass();
+    pEl.innerHTML = `${deltaArrow(stats.passengerDelta)} ${stats.passengerDelta >= 0 ? '+' : ''}${formatNumber(stats.passengerDelta)} ${stats.vsLabel}`;
 
     const rEl = document.getElementById('statRevenueDelta');
-    rEl.className = 'rp-stat-delta ' + deltaClass(stats.revenueDelta);
-    rEl.innerHTML = `${deltaArrow(stats.revenueDelta)} ${stats.revenueDelta >= 0 ? '+' : '-'}${formatCurrencyCompact(Math.abs(stats.revenueDelta))} vs yesterday`;
+    rEl.className = 'rp-stat-delta ' + deltaClass();
+    rEl.innerHTML = `${deltaArrow(stats.revenueDelta)} ${stats.revenueDelta >= 0 ? '+' : '-'}${formatCurrencyCompact(Math.abs(stats.revenueDelta))} ${stats.vsLabel}`;
     }
 
     function renderTable(table) {
@@ -926,71 +940,42 @@
 
     function renderPassengerSummary(summary) {
     document.getElementById('passengerSummaryTotal').textContent = formatNumber(summary.total);
-
-    const deltaEl = document.getElementById('passengerSummaryDelta');
-    deltaEl.className = 'rp-delta-row ' + deltaClass(summary.deltaPct);
-    deltaEl.innerHTML = `${deltaArrow(summary.deltaPct)} ${Math.abs(summary.deltaPct)}%`;
-
+    renderDelta(document.getElementById('passengerSummaryDelta'), summary.deltaPct);
     document.getElementById('passengerSummaryVsLabel').textContent = summary.comparisonLabel;
+    document.getElementById('passengerSummaryTrips').textContent = summary.trips === 0
+    ? 'No completed trips'
+    : `${tripsLine(summary.trips)}, ${formatNumber(summary.perTrip)} per trip`;
 
-    if (!passengerChart) {
-    passengerChart = miniLineChart('passengerMiniChart', summary.seriesLabels, summary.seriesData, '#9B59B6', v => formatNumber(v) + ' passengers');
-    } else {
-    passengerChart.data.labels = summary.seriesLabels;
-    passengerChart.data.datasets[0].data = summary.seriesData;
-    passengerChart.update();
-    }
+    const passengersFmt = v => `${formatNumber(v)} ${v === 1 ? 'passenger' : 'passengers'}`;
+    if (!passengerChart) passengerChart = miniBarChart('passengerMiniChart', summary, '#9B59B6', passengersFmt);
+    else updateMiniBarChart(passengerChart, summary);
 
-    const labels = summary.topRoutes.map(r => r.name);
-    const values = summary.topRoutes.map(r => r.value);
+    // Each route's share of every passenger in the period, not of the three shown.
+    const routes = summary.topRoutes || [];
+    const labels = routes.map(r => `${r.name} (${r.pct}%)`);
+    const values = routes.map(r => r.value);
+    const revenue = routes.map(r => r.revenue);
     if (!passengerBarChart) {
-    passengerBarChart = initBarChart(labels, values);
+    passengerBarChart = initBarChart(labels, values, revenue);
     } else {
     passengerBarChart.data.labels = labels;
     passengerBarChart.data.datasets[0].data = values;
+    passengerBarChart.data.datasets[0].revenue = revenue;
     passengerBarChart.update();
     }
     }
 
     function renderRevenueSummary(summary) {
     document.getElementById('revenueSummaryTotal').innerHTML = formatCurrencyCompact(summary.total);
-
-    const deltaEl = document.getElementById('revenueSummaryDelta');
-    deltaEl.className = 'rp-delta-row ' + deltaClass(summary.deltaPct);
-    deltaEl.innerHTML = `${deltaArrow(summary.deltaPct)} ${Math.abs(summary.deltaPct)}%`;
-
+    renderDelta(document.getElementById('revenueSummaryDelta'), summary.deltaPct);
     document.getElementById('revenueSummaryVsLabel').textContent = summary.comparisonLabel;
+    document.getElementById('revenueSummaryPerTrip').textContent = summary.trips === 0
+    ? 'No completed trips'
+    : `${formatCurrencyCompact(summary.perTrip)} per trip over ${tripsLine(summary.trips)}`;
 
-    if (!revenueChart) {
-    revenueChart = miniLineChart('revenueMiniChart', summary.seriesLabels, summary.seriesData, '#4AADA8', v => formatCurrencyCompact(v));
-    } else {
-    revenueChart.data.labels = summary.seriesLabels;
-    revenueChart.data.datasets[0].data = summary.seriesData;
-    revenueChart.update();
-    }
-
-    const colors = ['#4285F4', '#4AADA8', '#9B59B6'];
-    const container = document.getElementById('topEarningRoutes');
-    container.innerHTML = '';
-
-    if (!summary.topRoutes || summary.topRoutes.length === 0) {
-    container.innerHTML = '<div class="rp-route-bar-row">No data for this period.</div>';
-    return;
-    }
-
-    summary.topRoutes.forEach((r, i) => {
-    const row = document.createElement('div');
-    row.className = 'rp-route-bar-row';
-    row.innerHTML = `
-    <span class="rp-route-name">${r.name}</span>
-    <span class="rp-route-amount">${formatCurrencyCompact(r.value)}</span>
-    <div class="rp-progress-wrap">
-    <div class="rp-progress-bar" style="width:${r.pct}%;background:${colors[i % colors.length]};"></div>
-    </div>
-    <span class="rp-route-pct">${r.pct}%</span>
-    `;
-    container.appendChild(row);
-    });
+    const perTripFmt = v => `${formatCurrencyCompact(v)} per trip`;
+    if (!revenueChart) revenueChart = miniBarChart('revenueMiniChart', summary, '#4AADA8', perTripFmt);
+    else updateMiniBarChart(revenueChart, summary);
     }
 
     /* Replacement suggestions card. Loaded beside the main data rather than inside it,

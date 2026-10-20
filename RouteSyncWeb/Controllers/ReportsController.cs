@@ -104,13 +104,17 @@ namespace FleetWise.Controllers
             int page = 1,
             string? sort = null,
             string? dir = null,
-            string passengerPeriod = "This Week",
-            string revenuePeriod = "This Week")
+            string passengerPeriod = "This Day",
+            string revenuePeriod = "This Day")
         {
             if (page < 1) page = 1;
             // Defaults to the current operational day, 06:00 to 05:59 the next morning,
             // rather than the calendar day. Before 6 AM that is still the previous day.
             var anchor = (date ?? PhClock.OperationalDay).Date;
+            var now = PhClock.Now;
+            var passengerWindow = ReportWindow.For(anchor, passengerPeriod, now);
+            var revenueWindow = ReportWindow.For(anchor, revenuePeriod, now);
+            var dayWindow = ReportWindow.For(anchor, "This Day", now);
 
             // Reference data.
             var routesResp = await _supabase.From<BusRoute>().Get();
@@ -128,9 +132,9 @@ namespace FleetWise.Controllers
             List<Trip> allTrips;
             if (date.HasValue)
             {
-                var spans = new[] { GetRange(anchor, passengerPeriod), GetRange(anchor, revenuePeriod) };
-                var earliest = spans.Select(r => r.prevStart).Append(anchor.AddDays(-1)).Min();
-                var latest = spans.Select(r => r.end).Append(anchor).Max();
+                var spans = new[] { passengerWindow, revenueWindow, dayWindow };
+                var earliest = spans.Min(w => w.PrevStart);
+                var latest = spans.Max(w => w.End);
                 allTrips = await TripsAsync(earliest, latest);
             }
             else
@@ -216,20 +220,22 @@ namespace FleetWise.Controllers
             // not delivered.
             int missedTrips = filtered.Count(t => DeriveStatus(t) == "Missed");
 
-            int totalPassengers = filtered.Sum(Passengers);
+            // Completed trips only, like the table: a trip's count and takings are settled
+            // when it finishes.
+            int totalPassengers = filtered.Where(Earned).Sum(Passengers);
             decimal totalRevenue = filtered.Where(Earned).Sum(t => t.EstimatedRevenue);
 
-            var prevDay = anchor.AddDays(-1);
+            // Compared with the day before up to the same hour while the day is running.
             var prevDayTrips = allTrips.Where(t =>
                 (!routeId.HasValue || routeId.Value == 0 || t.RouteId == routeId.Value) &&
-                t.Date.Date == prevDay).ToList();
+                Earned(t) && dayWindow.InPrevious(t)).ToList();
 
             int prevPassengers = prevDayTrips.Sum(Passengers);
-            decimal prevRevenue = prevDayTrips.Where(Earned).Sum(t => t.EstimatedRevenue);
+            decimal prevRevenue = prevDayTrips.Sum(t => t.EstimatedRevenue);
 
             // Summary cards (passenger / revenue).
-            var passengerSummary = BuildSummary(allTrips, Passengers, routeNames, routeId, anchor, passengerPeriod, isPassenger: true);
-            var revenueSummary = BuildSummary(allTrips, Passengers, routeNames, routeId, anchor, revenuePeriod, isPassenger: false);
+            var passengerSummary = BuildSummary(allTrips, Passengers, routeNames, routeId, passengerWindow, passengerPeriod, isPassenger: true);
+            var revenueSummary = BuildSummary(allTrips, Passengers, routeNames, routeId, revenueWindow, revenuePeriod, isPassenger: false);
 
             return Json(new
             {
@@ -244,7 +250,8 @@ namespace FleetWise.Controllers
                     totalPassengers,
                     totalRevenue,
                     passengerDelta = totalPassengers - prevPassengers,
-                    revenueDelta = totalRevenue - prevRevenue
+                    revenueDelta = totalRevenue - prevRevenue,
+                    vsLabel = dayWindow.VsLabel
                 },
 
                 table = new
@@ -267,83 +274,76 @@ namespace FleetWise.Controllers
             Func<Trip, int> passengers,
             Dictionary<int, string> routeNames,
             int? routeId,
-            DateTime anchor,
+            ReportWindow window,
             string period,
             bool isPassenger)
         {
-            var (start, end, prevStart, prevEnd) = GetRange(anchor, period);
-
             bool InRoute(Trip t) => !routeId.HasValue || routeId.Value == 0 || t.RouteId == routeId.Value;
 
-            var current = allTrips.Where(t => InRoute(t) && t.Date.Date >= start && t.Date.Date <= end).ToList();
-            var previous = allTrips.Where(t => InRoute(t) && t.Date.Date >= prevStart && t.Date.Date <= prevEnd).ToList();
-
-            decimal total = isPassenger ? current.Sum(passengers) : current.Where(Earned).Sum(t => t.EstimatedRevenue);
-            decimal prevTotal = isPassenger ? previous.Sum(passengers) : previous.Where(Earned).Sum(t => t.EstimatedRevenue);
-
-            double deltaPct = prevTotal == 0
-                ? (total == 0 ? 0 : 100)
-                : (double)((total - prevTotal) / prevTotal * 100);
+            // Completed trips only: a trip's count and takings are settled when it finishes.
+            var current = allTrips.Where(t => InRoute(t) && Earned(t) && window.InCurrent(t)).ToList();
+            var previous = allTrips.Where(t => InRoute(t) && Earned(t) && window.InPrevious(t)).ToList();
 
             decimal Figure(IEnumerable<Trip> trips) =>
-                isPassenger ? trips.Sum(passengers) : trips.Where(Earned).Sum(t => t.EstimatedRevenue);
+                isPassenger ? trips.Sum(passengers) : trips.Sum(t => t.EstimatedRevenue);
 
-            // The mini chart covers the same period as the total above it: a day by shift, a
-            // week by day, a month by day.
-            string[] seriesLabels;
-            decimal[] seriesData;
-            if (period == "This Day")
-            {
-                seriesLabels = TripStatus.Windows.Keys.ToArray();
-                seriesData = seriesLabels
-                    .Select(shift => Figure(current.Where(t => string.Equals(t.ShiftType, shift, StringComparison.OrdinalIgnoreCase))))
-                    .ToArray();
-            }
-            else
-            {
-                var days = Enumerable.Range(0, (end - start).Days + 1).Select(i => start.AddDays(i)).ToList();
-                seriesLabels = days
-                    .Select(d => period == "This Month" ? d.ToString("MMM d", CultureInfo.InvariantCulture) : d.ToString("dddd", CultureInfo.InvariantCulture))
-                    .ToArray();
-                seriesData = days.Select(d => Figure(current.Where(t => t.Date.Date == d))).ToArray();
-            }
+            decimal total = Figure(current);
+            decimal prevTotal = Figure(previous);
 
-            // The three busiest routes in the selected period.
-            var topRoutes = current
+            // Null when there is nothing to compare with, rather than a rise from nothing.
+            double? deltaPct = prevTotal == 0 ? null : Math.Round((double)((total - prevTotal) / prevTotal * 100), 1);
+
+            // One bar per shift for a day, per day otherwise. A bar still ahead is null and
+            // not drawn; one with no trips is told apart by its trip count. The revenue card
+            // plots takings per trip, which the passenger card does not already show.
+            var buckets = period == "This Day"
+                ? TripStatus.Windows.Select(w => (
+                    label: w.Key,
+                    ahead: window.IsAhead(window.Start, w.Value.Start),
+                    trips: current.Where(t => string.Equals(t.ShiftType, w.Key, StringComparison.OrdinalIgnoreCase)).ToList()))
+                : Enumerable.Range(0, (window.End - window.Start).Days + 1)
+                    .Select(i => window.Start.AddDays(i))
+                    .Select(d => (
+                        label: period == "This Month" ? d.ToString("MMM d", CultureInfo.InvariantCulture) : d.ToString("dddd", CultureInfo.InvariantCulture),
+                        ahead: window.IsAhead(d),
+                        trips: current.Where(t => t.Date.Date == d).ToList()));
+
+            var series = buckets.Select(b => new
+            {
+                b.label,
+                trips = b.ahead ? (int?)null : b.trips.Count,
+                value = b.ahead ? (decimal?)null
+                    : isPassenger ? Figure(b.trips)
+                    : b.trips.Count == 0 ? 0 : Math.Round(Figure(b.trips) / b.trips.Count, 2),
+            }).ToList();
+
+            // The passenger card ranks the routes; revenue is fare times riders, so a second
+            // ranking by takings would repeat it.
+            var topRoutes = !isPassenger || total == 0 ? null : current
                 .GroupBy(t => t.RouteId)
                 .Select(g => new
                 {
                     routeId = g.Key,
                     name = routeNames.TryGetValue(g.Key, out var rn) ? rn : $"Route {g.Key:00}",
-                    value = isPassenger ? (decimal)g.Sum(passengers) : g.Where(Earned).Sum(t => t.EstimatedRevenue)
+                    value = (decimal)g.Sum(passengers),
+                    revenue = g.Sum(t => t.EstimatedRevenue),
                 })
                 .OrderByDescending(r => r.value)
                 .Take(3)
+                .Select(r => new { r.routeId, r.name, r.value, r.revenue, pct = Math.Round((double)(r.value / total * 100)) })
                 .ToList();
-
-            decimal topSum = topRoutes.Sum(r => r.value);
-            var topRoutesWithPct = topRoutes.Select(r => new
-            {
-                r.routeId,
-                r.name,
-                value = r.value,
-                pct = topSum == 0 ? 0 : Math.Round((double)(r.value / topSum * 100))
-            });
 
             return new
             {
                 total,
-                deltaPct = Math.Round(deltaPct, 1),
-                comparisonLabel = period switch
-                {
-                    "This Day" => "vs Yesterday",
-                    "Last Week" => "vs Previous Week",
-                    "This Month" => "vs Last Month",
-                    _ => "vs Last Week"
-                },
-                seriesLabels,
-                seriesData,
-                topRoutes = topRoutesWithPct
+                trips = current.Count,
+                perTrip = current.Count == 0 ? 0 : Math.Round(total / current.Count, isPassenger ? 1 : 2),
+                deltaPct,
+                comparisonLabel = window.VsLabel,
+                seriesLabels = series.Select(s => s.label),
+                seriesData = series.Select(s => s.value),
+                seriesTrips = series.Select(s => s.trips),
+                topRoutes
             };
         }
 
@@ -382,41 +382,6 @@ namespace FleetWise.Controllers
             }
         }
 
-        private static (DateTime start, DateTime end, DateTime prevStart, DateTime prevEnd) GetRange(DateTime anchor, string period)
-        {
-            switch (period)
-            {
-                case "This Day":
-                    return (anchor, anchor, anchor.AddDays(-1), anchor.AddDays(-1));
-
-                case "Last Week":
-                    {
-                        int offset = ((int)anchor.DayOfWeek + 6) % 7;
-                        var thisWeekStart = anchor.AddDays(-offset);
-                        var lastWeekStart = thisWeekStart.AddDays(-7);
-                        var lastWeekEnd = thisWeekStart.AddDays(-1);
-                        return (lastWeekStart, lastWeekEnd, lastWeekStart.AddDays(-7), lastWeekEnd.AddDays(-7));
-                    }
-
-                case "This Month":
-                    {
-                        var monthStart = new DateTime(anchor.Year, anchor.Month, 1);
-                        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-                        var prevMonthStart = monthStart.AddMonths(-1);
-                        var prevMonthEnd = monthStart.AddDays(-1);
-                        return (monthStart, monthEnd, prevMonthStart, prevMonthEnd);
-                    }
-
-                default: // "This Week"
-                    {
-                        int offset = ((int)anchor.DayOfWeek + 6) % 7;
-                        var weekStart = anchor.AddDays(-offset);
-                        var weekEnd = weekStart.AddDays(6);
-                        return (weekStart, weekEnd, weekStart.AddDays(-7), weekEnd.AddDays(-7));
-                    }
-            }
-        }
-
         /// <summary>The trips behind one of the figures on a summary card.</summary>
         /// <remarks>
         /// A card states a number and nothing else, so an operator reading a bad one has to
@@ -448,7 +413,7 @@ namespace FleetWise.Controllers
             var trips = kind switch
             {
                 "missed" => day.Where(t => DeriveStatus(t) == "Missed").ToList(),
-                "passengers" => day.Where(t => t.TotalBoarded > 0).ToList(),
+                "passengers" => day.Where(Earned).Where(t => t.TotalBoarded > 0).ToList(),
                 "revenue" => day.Where(Earned).Where(t => t.EstimatedRevenue > 0).ToList(),
                 _ => day.Where(Earned).ToList(),
             };
