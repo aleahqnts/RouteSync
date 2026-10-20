@@ -197,13 +197,23 @@
     }
 
     // Poking him shoves him away from the side the click landed on.
+    function poke(svg, x) {
+        var r = svg.getBoundingClientRect();
+        svg.style.setProperty('--bao-shove', x < r.left + r.width / 2 ? 1 : -1);
+        replay(svg, 'bao--poke', 650);
+    }
     baos.forEach(function (svg) {
-        svg.addEventListener('click', function (e) {
-            var r = svg.getBoundingClientRect();
-            svg.style.setProperty('--bao-shove', e.clientX < r.left + r.width / 2 ? 1 : -1);
-            replay(svg, 'bao--poke', 650);
-        });
+        svg.addEventListener('click', function (e) { poke(svg, e.clientX); });
     });
+
+    // Over the map his head is the tab's icon, so opening the tab from its text pokes him
+    // too. A click on him has already poked him on its way up.
+    if (!stage) {
+        box.querySelector('.rs-attn__head').addEventListener('click', function (e) {
+            if (box.open) return;
+            baos.forEach(function (svg) { if (!svg.contains(e.target)) poke(svg, e.clientX); });
+        });
+    }
 
     // His eyes follow the pointer and his head turns toward it. Pupil offsets are in
     // drawing units; the head turn is a -1 to 1 vector that site.css scales per part.
