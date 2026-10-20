@@ -574,13 +574,17 @@ html.rs-theme-switching *::after {
    window: the page title dropped by the height of the app bar and table headings slid
    over the first row, for as long as the dialog was open.
 
-   The scrollbar's room is kept while it is gone, so nothing under the dialog widens
-   and shifts sideways.
+   The scrollbar's room is kept on every page whether or not the page is long enough to
+   scroll, so a panel opening, a list growing or a dialog hiding the scrollbar never
+   changes the width of the cards under it.
    =========================================================================== */
+
+html {
+    scrollbar-gutter: stable;
+}
 
 html.rs-dialog-open {
     overflow: hidden;
-    scrollbar-gutter: stable;
 }
 
 /* ===========================================================================
