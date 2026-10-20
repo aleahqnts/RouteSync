@@ -9,40 +9,56 @@
        status competing with the one in the status column, and a board read an hour later
        still shows a row in red for a question already answered.
 
+       It is drawn in the brand teal rather than red: these are rows someone asked to see,
+       not errors, and the status column already says how serious each one is. Rows that
+       sit together share one frame (dp-flag-top on the first of a run, dp-flag-bottom on
+       the last, set by dpHighlight); a row on its own gets a frame of its own. The frame
+       runs from the trip ID to the actions, leaving out the shift cell, which spans rows.
+
        The scroll settles in about half a second, so it holds at full strength for one and
-       goes over the three after that. Pressing the card again starts it over from full,
+       fades over the three after that. Pressing the card again starts it over from full,
        which is how the same row is found twice. The class comes off at the end so the row
        is an ordinary row again, hover and all.
 
-       Faded to a transparent version of its own colour rather than to the keyword, which
-       some engines walk through grey on the way. */
-    /* No light-dark() inside the keyframes: Opera GX's engine crashes the tab on it. The
-       row's own rule holds the colour for the first second, then this fades it out. */
-    @keyframes dp-row-flag-fill {
-        to { background-color: transparent; }
+       Only opacity is animated. A colour from light-dark() inside @keyframes crashes the
+       tab in Opera GX's engine. */
+    @keyframes dp-row-flag-fade {
+        to { opacity: 0; }
     }
 
-    @keyframes dp-row-flag-edge {
-        0%, 25% { outline-color: #E74C3C; }
-        100%    { outline-color: rgba(231, 76, 60, 0); }
+    .dp-trip-row.dp-row-flag > td:not(.dp-shift-cell) {
+        position: relative;
     }
 
-    .dp-trip-row.dp-row-flag > td {
-        background-color: light-dark(#FEECEC, #574142);
-        animation: dp-row-flag-fill 3s ease-out 1s forwards;
+    .dp-trip-row.dp-row-flag > td:not(.dp-shift-cell)::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border: 0 solid #4AADA8;
+        background: rgba(74, 173, 168, .08);
+        animation: dp-row-flag-fade 3s ease-out 1s forwards;
     }
 
-    .dp-trip-row.dp-row-flag {
-        outline: 2px solid #E74C3C;
-        outline-offset: -2px;
-        animation: dp-row-flag-edge 4s ease-out forwards;
-    }
+    .dp-trip-row.dp-row-flag > td[data-label="Trip ID"]::after { border-left-width: 2px; }
+    .dp-trip-row.dp-row-flag > td[data-label="Actions"]::after { border-right-width: 2px; }
+    .dp-trip-row.dp-flag-top > td:not(.dp-shift-cell)::after { border-top-width: 2px; }
+    .dp-trip-row.dp-flag-bottom > td:not(.dp-shift-cell)::after { border-bottom-width: 2px; }
+    .dp-trip-row.dp-flag-top > td[data-label="Trip ID"]::after { border-top-left-radius: 8px; }
+    .dp-trip-row.dp-flag-top > td[data-label="Actions"]::after { border-top-right-radius: 8px; }
+    .dp-trip-row.dp-flag-bottom > td[data-label="Trip ID"]::after { border-bottom-left-radius: 8px; }
+    .dp-trip-row.dp-flag-bottom > td[data-label="Actions"]::after { border-bottom-right-radius: 8px; }
 
     /* The same four seconds, without the fade. The mark stays whole and is taken away at
        the end by the same timer, so nobody is left with a row marked for good. */
     @media (prefers-reduced-motion: reduce) {
-        .dp-trip-row.dp-row-flag > td,
-        .dp-trip-row.dp-row-flag { animation: none; }
+        .dp-trip-row.dp-row-flag > td::after { animation: none; }
+    }
+
+    /* On a phone every row is a card of its own, so each flagged card is outlined whole. */
+    @media (max-width: 599px) {
+        .dp-trip-row.dp-row-flag > td::after { content: none; }
+        .dp-trip-row.dp-row-flag { outline: 2px solid #4AADA8; outline-offset: -2px; }
     }
 
     .dp-title-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }

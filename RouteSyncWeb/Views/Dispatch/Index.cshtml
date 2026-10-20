@@ -606,9 +606,19 @@
     function dpHighlight(selector) {
         const rows = document.querySelectorAll(selector);
 
+        const flagClasses = ['dp-row-flag', 'dp-flag-top', 'dp-flag-bottom'];
         clearTimeout(dpFlagTimer);
-        document.querySelectorAll('.dp-row-flag').forEach(r => r.classList.remove('dp-row-flag'));
+        document.querySelectorAll('.dp-row-flag').forEach(r => r.classList.remove(...flagClasses));
         if (!rows.length) return;
+
+        // Rows that sit together share one frame: the top edge goes on the first of each
+        // run and the bottom edge on the last. Rows hidden by a filter do not break a run.
+        const flagged = new Set(rows);
+        const shown = r => r && r.offsetParent !== null;
+        const near = (r, step) => {
+            do { r = r[step]; } while (r && !shown(r));
+            return r;
+        };
 
         // Taking the class off and putting it back in the same frame is no change at all
         // as far as the browser is concerned, and the fade would carry on from where it
@@ -616,14 +626,18 @@
         // be settled first, which is what makes pressing the card twice work.
         void document.body.offsetWidth;
 
-        rows.forEach(r => r.classList.add('dp-row-flag'));
+        rows.forEach(r => {
+            r.classList.add('dp-row-flag');
+            if (!flagged.has(near(r, 'previousElementSibling'))) r.classList.add('dp-flag-top');
+            if (!flagged.has(near(r, 'nextElementSibling'))) r.classList.add('dp-flag-bottom');
+        });
         rows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // The mark goes when the fade has run out, so the row is left as any other: it can
         // be hovered again, and nothing on the board is still claiming a state the trip is
         // not in.
         dpFlagTimer = setTimeout(function () {
-            rows.forEach(r => r.classList.remove('dp-row-flag'));
+            rows.forEach(r => r.classList.remove(...flagClasses));
         }, 4000);
     }
 
