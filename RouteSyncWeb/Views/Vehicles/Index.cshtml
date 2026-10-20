@@ -250,7 +250,7 @@
         save: '@Url.Action("CameraSave", "Vehicles")'
     };
 </script>
-<script src="~/js/camera-calib.js"></script>
+<script src="~/js/camera-calib.js" asp-append-version="true"></script>
 
 <script nonce="@CspNonce.Value">
     // What this page's controls run, by the names in their data-on attributes. The content
@@ -889,7 +889,7 @@
 
 @section Scripts {
     @* This page's dialogs are Bootstrap's, which the layout no longer loads for every page. *@
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
 }
 
 @section TopbarContent {

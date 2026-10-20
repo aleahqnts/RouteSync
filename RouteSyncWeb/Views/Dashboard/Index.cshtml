@@ -222,7 +222,7 @@
 
 
     @* Chart.js *@
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
+    <script src="~/lib/chart.js/chart.umd.js" asp-append-version="true"></script>
     <script nonce="@CspNonce.Value">
         // What this page's controls run, by the names in their data-on attributes. The content
         // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
@@ -543,6 +543,7 @@
                 const res = await fetch(url, {
                     cache: 'no-store',
                     headers: { 'X-Requested-With': 'fetch' },
+                    signal: AbortSignal.timeout(8000),
                 });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const d = await res.json();
@@ -588,12 +589,12 @@
     </script>
 
     @* Fleet Map preview (same live data as the Fleet Map page) *@
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <script src="~/lib/leaflet/leaflet.js" asp-append-version="true"></script>
     <script src="~/js/route-motion.js" asp-append-version="true"></script>
     <script src="~/js/dashboard-fleetmap.js" asp-append-version="true"></script>
 
 @section Styles {
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
 }
 

@@ -328,8 +328,11 @@ namespace FleetWise.Controllers
 
         private async Task<(List<UserListItemViewModel> Items, List<Role> Roles)> BuildUserListAsync(string? role, string? search)
         {
-            var usersResponse = await _supabase.From<UserModel>().Get();
-            var roles = await GetRolesAsync();
+            var usersTask = _supabase.From<UserModel>().Get();
+            var rolesTask = GetRolesAsync();
+            await Task.WhenAll(usersTask, rolesTask);
+            var usersResponse = usersTask.Result;
+            var roles = rolesTask.Result;
 
             var roleNames = roles.ToDictionary(r => r.RoleId, r => r.RoleName);
 

@@ -158,7 +158,7 @@
 @* The panel is a Bootstrap dialog, and the layout does not load Bootstrap's script for
    every page, so this page loads it here, ahead of the code that opens the panel. *@
 @section Scripts {
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
 <script nonce="@CspNonce.Value">
     (function () {
         var modalEl = document.getElementById('siModal');

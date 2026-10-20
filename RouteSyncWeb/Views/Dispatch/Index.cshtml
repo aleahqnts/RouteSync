@@ -776,8 +776,12 @@
     // costs three narrow reads, so the board can be watched at the same rate as the fleet
     // map and still cost less than the half-minute rebuild it replaces.
     let dpPulse = null;
+    // One check out at a time, given up after 8 s, so a weak signal cannot stack them up.
+    let dpChecking = false;
 
     async function dpCheck() {
+        if (dpChecking) return;
+        dpChecking = true;
         try {
             const url = new URL('@Url.Action("Pulse", "Dispatch")', window.location.origin);
             const date = new URLSearchParams(window.location.search).get('date');
@@ -786,6 +790,7 @@
             const res = await fetch(url, {
                 cache: 'no-store',
                 headers: { 'X-Requested-With': 'fetch' },
+                signal: AbortSignal.timeout(8000),
             });
             if (!res.ok) { console.warn('dispatch pulse', res.status); return; }
             const { pulse } = await res.json();
@@ -802,6 +807,8 @@
             // last successful rebuild, which beats an error. Said out loud even so, because
             // a check that cannot run looks exactly like a board where nothing is happening.
             console.warn('dispatch pulse failed', e);
+        } finally {
+            dpChecking = false;
         }
     }
 

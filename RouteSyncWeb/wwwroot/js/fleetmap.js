@@ -705,7 +705,15 @@
     // Poll the live Positions endpoint, honouring the current Route/Status filters.
     var askedBus = new URLSearchParams(location.search).get('bus');
 
+    // One request out at a time. On a weak signal an answer can take longer than the poll
+    // interval; overlapping requests would queue behind each other and a late, older answer
+    // could move a bus backwards. A call made while one is out (a filter change) runs once
+    // the current answer is in, so it is never lost. A request still out after 8 s is given up.
+    var positionsBusy = false, positionsAgain = false;
+
     function fetchPositions() {
+        if (positionsBusy) { positionsAgain = true; return; }
+        positionsBusy = true;
         // A search is a request for one specific bus, so it looks across the whole fleet.
         // Leaving the dropdowns applied meant a plate could not be found while a route was
         // selected, which reads as the search being broken rather than filtered.
@@ -718,7 +726,7 @@
         if (status) params.push('status=' + encodeURIComponent(status));
         var url = '/FleetMap/Positions' + (params.length ? '?' + params.join('&') : '');
 
-        fetch(url)
+        fetch(url, { signal: AbortSignal.timeout(8000) })
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
@@ -836,6 +844,10 @@
             .catch(function (err) {
                 console.error('Failed to load positions:', err);
                 setConnectionLost(true); // keep markers as-is and keep polling
+            })
+            .finally(function () {
+                positionsBusy = false;
+                if (positionsAgain) { positionsAgain = false; fetchPositions(); }
             });
     }
 

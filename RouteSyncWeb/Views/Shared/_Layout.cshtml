@@ -14,9 +14,13 @@
     <script src="~/js/rs-time.js" asp-append-version="true"></script>
     @* Light or dark, settled before anything is drawn. *@
     <script src="~/js/theme.js" asp-append-version="true"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@fontsource/poppins@@5.0.14/700.css" integrity="sha384-PK7LSb2Yr8T/qnPqqOJx+2bJ5By5vnX9pE18GZraa02UOToJqaCmVyafgqCCb6s7" crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@fontsource/poppins@@5.0.14/800.css" integrity="sha384-zlU9tG/8NiXwwr1Mau0zRQYqplXPHil3cXQDpufI9dm62fOyReTv9gmsxuc9gc7M" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    @* Served from this site rather than a font CDN: on a weak mobile signal a second host
+       costs its own DNS, TCP and TLS round trips before the first glyph. The Latin files are
+       preloaded so headings are not drawn first in a fallback face. *@
+    <link rel="preload" href="/lib/poppins/files/poppins-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/lib/poppins/files/poppins-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="~/lib/poppins/poppins.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/FleetWise.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/icons.css" asp-append-version="true" />
@@ -24,6 +28,21 @@
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
     @* Each page links its own stylesheet here, ahead of the markup that needs it. *@
     @await RenderSectionAsync("Styles", required: false)
+    @* Chrome and Edge start building a navigation page in the background once the pointer
+       rests on its link (or a finger touches it), so the click lands on a finished page.
+       Navigation links only: every one is a plain GET page, and signing out is a POST form,
+       which is never prerendered. Other browsers ignore this block. *@
+    <script type="speculationrules" nonce="@CspNonce.Value">
+    {
+        "prerender": [{
+            "where": { "and": [
+                { "selector_matches": ".fw-sidebar__link, .fw-bar__link, .fw-sheet__link, .fw-sidebar__logo-link" },
+                { "not": { "selector_matches": "[aria-current=page]" } }
+            ] },
+            "eagerness": "moderate"
+        }]
+    }
+    </script>
 </head>
 <body>
 

@@ -179,14 +179,14 @@ builder.Services.AddHostedService<RosterCycleService>();
 // only: nothing here blocks anyone.
 builder.Services.AddHostedService<SecurityDetectorService>();
 
-// The map and the dashboard poll JSON every few seconds, and it shrinks to a fifth or less
-// compressed. Only JSON: compressing pages that carry the anti-forgery token beside text a
-// visitor can put there is what the BREACH attack reads secrets through, and the pages are
-// fetched once rather than every two seconds.
+// JSON polls and pages both shrink to a fifth or less compressed, which is most of the wait
+// on a weak mobile signal. BREACH reads a secret that repeats unchanged across compressed
+// responses; the anti-forgery request token is re-encrypted with a fresh IV on every
+// response and the CSP nonce is new each time, so neither repeats.
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
-    options.MimeTypes = new[] { "application/json" };
+    options.MimeTypes = new[] { "application/json", "text/html" };
 });
 
 var app = builder.Build();
@@ -236,6 +236,29 @@ app.UseHttpsRedirection();
 
 app.UseResponseCompression();
 
+// Server-Timing shows in the browser's Network tab how long the server spent on each
+// request and how much of that was database calls. A file requested with ?v=
+// (asp-append-version) is named by a hash of its content, so it can be kept for a year
+// without being checked again; a changed file gets a new hash and a new address.
+ServerTiming.Enable();
+app.Use(async (context, next) =>
+{
+    var started = System.Diagnostics.Stopwatch.GetTimestamp();
+    var db = ServerTiming.Begin();
+    context.Response.OnStarting(() =>
+    {
+        var ms = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        var dbMs = TimeSpan.FromTicks(Interlocked.Read(ref db.Ticks)).TotalMilliseconds;
+        context.Response.Headers["Server-Timing"] =
+            $"app;dur={ms:0}, db;dur={dbMs:0};desc=\"{db.Calls} calls\"";
+        if (context.Request.Query.ContainsKey("v") && context.Request.Path.Value?.Contains('.') == true
+            && context.Response.StatusCode is 200 or 304)
+            context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        return Task.CompletedTask;
+    });
+    await next();
+});
+
 // Security headers. The content security policy is a backstop rather than a fix: the real
 // protection is not placing user-supplied values into markup. What the policy adds is a
 // limit on the damage of anywhere that was missed.
@@ -255,12 +278,12 @@ app.Use(async (context, next) =>
     var headers = context.Response.Headers;
     headers["Content-Security-Policy"] =
         "default-src 'self'; " +
-        $"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://unpkg.com; " +
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
-        "font-src 'self' data: https://cdn.jsdelivr.net; " +
+        $"script-src 'self' 'nonce-{nonce}'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "font-src 'self' data:; " +
         // Leaflet pulls map tiles straight from OpenStreetMap, from the bare host. A
         // wildcard such as *.tile.openstreetmap.org does not cover it.
-        "img-src 'self' data: blob: https://tile.openstreetmap.org https://unpkg.com; " +
+        "img-src 'self' data: blob: https://tile.openstreetmap.org; " +
         // Every call the browser makes is to this server. The database is reached only
         // from the server side, so the browser never needs to.
         "connect-src 'self'; " +

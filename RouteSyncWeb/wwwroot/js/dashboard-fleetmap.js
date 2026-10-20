@@ -84,8 +84,13 @@
             }
         }
 
+        // One request out at a time, given up after 8 s: on a weak signal overlapping
+        // requests would queue and a late, older answer could move a bus backwards.
+        var positionsBusy = false;
         function fetchPositions() {
-            fetch('/FleetMap/Positions')
+            if (positionsBusy) return;
+            positionsBusy = true;
+            fetch('/FleetMap/Positions', { signal: AbortSignal.timeout(8000) })
                 .then(function (r) { return r.json(); })
                 .then(function (buses) {
                     var seen = {};
@@ -121,7 +126,8 @@
                         }
                     });
                 })
-                .catch(function (err) { console.error('Dashboard map positions failed:', err); });
+                .catch(function (err) { console.error('Dashboard map positions failed:', err); })
+                .finally(function () { positionsBusy = false; });
         }
 
         function buildLegend(routes) {

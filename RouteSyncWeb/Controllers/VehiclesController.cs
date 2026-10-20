@@ -1103,16 +1103,21 @@ namespace FleetWise.Controllers
 
         private async Task<(List<Vehicle> Vehicles, List<BusRoute> Routes, Dictionary<string, string> Maintenance)> LoadVehicleDataAsync()
         {
-            var vehiclesResponse = await _supabase.From<Vehicle>().Get();
-            var routesResponse = await _supabase
+            // The three reads do not depend on each other, so they go out together.
+            var vehiclesTask = _supabase.From<Vehicle>().Get();
+            var routesTask = _supabase
                 .From<BusRoute>()
                 .Order("route_name", Postgrest.Constants.Ordering.Ascending)
                 .Get();
             // The badge reads open logs only, so only those are fetched: every log ever
             // written would in time pass the database's thousand-row cap.
-            var logsResponse = await _supabase.From<MaintenanceLog>()
+            var logsTask = _supabase.From<MaintenanceLog>()
                 .Filter<object>("resolved_at", Postgrest.Constants.Operator.Is, null)
                 .Get();
+            await Task.WhenAll(vehiclesTask, routesTask, logsTask);
+            var vehiclesResponse = vehiclesTask.Result;
+            var routesResponse = routesTask.Result;
+            var logsResponse = logsTask.Result;
 
             var logsByVehicle = logsResponse.Models
                 .Where(l => l.VehicleId != null)
