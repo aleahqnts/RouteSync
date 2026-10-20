@@ -18,6 +18,15 @@
     <MinVerAutoIncrement>minor</MinVerAutoIncrement>
   </PropertyGroup>
 
+  <!--
+    A publish for a named runtime (the deploy workflow publishes for linux-x64) ships the code
+    already compiled to machine code, so the first visit to each page after a restart does
+    not wait for the JIT. Builds and runtime-neutral publishes are unaffected.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="postgrest-csharp" Version="3.5.1" />
     <PackageReference Include="QuestPDF" Version="2026.6.0" />

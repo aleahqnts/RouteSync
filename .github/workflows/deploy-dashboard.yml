@@ -72,8 +72,9 @@ jobs:
       - name: Test
         run: dotnet test RouteSyncWeb.Tests/RouteSyncWeb.Tests.csproj -c Release
 
+      # For the App Service's own runtime, which turns on ReadyToRun (see FleetWise.csproj).
       - name: Publish
-        run: dotnet publish RouteSyncWeb/FleetWise.csproj -c Release -o publish
+        run: dotnet publish RouteSyncWeb/FleetWise.csproj -c Release -r linux-x64 --self-contained false -o publish
 
       - name: Sign in to Azure
         uses: azure/login@v3
