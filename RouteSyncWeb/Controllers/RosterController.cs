@@ -50,6 +50,12 @@ namespace FleetWise.Controllers
         {
             var thisMonth = FirstOf(PhClock.OperationalDay);
 
+            // Every database wait in a row costs a round trip, so each read starts as soon as
+            // what it needs is known. These need nothing, and go out with the month lookup.
+            var routesTask = _supabase.From<BusRoute>().Get();
+            var vehiclesTask = _supabase.From<Vehicle>().Get();
+            var driversTask = _supabase.From<UserModel>().Filter("role_id", Operator.Equals, DriverRoleId.ToString()).Get();
+
             DateTime shown;
             if (TryParseMonth(month, out var asked))
             {
@@ -65,15 +71,25 @@ namespace FleetWise.Controllers
             var key = shown.ToString("yyyy-MM-dd");
             var monthTask = _supabase.From<RosterMonth>().Filter("month", Operator.Equals, key).Get();
             var slotsTask = _supabase.From<RosterSlot>().Filter("month", Operator.Equals, key).Get();
-            var routesTask = _supabase.From<BusRoute>().Get();
-            var vehiclesTask = _supabase.From<Vehicle>().Get();
-            var driversTask = _supabase.From<UserModel>().Filter("role_id", Operator.Equals, DriverRoleId.ToString()).Get();
             var holdsTask = _publisher.ReadHoldsAsync(shown);
+            // The publish panel's reads, which only need the month.
+            var previousTask = _supabase.From<RosterSlot>()
+                .Filter("month", Operator.Equals, shown.AddMonths(-1).ToString("yyyy-MM-dd"))
+                .Range(0, 0)
+                .Get();
+            var gapsTask = _supabase.From<RosterGap>().Filter("month", Operator.Equals, key).Get();
+            var skipsTask = _supabase.From<RosterSkip>().Filter("month", Operator.Equals, key).Get();
 
-            await Task.WhenAll(monthTask, slotsTask, routesTask, vehiclesTask, driversTask, holdsTask);
+            await Task.WhenAll(monthTask, slotsTask, routesTask, vehiclesTask, driversTask, holdsTask,
+                previousTask, gapsTask, skipsTask);
 
             var roster = monthTask.Result.Models.FirstOrDefault();
             var slots = slotsTask.Result.Models;
+
+            // Both need the roster row, and not each other.
+            var savedByTask = roster?.SavedBy is int savedBy ? NameOfAsync(savedBy) : null;
+            var openGapsTask = roster is null ? null
+                : _publisher.OpenGapsAsync(gapsTask.Result.Models, skipsTask.Result.Models, PhClock.OperationalDay);
 
             // What auto-fill chose is marked until the roster is published: publishing is the
             // choices being accepted. Saved again after a publish, the new marks show again.
@@ -95,7 +111,7 @@ namespace FleetWise.Controllers
                 SavedLine = roster?.SavedAt is DateTime at
                     // A true instant, read back in the machine's own zone.
                     ? "Saved " + PhClock.ToPh(new DateTimeOffset(at)).ToString("MMM d, h:mm tt", CultureInfo.InvariantCulture)
-                        + (roster.SavedBy is int by ? $" by {await NameOfAsync(by)}" : "")
+                        + (savedByTask is null ? "" : $" by {await savedByTask}")
                     : null,
                 Seats = slots.Select(s => new RosterSeatInput
                 {
@@ -164,7 +180,8 @@ namespace FleetWise.Controllers
                 };
             }).ToList();
 
-            await FillPublishStateAsync(vm, roster, routes);
+            await FillPublishStateAsync(vm, roster, routes,
+                previousTask.Result.Models.Count > 0, openGapsTask, skipsTask.Result.Models);
 
             return View(vm);
         }

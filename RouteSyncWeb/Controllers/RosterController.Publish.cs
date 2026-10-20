@@ -202,9 +202,12 @@ namespace FleetWise.Controllers
         }
 
         /// <summary>The publish state, gaps and skips the Roster page shows under its header.</summary>
-        private async Task FillPublishStateAsync(RosterViewModel vm, RosterMonth? roster, IReadOnlyList<BusRoute> routes)
+        /// <param name="openGaps">The month's open gaps, already being read; null when there is no roster.</param>
+        private async Task FillPublishStateAsync(RosterViewModel vm, RosterMonth? roster, IReadOnlyList<BusRoute> routes,
+            bool hasPreviousRoster, Task<List<RosterGap>>? openGaps, List<RosterSkip> skips)
         {
             vm.CanFillGaps = User.HasClaim("perm", "routes");
+            vm.HasPreviousRoster = hasPreviousRoster;
 
             if (roster?.PublishedAt is DateTime published)
             {
@@ -212,27 +215,10 @@ namespace FleetWise.Controllers
                 vm.ChangedSincePublish = roster.SavedAt is DateTime saved && saved > published;
             }
 
-            var key = vm.Month.ToString("yyyy-MM-dd");
-            var previousTask = _supabase.From<RosterSlot>()
-                .Filter("month", Operator.Equals, vm.Month.AddMonths(-1).ToString("yyyy-MM-dd"))
-                .Range(0, 0)
-                .Get();
-
-            if (roster is null)
-            {
-                vm.HasPreviousRoster = (await previousTask).Models.Count > 0;
-                return;
-            }
-
-            var gapsTask = _supabase.From<RosterGap>().Filter("month", Operator.Equals, key).Get();
-            var skipsTask = _supabase.From<RosterSkip>().Filter("month", Operator.Equals, key).Get();
-
-            await Task.WhenAll(previousTask, gapsTask, skipsTask);
-            vm.HasPreviousRoster = previousTask.Result.Models.Count > 0;
+            if (roster is null || openGaps is null) return;
 
             var routeNames = routes.ToDictionary(r => r.RouteId, r => r.RouteName);
-            var gaps = await _publisher.OpenGapsAsync(gapsTask.Result.Models, skipsTask.Result.Models, PhClock.OperationalDay);
-            var skips = skipsTask.Result.Models;
+            var gaps = await openGaps;
 
             vm.Gaps = gaps
                 .OrderBy(g => g.Date).ThenBy(g => ShiftIndex(g.Shift)).ThenBy(g => g.VehicleId, StringComparer.Ordinal)

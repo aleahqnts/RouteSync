@@ -406,12 +406,13 @@ namespace FleetWise.Controllers
 
             // The checklists of the trips on this board, not every checklist ever submitted,
             // for the same reason.
+            // Started here and awaited after the leave read below, so the two share one wait.
             var tripIds = trips.Select(t => (object)t.TripId).ToList();
-            var checklists = tripIds.Count == 0
-                ? new List<BusChecklist>()
-                : (await _supabase.From<BusChecklist>()
-                                  .Filter("trip_id", Operator.In, tripIds)
-                                  .Get()).Models;
+            var checklistsTask = tripIds.Count == 0
+                ? null
+                : _supabase.From<BusChecklist>()
+                           .Filter("trip_id", Operator.In, tripIds)
+                           .Get();
 
             // The availability flag carries no date, so it speaks for the operational day it
             // is read on and no other. Applied to a later board, one sick call would turn
@@ -446,6 +447,7 @@ namespace FleetWise.Controllers
             // Leave approved for the day this board is showing counts the same as being
             // unavailable, because on that day it is the same thing.
             availabilityDict = await _assignments.WithLeaveAsync(availabilityDict, selected);
+            var checklists = checklistsTask is null ? new List<BusChecklist>() : (await checklistsTask).Models;
 
             // One checklist per trip. Where a bus was inspected more than once, the most
             // recent submission wins.
