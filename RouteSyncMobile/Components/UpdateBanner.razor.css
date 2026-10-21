@@ -20,7 +20,7 @@
 
 .upd-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 .upd-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .25); overflow: hidden; }
-.upd-fill { height: 100%; border-radius: 3px; background: #4AADA8; transition: width 200ms linear; }
+.upd-fill { height: 100%; border-radius: 3px; background: #4AADA8; transform-origin: left; transition: transform 200ms linear; }
 .upd-pct { font: 800 12px sans-serif; min-width: 34px; text-align: right; }
 
 .upd-spin {

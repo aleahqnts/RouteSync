@@ -16,7 +16,7 @@
             @if (busy)
             {
                 <div class="upd-row">
-                    <div class="upd-bar"><div class="upd-fill" style="width:@Percent%"></div></div>
+                    <div class="upd-bar"><div class="upd-fill" style="transform:scaleX(@progress.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture))"></div></div>
                     <span class="upd-pct">@Percent%</span>
                 </div>
             }
