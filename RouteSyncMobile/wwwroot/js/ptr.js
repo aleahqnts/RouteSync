@@ -17,6 +17,9 @@ window.ptr = (function () {
     let resuming = false;
     const THRESHOLD = 70;
     const MAX_H = 96; // indicator height when spinning (room for status-bar offset)
+    // Anything that covers the page: sheets, dialogs, the busy cover. Kept in step with
+    // the scroll lock in app.css.
+    const MODAL = '.overlay, .nscrim, .busy-overlay, [aria-modal="true"]';
 
     function indicator() {
         let el = document.getElementById('ptr-ind');
@@ -36,7 +39,8 @@ window.ptr = (function () {
         const ind = indicator();
 
         el.addEventListener('touchstart', (e) => {
-            if (busy) return;
+            // A touch on an open sheet or dialog belongs to it, not to the page behind.
+            if (busy || document.querySelector(MODAL)) return;
             if (el.scrollTop <= 0) { startY = e.touches[0].clientY; pulling = true; dist = 0; }
         }, { passive: true });
 

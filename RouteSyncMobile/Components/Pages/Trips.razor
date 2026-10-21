@@ -120,6 +120,13 @@ else
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
+        // The last list read shows at once; the fresh one replaces it when it lands.
+        if (Data.PeekRecentTrips(Session.CurrentUser!.UserId) is { } held)
+        {
+            trips = held;
+            await FillRouteNames();
+            loading = false;
+        }
         try
         {
             trips = await Data.GetRecentTripsAsync(Session.CurrentUser!.UserId);
@@ -138,7 +145,9 @@ else
     // Route names do not change during a session, so each one is fetched once and cached.
     private async Task FillRouteNames()
     {
-        foreach (var id in trips.Select(t => t.RouteId).Distinct().Where(id => !routeNames.ContainsKey(id)))
+        // Read together rather than one after another.
+        var missing = trips.Select(t => t.RouteId).Distinct().Where(id => !routeNames.ContainsKey(id));
+        await Task.WhenAll(missing.Select(async id =>
         {
             try
             {
@@ -146,7 +155,7 @@ else
                 if (r is not null) routeNames[id] = r.RouteName;
             }
             catch { /* falls back to "Route N" label */ }
-        }
+        }).ToList());
     }
 
     // Re-fetches every thirty seconds while the tab is open. A trip joins this list only

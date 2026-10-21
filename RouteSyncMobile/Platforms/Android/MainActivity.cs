@@ -1,8 +1,6 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.OS;
-using AndroidX.Core.App;
-using AndroidX.Core.Content;
 using FleetWiseMobile.Services;
 
 namespace FleetWiseMobile;
@@ -19,14 +17,34 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
 
-        // Android 13+ requires a runtime grant before notifications can show.
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu &&
-            ContextCompat.CheckSelfPermission(this, Android.Manifest.Permission.PostNotifications)
-                != Permission.Granted)
+        _ = AskPermissionsOnceAsync();
+    }
+
+    // Every runtime permission the app can use, asked one after another on the first launch
+    // after install, so the phone is set up before the first shift rather than mid-task.
+    // Each later use still checks and asks again, and LocationPrompt covers a grant that
+    // was refused or taken back. Installing updates is a settings switch, not a runtime
+    // grant, so it stays with the update banner.
+    private static async Task AskPermissionsOnceAsync()
+    {
+        const string Key = "permissions_asked_v1";
+        if (Microsoft.Maui.Storage.Preferences.Default.Get(Key, false)) return;
+        try
         {
-            ActivityCompat.RequestPermissions(this,
-                new[] { Android.Manifest.Permission.PostNotifications }, 9100);
+            await Ask<Permissions.PostNotifications>();
+            // Background location is only offered once foreground location is granted.
+            if (await Ask<Permissions.LocationWhenInUse>() == PermissionStatus.Granted)
+                await Ask<Permissions.LocationAlways>();
+            await Ask<Permissions.Camera>();
         }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainActivity.Perms] {ex}"); }
+        Microsoft.Maui.Storage.Preferences.Default.Set(Key, true);
+    }
+
+    private static async Task<PermissionStatus> Ask<T>() where T : Permissions.BasePermission, new()
+    {
+        var status = await Permissions.CheckStatusAsync<T>();
+        return status == PermissionStatus.Granted ? status : await Permissions.RequestAsync<T>();
     }
 
     protected override void OnResume()

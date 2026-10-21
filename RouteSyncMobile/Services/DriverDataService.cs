@@ -513,7 +513,23 @@ public class DriverDataService
             .Order("trip_id", Ordering.Descending)
             .Limit(RecentTripCount)
             .Get();
+        _recentTrips = (userId, r.Models);
         return r.Models;
+    }
+
+    // The last list read, so the Trips tab opens on it at once and refreshes behind it.
+    private (int UserId, List<Trip> Trips)? _recentTrips;
+
+    /// <summary>The recent trips last read for <paramref name="userId"/>, or null before the first read.</summary>
+    public List<Trip>? PeekRecentTrips(int userId) =>
+        _recentTrips is { } c && c.UserId == userId ? c.Trips.ToList() : null;
+
+    /// <summary>The messages already held for <paramref name="userId"/>, or null before the first read.</summary>
+    /// <remarks>The message watch reads them from sign-in on, so the tab rarely waits.</remarks>
+    public List<MessageModel>? PeekMessages(int userId)
+    {
+        lock (_messagesGate)
+            return _messagesUser == userId && _messages.Count > 0 ? _messages.ToList() : null;
     }
 
     /// <summary>

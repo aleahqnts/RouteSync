@@ -401,7 +401,14 @@ h1:focus {
     border-radius: 50%;
     background: #edf6f6;
 }
-.bao-disc .bao { position: absolute; left: -14px; bottom: -6px; width: 160px; height: auto; }
+/* His face sits left of the drawing's middle (x 935 of 1960, the horns are uneven), so the
+   offset centres the face on the disc rather than the canvas. */
+.bao-disc .bao { position: absolute; left: -10px; bottom: -6px; width: 160px; height: auto; }
+
+/* While a sheet, dialog or busy cover is open the page behind it neither scrolls nor
+   pulls to refresh (js/ptr.js checks the same selector). */
+.app-body:has(.overlay, .nscrim, .busy-overlay, [aria-modal="true"]) { overflow: hidden; }
+.lv-modal-body, .nsheet { overscroll-behavior: contain; }
 
 @media (prefers-reduced-motion: reduce) {
     .bao-stage .bao > g,

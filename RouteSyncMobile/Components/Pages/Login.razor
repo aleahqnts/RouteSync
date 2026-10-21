@@ -63,6 +63,7 @@
         if (await Session.RestoreAsync())
         {
             Watch.Start(Session.CurrentUser!.UserId);
+            _ = Data.GetRecentTripsAsync(Session.CurrentUser!.UserId); // warms the Trips tab
             // A driver still on the temporary password, after the app was killed part-way
             // through changing it, is sent to change it before anything else.
             if (await SecureStorage.Default.GetAsync("fw_must_change") == "1")
@@ -94,6 +95,7 @@
 
             await Session.SetAsync(user);
             Watch.Start(user.UserId);
+            _ = Data.GetRecentTripsAsync(user.UserId); // warms the Trips tab
             try { await Data.StampLoginAsync(user.UserId); } catch { /* non-blocking */ }
 
             // A new driver on the shared temporary password is sent to set their own.

@@ -27,19 +27,27 @@
                              border-radius:999px; background:#d0494b; color:#fff;">Urgent</span>
             }
             <span style="margin-left:auto; font:600 11px sans-serif; color:#9aa3b2;">@Pages.Notifications.When(current, withDate: true)</span>
-            <button @onclick="Dismiss" @onclick:stopPropagation="true"
-                    style="flex:0 0 auto; border:none; cursor:pointer; font-weight:800; line-height:1;
-                           @(IsHigh(current)
-                             ? "padding:5px 12px; border-radius:999px; background:#d0494b; color:#fff; font-size:12px;"
-                             : "width:24px; height:24px; padding:0; border-radius:50%; background:rgba(20,30,55,.08); color:#59627a; font-size:12px;")">
-                @(IsHigh(current) ? "Got It" : "✕")
-            </button>
+            @if (!IsHigh(current))
+            {
+                <button @onclick="Dismiss" @onclick:stopPropagation="true" aria-label="Dismiss"
+                        style="flex:0 0 auto; width:32px; height:32px; margin:-6px -6px -6px 0; padding:0; border:none;
+                               border-radius:50%; background:rgba(20,30,55,.08); color:#59627a;
+                               font-size:13px; font-weight:800; line-height:1; cursor:pointer;">✕</button>
+            }
         </div>
         <p style="margin:0; font:800 15px sans-serif; color:#1b2a56; line-height:1.25;">@current.Subject</p>
         <p style="margin:3px 0 0; font:13px sans-serif; color:#5a6473; line-height:1.4;
                   @(expanded ? "" : "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;")">
             @current.Body
         </p>
+        @if (IsHigh(current))
+        {
+            @* Full width and thumb sized: an urgent message stays until this is pressed. *@
+            <button @onclick="Dismiss" @onclick:stopPropagation="true"
+                    style="display:block; width:100%; min-height:44px; margin-top:12px; border:none;
+                           border-radius:12px; background:#d0494b; color:#fff;
+                           font:800 15px sans-serif; cursor:pointer;">Got It</button>
+        }
     </div>
 }
 

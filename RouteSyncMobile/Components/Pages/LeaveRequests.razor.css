@@ -111,11 +111,13 @@
 
 .lv-add {
     width: 100%;
-    min-height: 42px;
-    margin-bottom: 12px;
-    border: 1px dashed #b9c0cc;
+    min-height: 48px;
+    margin-bottom: 14px;
+    /* One solid, raised button: a lip under a plain border reads as pressable. */
+    border: 1px solid #cfe3e1;
     border-radius: 14px;
     background: #fff;
+    box-shadow: 0 2px 0 #d7e8e6, 0 4px 10px rgba(20, 28, 50, 0.06);
     color: #2e9e8f;
     font-size: 14px;
     font-weight: 700;

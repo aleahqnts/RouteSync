@@ -1,5 +1,7 @@
 .notif {
-    padding: 0 22px 28px;
+    min-height: 100%;
+    padding: 0 16px 28px;
+    background: #f6f7f9;
 }
 
 /* Title and the All/Unread chips stay in reach while the list scrolls under them. */
@@ -7,9 +9,9 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    margin: 0 -22px;
-    padding: 64px 22px 6px;
-    background: #fff;
+    margin: 0 -16px;
+    padding: 64px 16px 6px;
+    background: #f6f7f9;
     border-bottom: 1px solid #eef0f4;
 }
 
@@ -53,7 +55,7 @@
     border: none;
     border-radius: 999px;
     padding: 7px 16px;
-    background: #eef0f4;
+    background: #fff;
     color: #3b4660;
     font-size: 13px;
     font-weight: 600;
@@ -110,19 +112,28 @@
 }
 
 .ngroup {
-    margin: 18px 0 2px;
+    margin: 18px 4px 6px;
     font-size: 12px;
     font-weight: 700;
     color: #8a93a2;
 }
 
-/* One message. Unread is said twice and no more: a bold title and a dot. */
+/* Each day's messages in one card, rows split by hairlines. */
+.nday {
+    padding: 0 14px;
+    border: 1px solid #eceef3;
+    border-radius: 14px;
+    background: #fff;
+}
+
+/* One message. Unread is said twice and no more: a bold title and a dot. Read ones
+   step back in grey. */
 .nrow {
     display: flex;
     align-items: flex-start;
     gap: 12px;
     width: 100%;
-    padding: 12px 2px;
+    padding: 12px 0;
     border: none;
     border-bottom: 1px solid #eceef3;
     background: none;
@@ -131,22 +142,19 @@
     cursor: pointer;
 }
 
-.nicon {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    flex: 0 0 38px;
+.nrow:last-child { border-bottom: none; }
+
+/* Small and single-coloured in the list: the title carries the row, not the icon. */
+.nrow .nicon {
+    flex: 0 0 18px;
+    margin-top: 1px;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    color: #8a93a2;
 }
 
-.nicon ::deep svg { width: 20px; height: 20px; }
-
-.nicon.aud-all { background: #eef0f4; color: #59627a; }
-.nicon.aud-route { background: #eaeefa; color: #3b5bb5; }
-.nicon.aud-driver { background: #e6f6f2; color: #2e9e8f; }
-.nrow.urgent .nicon { background: #fdeff0; color: #d0494b; }
+.nrow .nicon ::deep svg { width: 18px; height: 18px; }
+.nrow:not(.unread) .nicon { color: #b4bac5; }
+.nrow.urgent .nicon { color: #d0494b; }
 
 .nbody {
     display: flex;
@@ -157,8 +165,8 @@
 
 .nt {
     font-size: 14.5px;
-    font-weight: 600;
-    color: #3b4660;
+    font-weight: 500;
+    color: #5a6473;
     line-height: 1.3;
 }
 
@@ -172,11 +180,12 @@
     font-size: 13px;
     color: #6b7487;
     line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
+
+.nrow:not(.unread) .np { color: #9aa3b2; }
 
 .nside {
     display: flex;
@@ -253,13 +262,15 @@
 }
 
 .npin-ack {
-    margin-top: 10px;
+    margin-top: 12px;
+    width: 100%;
+    min-height: 44px;
     border: none;
-    border-radius: 999px;
-    padding: 6px 16px;
+    border-radius: 12px;
+    padding: 0 16px;
     background: #d0494b;
     color: #fff;
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 800;
     cursor: pointer;
 }
@@ -321,6 +332,22 @@
     align-items: center;
     gap: 14px;
 }
+
+/* The open message keeps its tinted badge: one at a time, it can afford the colour. */
+.nsheet-head .nicon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    flex: 0 0 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nsheet-head .nicon ::deep svg { width: 20px; height: 20px; }
+.nsheet-head .nicon.aud-all { background: #eef0f4; color: #59627a; }
+.nsheet-head .nicon.aud-route { background: #eaeefa; color: #3b5bb5; }
+.nsheet-head .nicon.aud-driver { background: #e6f6f2; color: #2e9e8f; }
 
 .nsheet-scope {
     display: flex;

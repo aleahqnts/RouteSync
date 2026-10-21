@@ -83,6 +83,7 @@ else
             @foreach (var g in Grouped)
             {
                 <h2 class="ngroup">@g.Key</h2>
+                <div class="nday">
                 @foreach (var n in g)
                 {
                     var unread = Watch.IsUnread(n);
@@ -102,6 +103,7 @@ else
                         </span>
                     </button>
                 }
+                </div>
             }
 
             @if (!unreadOnly)
@@ -258,6 +260,12 @@ else
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
+        // The message watch has usually read them already, so the list shows at once.
+        if (Data.PeekMessages(Session.CurrentUser!.UserId) is { } held)
+        {
+            items = held;
+            loading = false;
+        }
         try { items = await Data.GetMessagesAsync(Session.CurrentUser!.UserId); }
         catch (Exception ex)
         {

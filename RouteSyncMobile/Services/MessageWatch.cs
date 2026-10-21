@@ -36,7 +36,9 @@ public class MessageWatch
     private System.Threading.Timer? _timer;
     private int _userId;
     private bool _seeded;
-    private readonly HashSet<long> _known = new();
+    // The newest message id seen. Only messages above it are new arrivals: older history
+    // paged in by "Show older messages" lands below it and raises no alert.
+    private long _newest;
     private List<MessageModel> _msgs = new();
 
     // Broadcast and route messages this phone has read, and the moment before which all
@@ -65,7 +67,7 @@ public class MessageWatch
         Stop();
         _userId = userId;
         _seeded = false;
-        _known.Clear();
+        _newest = 0;
         LoadReadMarks();
         _timer = new System.Threading.Timer(_ => _ = Poll(), null, 0, PollMs);
     }
@@ -91,11 +93,10 @@ public class MessageWatch
             _msgs = msgs;
 
             bool firstPass = !_seeded;
-            foreach (var m in msgs)
+            var newest = _newest;
+            // Oldest first, so several arrivals queue in the order they were sent.
+            foreach (var m in msgs.Where(m => m.MessageId > newest).OrderBy(m => m.MessageId))
             {
-                if (_known.Contains(m.MessageId)) continue;
-                _known.Add(m.MessageId);
-
                 // The first poll seeds what already exists, so no alert is raised for history.
                 if (_seeded)
                 {
@@ -103,6 +104,7 @@ public class MessageWatch
                     try { _notifier.Show((int)(m.MessageId & 0x7fffffff), m.Subject ?? "New message", m.Body ?? ""); }
                     catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Watch.Notify] {ex}"); }
                 }
+                _newest = Math.Max(_newest, m.MessageId);
             }
             _seeded = true;
 
