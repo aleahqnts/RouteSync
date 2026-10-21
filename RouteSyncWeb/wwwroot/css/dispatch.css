@@ -410,7 +410,7 @@
         color: var(--rp-text);
         background: var(--rp-bg);
         outline: none;
-        width: 220px;
+        width: clamp(240px, 26vw, 400px);
         transition: border-color 150ms;
     }
 
