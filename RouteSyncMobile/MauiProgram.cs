@@ -57,11 +57,13 @@ public static class MauiProgram
 		builder.Services.AddSingleton<Services.ILocalNotifier, Platforms.Android.AndroidLocalNotifier>();
 		builder.Services.AddSingleton<Services.ILocationGuard, Platforms.Android.AndroidLocationGuard>();
 		builder.Services.AddSingleton<Services.IPhotoCapture, Platforms.Android.AndroidPhotoCapture>();
+		builder.Services.AddSingleton<Services.IApkInstaller, Platforms.Android.AndroidApkInstaller>();
 #else
 		builder.Services.AddSingleton<Services.ITripTracker, Services.NoopTripTracker>();
 		builder.Services.AddSingleton<Services.ILocalNotifier, Services.NoopLocalNotifier>();
 		builder.Services.AddSingleton<Services.ILocationGuard, Services.NoopLocationGuard>();
 		builder.Services.AddSingleton<Services.IPhotoCapture, Services.MauiPhotoCapture>();
+		builder.Services.AddSingleton<Services.IApkInstaller, Services.NoopApkInstaller>();
 #endif
 
 		// Message poller, which drives the badge, the popup and the system notification.

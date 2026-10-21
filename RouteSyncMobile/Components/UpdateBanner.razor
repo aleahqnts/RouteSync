@@ -1,0 +1,107 @@
+@implements IDisposable
+@inject IApkInstaller Installer
+
+@* Offers a newer driver app, checked once each time the app opens. The driver can
+   dismiss it and carry on; it comes back on the next launch. *@
+@if (offer is not null && !dismissed)
+{
+    <div class="upd">
+        @if (busy)
+        {
+            <span class="upd-spin" aria-hidden="true"></span>
+        }
+        <div class="upd-text">
+            <p class="upd-title">@(busy ? "Updating RouteSync" : "Update available")</p>
+            <p class="upd-sub">@Subtitle</p>
+            @if (busy)
+            {
+                <div class="upd-row">
+                    <div class="upd-bar"><div class="upd-fill" style="width:@Percent%"></div></div>
+                    <span class="upd-pct">@Percent%</span>
+                </div>
+            }
+        </div>
+        @if (!busy)
+        {
+            <button class="upd-go" @onclick="StartUpdate">Update</button>
+            <button class="upd-x" aria-label="Dismiss" @onclick="() => dismissed = true">✕</button>
+        }
+    </div>
+}
+
+@code {
+    // A swiped-away app often keeps its process, so a launch is not the only moment to check:
+    // coming back to the foreground checks too, no more than once in this long.
+    private static DateTime _lastCheck = DateTime.MinValue;
+    private static readonly TimeSpan CheckEvery = TimeSpan.FromMinutes(5);
+    private Window? window;
+
+    private UpdateOffer? offer;
+    private bool dismissed, busy;
+    private double progress;
+    private string? error;
+
+    private int Percent => (int)Math.Round(progress * 100);
+
+    private string Subtitle => error ?? (busy
+        ? (progress >= 1 ? "Opening the installer…" : $"Downloading version {offer!.Version.ToString(3)}…")
+        : $"RouteSync {offer!.Version.ToString(3)} is ready to install.");
+
+    protected override async Task OnInitializedAsync()
+    {
+        window = Application.Current?.Windows.FirstOrDefault();
+        if (window is not null) window.Resumed += OnResumed;
+        await CheckAsync();
+    }
+
+    private void OnResumed(object? sender, EventArgs e) => InvokeAsync(CheckAsync);
+
+    private async Task CheckAsync()
+    {
+        if (busy || DateTime.UtcNow - _lastCheck < CheckEvery) return;
+        _lastCheck = DateTime.UtcNow;
+
+        var found = await AppUpdate.CheckAsync(Version.Parse(AppInfo.Current.VersionString));
+        if (found is null) return;
+        offer = found;
+        dismissed = false;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        if (window is not null) window.Resumed -= OnResumed;
+    }
+
+    private async Task StartUpdate()
+    {
+        error = null;
+        if (!Installer.EnsureAllowed())
+        {
+            error = "Allow installs for RouteSync, then tap Update again.";
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            var folder = Path.Combine(FileSystem.CacheDirectory, "updates");
+            Directory.CreateDirectory(folder);
+            var path = Path.Combine(folder, $"RouteSync-Driver-{offer!.Version.ToString(3)}.apk");
+
+            await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<double>(p =>
+            {
+                progress = p;
+                InvokeAsync(StateHasChanged);
+            }));
+            Installer.Install(path);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[UpdateBanner] {ex}");
+            error = "Download failed. Check your connection and try again.";
+        }
+        busy = false;
+        progress = 0;
+    }
+}

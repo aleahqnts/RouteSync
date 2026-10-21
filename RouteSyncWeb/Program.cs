@@ -81,6 +81,13 @@ builder.Services.AddScoped<FareCalculator>();
 // the dashboard reaches them over HTTP rather than repeating the logic here.
 builder.Services.AddHttpClient<PasswordResetApi>(c => c.Timeout = TimeSpan.FromSeconds(12));
 
+// The newest driver app, for the phones' update check. GitHub rejects a request with no user agent.
+builder.Services.AddHttpClient<DriverUpdateFeed>(c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(10);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("RouteSync-Dashboard");
+});
+
 // Sign-in rate limit, per caller address.
 //
 // The dashboard sign-in is the one door with no limit in front of it: the mobile app goes
@@ -333,6 +340,12 @@ app.Use(async (context, next) =>
 });
 
 app.MapStaticAssets();
+
+// Public on purpose: a phone asks before anyone has signed in, and the answer is a version
+// number and a link to a file that is already public.
+app.MapGet("/app/driver-update", async (DriverUpdateFeed feed) =>
+    await feed.LatestAsync() is { } latest ? Results.Json(latest) : Results.NoContent())
+    .AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",
