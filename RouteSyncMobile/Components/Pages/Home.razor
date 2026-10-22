@@ -229,47 +229,52 @@ else
                 <p class="s-sub">Your leave has been approved. Dispatch will not assign you while you are off.</p>
             </div>
         }
-        else if (IsAvailable)
-        {
-            <div class="prompt-card">
-                <div>
-                    <p class="s-title">Unable to drive?</p>
-                    <p class="s-sub">Report it so dispatch can send a replacement</p>
-                </div>
-                <button class="toggle on" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
-            </div>
-        }
         else
         {
-            <div class="prompt-card green-bg">
+            @* The switch says what is true now: on is available. A question beside a switch
+               left drivers reading "on" as "yes, I am unable". *@
+            <div class="prompt-card @(IsAvailable ? "" : "warn-bg")">
                 <div>
-                    <p class="s-title">Ready to drive again?</p>
-                    <p class="s-sub">Tell dispatch you can take assignments</p>
+                    <p class="s-title">@(IsAvailable ? "Available to drive" : "Not available to drive")</p>
+                    <p class="s-sub">@(IsAvailable ? "Turn off if you can't drive today" : "Turn on when you can drive again")</p>
                 </div>
-                <button class="toggle off" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
+                <button class="toggle @(IsAvailable ? "on" : "off")" role="switch" aria-checked="@(IsAvailable ? "true" : "false")"
+                        aria-label="Available to drive" @onclick="ToggleAvailability" disabled="@toggling"><span></span></button>
             </div>
         }
     </div>
 
     @if (showUnavailModal)
     {
-        <div class="overlay">
-            <div class="ua-modal">
-                <h2>Report that you cannot drive</h2>
-                <p class="ua-sub">@ReportSub</p>
+        @* A sheet from the bottom, in thumb reach: Bao worried, the reasons as large tiles,
+           and the report button where the thumb already is. *@
+        <div class="overlay overlay--sheet" @onclick="@(() => showUnavailModal = false)">
+            <div class="ua-modal ua-sheet" role="dialog" aria-modal="true" aria-labelledby="ua-title"
+                 @onclick:stopPropagation="true">
+                <div class="ua-grab"></div>
+                <div class="ua-head">
+                    <div class="ua-bao"><BaoHead Face="worried" /></div>
+                    <div>
+                        <h2 id="ua-title">Can't drive today?</h2>
+                        <p class="ua-sub">@ReportSub</p>
+                    </div>
+                </div>
 
-                <p class="ua-label">Reason</p>
-                <div class="chips">
+                <p class="ua-label" id="ua-why">What happened?</p>
+                <div class="ua-reasons" role="radiogroup" aria-labelledby="ua-why">
                     @foreach (var r in reasons)
                     {
-                        <button class="chip @(reasonChoice == r ? "on" : "")" @onclick="@(() => reasonChoice = r)">@r</button>
+                        <button class="ua-reason @(reasonChoice == r ? "on" : "")" role="radio"
+                                aria-checked="@(reasonChoice == r ? "true" : "false")"
+                                @onclick="@(() => reasonChoice = r)"><span class="ua-radio"></span>@r</button>
                     }
                 </div>
-                <input class="ua-note" placeholder="Add a note (optional)" @bind="reasonNote" @bind:event="oninput" />
+                <textarea class="ua-note" rows="2" placeholder="Details for dispatch (optional)"
+                          @bind="reasonNote" @bind:event="oninput"></textarea>
 
-                <div class="ua-actions">
+                <div class="ua-actions stack">
+                    <button class="btn-confirm" @onclick="ConfirmUnavailable" disabled="@(toggling || !ReasonReady)">Report to Dispatch</button>
                     <button class="btn-cancel" @onclick="@(() => showUnavailModal = false)" disabled="@toggling">Cancel</button>
-                    <button class="btn-confirm" @onclick="ConfirmUnavailable" disabled="@(toggling || !ReasonReady)">Confirm</button>
                 </div>
             </div>
         </div>
@@ -816,7 +821,11 @@ else
 
     private async Task ConfirmUnavailable()
     {
-        var reason = !string.IsNullOrWhiteSpace(reasonNote) ? reasonNote.Trim() : reasonChoice;
+        // The tile and the note together, so a note never hides which reason was picked.
+        var note = reasonNote.Trim();
+        var reason = reasonChoice is null ? note
+            : note.Length == 0 ? reasonChoice
+            : $"{reasonChoice}: {note}";
         showUnavailModal = false;
         await ApplyAvailability("Unavailable", reason);
     }

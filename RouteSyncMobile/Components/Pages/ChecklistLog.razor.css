@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #8a93a2;
+    color: #5f6b7d;
 }
 
 .log {
@@ -55,7 +55,7 @@
 
 .empty {
     text-align: center;
-    color: #8a93a2;
+    color: #5f6b7d;
     margin-top: 40px;
 }
 
@@ -77,7 +77,7 @@
 
 .sum-time {
     margin: 3px 0 0;
-    color: #8a93a2;
+    color: #5f6b7d;
     font-size: 13px;
 }
 
@@ -104,7 +104,7 @@
 
 .log-item:last-child { border-bottom: none; }
 
-.num { color: #8a93a2; font-size: 14px; width: 22px; }
+.num { color: #5f6b7d; font-size: 14px; width: 22px; }
 .label { flex: 1; color: #1b2a56; font-size: 14px; }
 
 .badge {
@@ -118,6 +118,6 @@
 
 .badge svg { width: 16px; height: 16px; }
 
-.badge.pass { background: #e3f7ea; color: #3aaf5d; }
+.badge.pass { background: #e3f7ea; color: #1f8a46; }
 .badge.fail { background: #fce8e8; color: #d0494b; }
 .sum-status.warn { color: #d9822b; }

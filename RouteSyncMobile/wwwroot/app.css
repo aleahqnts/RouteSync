@@ -24,7 +24,8 @@ html, body {
     letter-spacing: .08em;
     text-transform: uppercase;
 }
-h1, .cl-confirm h2 {
+/* Every dialog and sheet title too, so the popups read as one family. */
+h1, .cl-confirm h2, .ua-modal h2, .lv-modal-head h2, .nsheet-t, .dlg-title {
     font-family: 'Selawik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -97,6 +98,33 @@ button:not(:disabled):active {
 .ua-modal {
     animation: sheet-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
+
+/* Bottom sheets rise from the bottom edge, the way the phone's own sheets do: the opened
+   message, the leave sheets and the unable-to-drive report. Centred dialogs keep sheet-in. */
+@keyframes sheet-up {
+    from { transform: translateY(100%); }
+}
+
+.nsheet, .lv-modal, .ua-modal.ua-sheet {
+    animation: sheet-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nsheet, .lv-modal, .ua-modal.ua-sheet { animation: fade-in 0.15s ease-out; }
+}
+
+/* The close, played by js/sheets.js on a copy of the sheet the page just removed. Written
+   stronger than the open rules above so the copy does not replay the rise. */
+@keyframes sheet-down {
+    to { transform: translateY(100%); }
+}
+
+@keyframes fade-out {
+    to { opacity: 0; }
+}
+
+html:root .sheet-closing { animation: sheet-down 0.26s cubic-bezier(0.4, 0, 1, 1) forwards; }
+html:root .cover-closing { animation: fade-out 0.26s ease-in forwards; }
 
 /* ---------- Skeleton loaders (replace "Loading..." text) ---------- */
 
@@ -385,6 +413,24 @@ h1:focus {
     font-size: 15px;
     font-weight: 600;
 }
+/* Header back arrows on every inner page: a 48px thumb target, drawn where the 32px one was. */
+html:root .back {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    margin-left: -8px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* The same bubble when Bao has bad news: warm amber, not alarm red. */
+.bao-line--warn {
+    border-color: #f2dfb0;
+    background: #fff8e6;
+    color: #6b4400;
+}
 
 /* Bao's head in a pale disc for empty lists. The disc's bottom edge crops his chin. */
 .bao-disc {
@@ -442,19 +488,19 @@ h1:focus {
    shade of that button's colour. Pressed, the lip goes and the key drops onto it. Written
    stronger than a page's scoped rules, which would otherwise take it back. */
 html:root :is(.btn-teal, .btn-green, .btn-confirm, .btn-cancel, .btn-signin, .btn-end, .btn-endred,
-    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .cc-btn) {
+    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .lv-hist-btn, .lv-btn-ghost, .cc-btn) {
     border-bottom: 3px solid rgba(0, 0, 0, .2);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 4px 6px -3px rgba(16, 24, 40, .28);
     transition: transform .07s, border-color .07s, box-shadow .07s;
 }
 html:root :is(.btn-teal, .btn-green, .btn-confirm, .btn-cancel, .btn-signin, .btn-end, .btn-endred,
-    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .cc-btn):active:not(:disabled) {
+    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .lv-hist-btn, .lv-btn-ghost, .cc-btn):active:not(:disabled) {
     border-bottom-color: transparent;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, .12);
     transform: translateY(2px);
 }
 html:root :is(.btn-teal, .btn-green, .btn-confirm, .btn-cancel, .btn-signin, .btn-end, .btn-endred,
-    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .cc-btn):disabled {
+    .btn-home, .btn-report, .psave, .lv-add, .lv-cancel, .lv-hist-btn, .lv-btn-ghost, .cc-btn):disabled {
     border-bottom-color: rgba(0, 0, 0, .08);
     box-shadow: none;
 }

@@ -91,7 +91,7 @@ else
                     OnResolved="LocationResolved" OnDismiss="SnoozeLocation" />
     <div class="ta">
         <div class="ta-head">
-            <h1>Active Trip</h1>
+            <h1>Active Shift</h1>
             @* The break takes the place of the status line rather than adding one, so the
                screen still fits without scrolling. *@
             @if (OnBreak)
@@ -213,9 +213,9 @@ else
         </div>
 
         <div class="progress-card">
-            <p class="prog-label">Trip Progress</p>
+            <p class="prog-label">Shift Progress</p>
             <p class="prog-remaining">@Remaining</p>
-            <div class="bar"><div class="fill" style="width:@(ProgressPct)%"></div></div>
+            <div class="bar"><div class="fill" style="transform:scaleX(@((ProgressPct / 100.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)))"></div></div>
             <div class="prog-times">
                 <span>@PhTime.Now.Date.Add(trip.ShiftStartTime).ToString("h:mm tt")</span>
                 @if (trip.BreakStart is TimeSpan breakStart)
@@ -280,22 +280,22 @@ else
     <div style="position:fixed; inset:0; z-index:9400; background:rgba(15,22,44,.55);
                 display:flex; align-items:center; justify-content:center; padding:28px;"
          @onclick="@(() => askLeave = false)">
-        <div style="width:100%; max-width:340px; background:#fff; border-radius:20px;
+        <div role="dialog" aria-modal="true" style="width:100%; max-width:340px; background:#fff; border-radius:20px;
                     padding:22px 20px 16px; box-shadow:0 24px 60px rgba(15,22,44,.45);"
              @onclick:stopPropagation="true">
-            <p style="margin:0 0 6px; font:800 18px sans-serif; color:#1b2a56;">Leave the counter?</p>
-            <p style="margin:0 0 18px; font:14px sans-serif; color:#5a6473; line-height:1.45;">
+            <p class="dlg-title" style="margin:0 0 6px; font-weight:800; font-size:18px; color:#1b2a56;">Leave the counter?</p>
+            <p style="margin:0 0 18px; font-size:14px; color:#5a6473; line-height:1.45;">
                 The trip keeps running and your count is saved. You can come back from Home.
             </p>
             <div style="display:flex; gap:10px;">
-                <button @onclick="@(() => askLeave = false)"
-                        style="flex:1; padding:12px 0; border:1px solid #e2e5ec; border-radius:999px;
-                               background:#fff; color:#1b2a56; font:700 14px sans-serif; cursor:pointer;">
+                <button class="btn-cancel" @onclick="@(() => askLeave = false)"
+                        style="flex:1; padding:12px 0; border:1px solid #e2e5ec; border-radius:12px;
+                               background:#fff; color:#1b2a56; font-weight:700; font-size:14px; cursor:pointer;">
                     Stay
                 </button>
-                <button @onclick="LeaveToHome"
-                        style="flex:1; padding:12px 0; border:none; border-radius:999px;
-                               background:#1b2a56; color:#fff; font:700 14px sans-serif; cursor:pointer;">
+                <button class="btn-confirm" @onclick="LeaveToHome"
+                        style="flex:1; padding:12px 0; border:none; border-radius:12px;
+                               background:#1b2a56; color:#fff; font-weight:700; font-size:14px; cursor:pointer;">
                     Leave
                 </button>
             </div>

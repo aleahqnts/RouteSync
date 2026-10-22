@@ -134,7 +134,7 @@
                             <button class="lv-hist-btn" @onclick="@(() => openHistory = r.RequestId)">History</button>
                             @if (LeaveEntitlement.IsOpen(r.Status))
                             {
-                                <button class="lv-cancel" @onclick="@(() => Cancel(r.RequestId))">Cancel</button>
+                                <button class="lv-cancel" @onclick="@(() => confirmCancel = r)">Cancel</button>
                             }
                             else if (CanAskToCancel(r))
                             {
@@ -314,6 +314,29 @@
     </div>
 }
 
+@* Cancelling takes the request off the list for good, so it is asked once more. *@
+@if (confirmCancel is not null)
+{
+    <div class="overlay" @onclick="@(() => confirmCancel = null)">
+        <div class="lv-modal" @onclick:stopPropagation="true">
+            <div class="lv-modal-head">
+                <h2>Cancel this request?</h2>
+                <button class="lv-close" @onclick="@(() => confirmCancel = null)" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="lv-modal-body">
+                <p class="lv-dates-said">@Span(confirmCancel) · @confirmCancel.LeaveType</p>
+                <p class="lv-withdraw-note">It comes off your list. File it again if you still need the days.</p>
+            </div>
+
+            <div class="lv-modal-foot">
+                <button class="lv-btn-ghost" @onclick="@(() => confirmCancel = null)">Keep It</button>
+                <button class="psave danger" @onclick="@(() => Cancel(confirmCancel!.RequestId))">Cancel Request</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     /// <summary>One thing that happened to a request.</summary>
     /// <remarks>
@@ -420,6 +443,7 @@
     private bool showForm, sending;
 
     private LeaveRequest? withdrawing;
+    private LeaveRequest? confirmCancel;
     private string withdrawReason = "";
     private string? withdrawProblem;
 
@@ -505,7 +529,7 @@
             {
                 // Not while a dialog is open. Replacing the list under a form being filled
                 // in, or under a request being read, takes it away mid-sentence.
-                if (showForm || openHistory is not null || withdrawing is not null) continue;
+                if (showForm || openHistory is not null || withdrawing is not null || confirmCancel is not null) continue;
 
                 try
                 {
@@ -541,7 +565,7 @@
     [JSInvokable]
     public async Task Refresh()
     {
-        if (showForm || openHistory is not null || withdrawing is not null) return;
+        if (showForm || openHistory is not null || withdrawing is not null || confirmCancel is not null) return;
 
         requests = await Data.GetLeaveRequestsAsync(Session.CurrentUser!.UserId);
         StateHasChanged();
@@ -766,6 +790,7 @@
 
     private async Task Cancel(long requestId)
     {
+        confirmCancel = null;
         try
         {
             await Data.CancelLeaveAsync(requestId);

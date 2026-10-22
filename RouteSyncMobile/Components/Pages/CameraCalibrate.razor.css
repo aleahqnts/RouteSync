@@ -63,7 +63,7 @@
 .cc-wait-s {
     margin: 6px 0 0;
     font-size: 13px;
-    color: #8a93a2;
+    color: #5f6b7d;
 }
 
 .cc-btn.retry { margin-top: 18px; }
@@ -73,7 +73,7 @@
 .cc-hint {
     margin: 0 0 10px;
     font-size: 12.5px;
-    color: #8a93a2;
+    color: #5f6b7d;
     text-align: center;
 }
 
@@ -157,7 +157,7 @@
 .cc-note {
     margin: 10px 0 0;
     font-size: 12.5px;
-    color: #8a93a2;
+    color: #5f6b7d;
     text-align: center;
 }
 

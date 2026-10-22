@@ -33,17 +33,17 @@
                 </svg>
             </div>
 
-            <p id="loc-title" style="margin:0 0 8px; font:800 18px sans-serif; color:#1b2a56;">@Title</p>
-            <p style="margin:0 0 20px; font:14px sans-serif; color:#5a6473; line-height:1.5;">@Body</p>
+            <p id="loc-title" class="dlg-title" style="margin:0 0 8px; font-weight:800; font-size:18px; color:#1b2a56;">@Title</p>
+            <p style="margin:0 0 20px; font-size:14px; color:#5a6473; line-height:1.5;">@Body</p>
 
-            <button @onclick="OpenSettings"
+            <button class="btn-confirm" @onclick="OpenSettings"
                     style="width:100%; padding:13px 0; border:none; border-radius:12px;
-                           background:#2e9e8f; color:#fff; font:700 15px sans-serif; cursor:pointer;">
+                           background:#2e9e8f; color:#fff; font-weight:700; font-size:15px; cursor:pointer;">
                 @SettingsLabel
             </button>
             <button @onclick="Dismiss"
                     style="width:100%; margin-top:8px; padding:11px 0; border:none; border-radius:12px;
-                           background:transparent; color:#5a6473; font:600 14px sans-serif; cursor:pointer;">
+                           background:transparent; color:#5a6473; font-weight:600; font-size:14px; cursor:pointer;">
                 @DismissLabel
             </button>
         </div>

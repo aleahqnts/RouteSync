@@ -3,9 +3,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #8a93a2;
+    color: #5f6b7d;
 }
-.ta-empty { text-align: center; color: #8a93a2; margin-top: 40px; }
+.ta-empty { text-align: center; color: #5f6b7d; margin-top: 40px; }
 
 /*
    The shift screen is sized to the phone rather than allowed to run past it. A
@@ -79,7 +79,7 @@
 
 .status {
     margin: 0;
-    color: #3aaf5d;
+    color: #1f8a46;
     font-size: 13px;
     font-weight: 600;
     display: flex;
@@ -91,7 +91,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #3aaf5d;
+    background: #1f8a46;
 }
 
 .status.on-break { color: #b7791f; }
@@ -116,12 +116,12 @@
 
 .bus-ico svg { width: clamp(30px, 5vh, 38px); height: auto; display: block; }
 .bus-name { margin: 0; font-size: 18px; font-weight: 800; color: #1b2a56; }
-.plate { font-size: 13px; font-weight: 500; color: #8a93a2; }
+.plate { font-size: 13px; font-weight: 500; color: #5f6b7d; }
 .route { margin: 2px 0 0; color: #2e9e8f; font-size: 13px; font-weight: 600; }
 
 /* Quieter than the route it sits under, since it names what the trip is no longer on. */
-.route-moved { margin: 1px 0 0; color: #c0504d; font-size: 11px; font-weight: 600; }
-.trip-id { margin: 3px 0 0; color: #8a93a2; font-size: 12px; font-weight: 700; letter-spacing: .3px; }
+.route-moved { margin: 1px 0 0; color: #c0504d; font-size: 13px; font-weight: 600; }
+.trip-id { margin: 3px 0 0; color: #5f6b7d; font-size: 12px; font-weight: 700; letter-spacing: .3px; }
 
 .counter-card {
     background: #f4f6f9;
@@ -220,18 +220,19 @@
     overflow: hidden;
 }
 
+/* Grown with a transform rather than a width, so each tick repaints the bar alone. */
 .fill {
     height: 100%;
     background: #2e9e8f;
-    border-radius: 5px;
-    transition: width 0.5s linear;
+    transform-origin: left center;
+    transition: transform 0.5s linear;
 }
 
 .prog-times {
     display: flex;
     justify-content: space-between;
     margin-top: 8px;
-    color: #8a93a2;
+    color: #5f6b7d;
     font-size: 12px;
 }
 
@@ -285,7 +286,7 @@
 .flag svg { width: 30px; height: 30px; }
 
 .confirm h2 { margin: 0 0 6px; font-size: 18px; font-weight: 800; color: #1b2a56; }
-.c-sub { margin: 0 0 16px; color: #8a93a2; font-size: 13px; }
+.c-sub { margin: 0 0 16px; color: #5f6b7d; font-size: 13px; }
 
 .c-card {
     border: 1px solid #e6e8ee;
@@ -314,7 +315,7 @@
 
 .c-div { border-top: 1px solid #eef0f4; margin: 14px 0; }
 
-.c-k { margin: 0; color: #8a93a2; font-size: 12px; }
+.c-k { margin: 0; color: #5f6b7d; font-size: 12px; }
 .c-v { margin: 2px 0 0; color: #1b2a56; font-size: 15px; font-weight: 700; }
 
 .err { color: #d0494b; font-size: 13px; margin: 0 0 12px; }
@@ -370,7 +371,7 @@
 }
 
 /* Grace window: camera expected but no heartbeat yet */
-.auto-badge.pending { color: #9aa3b2; }
+.auto-badge.pending { color: #6b7487; }
 .auto-badge.pending .auto-dot { background: #9aa3b2; }
 
 /* ---------- Camera card: liveness chip and the way in to calibration ---------- */

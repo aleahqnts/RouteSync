@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #8a93a2;
+    color: #5f6b7d;
 }
 
 .td { padding: 52px 22px calc(28px + env(safe-area-inset-bottom)); }
@@ -26,7 +26,7 @@
 
 .td-title { flex: 1; text-align: center; }
 .td-title h1 { margin: 0; font-size: 19px; font-weight: 800; color: #1b2a56; }
-.td-sub { margin: 2px 0 0; color: #8a93a2; font-size: 13px; }
+.td-sub { margin: 2px 0 0; color: #5f6b7d; font-size: 13px; }
 .spacer { width: 32px; }
 
 .td-card {
@@ -53,7 +53,7 @@
 .i.pin { color: #e0556b; }
 
 .divider { border-top: 1px solid #eef0f4; margin: 14px 0; }
-.muted { margin: 2px 0; color: #8a93a2; font-size: 13px; }
+.muted { margin: 2px 0; color: #5f6b7d; font-size: 13px; }
 .bus { margin: 2px 0; font-size: 20px; font-weight: 800; color: #1b2a56; }
 .green { color: #2e9e8f; }
 .strong { font-weight: 700; }
@@ -68,14 +68,14 @@
 .done p { margin: 1px 0; }
 
 .err { color: #d0494b; font-size: 13px; text-align: center; margin: 0 0 12px; }
-.td-empty { text-align: center; color: #8a93a2; margin-top: 40px; }
+.td-empty { text-align: center; color: #5f6b7d; margin-top: 40px; }
 
 .btn-green {
     width: 100%;
     border: none;
     border-radius: 10px;
     padding: 15px;
-    background: #3aaf5d;
+    background: #1f8a46;
     color: #fff;
     cursor: pointer;
 }

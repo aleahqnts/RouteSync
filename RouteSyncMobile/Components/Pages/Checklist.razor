@@ -29,14 +29,14 @@ else if (submitted)
     <div class="cl-confirm">
         @if (blocked)
         {
-            <div class="confirm-check bad">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#d0494b" stroke-width="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 7v6" /><path d="M12 16.5v.5" /></svg>
-            </div>
+            @* The hardest moment in the app: a bus that cannot leave. Bao stays, worried
+               rather than gone, and the driver is told the next step, which is the radio. *@
+            <div class="bao-stage"><BaoFull Face="worried" /></div>
             <h2>Trip Blocked</h2>
             <p class="confirm-sub">
-                This bus is out of service and cannot be driven. Your operator has been
-                told. Wait on your home screen.
+                This bus is out of service and cannot be driven. Your operator has been told.
             </p>
+            <p class="bao-line bao-line--warn">Safety first. Radio dispatch for your next bus.</p>
         }
         else if (hasDefects)
         {
@@ -51,7 +51,7 @@ else if (submitted)
                 <i class="bao-spark"></i><i class="bao-spark"></i><i class="bao-spark"></i>
                 <BaoFull />
             </div>
-            <h2>Bus Checklist Submitted!</h2>
+            <h2>Checklist Submitted</h2>
             <p class="bao-line">Checklist complete. Ingat sa biyahe.</p>
         }
 

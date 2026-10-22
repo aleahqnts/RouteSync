@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #8a93a2;
+    color: #5f6b7d;
 }
 
 .home {
@@ -147,9 +147,10 @@
     margin-top: 10px;
 }
 
-.green-bg {
-    background: #eafaf1;
-    border-color: #cdeede;
+/* Not available: amber, a state to notice rather than an error. */
+.warn-bg {
+    background: #fff8e6;
+    border-color: #f2dfb0;
 }
 
 .s-title {
@@ -161,8 +162,8 @@
 
 .s-sub {
     margin: 2px 0 0;
-    color: #8a93a2;
-    font-size: 13px;
+    color: #5f6b7d;
+    font-size: 14px;
 }
 
 .green { color: #2e9e8f; }
@@ -277,7 +278,7 @@
 }
 
 .btn-teal { background: #2e9e8f; }
-.btn-green { background: #3aaf5d; }
+.btn-green { background: #1f8a46; }
 
 /* A button held shut by the clock is left on screen, so it has to read as shut. */
 .btn-teal:disabled, .btn-green:disabled { opacity: 0.55; cursor: default; }
@@ -287,39 +288,69 @@
     background: #eaf0fb;
     color: #355fc4;
     border-radius: 8px;
-    padding: 8px 14px;
+    min-height: 44px;
+    padding: 0 16px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 14px;
     cursor: pointer;
 }
 
+/* A physical switch: the track is sunk into the card, the knob stands on a lip like the
+   action buttons and drops onto it under the finger. On reads teal with a tick, off grey
+   with a cross, so the state does not rest on colour alone. */
 .toggle {
-    width: 46px;
-    height: 26px;
-    border-radius: 13px;
-    border: none;
     position: relative;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 18px;
+    background: #d5dae3;
+    box-shadow: inset 0 2px 4px rgba(16, 24, 40, 0.22);
     cursor: pointer;
-    background: #cfd5df;
-    flex: 0 0 46px;
-    transition: background 0.2s ease;
+    transition: background 0.18s ease;
+}
+
+/* A 48px thumb target around the 36px switch. */
+.toggle::before {
+    content: "";
+    position: absolute;
+    inset: -8px -6px;
 }
 
 .toggle.on { background: #2e9e8f; }
 
 .toggle span {
     position: absolute;
-    top: 3px;
-    width: 20px;
-    height: 20px;
+    top: 2px;
+    left: 3px;
+    width: 30px;
+    height: 29px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
     background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-    transition: left 0.2s cubic-bezier(0.3, 1.3, 0.5, 1);
-    left: 3px;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 4px rgba(16, 24, 40, 0.25);
+    color: #8d96a6;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    transition: transform 0.18s ease-out, box-shadow 0.07s;
 }
 
-.toggle.on span { left: 23px; }
+.toggle span::after { content: "¹5"; }
+.toggle.on span { transform: translateX(25px); color: #2e9e8f; }
+.toggle.on span::after { content: "¹3"; }
+
+.toggle:active:not(:disabled) span {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+    top: 4px;
+}
+
+.toggle:active:not(:disabled) { transform: none; filter: none; }
 
 /* Busy spinner while toggling availability */
 .busy-overlay {
@@ -361,7 +392,7 @@
     width: 100%;
     max-width: 360px;
     background: #fff;
-    border-radius: 16px;
+    border-radius: 20px;
     padding: 22px;
 }
 
@@ -374,7 +405,7 @@
 
 .ua-sub {
     margin: 0 0 16px;
-    color: #8a93a2;
+    color: #5f6b7d;
     font-size: 13px;
 }
 
@@ -385,36 +416,61 @@
     color: #1b2a56;
 }
 
-.chips {
-    display: flex;
-    flex-wrap: wrap;
+/* The reasons as tiles in a two-column grid, each a full thumb tall. The last one spans
+   the row when the count is odd. */
+.ua-reasons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin-bottom: 12px;
 }
 
-.chip {
-    border: 1px solid #d9dee6;
+.ua-reason {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 0 14px;
+    border: 1.5px solid #d9dee6;
+    border-radius: 12px;
     background: #fff;
-    border-radius: 999px;
-    padding: 7px 14px;
-    font-size: 13px;
-    color: #5a6473;
+    color: #1b2a56;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
     cursor: pointer;
 }
 
-.chip.on {
-    background: #e8f5f1;
-    border-color: #2e9e8f;
-    color: #2e9e8f;
-    font-weight: 700;
+.ua-reason:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.ua-radio {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border: 2px solid #b8c0cc;
+    border-radius: 50%;
+}
+
+.ua-reason.on {
+    border-color: #d0494b;
+    background: #fdf1f1;
+}
+
+.ua-reason.on .ua-radio {
+    border: 6px solid #d0494b;
 }
 
 .ua-note {
+    display: block;
     width: 100%;
-    border: 1px solid #d9dee6;
-    border-radius: 10px;
-    padding: 11px 12px;
-    font-size: 14px;
+    border: 1.5px solid #d9dee6;
+    border-radius: 12px;
+    padding: 12px;
+    font: inherit;
+    font-size: 15px;
+    color: #1b2a56;
+    resize: none;
     margin-bottom: 16px;
     box-sizing: border-box;
 }
@@ -466,3 +522,60 @@
     padding: 13px;
     font-size: 15px;
 }
+
+/* The unable-to-drive report rises from the bottom edge, in thumb reach. */
+.overlay--sheet {
+    align-items: flex-end;
+    padding: 0;
+}
+
+.ua-sheet {
+    max-width: none;
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 22px 22px 0 0;
+    padding: 10px 20px calc(18px + env(safe-area-inset-bottom));
+}
+
+.ua-grab {
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 14px;
+    border-radius: 2px;
+    background: #d9dee6;
+}
+
+.ua-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.ua-head h2 { margin: 0 0 3px; }
+.ua-head .ua-sub { margin: 0; font-size: 14px; line-height: 1.4; }
+
+/* Bao's worried face in a small warm disc, cropped at the chin like the empty lists. */
+.ua-bao {
+    position: relative;
+    flex: 0 0 60px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fff1dc;
+    overflow: hidden;
+}
+
+.ua-bao ::deep .bao {
+    position: absolute;
+    left: -5px;
+    bottom: -4px;
+    width: 72px;
+    height: auto;
+}
+
+.ua-sheet .ua-label { font-size: 14px; }
+
+.ua-sheet .ua-actions.stack button { min-height: 52px; font-size: 16px; }

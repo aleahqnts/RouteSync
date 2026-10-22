@@ -18,15 +18,15 @@
         <div style="display:flex; align-items:center; gap:7px; margin-bottom:6px;">
             <span style="width:7px; height:7px; border-radius:50%; flex:0 0 7px;
                          background:@(IsHigh(current) ? "#d0494b" : "#2e9e8f");"></span>
-            <span style="font:700 11px sans-serif; letter-spacing:.2px; text-transform:uppercase; color:#6a7386;">
+            <span style="font:700 12px sans-serif; letter-spacing:.2px; text-transform:uppercase; color:#6a7386;">
                 @ScopeLabel(current)
             </span>
             @if (IsHigh(current))
             {
-                <span style="font:800 10px sans-serif; text-transform:uppercase; padding:2px 8px;
+                <span style="font:800 11px sans-serif; text-transform:uppercase; padding:2px 8px;
                              border-radius:999px; background:#d0494b; color:#fff;">Urgent</span>
             }
-            <span style="margin-left:auto; font:600 11px sans-serif; color:#9aa3b2;">@Pages.Notifications.When(current, withDate: true)</span>
+            <span style="margin-left:auto; font:600 12px sans-serif; color:#6b7487;">@Pages.Notifications.When(current, withDate: true)</span>
             @if (!IsHigh(current))
             {
                 <button @onclick="Dismiss" @onclick:stopPropagation="true" aria-label="Dismiss"

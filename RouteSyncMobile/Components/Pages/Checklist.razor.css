@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #8a93a2;
+    color: #5f6b7d;
 }
 
 .cl {
@@ -134,8 +134,9 @@
     border: 1px solid #cfd6e4;
     background: #fff;
     color: #1b2a56;
-    font-size: 12px;
-    padding: 6px 12px;
+    font-size: 13px;
+    min-height: 44px;
+    padding: 0 16px;
     border-radius: 999px;
 }
 
@@ -147,7 +148,7 @@
 
 .ph-note, .ph-fail { font-size: 12px; }
 
-.ph-note { color: #8a93a2; }
+.ph-note { color: #5f6b7d; }
 
 .ph-fail { color: #d0494b; }
 
@@ -163,7 +164,7 @@
 }
 
 .num {
-    color: #8a93a2;
+    color: #5f6b7d;
     font-size: 14px;
     width: 22px;
 }
@@ -196,7 +197,7 @@
 
 .mark.check {
     border: 1.5px solid #bfe0d9;
-    color: #3aaf5d;
+    color: #1f8a46;
 }
 
 .mark.check.on {
@@ -270,7 +271,7 @@
 }
 
 .confirm-sub {
-    color: #8a93a2;
+    color: #5f6b7d;
     font-size: 13px;
     margin: 0 0 8px;
     text-align: center;
@@ -287,7 +288,7 @@
 }
 
 .confirm-row .ok {
-    color: #3aaf5d;
+    color: #1f8a46;
     font-weight: 700;
 }
 
@@ -300,11 +301,11 @@
 .crit {
     display: inline-block;
     margin-left: 6px;
-    padding: 1px 6px;
+    padding: 2px 8px;
     border-radius: 999px;
     background: #fdecea;
     color: #c0392b;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: .3px;
     vertical-align: middle;
@@ -363,7 +364,7 @@
     width: 100%;
     max-width: 340px;
     background: #fff;
-    border-radius: 16px;
+    border-radius: 20px;
     padding: 22px;
 }
 
@@ -376,7 +377,7 @@
 
 .ua-sub {
     margin: 0 0 18px;
-    color: #8a93a2;
+    color: #5f6b7d;
     font-size: 13px;
 }
 
