@@ -6,10 +6,12 @@
     color: #5f6b7d;
 }
 
+/* One screen tall, so the item list scrolls on its own and Next stays in reach however
+   many failed items have opened their photo rows. */
 .cl {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100dvh;
     padding: 52px 18px calc(24px + env(safe-area-inset-bottom));
     box-sizing: border-box;
 }
@@ -97,7 +99,9 @@
     flex: 1;
     border: 1px solid #e6e8ee;
     border-radius: 12px;
-    overflow: hidden;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     margin-bottom: 16px;
 }
 
@@ -247,12 +251,13 @@
     justify-content: center;
     padding: 24px;
     text-align: center;
+    /* The waves run behind the text and are cut at the screen's edge. */
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
 }
 
-.confirm-check svg {
-    width: 84px;
-    height: 84px;
-}
+.cl-confirm > :not(.bao-stage) { position: relative; z-index: 1; }
 
 .cl-confirm h2 {
     color: #1b2a56;
@@ -311,8 +316,6 @@
     vertical-align: middle;
 }
 
-.confirm-check.bad svg { stroke: #d0494b; }
-.confirm-check.warn svg { stroke: #d99b1a; }
 
 .confirm-row .bad { color: #d0494b; font-weight: 700; }
 
@@ -411,3 +414,148 @@
 }
 
 .btn-cancel:disabled, .btn-confirm:disabled { opacity: 0.55; }
+
+/* ---------- Submitted screens ----------
+   Passed and passed-with-defects share one beat: Bao hops, and as he lands the disc flashes
+   and a wave rolls out past the edges of the screen, with a smaller echo from his second
+   hop. Each line of the screen bobs as the wave passes under it (--ld, set in the markup,
+   top to bottom). --wave is the colour as an RGB triple. Everything plays once. */
+.cl-confirm--passed { --wave: 74, 173, 168; --land: .91s; --echo: 1.19s; }
+.cl-confirm--defects { --wave: 217, 155, 26; --land: .83s; }
+
+.cl-confirm--passed .bao-stage ::deep .bao > g { animation: hop 4s ease-out .35s 1; }
+.cl-confirm--defects .bao-stage ::deep .bao > g { animation: hop-small 4s ease-out .35s 1; }
+@keyframes hop { 7% { transform: translateY(-300px); } 14% { transform: none; } 18% { transform: translateY(-64px); } 21%, 100% { transform: none; } }
+@keyframes hop-small { 6% { transform: translateY(-140px); } 12%, 100% { transform: none; } }
+
+/* Centred on the disc (100, 131 in the stage). The stage is not a stacking context, so
+   z-index 0 puts these under the disc and under the text, which sits at 1. */
+.fx {
+    position: absolute;
+    z-index: 0;
+    left: 0;
+    top: 31px;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.crest {
+    background: radial-gradient(circle, rgba(var(--wave), 0) 52%, rgba(var(--wave), .12) 72%, rgba(var(--wave), .42) 86%,
+                rgba(255, 255, 255, .95) 88.5%, rgba(var(--wave), .25) 90%, rgba(var(--wave), 0) 93%);
+    animation: crest 2s cubic-bezier(.2, .55, .4, 1) var(--land) 1;
+}
+.crest--small { animation: crest-small 1.3s cubic-bezier(.2, .55, .4, 1) var(--echo) 1; }
+.cl-confirm--defects .crest--small { display: none; }
+@keyframes crest { 0% { opacity: 1; transform: scale(.95); } 100% { opacity: 0; transform: scale(8); } }
+@keyframes crest-small { 0% { opacity: .7; transform: scale(.95); } 100% { opacity: 0; transform: scale(3); } }
+
+.impact {
+    left: 5px;
+    top: 36px;
+    width: 190px;
+    height: 190px;
+    background: rgba(var(--wave), .35);
+    animation: impact .5s ease-out var(--land) 1;
+}
+@keyframes impact { 0% { opacity: .9; transform: scale(.97); } 100% { opacity: 0; transform: scale(1.04); } }
+
+.wash {
+    background: radial-gradient(circle, rgba(var(--wave), .18) 0%, rgba(var(--wave), .10) 60%, rgba(var(--wave), 0) 75%);
+    animation: wash 2.4s cubic-bezier(.2, .55, .4, 1) var(--land) 1;
+}
+@keyframes wash { 0% { opacity: 1; transform: scale(.9); } 70% { opacity: .6; transform: scale(7); } 100% { opacity: 0; transform: scale(8); } }
+
+.cl-confirm--passed .lift,
+.cl-confirm--defects .lift { animation: lift 1.2s ease-out var(--ld) 1 backwards; }
+@keyframes lift { 30% { transform: translateY(-5px); } 65% { transform: translateY(1px); } }
+
+/* With defects, the card holding them answers the wave in amber and keeps an amber edge. */
+.cl-confirm--defects .confirm-card { animation: lift 1.2s ease-out var(--ld) 1 backwards, card-amber 1.6s ease-out var(--ld) 1 both; }
+@keyframes card-amber {
+    0% { box-shadow: 0 0 0 0 rgba(217, 155, 26, 0); border-color: #e6e8ee; }
+    25% { box-shadow: 0 0 0 6px rgba(217, 155, 26, .22); border-color: #d99b1a; }
+    100% { box-shadow: 0 0 0 0 rgba(217, 155, 26, 0); border-color: #f2dfb0; }
+}
+
+/* Trip Blocked: no wave. The disc turns pale red with a slow red halo behind it, caution
+   tape with the words already printed on it zips across, Bao startles as it lands, and the
+   radio line arrives last so it is read last. */
+.cl-confirm--blocked .bao-stage::before { animation: disc-red 1.2s ease-out .4s forwards; }
+@keyframes disc-red { to { background: #fbeeee; } }
+
+.halo {
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    top: 31px;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(208, 73, 75, 0) 58%, rgba(208, 73, 75, .22) 70%, rgba(208, 73, 75, 0) 80%);
+    opacity: 0;
+    animation: halo 3.6s ease-in-out 1.2s infinite;
+}
+@keyframes halo { 0%, 100% { opacity: .25; transform: scale(1.02); } 50% { opacity: 1; transform: scale(1.18); } }
+
+.cl-confirm--blocked .bao-stage ::deep .bao > g { animation: startle .35s ease-out .9s 1; }
+@keyframes startle { 40% { transform: translateY(-40px); } }
+
+.tape {
+    position: absolute;
+    z-index: 3;
+    left: -60px;
+    top: 130px;
+    width: 320px;
+    height: 24px;
+    transform: rotate(-12deg);
+}
+.tape--2 { top: 168px; transform: rotate(9deg); }
+
+.tape-strip {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #facc15;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, .25);
+    clip-path: inset(0 100% 0 0);
+    animation: zip .45s cubic-bezier(.3, .7, .3, 1) .5s forwards;
+}
+.tape--2 .tape-strip { clip-path: inset(0 0 0 100%); animation-delay: .75s; }
+@keyframes zip { to { clip-path: inset(0); } }
+
+/* Hazard stripes along both edges. */
+.tape-strip::before,
+.tape-strip::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(45deg, #1f2937 0 6px, #facc15 6px 12px);
+}
+.tape-strip::before { top: 0; }
+.tape-strip::after { bottom: 0; }
+
+.tape-strip span {
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    color: #1f2937;
+}
+
+.cl-confirm--blocked .bao-line { animation: line-in .5s ease-out 1.6s both; }
+@keyframes line-in { from { opacity: 0; transform: translateY(8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .fx, .halo { display: none; }
+    .lift, .confirm-card, .bao-line, .tape-strip,
+    .bao-stage::before,
+    .bao-stage ::deep .bao > g { animation-duration: .01s !important; animation-delay: 0s !important; }
+}

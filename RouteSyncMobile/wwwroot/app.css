@@ -315,9 +315,6 @@ h1:focus {
 @keyframes bao-swish {
     50% { transform: rotate(7deg); }
 }
-@keyframes bao-nod {
-    40% { transform: translateY(3%); }
-}
 
 @media (prefers-reduced-motion: reduce) {
     .bao,
@@ -329,10 +326,10 @@ h1:focus {
     .bao .bao-pupil { transition: none; }
 }
 
-/* Bao standing on a pale disc, for the moments that close a task. A passed checklist
-   and a finished shift are celebrations: he keeps hopping (and, at the end of a shift,
-   waving) until the driver leaves the screen. Defects get one calm nod. Distances are
-   in drawing units, so every part of him moves together. */
+/* Bao standing on a pale disc, for the moments that close a task. A finished shift is a
+   celebration: he keeps hopping and waving until the driver leaves the screen. The
+   checklist's own effects live with the checklist. Distances are in drawing units, so
+   every part of him moves together. */
 .bao-stage { position: relative; width: 200px; height: 230px; margin: 0 auto 16px; }
 .bao-stage::before {
     content: "";
@@ -345,21 +342,7 @@ h1:focus {
     background: #e3f3f2;
 }
 .bao-stage .bao { position: absolute; left: 20px; top: 0; width: 160px; height: auto; }
-.bao-spark {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background: #4AADA8;
-    transform: rotate(45deg);
-}
-.bao-spark:nth-of-type(1) { left: -6px; top: 70px; }
-.bao-spark:nth-of-type(2) { right: 0; top: 24px; background: #18325F; }
-.bao-spark:nth-of-type(3) { right: -10px; top: 120px; }
-
-.bao-stage--jump .bao > g { animation: bao-jump 2.4s ease-out .35s infinite; }
 .bao-stage--celebrate .bao > g { animation: bao-celebrate-jump 3.2s ease-out .35s infinite; }
-.bao-stage--nod .bao .bao-head { animation: bao-nod .7s ease-in-out .35s 2; }
 /* The sleeve turns with the arm about the shoulder, so the arm never leaves it. The easing
    matches the hop, so the arm rides the jump with the body instead of lagging behind it. */
 .bao-stage--celebrate .bao .bao-arm-r,
@@ -368,14 +351,8 @@ h1:focus {
     transform-origin: 1290px 1180px;
     animation: bao-jump-wave 3.2s ease-out .35s infinite;
 }
-@keyframes bao-jump {
-    12% { transform: translateY(-300px); }
-    24% { transform: none; }
-    30% { transform: translateY(-64px); }
-    36% { transform: none; }
-}
 /* At the end of a shift he hops, then raises his right arm over his head and waves
-   before the next hop. The hop keeps the bao-jump timings at the longer 3.2s loop. */
+   before the next hop. */
 @keyframes bao-celebrate-jump {
     9% { transform: translateY(-300px); }
     18% { transform: none; }
@@ -454,6 +431,8 @@ html:root .back {
 /* While a sheet, dialog or busy cover is open the page behind it neither scrolls nor
    pulls to refresh (js/ptr.js checks the same selector). */
 .app-body:has(.overlay, .nscrim, .busy-overlay, [aria-modal="true"]) { overflow: hidden; }
+/* LoginLayout pages (checklist, active trip) have no .app-body and scroll the document. */
+html:has(.overlay, .nscrim, .busy-overlay, [aria-modal="true"]) { overflow: hidden; }
 .lv-modal-body, .nsheet { overscroll-behavior: contain; }
 
 @media (prefers-reduced-motion: reduce) {

@@ -26,36 +26,47 @@ else if (loadFailed)
 }
 else if (submitted)
 {
-    <div class="cl-confirm">
+    <div class="cl-confirm @(blocked ? "cl-confirm--blocked" : hasDefects ? "cl-confirm--defects" : "cl-confirm--passed")">
         @if (blocked)
         {
             @* The hardest moment in the app: a bus that cannot leave. Bao stays, worried
-               rather than gone, and the driver is told the next step, which is the radio. *@
-            <div class="bao-stage"><BaoFull Face="worried" /></div>
+               rather than gone, the bus is taped off, and the driver is told the next step,
+               which is the radio. *@
+            <div class="bao-stage">
+                <span class="halo"></span>
+                <BaoFull Face="worried" />
+                <span class="tape"><span class="tape-strip"><span>@TapeText</span></span></span>
+                <span class="tape tape--2"><span class="tape-strip"><span>@TapeText</span></span></span>
+            </div>
             <h2>Trip Blocked</h2>
             <p class="confirm-sub">
                 This bus is out of service and cannot be driven. Your operator has been told.
             </p>
             <p class="bao-line bao-line--warn">Safety first. Radio dispatch for your next bus.</p>
         }
-        else if (hasDefects)
-        {
-            <div class="bao-stage bao-stage--nod"><BaoFull /></div>
-            <h2>Checklist Submitted</h2>
-            <p class="confirm-sub">Nothing critical failed, so you can start your trip.</p>
-            <p class="bao-line">Thank you for reporting. Your operator will review the defects.</p>
-        }
         else
         {
-            <div class="bao-stage bao-stage--jump">
-                <i class="bao-spark"></i><i class="bao-spark"></i><i class="bao-spark"></i>
-                <BaoFull />
+            @* Bao hops and a wave rolls out across the screen from where he lands. Teal when
+               everything passed; amber when defects were reported, since the trip may still
+               go but something is waiting for the operator. *@
+            <div class="bao-stage">
+                <span class="fx wash"></span><span class="fx impact"></span>
+                <span class="fx crest"></span><span class="fx crest crest--small"></span>
+                <BaoFull Face="@(hasDefects ? "chill" : null)" />
             </div>
-            <h2>Checklist Submitted</h2>
-            <p class="bao-line">Checklist complete. Ingat sa biyahe.</p>
+            <h2 class="lift" style="--ld:1s">Checklist Submitted</h2>
+            @if (hasDefects)
+            {
+                <p class="confirm-sub lift" style="--ld:1.08s">Nothing critical failed, so you can start your trip.</p>
+                <p class="bao-line bao-line--warn lift" style="--ld:1.16s">Thank you for reporting. Your operator will review the defects.</p>
+            }
+            else
+            {
+                <p class="bao-line lift" style="--ld:1.12s">Checklist complete. Ingat sa biyahe.</p>
+            }
         }
 
-        <div class="confirm-card">
+        <div class="confirm-card lift" style="--ld:1.3s">
             @foreach (var label in reportedIssues)
             {
                 <div class="confirm-row">
@@ -68,7 +79,7 @@ else if (submitted)
                 <p class="confirm-sub">All @sections.Sum(x => x.Items.Count) items passed.</p>
             }
         </div>
-        <button class="btn-teal" @onclick="@(() => Nav.NavigateTo("/home"))">Back to Home</button>
+        <button class="btn-teal lift" style="--ld:1.45s" @onclick="@(() => Nav.NavigateTo("/home"))">Back to Home</button>
     </div>
 }
 else
@@ -258,6 +269,9 @@ else
     private DateTimeOffset pendingTakenAt;
     private bool cameraBusy;
     private readonly HashSet<int> uploadFailed = new();
+
+    // Printed along the caution tape on Trip Blocked, repeated like real tape.
+    private const string TapeText = "DO NOT OPERATE ● DO NOT OPERATE ● DO NOT OPERATE ● DO NOT OPERATE";
 
     private Section CurrentSection => sections[currentSection];
     private bool IsLast => currentSection == sections.Count - 1;
