@@ -295,8 +295,9 @@
         var left = smoothLeft(bus, bus.nextStopSeconds - readingAge(bus) / 1000);
         // The last few seconds are within the estimate's own error, so they are not counted.
         if (left <= ETA_ARRIVING_SECONDS) return 'Arriving';
+        // Seconds only in the last minute; further out, whole minutes.
         var s = Math.round(left);
-        return 'About ' + (s >= 60 ? Math.floor(s / 60) + ' min ' : '') + s % 60 + ' sec';
+        return 'About ' + (s > 60 ? Math.round(s / 60) + ' min' : s + ' sec');
     }
 
     // The day sheet of the parked bus shown, read when the panel opens on it and again
