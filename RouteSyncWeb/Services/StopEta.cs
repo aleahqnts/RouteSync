@@ -193,11 +193,22 @@
             return span <= 0 ? null : Math.Clamp(1 - leg.Metres / span, 0, 1);
         }
 
-        /// <summary>Seconds to cover the distance, at the first speed known.</summary>
+        /// <summary>
+        /// Seconds to cover the distance, at the first speed known. A bus moving at under
+        /// half the usual speed is crawling in traffic, and the usual speed is cut to twice
+        /// its own: the slower it crawls, the longer the estimate, without one slow reading
+        /// at a corner doubling it.
+        /// </summary>
         /// <param name="usual">The stretch's learned speed at this hour, if any.</param>
         /// <param name="recent">This bus's own recent speed, used only while it is moving.</param>
-        public static double Seconds(double metres, double? usual, double? recent) =>
-            metres / (usual ?? (recent >= RouteSnapper.MovingSpeed ? recent : null) ?? DefaultSpeed);
+        public static double Seconds(double metres, double? usual, double? recent)
+        {
+            var moving = recent >= RouteSnapper.MovingSpeed ? recent : null;
+            // ponytail: one reading's speed stands for the traffic ahead; average the last
+            // few readings if single slow fixes make the estimate swing.
+            var speed = usual is double u && moving is double m ? Math.Min(u, 2 * m) : usual ?? moving;
+            return metres / (speed ?? DefaultSpeed);
+        }
 
         /// <summary>A normal wait at a stop or a light, already inside the usual speeds.</summary>
         public static readonly TimeSpan UsualWait = TimeSpan.FromSeconds(30);

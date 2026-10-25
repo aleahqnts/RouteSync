@@ -265,12 +265,34 @@
     // worked out at, so it keeps falling between readings.
     var ETA_ARRIVING_SECONDS = 10;
 
+    // What the panel last showed. Each reading brings a fresh estimate, and the figure
+    // eases toward it, a fifth of the gap each second, rather than jumping to it. A
+    // slightly later estimate is the estimate's own wobble and holds the figure still
+    // until the two meet; one more than ETA_RISE_SECONDS later is the bus genuinely
+    // running late, and the figure climbs to it.
+    var ETA_RISE_SECONDS = 30;
+    var etaShown = null;
+
+    function smoothLeft(bus, target) {
+        var now = Date.now();
+        var s = etaShown;
+        var left = target;
+        if (s && s.bus === bus.vehicleId && s.next === bus.nextStop && now - s.at < 10000) {
+            var dt = (now - s.at) / 1000;
+            left = s.left - dt;
+            var eased = left + (target - left) * (1 - Math.pow(0.8, dt));
+            left = target - left > ETA_RISE_SECONDS ? eased : Math.min(s.left, eased);
+        }
+        etaShown = { bus: bus.vehicleId, next: bus.nextStop, left: left, at: now };
+        return left;
+    }
+
     function etaText(bus) {
         if (isStale(bus)) return 'No recent signal';
         if (bus.atStop) return 'At ' + bus.atStop;
         if (!bus.nextStop) return bus.onRoute ? 'Past the last stop' : 'No estimate right now';
         if (bus.nextStopSeconds == null) return '';
-        var left = bus.nextStopSeconds - readingAge(bus) / 1000;
+        var left = smoothLeft(bus, bus.nextStopSeconds - readingAge(bus) / 1000);
         // The last few seconds are within the estimate's own error, so they are not counted.
         if (left <= ETA_ARRIVING_SECONDS) return 'Arriving';
         var s = Math.round(left);

@@ -484,7 +484,14 @@ namespace FleetWise.Services
             public double? StillAlong;
             public DateTime StillSince;
             public double? StoodAt;
+            public readonly Queue<double> Speeds = new();
+            public int EtaStop = -1;
+            public DateTime EtaFrom;
+            public double EtaPredicted, EtaMetres;
         }
+
+        /// <summary>How many of a moving bus's latest readings its speed is averaged over.</summary>
+        private const int SpeedReadings = 4;
 
         /// <summary>Metres a bus may drift on the line, from GPS jitter alone, and still count as standing.</summary>
         private const double StandingRadius = 20;
@@ -547,6 +554,17 @@ namespace FleetWise.Services
                     entry.LastAt = at;
                     entry.LastId = id;
 
+                    // A stop empties the run of speeds, so a bus pulling away from a light
+                    // is not taken for one crawling in traffic.
+                    if (reading.Speed is double sp && sp >= RouteSnapper.MovingSpeed)
+                    {
+                        entry.Speeds.Enqueue(sp);
+                        if (entry.Speeds.Count > SpeedReadings)
+                            entry.Speeds.Dequeue();
+                    }
+                    else
+                        entry.Speeds.Clear();
+
                     // Where the bus came to rest, kept until it moves on from there.
                     if (line is null || entry.Result is not { OnRoute: true, Along: double along })
                         entry.StillAlong = null;
@@ -595,6 +613,47 @@ namespace FleetWise.Services
                 return null;
             lock (entry.Gate)
                 return entry.StoodAt;
+        }
+
+        /// <summary>
+        /// The trip's bus's average speed over its latest moving readings, or null when its
+        /// latest reading has it standing.
+        /// </summary>
+        public double? RecentSpeed(string tripId)
+        {
+            if (!_trips.TryGetValue(tripId, out var entry))
+                return null;
+            lock (entry.Gate)
+                return entry.Speeds.Count == 0 ? null : entry.Speeds.Average();
+        }
+
+        /// <summary>
+        /// Follows the estimate for each stretch: the seconds predicted when the bus was first
+        /// seen heading for a stop, against the seconds it took to reach that stop's zone.
+        /// Returns the pair once, on arrival.
+        /// </summary>
+        /// <param name="inZone">The stop whose zone the bus is in, or -1.</param>
+        /// <param name="next">The stop the bus is heading for, if any.</param>
+        /// <param name="at">The reading's time.</param>
+        /// <param name="seconds">The estimate to that stop at this reading.</param>
+        /// <param name="metres">The distance to that stop at this reading.</param>
+        public (int Stop, double Predicted, double Actual, double Metres)? NoteEta(string tripId, int inZone,
+            int? next, DateTime at, double? seconds, double metres)
+        {
+            if (!_trips.TryGetValue(tripId, out var entry))
+                return null;
+            lock (entry.Gate)
+            {
+                (int, double, double, double)? arrived = null;
+                if (inZone >= 0 && inZone == entry.EtaStop)
+                {
+                    arrived = (inZone, entry.EtaPredicted, (at - entry.EtaFrom).TotalSeconds, entry.EtaMetres);
+                    entry.EtaStop = -1;
+                }
+                if (next is int n && n != entry.EtaStop && n != inZone && seconds is double s)
+                    (entry.EtaStop, entry.EtaFrom, entry.EtaPredicted, entry.EtaMetres) = (n, at, s, metres);
+                return arrived;
+            }
         }
 
         /// <summary>Records the stop the trip's bus has stood at, or clears it with null.</summary>

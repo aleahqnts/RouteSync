@@ -61,6 +61,7 @@ namespace FleetWise.Controllers
 
         private readonly RouteSnapTracker _snaps;
         private readonly TripAssignments _assignments;
+        private readonly ILogger<FleetMapController> _logger;
 
         /// <summary>
         /// How long one read of the live positions is shared, just under the map's
@@ -100,8 +101,9 @@ namespace FleetWise.Controllers
         private static volatile bool _seenUnsupported;
 
         public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache,
-            RouteSnapTracker snaps, TripAssignments assignments)
+            RouteSnapTracker snaps, TripAssignments assignments, ILogger<FleetMapController> logger)
         {
+            _logger = logger;
             _supabase = supabase;
             _fareCalculator = fareCalculator;
             _cache = cache;
@@ -403,8 +405,17 @@ namespace FleetWise.Controllers
                     if (leg is { } l)
                         etaSeconds = StopEta.Seconds(l.Metres,
                                 l.Previous >= 0 ? speeds.For(l.Previous, PhClock.Now.Hour) : null,
-                                telemetry.Speed is decimal sp ? (double)sp : null)
+                                _snaps.RecentSpeed(trip.TripId))
                             + StopEta.Delay(_snaps.Standing(trip.TripId));
+
+                    // Each stretch's first estimate against the time the bus took, for
+                    // measuring how far off the estimate runs.
+                    if (_snaps.NoteEta(trip.TripId, StopEta.ZoneAt(line, places, along), leg?.Next,
+                            telemetry.Timestamp, etaSeconds, leg?.Metres ?? 0) is { } check)
+                        _logger.LogInformation(
+                            "ETA check: trip {TripId} route {RouteId} to {Stop}, {Metres:0} m: predicted {Predicted:0} s, took {Actual:0} s, off by {Error:0} s",
+                            trip.TripId, trip.RouteId, places[check.Stop].Name, check.Metres,
+                            check.Predicted, check.Actual, check.Actual - check.Predicted);
                 }
 
                 // Two copies of one number. The counter phone writes the trip's figure

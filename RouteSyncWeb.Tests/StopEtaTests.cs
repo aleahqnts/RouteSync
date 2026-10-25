@@ -139,8 +139,13 @@ public class StopEtaTests
     [Fact]
     public void Time_uses_the_usual_speed_then_a_moving_bus_then_the_default()
     {
-        Assert.Equal(100, StopEta.Seconds(1000, 10, 2));
+        Assert.Equal(100, StopEta.Seconds(1000, 10, 6));
+        Assert.Equal(100, StopEta.Seconds(1000, 10, null));
         Assert.Equal(500, StopEta.Seconds(1000, null, 2));
+        // Crawling at under half the usual speed: the usual is cut to twice the crawl.
+        Assert.Equal(250, StopEta.Seconds(1000, 10, 2));
+        // Standing still is the delay rule's job, not a crawl.
+        Assert.Equal(100, StopEta.Seconds(1000, 10, 0.3));
         Assert.Equal(1000 / StopEta.DefaultSpeed, StopEta.Seconds(1000, null, 0.3), 6);
     }
 
@@ -182,6 +187,41 @@ public class StopEtaTests
 
         tracker.Advance("T", line, new[] { (4L, t.AddSeconds(100), At(400, 8)) });
         Assert.Equal(TimeSpan.Zero, tracker.Standing("T"));
+    }
+
+    [Fact]
+    public void The_tracker_averages_the_latest_moving_speeds_and_a_stop_starts_them_over()
+    {
+        var tracker = new RouteSnapTracker();
+        var line = EastRoad();
+        var t = new DateTime(2026, 10, 1, 8, 0, 0);
+        GpsReading At(double east, double speed) => new(Offset(Origin, 0, east), 90, speed, 5);
+
+        tracker.Advance("T", line, new[]
+        {
+            (1L, t, At(100, 2)), (2L, t.AddSeconds(5), At(110, 4)), (3L, t.AddSeconds(10), At(130, 6)),
+            (4L, t.AddSeconds(15), At(160, 8)), (5L, t.AddSeconds(20), At(200, 10))
+        });
+        Assert.Equal(7, tracker.RecentSpeed("T")); // the last four
+
+        tracker.Advance("T", line, new[] { (6L, t.AddSeconds(25), At(200, 0)) });
+        Assert.Null(tracker.RecentSpeed("T"));
+        tracker.Advance("T", line, new[] { (7L, t.AddSeconds(30), At(210, 9)) });
+        Assert.Equal(9, tracker.RecentSpeed("T"));
+    }
+
+    [Fact]
+    public void The_tracker_pairs_each_stretchs_first_estimate_with_the_time_taken()
+    {
+        var tracker = new RouteSnapTracker();
+        var t = new DateTime(2026, 10, 1, 8, 0, 0);
+        tracker.Advance("T", EastRoad(), new[] { (1L, t, new GpsReading(Offset(Origin, 0, 100), 90, 8, 5)) });
+
+        Assert.Null(tracker.NoteEta("T", -1, 1, t, 60, 400));
+        Assert.Null(tracker.NoteEta("T", -1, 1, t.AddSeconds(30), 25, 200)); // later estimates are not kept
+        var check = tracker.NoteEta("T", 1, 1, t.AddSeconds(75), 0, 0);
+        Assert.Equal((1, 60.0, 75.0, 400.0), check);
+        Assert.Null(tracker.NoteEta("T", 1, 1, t.AddSeconds(80), 0, 0)); // once per arrival
     }
 
     [Fact]
