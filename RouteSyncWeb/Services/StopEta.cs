@@ -169,10 +169,12 @@
                         Math.Max(0, places[i].Along - along));
             }
 
-            // Past the last stop. Round a loop the next is the first again.
-            return line.IsLoop
-                ? new StopLeg(places.Count - 1, 0, line.Length - along + places[0].Along)
-                : null;
+            // Past the last stop. Round a loop the next is the first again, unless the bus is
+            // standing at it, coming round the end of the line, when it is the second.
+            if (!line.IsLoop)
+                return null;
+            var next = places[0].Along == stoodAt && places.Count > 1 ? 1 : 0;
+            return new StopLeg(next == 0 ? places.Count - 1 : 0, next, line.Length - along + places[next].Along);
         }
 
         /// <summary>

@@ -190,6 +190,19 @@ public class StopEtaTests
     }
 
     [Fact]
+    public void Standing_at_a_loops_first_stop_from_the_end_of_the_line_heads_for_the_second()
+    {
+        var line = OutAndBack();
+        var places = StopEta.Place(line, new[] { StopAt("Start", 0), StopAt("Turn", 1000) });
+
+        var state = StopEta.Follow(line, places, line.Length - 10, standing: true, stoodAt: null);
+
+        Assert.Equal(0, state.AtStop);
+        Assert.Equal(0, state.Leg!.Value.Previous);
+        Assert.Equal(1, state.Leg!.Value.Next);
+    }
+
+    [Fact]
     public void The_tracker_averages_the_latest_moving_speeds_and_a_stop_starts_them_over()
     {
         var tracker = new RouteSnapTracker();
