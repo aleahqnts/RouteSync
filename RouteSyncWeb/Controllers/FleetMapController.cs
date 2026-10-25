@@ -451,6 +451,9 @@ namespace FleetWise.Controllers
                     NextStop = leg is { } n ? stopPlaces![n.Next].Name : null,
                     NextStopSeconds = etaSeconds is double e ? (int)Math.Round(e) : null,
                     NextStopProgress = leg is { } g ? StopEta.Progress(line!, stopPlaces!, g) : null,
+                    NextStopAlong = leg is { } na ? Math.Round(stopPlaces![na.Next].Along, 1) : null,
+                    NextStopSpan = leg is { } sp2 && StopEta.Span(line!, stopPlaces!, sp2) is double span
+                        ? Math.Round(span, 1) : null,
                     AtStop = atStop >= 0 ? stopPlaces![atStop].Name : null,
                     AtStopAlong = atStop >= 0 ? stopPlaces![atStop].Along : null,
                     AtStopSince = atStop >= 0 && _snaps.StandingSince(trip.TripId) is DateTime since

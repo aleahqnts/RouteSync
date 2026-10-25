@@ -99,6 +99,16 @@ public class BusPositionDto
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? NextStopProgress { get; set; }
 
+    // Where the next stop is along the route line, and the metres from the last stop to
+    // it, so the map can move the stop strip with the bus between readings.
+    [JsonPropertyName("nextStopAlong")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? NextStopAlong { get; set; }
+
+    [JsonPropertyName("nextStopSpan")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? NextStopSpan { get; set; }
+
     // The stop the bus is standing at, if it is within one's zone.
     [JsonPropertyName("atStop")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

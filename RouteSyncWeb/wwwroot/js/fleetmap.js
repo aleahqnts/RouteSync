@@ -369,6 +369,22 @@
         legShown = { bus: vehicleId, at: at };
     }
 
+    // How far along the stretch the bus is, from where the map draws it this moment rather
+    // than from its last reading, so the strip moves with the pin instead of stepping at
+    // each reading. Inside the next stop's zone it is there; standing, it is at the start.
+    var ZONE_BEFORE_M = 30; // StopEta.ZoneBefore
+
+    function legProgress(bus) {
+        if (bus.nextStopProgress == null) return null;
+        if (bus.atStop) return 0;
+        var m = busMarkers[bus.vehicleId];
+        if (!m || !m._rmLine || m._rmAlong == null || bus.nextStopAlong == null || !bus.nextStopSpan)
+            return bus.nextStopProgress;
+        var left = m._rmLine.ahead(m._rmAlong, bus.nextStopAlong);
+        if (left <= ZONE_BEFORE_M) return 1;
+        return Math.max(0, Math.min(1, 1 - left / bus.nextStopSpan));
+    }
+
     function fillPanel(bus) {
         var live = !!bus.tripId;
         document.getElementById('fmPanelBus').textContent = bus.vehicleId;
@@ -388,7 +404,7 @@
             document.getElementById('fmPanelNext').textContent = known ? (bus.nextStop || 'None') : 'Not known';
             document.getElementById('fmPanelEta').textContent = etaText(bus);
             // Standing at a stop, the bus sits on the ring of the stop it is at.
-            placeOnLeg(known ? (bus.atStop ? 0 : bus.nextStopProgress) : null, bus.vehicleId);
+            placeOnLeg(known ? legProgress(bus) : null, bus.vehicleId);
             document.getElementById('fmPanelDriver').textContent = bus.driverName;
             document.getElementById('fmPanelPax').textContent = bus.passengers;
             // Written as an escape rather than the sign itself: this file carries no
@@ -1096,10 +1112,13 @@
                 if (document.hidden) return;
                 fetchPositions();
             }, POLL_INTERVAL_MS);
-            // The time to the next stop counts down every second between polls.
+            // The time to the next stop counts down, and the strip follows the pin, every
+            // second between polls.
             setInterval(function () {
                 var m = selectedVehicleId && busMarkers[selectedVehicleId];
-                if (m && m._bus && m._bus.tripId) document.getElementById('fmPanelEta').textContent = etaText(m._bus);
+                if (!m || !m._bus || !m._bus.tripId) return;
+                document.getElementById('fmPanelEta').textContent = etaText(m._bus);
+                if (m._bus.onRoute && !isStale(m._bus)) placeOnLeg(legProgress(m._bus), m._bus.vehicleId);
             }, 1000);
             document.addEventListener('visibilitychange', function () {
                 if (!document.hidden) fetchPositions();

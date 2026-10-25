@@ -741,7 +741,7 @@
         background: linear-gradient(90deg, var(--fm-leg-from), var(--fm-leg-to));
         clip-path: inset(0 calc((1 - var(--fm-leg)) * 100%) 0 0 round 3px);
         opacity: 0;
-        transition: clip-path .9s ease-out;
+        transition: clip-path 1s linear;
     }
 
     .fm-panel__ring {
@@ -776,7 +776,8 @@
         background: color-mix(in srgb, var(--fm-leg-to) calc(var(--fm-leg) * 100%), var(--fm-leg-from));
         box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
         opacity: 0;
-        transition: left .9s ease-out, background-color .9s ease-out, transform .3s ease-out, box-shadow .3s ease-out;
+        /* Moved once a second, linearly over that second, so the steps run together. */
+        transition: left 1s linear, background-color 1s linear, transform .3s ease-out, box-shadow .3s ease-out;
     }
 
     /* At either end the bus has reached that stop: it grows over the stop's ring, haloed. */

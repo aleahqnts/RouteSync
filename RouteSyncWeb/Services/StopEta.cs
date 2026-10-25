@@ -189,10 +189,18 @@
             if (leg.Metres <= ZoneBefore)
                 return 1;
 
+            return Span(line, places, leg) is double span ? Math.Clamp(1 - leg.Metres / span, 0, 1) : null;
+        }
+
+        /// <summary>Metres from the last stop to the next, or null before the first stop of a line that is not a loop.</summary>
+        public static double? Span(RouteLine line, IReadOnlyList<StopPlace> places, StopLeg leg)
+        {
+            if (leg.Previous < 0)
+                return null;
             var span = places[leg.Next].Along - places[leg.Previous].Along;
             if (span <= 0)
                 span += line.Length; // round the end of a loop
-            return span <= 0 ? null : Math.Clamp(1 - leg.Metres / span, 0, 1);
+            return span <= 0 ? null : span;
         }
 
         /// <summary>
