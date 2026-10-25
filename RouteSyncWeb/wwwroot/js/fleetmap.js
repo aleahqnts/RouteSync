@@ -273,10 +273,8 @@
         var left = bus.nextStopSeconds - readingAge(bus) / 1000;
         // The last few seconds are within the estimate's own error, so they are not counted.
         if (left <= ETA_ARRIVING_SECONDS) return 'Arriving';
-        // Under a minute in steps of five seconds, so the figure does not flicker on
-        // every poll.
-        if (left <= 55) return 'About ' + Math.ceil(left / 5) * 5 + ' sec';
-        return 'About ' + Math.round(left / 60) + ' min';
+        var s = Math.round(left);
+        return 'About ' + (s >= 60 ? Math.floor(s / 60) + ' min ' : '') + s % 60 + ' sec';
     }
 
     // The day sheet of the parked bus shown, read when the panel opens on it and again
@@ -339,6 +337,7 @@
         var at = progress == null ? 0 : progress;
         var jump = vehicleId !== legShown.bus || at < legShown.at - 0.01;
         leg.classList.toggle('fm-panel__leg--placed', progress != null);
+        leg.classList.toggle('fm-panel__leg--at-stop', progress != null && (at <= 0 || at >= 1));
         if (jump) leg.classList.add('fm-panel__leg--jump');
         leg.style.setProperty('--fm-leg', at.toFixed(3));
         if (jump) {
@@ -366,7 +365,8 @@
             document.getElementById('fmPanelPrev').textContent = known ? (bus.previousStop || 'None yet') : 'Not known';
             document.getElementById('fmPanelNext').textContent = known ? (bus.nextStop || 'None') : 'Not known';
             document.getElementById('fmPanelEta').textContent = etaText(bus);
-            placeOnLeg(known ? bus.nextStopProgress : null, bus.vehicleId);
+            // Standing at a stop, the bus sits on the ring of the stop it is at.
+            placeOnLeg(known ? (bus.atStop ? 0 : bus.nextStopProgress) : null, bus.vehicleId);
             document.getElementById('fmPanelDriver').textContent = bus.driverName;
             document.getElementById('fmPanelPax').textContent = bus.passengers;
             // Written as an escape rather than the sign itself: this file carries no
@@ -629,6 +629,9 @@
                     '<span class="fm-tooltip__route">' + escapeHtml(bus.routeName) + '</span>' +
                 '</div>' +
                 '<div class="fm-tooltip__plate">' + escapeHtml(bus.plateNumber) + '</div>' +
+                (bus.atStop && !isStale(bus)
+                    ? '<div class="fm-tooltip__stop">At ' + escapeHtml(bus.atStop) + '</div>'
+                    : '') +
                 '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + escapeHtml(statusText(bus)) + '</div>' +
                 '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + escapeHtml(bus.passengers) + '</strong></div>' +
                 (isStale(bus)
@@ -814,6 +817,10 @@
                         moveBus(marker, bus, pos);
                     }
                     marker._bus = bus; // keep latest data for tooltip/panel refresh
+                    // Standing at a stop, the pill covers the stop's dot, so it wears a ring
+                    // in the stop's colour instead.
+                    var el = marker.getElement();
+                    if (el) el.classList.toggle('fm-bus-marker--at-stop', !!bus.atStop && !stale);
                 });
 
                 // Drop buses that fell out of the response (trip ended or filtered out).
@@ -1067,6 +1074,11 @@
                 if (document.hidden) return;
                 fetchPositions();
             }, POLL_INTERVAL_MS);
+            // The time to the next stop counts down every second between polls.
+            setInterval(function () {
+                var m = selectedVehicleId && busMarkers[selectedVehicleId];
+                if (m && m._bus && m._bus.tripId) document.getElementById('fmPanelEta').textContent = etaText(m._bus);
+            }, 1000);
             document.addEventListener('visibilitychange', function () {
                 if (!document.hidden) fetchPositions();
             });

@@ -393,6 +393,18 @@
         box-shadow: inset 0 0 0 2px currentColor, 0 2px 8px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .208));
     }
 
+    /* Standing at a stop: the pill covers the stop's dot, so a ring in the stop's colour
+       stands in for it, set off from the pill by a gap. */
+    .fm-bus-marker--at-stop span {
+        box-shadow: 0 0 0 3px light-dark(#fff, #393939), 0 0 0 6px rgba(99, 102, 241, .6),
+            0 2px 8px light-dark(rgba(0, 0, 0, .18), rgba(0, 0, 0, .292));
+    }
+
+    .fm-tooltip__stop {
+        font-weight: 600;
+        color: light-dark(#4F46E5, #A5B4FC);
+    }
+
     /* The arrow inside the pill: which way the bus is going. The road's direction while
        it is on its route, the phone's course when it is off it, hidden when it stands. */
     .fm-bus-arrow {
@@ -764,7 +776,13 @@
         background: color-mix(in srgb, var(--fm-leg-to) calc(var(--fm-leg) * 100%), var(--fm-leg-from));
         box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
         opacity: 0;
-        transition: left .9s ease-out, background-color .9s ease-out;
+        transition: left .9s ease-out, background-color .9s ease-out, transform .3s ease-out, box-shadow .3s ease-out;
+    }
+
+    /* At either end the bus has reached that stop: it grows over the stop's ring, haloed. */
+    .fm-panel__leg--at-stop .fm-panel__dot {
+        transform: scale(1.35);
+        box-shadow: 0 0 0 3px light-dark(rgba(58, 179, 156, .35), rgba(58, 179, 156, .5)), 0 1px 3px rgba(0, 0, 0, .3);
     }
 
     .fm-panel__leg--placed .fm-panel__done,

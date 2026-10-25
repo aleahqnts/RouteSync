@@ -177,12 +177,15 @@
 
         /// <summary>
         /// How far the bus has come from the last stop toward the next, from 0 to 1, or null
-        /// before the first stop of a line that is not a loop.
+        /// before the first stop of a line that is not a loop. Inside the next stop's zone it
+        /// is 1: the bus is at that stop, not short of it.
         /// </summary>
         public static double? Progress(RouteLine line, IReadOnlyList<StopPlace> places, StopLeg leg)
         {
             if (leg.Previous < 0)
                 return null;
+            if (leg.Metres <= ZoneBefore)
+                return 1;
 
             var span = places[leg.Next].Along - places[leg.Previous].Along;
             if (span <= 0)

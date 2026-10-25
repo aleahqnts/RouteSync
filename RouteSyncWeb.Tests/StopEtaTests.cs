@@ -122,6 +122,8 @@ public class StopEtaTests
         var road = EastRoad();
         var two = StopEta.Place(road, new[] { StopAt("A", 100), StopAt("B", 500) });
         Assert.Null(StopEta.Progress(road, two, StopEta.Locate(road, two, 50)!.Value));
+        // Inside the next stop's zone the bus is at it.
+        Assert.Equal(1, StopEta.Progress(road, two, StopEta.Locate(road, two, 480)!.Value)!.Value, 3);
     }
 
     [Fact]
