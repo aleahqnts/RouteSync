@@ -2,7 +2,8 @@
    the tab bar, and is the size container for what is inside it, so --k measures that
    space rather than the whole screen: 0 when it is 520px tall, up to 260px when it is
    780px. Every pad and type size inside grows along it from its tightest to its roomiest.
-   Taller still, the sections spread apart instead of leaving the bottom empty.
+   The sections stay stacked at the top with an even gap; on a taller phone still, the
+   spare room is left below the last card rather than spread between them.
    --k is resolved where it is used, inside the page, so the page's own gaps and pads are
    tied to the screen instead. The top pad keeps clear of the status bar, which the page
    runs under. */
@@ -15,7 +16,6 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     gap: clamp(6px, 1.4svh, 12px);
     padding: clamp(34px, calc(6svh - 4px), 52px) 22px 10px;
     /* Bootstrap's 1.5 is a reading measure; these are labels and figures. */
