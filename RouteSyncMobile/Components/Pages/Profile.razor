@@ -128,18 +128,26 @@ else
         @if (showInfoForm)
         {
             <div class="pform expanded">
-                <label>Contact number</label>
-                <input value="@contact" @oninput="OnContactInput" inputmode="numeric" maxlength="13" placeholder="0917 123 4567" />
+                <label class="fl">
+                    <input value="@contact" @oninput="OnContactInput" inputmode="numeric" maxlength="13" placeholder="0917 123 4567" />
+                    <span class="fl-l">Contact number</span>
+                </label>
                 @if (contact.Length > 0 && !PhoneValid(contact))
                 {
                     <p class="err-msg">Format: 09XX XXX XXXX</p>
                 }
-                <label>Address</label>
-                <input @bind="address" placeholder="Home address" />
-                <label>Emergency contact name</label>
-                <input @bind="emName" placeholder="Full name" />
-                <label>Emergency contact number</label>
-                <input value="@emNumber" @oninput="OnEmNumberInput" inputmode="numeric" maxlength="13" placeholder="0917 123 4567" />
+                <label class="fl">
+                    <input @bind="address" placeholder="Home address" />
+                    <span class="fl-l">Address</span>
+                </label>
+                <label class="fl">
+                    <input @bind="emName" placeholder="Full name" />
+                    <span class="fl-l">Emergency contact name</span>
+                </label>
+                <label class="fl">
+                    <input value="@emNumber" @oninput="OnEmNumberInput" inputmode="numeric" maxlength="13" placeholder="0917 123 4567" />
+                    <span class="fl-l">Emergency contact number</span>
+                </label>
                 @if (emNumber.Length > 0 && !PhoneValid(emNumber))
                 {
                     <p class="err-msg">Format: 09XX XXX XXXX</p>
@@ -166,13 +174,19 @@ else
         {
             <div class="pform expanded">
                 <div class="pw-row">
-                    <input type="@(showCur ? "text" : "password")" @bind="curPwd" @bind:event="oninput" placeholder="Current password" />
+                    <label class="fl">
+                        <input type="@(showCur ? "text" : "password")" @bind="curPwd" @bind:event="oninput" placeholder=" " />
+                        <span class="fl-l">Current password</span>
+                    </label>
                     <button type="button" class="eye" @onclick="@(() => showCur = !showCur)">
                         <EyeIcon Shown="@showCur" />
                     </button>
                 </div>
                 <div class="pw-row">
-                    <input type="@(showNew ? "text" : "password")" @bind="newPwd" @bind:event="oninput" placeholder="New password" />
+                    <label class="fl">
+                        <input type="@(showNew ? "text" : "password")" @bind="newPwd" @bind:event="oninput" placeholder=" " />
+                        <span class="fl-l">New password</span>
+                    </label>
                     <button type="button" class="eye" @onclick="@(() => showNew = !showNew)">
                         <EyeIcon Shown="@showNew" />
                     </button>
@@ -186,7 +200,10 @@ else
                     <li class="@(Met(p => p.Any(char.IsLower)))"><span class="dot"></span>Lowercase</li>
                 </ul>
                 <div class="pw-row">
-                    <input type="@(showConfirm ? "text" : "password")" @bind="confirmPwd" @bind:event="oninput" placeholder="Confirm new password" />
+                    <label class="fl">
+                        <input type="@(showConfirm ? "text" : "password")" @bind="confirmPwd" @bind:event="oninput" placeholder=" " />
+                        <span class="fl-l">Confirm new password</span>
+                    </label>
                     <button type="button" class="eye" @onclick="@(() => showConfirm = !showConfirm)">
                         <EyeIcon Shown="@showConfirm" />
                     </button>

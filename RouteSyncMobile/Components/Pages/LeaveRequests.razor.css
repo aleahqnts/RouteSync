@@ -515,33 +515,79 @@
     padding: 16px 18px 24px;
 }
 
-.lv-modal-body label {
+.lv-modal-body input,
+.lv-modal-body textarea {
+    width: 100%;
+    min-height: 52px;
+    padding: 11px 13px;
+    border: 1px solid #e6e8ee;
+    border-radius: 12px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    color: #1b2a56;
+}
+
+.lv-modal-body .fl { --fl-x: 14px; }
+
+/* Wraps and grows with what is typed, up to a few lines, then scrolls. */
+.lv-modal-body textarea {
     display: block;
-    margin: 12px 0 6px;
+    resize: none;
+    line-height: 1.4;
+    field-sizing: content;
+    min-height: 88px;
+    max-height: 168px;
+    overflow-wrap: anywhere;
+}
+
+.lv-modal-body input:focus,
+.lv-modal-body textarea:focus {
+    outline: none;
+    border-color: #2e9e8f;
+}
+
+.lv-dates {
+    display: flex;
+    gap: 10px;
+}
+
+.lv-reason { margin-top: 14px; }
+
+.lv-field-name {
+    margin: 14px 0 6px;
     font-size: 12px;
     font-weight: 700;
     color: #5f6b7d;
 }
 
-.lv-modal-body label:first-child { margin-top: 0; }
+.lv-types {
+    display: flex;
+    gap: 8px;
+    border-radius: 12px;
+}
 
-.lv-modal-body input,
-.lv-modal-body select {
-    width: 100%;
+.lv-type {
+    flex: 1;
     min-height: 46px;
-    padding: 11px 13px;
+    padding: 0 8px;
     border: 1px solid #e6e8ee;
     border-radius: 12px;
     background: #fff;
-    font-size: 15px;
-    color: #1b2a56;
+    color: #3b4660;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.lv-modal-body input:focus,
-.lv-modal-body select:focus {
-    outline: none;
+.lv-type.on {
     border-color: #2e9e8f;
+    background: #e8f5f3;
+    color: #1f7a6e;
 }
+
+.lv-types.field-bad { outline: 2px solid #d0494b; outline-offset: 2px; background: none; }
 
 /* The chosen dates in words, under the two fields they come from. */
 .lv-dates-said {
@@ -556,29 +602,6 @@
 .field-bad {
     border-color: #d0494b !important;
     background: #fef6f6;
-}
-
-/* A select carries the platform's own control, which on Android is a bare line of text
-   with no edge to it. Drawn as a field like the others, with a mark of its own so it
-   still reads as something that opens. */
-.lv-select-wrap {
-    position: relative;
-}
-
-.lv-select-wrap select {
-    appearance: none;
-    -webkit-appearance: none;
-    padding-right: 38px;
-}
-
-.lv-select-arrow {
-    position: absolute;
-    top: 50%;
-    right: 14px;
-    transform: translateY(-50%);
-    color: #5f6b7d;
-    font-size: 13px;
-    pointer-events: none;
 }
 
 .lv-modal-foot {

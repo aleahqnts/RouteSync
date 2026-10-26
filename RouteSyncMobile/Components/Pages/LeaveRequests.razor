@@ -227,14 +227,19 @@
                    the days already chosen. *@
                 @* Bounded at the loosest of the types, since the dates are chosen before
                    the type is. The type narrows it, and Validate says so by name. *@
-                <label>Start date</label>
-                <input type="date" lang="en-US" data-picker-only inputmode="none"
-                       min="@EarliestStart.ToString("yyyy-MM-dd")"
-                       class="@Bad(nameof(start))" @bind="start" @bind:after="Revalidate" />
-
-                <label>End date</label>
-                <input type="date" lang="en-US" data-picker-only inputmode="none"
-                       class="@Bad(nameof(end))" @bind="end" @bind:after="Revalidate" />
+                <div class="lv-dates">
+                    <label class="fl">
+                        <input type="date" lang="en-US" data-picker-only inputmode="none"
+                               min="@EarliestStart.ToString("yyyy-MM-dd")"
+                               class="@Bad(nameof(start))" @bind="start" @bind:after="Revalidate" />
+                        <span class="fl-l">Start date</span>
+                    </label>
+                    <label class="fl">
+                        <input type="date" lang="en-US" data-picker-only inputmode="none"
+                               class="@Bad(nameof(end))" @bind="end" @bind:after="Revalidate" />
+                        <span class="fl-l">End date</span>
+                    </label>
+                </div>
 
                 @* The digits inside a date field are written by the phone, in whatever
                    order its locale uses, and no markup here decides that. This says the
@@ -244,19 +249,23 @@
                     <p class="lv-dates-said">@Said</p>
                 }
 
-                <label>Type</label>
-                <div class="lv-select-wrap">
-                    <select class="@Bad(nameof(type))" @bind="type" @bind:after="Revalidate">
-                        @foreach (var t in LeaveEntitlement.Types)
-                        {
-                            <option value="@t">@t</option>
-                        }
-                    </select>
-                    <span class="lv-select-arrow" aria-hidden="true">&#9662;</span>
+                @* Three types fit on one row, so they are all on show: one tap to choose,
+                   and none of the phone's own unstyled pop-up list. *@
+                <p class="lv-field-name" id="lv-type">Type</p>
+                <div class="lv-types @Bad(nameof(type))" role="radiogroup" aria-labelledby="lv-type">
+                    @foreach (var t in LeaveEntitlement.Types)
+                    {
+                        <button type="button" role="radio" class="lv-type @(type == t ? "on" : "")"
+                                aria-checked="@(type == t ? "true" : "false")"
+                                @onclick="@(() => PickType(t))">@t</button>
+                    }
                 </div>
 
-                <label>Reason</label>
-                <input class="lv-reason-input" @bind="reason" maxlength="200" placeholder="Optional" />
+                <label class="fl lv-reason">
+                    <textarea rows="3" @bind="reason" @bind:event="oninput" maxlength="200"
+                              placeholder="Optional"></textarea>
+                    <span class="fl-l">Reason (optional)</span>
+                </label>
 
                 @if (problem is not null)
                 {
@@ -294,9 +303,11 @@
                     days off. Until then the leave stands and you are not scheduled to drive.
                 </p>
 
-                <label>Reason for cancelling</label>
-                <input class="lv-reason-input" @bind="withdrawReason" maxlength="200"
-                       placeholder="Required" />
+                <label class="fl lv-reason">
+                    <textarea rows="3" @bind="withdrawReason" @bind:event="oninput" maxlength="200"
+                              placeholder=" "></textarea>
+                    <span class="fl-l">Reason for cancelling</span>
+                </label>
 
                 @if (withdrawProblem is not null)
                 {
@@ -668,6 +679,12 @@
     private void Revalidate()
     {
         if (problem is not null) Validate();
+    }
+
+    private void PickType(string t)
+    {
+        type = t;
+        Revalidate();
     }
 
     private async Task Submit()

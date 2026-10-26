@@ -126,6 +126,64 @@ button:not(:disabled):active {
 html:root .sheet-closing { animation: sheet-down 0.26s cubic-bezier(0.4, 0, 1, 1) forwards; }
 html:root .cover-closing { animation: fade-out 0.26s ease-in forwards; }
 
+/* ---------- Floating labels ----------
+   The field's name sits inside it like a placeholder and rises to the top edge once the
+   field is focused or filled, so the name stays readable while typing.
+   Markup: <label class="fl"><input placeholder=" " /><span class="fl-l">Name</span></label>.
+   A placeholder with words in it is kept as a hint and shown only while the field is
+   focused. Each page keeps its own border, colour and side padding for the field. */
+.fl {
+    position: relative;
+    display: block;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+
+.fl > input,
+.fl > textarea {
+    display: block;
+    width: 100%;
+    padding-top: 21px !important;
+    padding-bottom: 5px !important;
+}
+
+.fl > .fl-l {
+    position: absolute;
+    top: 50%;
+    left: var(--fl-x, 0);
+    right: 8px;
+    transform: translateY(-50%);
+    color: #8a94a6;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    transition: top 0.16s ease, font-size 0.16s ease, color 0.16s ease;
+}
+
+/* A text box is taller than one line, so its name waits on the first line. */
+.fl > textarea + .fl-l { top: 31px; }
+
+/* A date field always shows a date, so its name is always up. */
+.fl > :focus + .fl-l,
+.fl > :not(:placeholder-shown) + .fl-l,
+.fl > [type="date"] + .fl-l {
+    top: 13px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.fl > :focus + .fl-l { color: #2e9e8f; }
+
+.fl > :not(:focus)::placeholder { color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fl > .fl-l { transition: none; }
+}
+
 /* ---------- Skeleton loaders (replace "Loading..." text) ---------- */
 
 .page-skeleton {

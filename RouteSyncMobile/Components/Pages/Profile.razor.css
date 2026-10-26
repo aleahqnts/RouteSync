@@ -224,12 +224,9 @@
     from { opacity: 0; transform: translateY(-6px); }
 }
 
-.pform label {
-    display: block;
-    color: #5f6b7d;
-    font-size: 12px;
-    font-weight: 600;
-    margin: 4px 0 5px;
+.pform .fl {
+    margin-bottom: 12px;
+    --fl-x: 13px;
 }
 
 .pform input {
@@ -237,8 +234,7 @@
     border: 1px solid #d9dee6;
     border-radius: 10px;
     padding: 11px 12px;
-    font-size: 14px;
-    margin-bottom: 12px;
+    font-size: 15px;
     box-sizing: border-box;
     color: #1b2a56;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -364,7 +360,7 @@
 
 .pform .eye {
     position: absolute;
-    top: 12px;
+    top: 13px;
     right: 12px;
     border: none;
     background: none;

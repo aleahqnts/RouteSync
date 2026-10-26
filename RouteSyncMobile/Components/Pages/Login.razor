@@ -15,14 +15,20 @@
 
         <div class="field">
             <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg></span>
-            <input type="email" placeholder="Email" autocomplete="username"
-                   @bind="email" @bind:event="oninput" />
+            <label class="fl">
+                <input type="email" placeholder=" " autocomplete="username"
+                       @bind="email" @bind:event="oninput" />
+                <span class="fl-l">Email</span>
+            </label>
         </div>
 
         <div class="field">
             <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg></span>
-            <input type="@(showPwd ? "text" : "password")" placeholder="Password" autocomplete="current-password"
-                   @bind="password" @bind:event="oninput" @onkeydown="OnKey" />
+            <label class="fl">
+                <input type="@(showPwd ? "text" : "password")" placeholder=" " autocomplete="current-password"
+                       @bind="password" @bind:event="oninput" @onkeydown="OnKey" />
+                <span class="fl-l">Password</span>
+            </label>
             <button type="button" class="eye" @onclick="@(() => showPwd = !showPwd)">
                 <EyeIcon Shown="@showPwd" />
             </button>
