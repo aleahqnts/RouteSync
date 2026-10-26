@@ -269,8 +269,11 @@ else
                                 @onclick="@(() => reasonChoice = r)"><span class="ua-radio"></span>@r</button>
                     }
                 </div>
-                <textarea class="ua-note" rows="2" placeholder="Details for dispatch (optional)"
-                          @bind="reasonNote" @bind:event="oninput"></textarea>
+                <label class="fl ua-note-field">
+                    <textarea class="ua-note" rows="2" placeholder="Optional"
+                              @bind="reasonNote" @bind:event="oninput"></textarea>
+                    <span class="fl-l">Reason</span>
+                </label>
 
                 <div class="ua-actions stack">
                     <button class="btn-confirm" @onclick="ConfirmUnavailable" disabled="@(toggling || !ReasonReady)">Report to Dispatch</button>

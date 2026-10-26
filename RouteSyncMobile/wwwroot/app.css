@@ -127,11 +127,15 @@ html:root .sheet-closing { animation: sheet-down 0.26s cubic-bezier(0.4, 0, 1, 1
 html:root .cover-closing { animation: fade-out 0.26s ease-in forwards; }
 
 /* ---------- Floating labels ----------
-   The field's name sits inside it like a placeholder and rises to the top edge once the
-   field is focused or filled, so the name stays readable while typing.
-   Markup: <label class="fl"><input placeholder=" " /><span class="fl-l">Name</span></label>.
+   The field's name sits inside it like a placeholder and, once the field is focused or
+   filled, rises onto its top border, breaking the line, so the name stays readable while
+   typing. Markup: <label class="fl"><input placeholder=" " /><span class="fl-l">Name</span></label>.
    A placeholder with words in it is kept as a hint and shown only while the field is
-   focused. Each page keeps its own border, colour and side padding for the field. */
+   focused. Each page keeps its own border, colour and padding for the field; --fl-x is
+   the field's left padding, so the name lines up with what is typed.
+   The break in the border is the name's own background: the lower half is the field's
+   colour (--fl-bg, white unless set) and covers the line, the upper half is left clear
+   for whatever is behind the field. */
 .fl {
     position: relative;
     display: block;
@@ -144,19 +148,20 @@ html:root .cover-closing { animation: fade-out 0.26s ease-in forwards; }
 .fl > textarea {
     display: block;
     width: 100%;
-    padding-top: 21px !important;
-    padding-bottom: 5px !important;
 }
 
 .fl > .fl-l {
     position: absolute;
     top: 50%;
-    left: var(--fl-x, 0);
-    right: 8px;
+    left: calc(var(--fl-x, 0px) - 5px);
+    max-width: calc(100% - var(--fl-x, 0px) - 4px);
+    padding: 0 5px;
     transform: translateY(-50%);
+    background: linear-gradient(to bottom, transparent calc(50% - 1.5px), var(--fl-bg, #fff) calc(50% - 1.5px));
     color: #8a94a6;
     font-size: 15px;
     font-weight: 500;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -165,15 +170,16 @@ html:root .cover-closing { animation: fade-out 0.26s ease-in forwards; }
 }
 
 /* A text box is taller than one line, so its name waits on the first line. */
-.fl > textarea + .fl-l { top: 31px; }
+.fl > textarea + .fl-l { top: var(--fl-y, 22px); }
 
 /* A date field always shows a date, so its name is always up. */
 .fl > :focus + .fl-l,
 .fl > :not(:placeholder-shown) + .fl-l,
 .fl > [type="date"] + .fl-l {
-    top: 13px;
-    font-size: 11px;
+    top: 0.5px;
+    font-size: 12px;
     font-weight: 700;
+    color: #5f6b7d;
 }
 
 .fl > :focus + .fl-l { color: #2e9e8f; }

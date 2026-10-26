@@ -471,8 +471,13 @@
     font-size: 15px;
     color: #1b2a56;
     resize: none;
-    margin-bottom: 16px;
     box-sizing: border-box;
+}
+
+.ua-note-field {
+    margin-bottom: 16px;
+    --fl-x: 13.5px;
+    --fl-y: 23px;
 }
 
 .ua-note:focus {
