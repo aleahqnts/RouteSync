@@ -557,22 +557,26 @@
 .ua-head h2 { margin: 0 0 3px; }
 .ua-head .ua-sub { margin: 0; font-size: 14px; line-height: 1.4; }
 
-/* Bao's worried face in a small warm disc, cropped at the chin like the empty lists. */
+/* Bao's worried face whole, standing in front of a small warm disc, his horns past its
+   edge. The head is drawn left of centre in its own canvas, so it is nudged right to sit
+   over the middle of the disc. */
 .ua-bao {
     position: relative;
     flex: 0 0 60px;
     width: 60px;
     height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
     background: #fff1dc;
-    overflow: hidden;
 }
 
 .ua-bao ::deep .bao {
-    position: absolute;
-    left: -5px;
-    bottom: -4px;
-    width: 72px;
+    position: relative;
+    left: 1.7px;
+    flex: 0 0 auto;
+    width: 80px;
     height: auto;
 }
 
