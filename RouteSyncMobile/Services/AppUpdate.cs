@@ -42,7 +42,19 @@ public static class AppUpdate
     }
 
     /// <summary>Saves the APK to <paramref name="path"/>, reporting 0 to 1 as it goes.</summary>
+    /// <remarks>
+    /// Written beside it under a .part name and renamed only once complete, so a file at
+    /// <paramref name="path"/> is always a whole download that can be installed again
+    /// without fetching it a second time.
+    /// </remarks>
     public static async Task DownloadAsync(string url, string path, IProgress<double> progress)
+    {
+        var part = path + ".part";
+        await DownloadToAsync(url, part, progress);
+        File.Move(part, path, overwrite: true);
+    }
+
+    private static async Task DownloadToAsync(string url, string path, IProgress<double> progress)
     {
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RouteSync-Driver");

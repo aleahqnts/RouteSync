@@ -44,7 +44,7 @@
     private int Percent => (int)Math.Round(progress * 100);
 
     private string Subtitle => error ?? (busy
-        ? (progress >= 1 ? "Opening the installer…" : $"Downloading version {offer!.Version.ToString(3)}…")
+        ? (progress >= 1 ? "Opening the installer" : $"Downloading version {offer!.Version.ToString(3)}")
         : $"RouteSync {offer!.Version.ToString(3)} is ready to install.");
 
     protected override async Task OnInitializedAsync()
@@ -62,7 +62,9 @@
         _lastCheck = DateTime.UtcNow;
 
         var found = await AppUpdate.CheckAsync(Version.Parse(AppInfo.Current.VersionString));
-        if (found is null) return;
+        // Nothing newer: an APK still kept is the one now installed, or one for a version
+        // that has since been withdrawn.
+        if (found is null) { ClearDownloads(keep: null); return; }
         offer = found;
         dismissed = false;
         StateHasChanged();
@@ -85,15 +87,18 @@
         busy = true;
         try
         {
-            var folder = Path.Combine(FileSystem.CacheDirectory, "updates");
-            Directory.CreateDirectory(folder);
-            var path = Path.Combine(folder, $"RouteSync-Driver-{offer!.Version.ToString(3)}.apk");
+            Directory.CreateDirectory(UpdatesFolder);
+            var path = Path.Combine(UpdatesFolder, $"RouteSync-Driver-{offer!.Version.ToString(3)}.apk");
+            ClearDownloads(keep: path);
 
-            await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<double>(p =>
-            {
-                progress = p;
-                InvokeAsync(StateHasChanged);
-            }));
+            // Already downloaded when the installer was backed out of or failed: install it again.
+            if (File.Exists(path)) progress = 1;
+            else
+                await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<double>(p =>
+                {
+                    progress = p;
+                    InvokeAsync(StateHasChanged);
+                }));
             Installer.Install(path);
         }
         catch (Exception ex)
@@ -103,5 +108,18 @@
         }
         busy = false;
         progress = 0;
+    }
+
+    private static string UpdatesFolder => Path.Combine(FileSystem.CacheDirectory, "updates");
+
+    /// <summary>Deletes every kept APK and unfinished download except <paramref name="keep"/>.</summary>
+    private static void ClearDownloads(string? keep)
+    {
+        if (!Directory.Exists(UpdatesFolder)) return;
+        foreach (var f in Directory.GetFiles(UpdatesFolder))
+        {
+            if (f == keep) continue;
+            try { File.Delete(f); } catch (IOException) { }
+        }
     }
 }
