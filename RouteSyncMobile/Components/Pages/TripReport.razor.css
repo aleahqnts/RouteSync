@@ -1,4 +1,22 @@
-.rep { padding: 52px 22px calc(28px + env(safe-area-inset-bottom)); }
+/* Fits one screen on any phone. --k runs from 0 on a 640px-tall screen to 260px on a
+   900px one, and every gap, pad and type size below grows along it from its tightest to
+   its roomiest. On a taller phone still, the sections spread apart instead of leaving the
+   bottom empty. The top pad keeps clear of the status bar, which the page runs under. */
+.rep {
+    --k: clamp(0px, calc(100dvh - 640px), 260px);
+    --gap: calc(5px + var(--k) * 0.0269);
+    --pad: calc(8px + var(--k) * 0.0308);
+    --fs: calc(12.5px + var(--k) * 0.0058);
+    min-height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--gap);
+    padding: calc(42px + var(--k) * 0.0385) 22px calc(calc(10px + var(--k) * 0.0692) + env(safe-area-inset-bottom));
+}
+
+.rep > .sk { margin: 0; }
 
 .page-loading {
     min-height: 80vh;
@@ -12,16 +30,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
 }
 
 .back {
     border: none;
     background: none;
     font-size: 22px;
+    line-height: 1;
     color: #1b2a56;
     cursor: pointer;
     width: 32px;
+    height: 32px;
+    padding: 0;
 }
 
 .rep-header h1 {
@@ -43,8 +63,7 @@
     background: #edf0f6;
     border: 1px solid #dde2ec;
     border-radius: 14px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
+    padding: var(--pad) 18px;
 }
 
 .hero-top {
@@ -80,14 +99,14 @@
 }
 
 .hero-route {
-    margin: 10px 0 0;
+    margin: calc(3px + var(--k) * 0.0269) 0 0;
     color: #1b2a56;
-    font-size: 19px;
+    font-size: calc(16px + var(--k) * 0.0115);
     font-weight: 800;
 }
 
 .hero-id {
-    margin: 8px 0 0;
+    margin: calc(2px + var(--k) * 0.0231) 0 0;
     color: #5f6b7d;
     font-size: 12px;
     font-weight: 600;
@@ -98,7 +117,6 @@
 .stats {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
 }
 
 .stat {
@@ -106,7 +124,7 @@
     border: 1px solid #e6e8ee;
     border-radius: 14px;
     background: #fff;
-    padding: 12px 8px 10px;
+    padding: calc(6px + var(--k) * 0.0231) 8px calc(5px + var(--k) * 0.0192);
     text-align: center;
     min-width: 0;
 }
@@ -150,12 +168,11 @@
     border: 1px solid #e6e8ee;
     border-radius: 14px;
     background: #fff;
-    padding: 14px 16px;
-    margin-bottom: 12px;
+    padding: var(--pad) 16px;
 }
 
 .card-title {
-    margin: 0 0 10px;
+    margin: 0 0 calc(3px + var(--k) * 0.0269);
     font-size: 14px;
     font-weight: 800;
     color: #1b2a56;
@@ -169,8 +186,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 6px 0;
-    font-size: 14px;
+    padding: calc(2px + var(--k) * 0.0154) 0;
+    font-size: var(--fs);
 }
 
 .tl-row + .tl-row { border-top: 1px dashed #eef0f5; }
@@ -203,8 +220,8 @@
     display: flex;
     gap: 10px;
     align-items: baseline;
-    margin: 7px 0;
-    font-size: 14px;
+    margin: calc(2px + var(--k) * 0.0192) 0;
+    font-size: var(--fs);
 }
 
 .row .k {
