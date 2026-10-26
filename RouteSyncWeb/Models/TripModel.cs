@@ -59,6 +59,11 @@ public class Trip : BaseModel
     [Column("actual_end_time")]
     public DateTime? ActualEndTime { get; set; }
 
+    // Written every few seconds by the Sentinel while it counts, in true UTC. Read only
+    // here: the web never writes it.
+    [Column("count_heartbeat", ignoreOnInsert: true, ignoreOnUpdate: true)]
+    public DateTimeOffset? CountHeartbeat { get; set; }
+
     // Marks trips created by the retired telemetry simulator. The column stays because
     // TripReaperService still excludes such rows, so any left in the database are not
     // mistaken for the ghost trips it removes.

@@ -14,10 +14,11 @@
     var SHOWN = 5;
     // This many of one kind read as one line rather than a column of near-identical ones.
     var GROUP_AT = 3;
-    var LABELS = { relief: 'Relief', issue: 'Cannot run', late: 'Late', fault: 'Fault', signal: 'No signal' };
+    var LABELS = { relief: 'Relief', issue: 'Cannot run', late: 'Late', camera: 'Camera', fault: 'Fault', signal: 'No signal' };
     var GROUPED = {
         issue: function (n) { return n + ' trips cannot run as assigned'; },
         late: function (n) { return n + ' trips have not started'; },
+        camera: function (n) { return n + ' buses are not counting passengers'; },
         fault: function (n) { return n + ' buses have an open fault'; },
         signal: function (n) { return n + ' buses on a trip have not reported'; }
     };

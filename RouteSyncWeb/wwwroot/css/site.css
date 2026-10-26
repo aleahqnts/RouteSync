@@ -1156,6 +1156,7 @@ th.rs-sortable:focus-visible {
 .rs-attn__item--issue .rs-attn__tag { background: light-dark(#FDECEC, #574142); color: light-dark(#B42318, #FFB4AE); }
 .rs-attn__item--late .rs-attn__tag,
 .rs-attn__item--fault .rs-attn__tag { background: light-dark(#FFF4DE, #50472A); color: light-dark(#8A5300, #F2C27A); }
+.rs-attn__item--camera .rs-attn__tag,
 .rs-attn__item--signal .rs-attn__tag { background: light-dark(#EDF1F5, #3A3F47); color: light-dark(#3F4756, #D3D8DF); }
 
 .rs-attn__clear {

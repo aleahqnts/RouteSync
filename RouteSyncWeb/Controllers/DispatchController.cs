@@ -320,6 +320,36 @@ namespace FleetWise.Controllers
             : late.Minutes == 0 ? $"{(int)late.TotalHours}h"
             : $"{(int)late.TotalHours}h {late.Minutes}m";
 
+        /// <summary>
+        /// How long a camera-bound bus has gone without a count while on its trip. The driver
+        /// app calls a camera stale after 12 seconds; the list waits a minute, so a brief
+        /// drop does not come and go on it.
+        /// </summary>
+        private static readonly TimeSpan CameraSilentAfter = TimeSpan.FromMinutes(1);
+
+        /// <summary>
+        /// Time since the bus's Sentinel last counted, and whether it ever did on this trip,
+        /// or null while it is counting, or the bus has no Sentinel bound to it.
+        /// </summary>
+        public static (TimeSpan For, bool Seen)? CameraSilence(Trip trip, Vehicle? vehicle,
+            DateTimeOffset? utcNow = null, DateTime? phNow = null)
+        {
+            if (string.IsNullOrWhiteSpace(vehicle?.CounterDeviceId))
+                return null;
+            if (trip.CountHeartbeat is DateTimeOffset beat)
+            {
+                var gap = (utcNow ?? DateTimeOffset.UtcNow) - beat;
+                return gap >= CameraSilentAfter ? (gap, true) : null;
+            }
+            // Never counted: allowed the same minute from the trip's start, by the
+            // Philippine wall clock its start time is stored in. A trip no phone started
+            // has no start and is the board's to explain.
+            if (trip.ActualStartTime is not DateTime started)
+                return null;
+            var since = (phNow ?? PhClock.Now) - StoredTimes.FromWall(started);
+            return since >= CameraSilentAfter ? (since, false) : null;
+        }
+
         /// <summary>The needs-attention list for one day, read from the database.</summary>
         private async Task<List<object>> ReadAttentionAsync(DateTime today)
         {
@@ -343,6 +373,10 @@ namespace FleetWise.Controllers
                         : (1, "issue", $"{Name(r.Driver)} cannot drive. The {t.ShiftType} trip on {t.VehicleId} needs another driver.");
                 else if (r.Late is TimeSpan late)
                     hit = (2, "late", $"{t.VehicleId} has not started. {LateText(late)} late.");
+                else if (r.TripStatus == "Active" && CameraSilence(t, r.Vehicle) is { } silent)
+                    hit = (2, "camera", silent.Seen
+                        ? $"{t.VehicleId}'s passenger camera stopped {LateText(silent.For)} ago. Boardings are not being counted."
+                        : $"{t.VehicleId}'s passenger camera has not started counting.");
                 else if (r.Flagged && r.TripStatus != "Active" && faultsSaid.Add(t.VehicleId))
                     hit = (3, "fault", $"{t.VehicleId} has an open fault. Check it before the {t.ShiftType} trip.");
 
