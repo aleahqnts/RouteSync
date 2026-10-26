@@ -1,19 +1,25 @@
-/* Fits one screen on any phone. --k runs from 0 on a 640px-tall screen to 260px on a
-   900px one, and every gap, pad and type size below grows along it from its tightest to
-   its roomiest. On a taller phone still, the sections spread apart instead of leaving the
-   bottom empty. The top pad keeps clear of the status bar, which the page runs under. */
+/* Fits one screen on any phone. The page is exactly the space between the status bar and
+   the tab bar, and is the size container for what is inside it, so --k measures that
+   space rather than the whole screen: 0 when it is 520px tall, up to 260px when it is
+   780px. Every pad and type size inside grows along it from its tightest to its roomiest.
+   Taller still, the sections spread apart instead of leaving the bottom empty.
+   --k is resolved where it is used, inside the page, so the page's own gaps and pads are
+   tied to the screen instead. The top pad keeps clear of the status bar, which the page
+   runs under. */
 .rep {
-    --k: clamp(0px, calc(100dvh - 640px), 260px);
-    --gap: calc(5px + var(--k) * 0.0269);
+    --k: clamp(0px, calc(100cqh - 520px), 260px);
     --pad: calc(8px + var(--k) * 0.0308);
     --fs: calc(12.5px + var(--k) * 0.0058);
-    min-height: 100%;
+    height: 100%;
+    container-type: size;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: var(--gap);
-    padding: calc(42px + var(--k) * 0.0385) 22px calc(calc(10px + var(--k) * 0.0692) + env(safe-area-inset-bottom));
+    gap: clamp(6px, 1.4svh, 12px);
+    padding: clamp(34px, calc(6svh - 4px), 52px) 22px 10px;
+    /* Bootstrap's 1.5 is a reading measure; these are labels and figures. */
+    line-height: 1.3;
 }
 
 .rep > .sk { margin: 0; }
@@ -26,7 +32,10 @@
     color: #5f6b7d;
 }
 
+/* Shorter than the 48px back button, which reaches past it into the pad above and below. */
 .rep-header {
+    flex: 0 0 auto;
+    height: 40px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -216,7 +225,7 @@
 
 /* ---------- Key/value rows ---------- */
 
-.row {
+.kv {
     display: flex;
     gap: 10px;
     align-items: baseline;
@@ -224,13 +233,13 @@
     font-size: var(--fs);
 }
 
-.row .k {
+.kv .k {
     flex: 0 0 120px;
     color: #7a8494;
     font-weight: 600;
 }
 
-.row .v {
+.kv .v {
     flex: 1;
     color: #1b2a56;
     font-weight: 700;
@@ -238,8 +247,10 @@
 
 /* ---------- Checklist card ---------- */
 
+/* Bootstrap's own .card stacks its children; this one is a single row. */
 .check {
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 10px;
     cursor: pointer;

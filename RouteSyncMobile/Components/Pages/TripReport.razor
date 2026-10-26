@@ -94,9 +94,9 @@ else
         <!-- Assignment -->
         <div class="card">
             <p class="card-title">Assignment</p>
-            <div class="row"><span class="k">Bus</span><span class="v">@(vehicle?.VehicleId ?? trip.VehicleId)</span></div>
-            <div class="row"><span class="k">Plate Number</span><span class="v">@(vehicle?.PlateNumber ?? "N/A")</span></div>
-            <div class="row"><span class="k">Driver</span><span class="v">@Session.DisplayName</span></div>
+            <div class="kv"><span class="k">Bus</span><span class="v">@(vehicle?.VehicleId ?? trip.VehicleId)</span></div>
+            <div class="kv"><span class="k">Plate Number</span><span class="v">@(vehicle?.PlateNumber ?? "N/A")</span></div>
+            <div class="kv"><span class="k">Driver</span><span class="v">@Session.DisplayName</span></div>
         </div>
 
         <!-- Pre-trip checklist -->
