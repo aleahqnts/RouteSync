@@ -1,6 +1,18 @@
 ﻿@model FleetWise.Models.LoginViewModel
 @{
     Layout = "~/Views/Shared/_LoginLayout.cshtml";
+    ViewData["Title"] = "RouteSync Fleet Dashboard";
+}
+
+@* The one page robots.txt lets search engines read, so these are what a search result shows. *@
+@section Head {
+    <meta name="description" content="RouteSync is the fleet dashboard for bus operations in BGC, Taguig: live bus map, dispatch, driver rosters and ridership reports. Staff sign in here." />
+    <link rel="canonical" href="https://dashboard.routesync.website/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RouteSync" />
+    <meta property="og:title" content="RouteSync Fleet Dashboard" />
+    <meta property="og:description" content="Live bus map, dispatch, driver rosters and ridership reports for bus operations in BGC, Taguig." />
+    <meta property="og:url" content="https://dashboard.routesync.website/" />
 }
 
 <div class="bg-wrapper">
