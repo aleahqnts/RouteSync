@@ -132,6 +132,10 @@
     }
     var parkedSlots = {};     // vehicleId -> { lat, lng, i }: its terminal and place in the grid
 
+    // Leaflet stacks markers by latitude, so a stop or parked pill just south of a bus
+    // would be drawn over it. Buses on a trip sit above parked ones, and both above stops.
+    function busZ(parked) { return parked ? 10000 : 20000; }
+
     // The point this many screen pixels from another at the current zoom.
     function offsetPx(lat, lng, dx, dy) {
         var z = map.getZoom();
@@ -139,10 +143,66 @@
         return map.unproject([p.x + dx, p.y + dy], z);
     }
 
-    function terminalSlot(lat, lng, i) {
+    // The grid's first row sits this far below the terminal point, leaving the point
+    // itself to a bus on a trip standing there, with the terminal's name in between.
+    var GRID_DROP_PX = 72;
+    var gridShifts = {};      // terminal, zoom and bus count -> sideways shift of its grid
+
+    // How far sideways a terminal's grid sits: centred under the terminal or off to
+    // either side, whichever covers the fewest points along the route lines.
+    function gridShift(lat, lng, count) {
+        var z = map.getZoom();
+        var key = lat + ',' + lng + '@' + z + '#' + count;
+        if (key in gridShifts) return gridShifts[key];
+
+        var o = map.project([lat, lng], z);
+        var w = TERMINAL_PER_ROW * SLOT_W_PX;
+        var side = w / 2 + SLOT_W_PX / 2;
+        var top = o.y + GRID_DROP_PX - LABEL_RISE_PX - 13;
+        var bottom = o.y + GRID_DROP_PX + (Math.ceil(count / TERMINAL_PER_ROW) - 0.5) * SLOT_H_PX;
+
+        // Points every 8 px along every route line, kept only near the terminal.
+        var pts = [];
+        Object.keys(routePolylines).forEach(function (rid) {
+            routePolylines[rid].forEach(function (line) {
+                var prev = null;
+                line.getLatLngs().forEach(function (ll) {
+                    var p = map.project(ll, z);
+                    if (prev) {
+                        var steps = Math.max(1, Math.ceil(prev.distanceTo(p) / 8));
+                        for (var s = 1; s <= steps; s++) {
+                            var x = prev.x + (p.x - prev.x) * s / steps, y = prev.y + (p.y - prev.y) * s / steps;
+                            if (y > top && y < bottom && Math.abs(x - o.x) < side + w / 2) pts.push(x);
+                        }
+                    }
+                    prev = p;
+                });
+            });
+        });
+
+        var best = 0, fewest = Infinity;
+        [0, -side, side].forEach(function (dx) {
+            var left = o.x + dx - w / 2, right = left + w;
+            var n = pts.filter(function (x) { return x > left && x < right; }).length;
+            if (n < fewest) { fewest = n; best = dx; }
+        });
+        return (gridShifts[key] = best);
+    }
+
+    function terminalSlot(lat, lng, i, count) {
         var row = Math.floor(i / TERMINAL_PER_ROW);
         var col = i % TERMINAL_PER_ROW;
-        return offsetPx(lat, lng, (col - (TERMINAL_PER_ROW - 1) / 2) * SLOT_W_PX, row * SLOT_H_PX);
+        return offsetPx(lat, lng, gridShift(lat, lng, count) + (col - (TERMINAL_PER_ROW - 1) / 2) * SLOT_W_PX,
+            GRID_DROP_PX + row * SLOT_H_PX);
+    }
+
+    // Above its grid while the grid shows, and just above the terminal point once the
+    // grid folds into it.
+    function terminalLabelPos(label) {
+        var a = label._anchor;
+        return map.getZoom() < PARKED_MIN_ZOOM
+            ? offsetPx(a[0], a[1], 0, -LABEL_RISE_PX)
+            : offsetPx(a[0], a[1], gridShift(a[0], a[1], label._count), GRID_DROP_PX - LABEL_RISE_PX);
     }
 
     // Puts every parked bus and terminal label back in its grid for the current zoom.
@@ -150,10 +210,10 @@
         Object.keys(parkedSlots).forEach(function (id) {
             var slot = parkedSlots[id];
             var marker = busMarkers[id];
-            if (marker) marker.setLatLng(terminalSlot(slot.lat, slot.lng, slot.i));
+            if (marker) marker.setLatLng(terminalSlot(slot.lat, slot.lng, slot.i, slot.n));
         });
         terminalLayer.eachLayer(function (label) {
-            label.setLatLng(offsetPx(label._anchor[0], label._anchor[1], 0, -LABEL_RISE_PX));
+            label.setLatLng(terminalLabelPos(label));
         });
     }
 
@@ -689,11 +749,13 @@
         var html = '<div class="fm-terminal-pill" title="' + safe + ' · ' + count + ' parked">'
                  + '<span class="fm-terminal-p" aria-hidden="true">P</span>'
                  + '<span class="fm-terminal-name">' + safe + ' · </span>' + count + '</div>';
-        var label = L.marker(offsetPx(lat, lng, 0, -LABEL_RISE_PX), {
+        var label = L.marker([lat, lng], {
             icon: L.divIcon({ className: 'fm-terminal-label', html: html, iconSize: [200, 26], iconAnchor: [100, 13] }),
             zIndexOffset: -500
         });
         label._anchor = [lat, lng];
+        label._count = count;
+        label.setLatLng(terminalLabelPos(label));
         label.on('click', function () {
             map.setView(this._anchor, Math.max(map.getZoom(), PARKED_MIN_ZOOM));
         });
@@ -798,8 +860,8 @@
                     var g = parkedGroups[key];
                     g.list.sort(function (a, b) { return a.vehicleId < b.vehicleId ? -1 : 1; });
                     g.list.forEach(function (b, i) {
-                        parkedSlots[b.vehicleId] = { lat: g.lat, lng: g.lng, i: i };
-                        parkedPos[b.vehicleId] = terminalSlot(g.lat, g.lng, i);
+                        parkedSlots[b.vehicleId] = { lat: g.lat, lng: g.lng, i: i, n: g.list.length };
+                        parkedPos[b.vehicleId] = terminalSlot(g.lat, g.lng, i, g.list.length);
                     });
                 });
 
@@ -834,13 +896,14 @@
                         // done only when what the icon shows has changed.
                         if (marker._iconKey !== iconKey) {
                             marker.setIcon(busIcon(bus.vehicleId, color, stale, off, parked));
+                            marker.setZIndexOffset(busZ(parked));
                             marker._iconKey = iconKey;
                             RouteMotion.repoint(marker);
                         }
                         moveBus(marker, bus, pos);
                         if (!(marker._rmGroupSize > 1)) marker.setTooltipContent(tooltipHtml(bus));
                     } else {
-                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off, parked) })
+                        marker = L.marker(pos, { icon: busIcon(bus.vehicleId, color, stale, off, parked), zIndexOffset: busZ(parked) })
                             .bindTooltip(tooltipHtml(bus), { direction: 'top', offset: [0, -10], className: 'fm-tooltip-wrap', opacity: 1 })
                             .addTo(busLayer);
                         marker.on('click', function () {
