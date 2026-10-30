@@ -175,8 +175,7 @@ public static class LeaveEntitlement
             return $"{type} leave cannot be filed for a day that has passed.";
 
         if (days > BackdatingDays)
-            return $"{type} leave can be filed up to {BackdatingDays} days late, and that is "
-                 + $"{days} days ago.";
+            return $"{type} leave can be filed up to {BackdatingDays} days after its first day.";
 
         return null;
     }
