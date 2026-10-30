@@ -180,6 +180,9 @@ fun Root(vm: CounterViewModel = viewModel()) {
                 else -> {}
             }
         }
+        UpdateToast(
+            Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp)
+        )
     }
 }
 

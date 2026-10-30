@@ -16,6 +16,8 @@
          API 34+; the overlay grant lets it open the UI directly on trip start. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Opens the phone's installer for a downloaded update. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- No backup: the phone's identity must not be copied to another phone.
          allowBackup covers Android 11 and below, the extraction rules Android 12 on,
@@ -66,5 +68,16 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Dedicated bus-mounted passenger counter: watches for trip start and reopens the counting UI" />
         </service>
+
+        <!-- Shares a downloaded update with the phone's installer. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
     </application>
 </manifest>
