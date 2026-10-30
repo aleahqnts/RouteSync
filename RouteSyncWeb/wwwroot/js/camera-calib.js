@@ -161,8 +161,26 @@
         el.style.display = 'block';
     }
 
+    // The release the phone reports, and whether a newer one is published. Phones on
+    // releases before the report existed send nothing, so the line stays hidden.
+    function version(running, latest) {
+        const el = $('camVersion');
+        if (!el) return;
+        if (!running) { el.style.display = 'none'; return; }
+        const parts = v => (v.match(/^(\d+)\.(\d+)\.(\d+)/) || []).slice(1).map(Number);
+        const [a, b] = [parts(running), latest ? parts(latest) : []];
+        const behind = b.length === 3 && a.length === 3 &&
+            (b[0] - a[0] || b[1] - a[1] || b[2] - a[2]) > 0;
+        el.textContent = behind
+            ? 'Sentinel ' + running + '. Version ' + latest + ' is available; update on the next visit.'
+            : 'Sentinel ' + running;
+        el.className = 'cam-version' + (behind ? ' cam-version--behind' : '');
+        el.style.display = 'block';
+    }
+
     function applyState(s) {
         if (!s) return;
+        version(s.status && s.status.app_version, s.latestSentinel);
         if (s.status && s.status.last_seen) {
             chip(Date.now() - Date.parse(s.status.last_seen) < 30000);
         } else {

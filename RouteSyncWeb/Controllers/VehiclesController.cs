@@ -1535,10 +1535,10 @@ namespace FleetWise.Controllers
             return res.IsSuccessStatusCode;
         }
 
-        // Panel state: the device, its desired configuration, and what it
-        // reports.
+        // Panel state: the device, its desired configuration, what it reports, and the
+        // newest published Sentinel to compare its version against.
         [HttpGet]
-        public async Task<IActionResult> CameraState(string vehicleId)
+        public async Task<IActionResult> CameraState(string vehicleId, [FromServices] ApkUpdateFeed feed)
         {
             var vResp = await _supabase.From<Vehicle>()
                 .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
@@ -1550,7 +1550,8 @@ namespace FleetWise.Controllers
             var esc = Uri.EscapeDataString(dev);
             var cfg = await CamGetFirst($"rest/v1/device_config?device_id=eq.{esc}");
             var st = await CamGetFirst($"rest/v1/device_status?device_id=eq.{esc}");
-            return Json(new { deviceId = dev, config = cfg, status = st });
+            var latest = (await feed.LatestAsync(ApkUpdateFeed.Sentinel))?.Version;
+            return Json(new { deviceId = dev, config = cfg, status = st, latestSentinel = latest });
         }
 
         // Asks the camera to wake and take a fresh photo of the doorway.
