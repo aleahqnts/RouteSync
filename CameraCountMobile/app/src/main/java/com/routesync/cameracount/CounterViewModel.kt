@@ -764,7 +764,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
      * row answers 200 with an empty body, and a count can match nothing for reasons that
      * are not recoverable: the claim was taken by another phone while this one was
      * offline, and row-level security then refuses every retry against the closed trip.
-     * Treating that as success is what used to delete counts that had never been stored.
+     * Treating that as success would delete counts that had never been stored.
      */
     private suspend fun reconcileOne(held: Prefs.PendingCount): Boolean {
         if (held.count <= 0) {

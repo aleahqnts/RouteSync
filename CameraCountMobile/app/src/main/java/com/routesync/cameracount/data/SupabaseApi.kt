@@ -210,10 +210,10 @@ object SupabaseApi {
      * high-water mark itself, which no client can get wrong or forget.
      *
      * @return the machine count the database holds after the write, or null when the
-     *   request matched no row. Those are different outcomes and used to be identical:
-     *   a lost claim, a deleted trip and a refusal by row-level security all answer 200
-     *   with an empty body, so a caller that only checked the status code deleted counts
-     *   that had never been stored. Nothing is cleared until this figure comes back.
+     *   request matched no row. These are different outcomes: a lost claim, a deleted
+     *   trip and a refusal by row-level security all answer 200 with an empty body, so
+     *   a caller that only checked the status code would delete counts that had never
+     *   been stored. Nothing is cleared until this figure comes back.
      *
      * The body carries no heartbeat: the trip is over and nothing should appear alive.
      */
