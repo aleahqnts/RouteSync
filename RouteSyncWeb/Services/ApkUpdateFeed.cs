@@ -3,49 +3,58 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace FleetWise.Services
 {
-    // The newest driver app a GitHub Release carries as an APK.
-    public record DriverUpdate(string Version, string ApkUrl);
+    // The newest phone app a GitHub Release carries as an APK.
+    public record ApkUpdate(string Version, string ApkUrl);
 
-    // Tells the driver app which version is newest, without every phone asking GitHub.
+    // Tells the phone apps which version is newest, without every phone asking GitHub.
     //
     // GitHub allows sixty unauthenticated requests an hour per address, which phones sharing
-    // one network could use up. The dashboard asks once in a while and answers every phone
-    // from memory. A release counts only when it carries an asset named
-    // RouteSync-Driver-X.Y.Z.apk, so a release made for the dashboard alone offers nothing.
-    public class DriverUpdateFeed
+    // one network could use up. The dashboard fetches the release list once in a while and
+    // answers every phone from memory. A release counts for an app only when it carries an
+    // asset named with that app's prefix, such as RouteSync-Driver-X.Y.Z.apk, so a release
+    // made for the dashboard alone offers nothing.
+    public class ApkUpdateFeed
     {
+        public const string Driver = "RouteSync-Driver-";
+        public const string Sentinel = "RouteSync-Sentinel-";
+
         private const string ReleasesUrl = "https://api.github.com/repos/aleahqnts/RouteSync/releases?per_page=10";
         private static readonly TimeSpan Keep = TimeSpan.FromMinutes(10);
 
         private readonly HttpClient _http;
         private readonly IMemoryCache _cache;
 
-        public DriverUpdateFeed(HttpClient http, IMemoryCache cache)
+        public ApkUpdateFeed(HttpClient http, IMemoryCache cache)
         {
             _http = http;
             _cache = cache;
         }
 
-        public async Task<DriverUpdate?> LatestAsync()
+        public async Task<ApkUpdate?> LatestAsync(string prefix) =>
+            await ReleasesAsync() is { } json ? Pick(json, prefix) : null;
+
+        // The release list, shared by both apps' checks.
+        private async Task<string?> ReleasesAsync()
         {
-            if (_cache.TryGetValue(nameof(DriverUpdateFeed), out DriverUpdate? kept)) return kept;
+            if (_cache.TryGetValue(nameof(ApkUpdateFeed), out string? kept)) return kept;
 
             try
             {
-                var found = Pick(await _http.GetStringAsync(ReleasesUrl));
-                _cache.Set(nameof(DriverUpdateFeed), found, Keep);
-                return found;
+                var json = await _http.GetStringAsync(ReleasesUrl);
+                _cache.Set(nameof(ApkUpdateFeed), json, Keep);
+                return json;
             }
             catch (Exception)
             {
                 // GitHub unreachable or refusing: say nothing for a minute rather than ask again at once.
-                _cache.Set(nameof(DriverUpdateFeed), (DriverUpdate?)null, TimeSpan.FromMinutes(1));
+                _cache.Set(nameof(ApkUpdateFeed), (string?)null, TimeSpan.FromMinutes(1));
                 return null;
             }
         }
 
-        // The highest-numbered driver APK among published (not draft, not pre-release) releases.
-        public static DriverUpdate? Pick(string releasesJson)
+        // The highest-numbered APK with this prefix among published (not draft, not
+        // pre-release) releases.
+        public static ApkUpdate? Pick(string releasesJson, string prefix)
         {
             Version? best = null;
             string? url = null;
@@ -58,7 +67,6 @@ namespace FleetWise.Services
                 foreach (var asset in assets.EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? "";
-                    const string prefix = "RouteSync-Driver-";
                     if (!name.StartsWith(prefix) || !name.EndsWith(".apk")) continue;
                     if (!Version.TryParse(name[prefix.Length..^4], out var version)) continue;
                     if (best is not null && version <= best) continue;
@@ -67,7 +75,7 @@ namespace FleetWise.Services
                     url = asset.GetProperty("browser_download_url").GetString();
                 }
             }
-            return best is null || url is null ? null : new DriverUpdate(best.ToString(3), url);
+            return best is null || url is null ? null : new ApkUpdate(best.ToString(3), url);
         }
     }
 }

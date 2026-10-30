@@ -81,8 +81,8 @@ builder.Services.AddScoped<FareCalculator>();
 // the dashboard reaches them over HTTP rather than repeating the logic here.
 builder.Services.AddHttpClient<PasswordResetApi>(c => c.Timeout = TimeSpan.FromSeconds(12));
 
-// The newest driver app, for the phones' update check. GitHub rejects a request with no user agent.
-builder.Services.AddHttpClient<DriverUpdateFeed>(c =>
+// The newest phone apps, for their update checks. GitHub rejects a request with no user agent.
+builder.Services.AddHttpClient<ApkUpdateFeed>(c =>
 {
     c.Timeout = TimeSpan.FromSeconds(10);
     c.DefaultRequestHeaders.UserAgent.ParseAdd("RouteSync-Dashboard");
@@ -343,8 +343,11 @@ app.MapStaticAssets();
 
 // Public on purpose: a phone asks before anyone has signed in, and the answer is a version
 // number and a link to a file that is already public.
-app.MapGet("/app/driver-update", async (DriverUpdateFeed feed) =>
-    await feed.LatestAsync() is { } latest ? Results.Json(latest) : Results.NoContent())
+app.MapGet("/app/driver-update", async (ApkUpdateFeed feed) =>
+    await feed.LatestAsync(ApkUpdateFeed.Driver) is { } latest ? Results.Json(latest) : Results.NoContent())
+    .AllowAnonymous();
+app.MapGet("/app/sentinel-update", async (ApkUpdateFeed feed) =>
+    await feed.LatestAsync(ApkUpdateFeed.Sentinel) is { } latest ? Results.Json(latest) : Results.NoContent())
     .AllowAnonymous();
 
 app.MapControllerRoute(
