@@ -543,6 +543,22 @@ object SupabaseApi {
             }
         }
 
+    /**
+     * Records which Sentinel release this device runs, so the dashboard can show a camera
+     * that is behind. Apart from the heartbeat for the same reason as the battery: a
+     * database without the column refuses the whole body. Returns whether it was stored.
+     */
+    suspend fun patchDeviceVersion(deviceId: String, version: String): Boolean =
+        withContext(Dispatchers.IO) {
+            val req = Request.Builder()
+                .url("$BASE/device_status?device_id=eq.$deviceId")
+                .supabaseHeaders()
+                .header("Prefer", "return=minimal")
+                .patch(JSONObject().put("app_version", version).toString().toRequestBody(JSON))
+                .build()
+            runCatching { http.newCall(req).execute().use { it.isSuccessful } }.getOrDefault(false)
+        }
+
     // Snapshot transport. A private storage bucket holds at most one transient object
     // per device, named {device_id}.jpg, deleted as soon as it has served its purpose.
 

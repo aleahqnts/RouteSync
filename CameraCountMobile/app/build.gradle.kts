@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -31,6 +33,15 @@ val suiteVersion: SuiteVersion = run {
     }
 }
 
+// The release signing key, read from keystore.properties beside the project, which git
+// ignores. The key itself lives outside the repository and is backed up apart from this
+// machine: a phone only accepts an update signed with the key it was installed with, so
+// losing it means reinstalling every mounted camera by hand. Without the file, release
+// builds come out unsigned and cannot be installed.
+val releaseKey = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+    Properties().apply { file.inputStream().use { load(it) } }
+}
+
 android {
     namespace = "com.routesync.cameracount"
     compileSdk = 35
@@ -44,9 +55,19 @@ android {
         buildConfigField("String", "SUITE_VERSION", "\"${suiteVersion.label}\"")
     }
 
+    signingConfigs {
+        if (releaseKey != null) create("release") {
+            storeFile = file(releaseKey.getProperty("storeFile"))
+            storePassword = releaseKey.getProperty("storePassword")
+            keyAlias = releaseKey.getProperty("keyAlias")
+            keyPassword = releaseKey.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

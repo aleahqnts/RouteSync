@@ -621,8 +621,13 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 unreconciled = unreconciled, unreconciledOldest = backlogInstant()
             )
         }
+        // Once per run is enough: the version changes only by reinstalling, which restarts
+        // the app. Retried next tick until stored.
+        if (!versionSent) versionSent = SupabaseApi.patchDeviceVersion(deviceId, BuildConfig.VERSION_NAME)
         handleWake(cfg?.wakeRequestedAt, localV)
     }
+
+    private var versionSent = false
 
     // Maintenance wake. A driver requesting a remote calibration patches
     // wake_requested_at, which makes this device capture one still: headless while
