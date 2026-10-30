@@ -406,3 +406,6 @@ FLEETMAP-SNAP-plan.md
 
 # Supabase CLI scratch, left behind by a dump. Holds no schema of its own.
 /supabase/
+
+# Driver app release signing (keystore passwords)
+RouteSyncMobile/keystore.props

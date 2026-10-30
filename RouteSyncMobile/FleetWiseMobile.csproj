@@ -149,4 +149,11 @@
         </PropertyGroup>
     </Target>
 
+    <!--
+      Release signing key, kept out of the repository. Every release must be signed with the
+      same key or phones refuse the update. Without the file, builds fall back to the .NET
+      debug key, which installed release phones do not accept.
+    -->
+    <Import Project="keystore.props" Condition="Exists('keystore.props')" />
+
 </Project>
