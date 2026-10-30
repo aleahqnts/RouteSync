@@ -1532,6 +1532,7 @@ CREATE TABLE IF NOT EXISTS "public"."device_status" (
     "battery_level" integer,
     "battery_charging" boolean,
     "battery_read_at" timestamp with time zone,
+    "app_version" "text",
     CONSTRAINT "ck_device_status_battery_level" CHECK ((("battery_level" IS NULL) OR (("battery_level" >= 0) AND ("battery_level" <= 100))))
 );
 
@@ -1556,6 +1557,10 @@ COMMENT ON COLUMN "public"."device_status"."battery_charging" IS 'Whether the ph
 
 
 COMMENT ON COLUMN "public"."device_status"."battery_read_at" IS 'When the phone last reported its charge. It reports on a change rather than on a schedule, so an old time with a live heartbeat means the level has held steady.';
+
+
+
+COMMENT ON COLUMN "public"."device_status"."app_version" IS 'Sentinel release the phone runs, written once per app start. Null until a phone on 1.14.1 or later reports.';
 
 
 
