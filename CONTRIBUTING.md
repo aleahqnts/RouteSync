@@ -33,6 +33,13 @@
    both APKs to the tag's GitHub Release, named `RouteSync-Driver-X.Y.Z.apk` and `RouteSync-Sentinel-X.Y.Z.apk`.
    Build them on the same machine as before: a phone only updates an app signed with the
    key it was first installed with. The APKs never go into the repository.
+   - Driver app: `dotnet publish FleetWiseMobile.csproj -f net10.0-android -c Release`.
+   - Sentinel: `gradlew assembleRelease`, signed with the key named in the git-ignored
+     `CameraCountMobile/keystore.properties`. Keep a backup of that key and its passwords
+     away from this machine.
+
+   Both apps find the new APK through the dashboard and offer it in the app, so the name
+   must match exactly. A release marked pre-release is never offered.
 
 ## Hotfix
 
