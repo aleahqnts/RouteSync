@@ -1361,6 +1361,13 @@
     padding: 48px 0;
     }
 
+    .rg-empty-route {
+    color: var(--rp-muted);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.85rem;
+    margin: 0 0 14px;
+    }
+
     .rg-total-bar {
     display: flex;
     align-items: center;

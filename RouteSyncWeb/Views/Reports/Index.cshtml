@@ -1526,6 +1526,19 @@
     previewTables.appendChild(table);
     });
 
+    // Routes with no trip in this period, listed so they read as no service.
+    (data.emptyRoutes || []).forEach(name => {
+    const header = document.createElement('div');
+    header.className = 'rg-group-header';
+    header.textContent = name;
+    previewTables.appendChild(header);
+
+    const note = document.createElement('p');
+    note.className = 'rg-empty-route';
+    note.textContent = 'No trips in this period.';
+    previewTables.appendChild(note);
+    });
+
     // Clear grand total at the end
     if (data.totals) {
     const t = data.totals;

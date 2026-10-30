@@ -656,8 +656,30 @@ namespace FleetWise.Controllers
 
             // The heading is written here rather than in the browser, so the preview and the
             // downloaded file name the same days in the same words.
-            return Json(new { groups, totals, period = PeriodLabel(from, to) });
+            return Json(new
+            {
+                groups,
+                emptyRoutes = RoutesWithoutTrips(routesResp.Models, filtered, routeId, driverId, vehicleId),
+                totals,
+                period = PeriodLabel(from, to),
+            });
         }
+
+        // Routes with no trip in an all-routes report, by name.
+        //
+        // Listed as empty sections so a route with no service in the period reads as such,
+        // rather than as a route the report left out. Only when nothing narrows the report:
+        // a driver's or a bus's report would otherwise list every route they never run. A
+        // report with no trips at all says so as a whole instead.
+        private static List<string> RoutesWithoutTrips(
+            IEnumerable<BusRoute> routes, List<Trip> trips,
+            int? routeId, int? driverId, string? vehicleId) =>
+            trips.Count == 0 || routeId.HasValue || driverId.HasValue || !string.IsNullOrEmpty(vehicleId)
+                ? new List<string>()
+                : routes.Where(r => trips.All(t => t.RouteId != r.RouteId))
+                    .OrderBy(r => r.RouteId)
+                    .Select(r => r.RouteName)
+                    .ToList();
 
         // The trips a report covers, filtered and in reading order.
         //
@@ -916,6 +938,9 @@ namespace FleetWise.Controllers
                 })
                 .ToList();
 
+            groups.AddRange(RoutesWithoutTrips(routesResp.Models, filtered, routeId, driverId, vehicleId)
+                .Select(name => new ReportGroup { GroupName = name, Rows = new() }));
+
             // Generate PDF with QuestPDF.
             QuestPDF.Settings.License = LicenseType.Community;
 
@@ -978,6 +1003,13 @@ namespace FleetWise.Controllers
                             col.Item().PaddingBottom(4).Text(group.GroupName)
                                 .Bold().FontSize(9).FontColor("#9AA5B4")
                                 .LetterSpacing(0.06f);
+
+                            if (group.Rows.Count == 0)
+                            {
+                                col.Item().PaddingBottom(14).Text("No trips in this period.")
+                                    .FontSize(8.5f).FontColor("#5F6B7A");
+                                continue;
+                            }
 
                             // Table
                             col.Item().PaddingBottom(14).Table(table =>
