@@ -414,7 +414,8 @@ namespace FleetWise.Controllers
                 ? "This driver is still assigned to a shift during this leave."
                 : $"This driver is still assigned to {count} shifts during this leave.";
 
-        // Why this leave is filed too late to be granted, or null.
+        // Why this leave cannot be granted at all, or null: too late, or over days the
+        // driver drove.
         //
         // How late leave may be filed is decided here as well as in the driver's app. The
         // app inserts its own rows under the driver's own token, so the form it fills in
@@ -425,8 +426,9 @@ namespace FleetWise.Controllers
         // rejected, which is how it leaves the queue.
         private async Task<string?> LateApprovalAsync(LeaveRequest found)
         {
-            var late = LeaveEntitlement.BackdatingProblem(
-                found.LeaveType, found.StartDate, PhClock.OperationalDay);
+            var late = LeaveEntitlement.ApprovalProblem(
+                    found.LeaveType, found.StartDate, PhClock.OperationalDay)
+                ?? LeaveEntitlement.DrivenProblem(found, await TripsInLeaveAsync(found));
 
             if (late is not null)
             {
@@ -768,24 +770,27 @@ namespace FleetWise.Controllers
         // made and leave the request unanswerable in both directions.
         //
         // This is what lets leave be filed for a day already past. The shift on it has
-        // finished, so it asks nothing of the schedule and blocks nothing.
+        // finished, so it asks nothing of the schedule and blocks nothing. A shift the
+        // driver actually drove is refused earlier, by LeaveEntitlement.DrivenProblem.
         private async Task<List<Trip>> BlockingTripRowsAsync(LeaveRequest r)
         {
-            var trips = await _supabase.From<Trip>()
-                .Filter("driver_id", Constants.Operator.Equals, r.UserId.ToString())
-                .Filter("date", Constants.Operator.GreaterThanOrEqual, r.StartDate.ToString("yyyy-MM-dd"))
-                .Filter("date", Constants.Operator.LessThanOrEqual, r.EndDate.ToString("yyyy-MM-dd"))
-                .Get();
-
             var now = PhClock.Now;
 
-            return trips.Models
+            return (await TripsInLeaveAsync(r))
                 .Where(t => !TripStatus.Locked(t, now))
                 // A day already handed back is not leave, so a shift on it blocks nothing.
                 .Where(t => !LeaveEntitlement.IsRevokedOn(r, t.Date))
                 .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
                 .ToList();
         }
+
+        // Every trip booked to the driver inside the leave's dates, whatever its state.
+        private async Task<List<Trip>> TripsInLeaveAsync(LeaveRequest r) =>
+            (await _supabase.From<Trip>()
+                .Filter("driver_id", Constants.Operator.Equals, r.UserId.ToString())
+                .Filter("date", Constants.Operator.GreaterThanOrEqual, r.StartDate.ToString("yyyy-MM-dd"))
+                .Filter("date", Constants.Operator.LessThanOrEqual, r.EndDate.ToString("yyyy-MM-dd"))
+                .Get()).Models;
 
         private static BlockingShift ToBlockingShift(Trip t) => new()
         {

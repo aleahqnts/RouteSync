@@ -195,10 +195,50 @@ public static class LeaveEntitlement
             return $"{type} leave cannot be filed for a day that has passed.";
 
         if (days > BackdatingDays)
-            return $"{type} leave can be filed up to {BackdatingDays} days late, and that is "
-                 + $"{days} days ago.";
+            return $"{type} leave can be filed up to {BackdatingDays} days after its first day.";
 
         return null;
+    }
+
+    // Why this leave can no longer be granted for the days it names, or null when it can.
+    //
+    // The same limit as filing, worded for the person deciding. A request filed on time
+    // and reviewed late is refused by the review date, and the message has to say so
+    // rather than blame the filing.
+    public static string ApprovalProblem(string type, DateTime start, DateTime today)
+    {
+        if (BackdatingProblem(type, start, today) is null) return null;
+
+        return AllowsBackdating(type)
+            ? $"This request is past the {BackdatingDays}-day approval window for "
+              + $"{type.ToLowerInvariant()} leave."
+            : $"{type} leave can no longer be approved because its first day has passed.";
+    }
+
+    // Why leave cannot be granted over days the driver drove, or null when it can.
+    //
+    // A trip that is running or completed under the driver is a day worked. Granting
+    // leave over it records the day as both and spends the allowance on it. A shift that
+    // ended without being driven is an absence, which is what late sick leave is filed
+    // for, so it stays grantable.
+    public static string DrivenProblem(LeaveRequest r, IEnumerable<Trip> trips)
+    {
+        var days = trips
+            .Where(t => t.DriverId == r.UserId
+                && (string.Equals(t.TripStatus, "Active", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                && t.Date.Date >= r.StartDate.Date
+                && t.Date.Date <= r.EndDate.Date
+                && !IsRevokedOn(r, t.Date))
+            .Select(t => t.Date.Date)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+
+        if (days.Count == 0) return null;
+
+        return $"Leave cannot be approved for {string.Join(", ", days.Select(d => d.ToString("MMM d")))} "
+             + $"because the driver completed a trip on {(days.Count == 1 ? "that day" : "those days")}.";
     }
 
     // Whether a request is still waiting on an answer.
