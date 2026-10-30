@@ -3,21 +3,18 @@ using FleetWise.Services;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>
-/// A small fleet built by hand, for asking the scheduling rules questions about.
-/// </summary>
-/// <remarks>
-/// The clock is fixed at 07:00 on Monday 14 September 2026, so the operational day is
-/// the 14th, the week runs from the 14th to the 20th, and anything dated before the 14th
-/// has already closed.
-/// </remarks>
+// A small fleet built by hand, for asking the scheduling rules questions about.
+//
+// The clock is fixed at 07:00 on Monday 14 September 2026, so the operational day is
+// the 14th, the week runs from the 14th to the 20th, and anything dated before the 14th
+// has already closed.
 internal sealed class World
 {
     public static readonly DateTime Now = new(2026, 9, 14, 7, 0, 0);
 
     public static readonly DateTime Today = new(2026, 9, 14);
 
-    /// <summary>A Wednesday two days out, where most questions are asked.</summary>
+    // A Wednesday two days out, where most questions are asked.
     public static readonly DateTime Wednesday = new(2026, 9, 16);
 
     public const int NorthLoop = 1;

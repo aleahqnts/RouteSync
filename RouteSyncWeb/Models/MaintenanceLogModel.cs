@@ -87,12 +87,11 @@ public class MaintenanceIssueDetails
     [JsonIgnore]
     public List<int> CriticalItemIds => IdsFrom(RawCriticalItemIds);
 
-    /// <summary>The ids in a value that may be a JSON array or an array literal.</summary>
-    /// <remarks>
-    /// Both shapes are in the table: the array literal on orders opened by the dashboard
-    /// before this was understood, and a plain array on those the inspection function
-    /// wrote. Reading accepts either, so nothing has to be repaired in the database.
-    /// </remarks>
+    // The ids in a value that may be a JSON array or an array literal.
+    //
+    // Both shapes are in the table: the array literal on orders opened by the dashboard
+    // before this was understood, and a plain array on those the inspection function
+    // wrote. Reading accepts either, so nothing has to be repaired in the database.
     private static List<int> IdsFrom(JToken value)
     {
         var ids = new List<int>();
@@ -110,11 +109,11 @@ public class MaintenanceIssueDetails
         return ids;
     }
 
-    /// <summary>Whether this fault is one that grounds the bus.</summary>
+    // Whether this fault is one that grounds the bus.
     public bool IsCritical =>
         string.Equals(Severity, "Critical", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The critical faults, or all of them when none were singled out.</summary>
+    // The critical faults, or all of them when none were singled out.
     public string CriticalSummary =>
         CriticalIssues is { Count: > 0 } ? string.Join(", ", CriticalIssues) : string.Join(", ", Issues);
 }

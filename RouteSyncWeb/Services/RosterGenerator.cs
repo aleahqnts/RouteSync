@@ -2,36 +2,36 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>Which roster wrote a trip, and whether a person has changed it since.</summary>
+    // Which roster wrote a trip, and whether a person has changed it since.
     public sealed record TripRosterMark(DateTime? RosterMonth, bool HandEdited);
 
-    /// <summary>Everything a publish plan is worked out from.</summary>
+    // Everything a publish plan is worked out from.
     public sealed class RosterWorld
     {
-        /// <summary>The first day of the month being published.</summary>
+        // The first day of the month being published.
         public required DateTime Month { get; init; }
 
-        /// <summary>Today's service day. Nothing on or before it is written or rewritten.</summary>
+        // Today's service day. Nothing on or before it is written or rewritten.
         public required DateTime OperationalDay { get; init; }
 
         public required DateTime Now { get; init; }
 
-        /// <summary>The month's saved roster.</summary>
+        // The month's saved roster.
         public required IReadOnlyList<RosterSeat> Seats { get; init; }
 
-        /// <summary>Trips from a week before the month to a week after it.</summary>
+        // Trips from a week before the month to a week after it.
         public required IReadOnlyList<Trip> Trips { get; init; }
 
-        /// <summary>The roster marks of those trips, by trip id. A trip missing here was made by hand.</summary>
+        // The roster marks of those trips, by trip id. A trip missing here was made by hand.
         public required IReadOnlyDictionary<string, TripRosterMark> Marks { get; init; }
 
         public required IReadOnlyList<UserModel> Drivers { get; init; }
         public required IReadOnlyList<Vehicle> Vehicles { get; init; }
 
-        /// <summary>Approved leave overlapping the month.</summary>
+        // Approved leave overlapping the month.
         public required IReadOnlyList<LeaveRequest> Leave { get; init; }
 
-        /// <summary>Slots that must stay empty, as (date, bus, shift).</summary>
+        // Slots that must stay empty, as (date, bus, shift).
         public required IReadOnlySet<(DateTime Date, string VehicleId, string Shift)> Skips { get; init; }
 
         public required IReadOnlyDictionary<int, string> RouteNames { get; init; }
@@ -45,14 +45,14 @@ namespace FleetWise.Services
 
     public sealed record PlannedGap(DateTime Date, string VehicleId, int RouteId, string Shift, string Reason);
 
-    /// <summary>A roster slot a publish leaves as a person left it.</summary>
-    /// <param name="ByHand">True for a roster trip edited by hand; false for a trip made by hand in a roster slot.</param>
+    // A roster slot a publish leaves as a person left it.
+    // ByHand: True for a roster trip edited by hand; false for a trip made by hand in a roster slot.
     public sealed record KeptTrip(string TripId, DateTime Date, string Shift, string VehicleId, int DriverId, bool ByHand);
 
-    /// <summary>A crew driver with nothing to drive on a shift, because a trip made by hand took their bus.</summary>
+    // A crew driver with nothing to drive on a shift, because a trip made by hand took their bus.
     public sealed record IdleDriver(int DriverId, DateTime Date, string Shift, string VehicleId);
 
-    /// <summary>What a publish would write, and what it would leave and why.</summary>
+    // What a publish would write, and what it would leave and why.
     public sealed class PublishPlan
     {
         public List<PlannedInsert> Inserts { get; } = new();
@@ -62,54 +62,50 @@ namespace FleetWise.Services
         public List<KeptTrip> Kept { get; } = new();
         public List<IdleDriver> Idle { get; } = new();
 
-        /// <summary>Roster trips that already match the plan and need no write.</summary>
+        // Roster trips that already match the plan and need no write.
         public int Unchanged { get; set; }
 
-        /// <summary>Slots left empty because they were skipped.</summary>
+        // Slots left empty because they were skipped.
         public int Skipped { get; set; }
 
-        /// <summary>Rest days and absences filled from the route's floaters.</summary>
+        // Rest days and absences filled from the route's floaters.
         public int CoversFilled => Inserts.Count(i => i.IsCover) + Updates.Count(u => u.IsCover);
 
-        /// <summary>Buses out of service now, and how many of the month's written trips use them.</summary>
+        // Buses out of service now, and how many of the month's written trips use them.
         public Dictionary<string, int> OutOfServiceUse { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>The first day the plan covers.</summary>
+        // The first day the plan covers.
         public DateTime From { get; set; }
 
-        /// <summary>The last day of the month.</summary>
+        // The last day of the month.
         public DateTime To { get; set; }
     }
 
-    /// <summary>
-    /// Expands a month's roster into its trips, and rotates a roster into the next month.
-    /// </summary>
-    /// <remarks>
-    /// <para>Pure. The dashboard gathers a <see cref="RosterWorld"/>, asks for a plan, shows
-    /// it, and hands it to publish_roster_month, which checks every row of it again before
-    /// writing.</para>
-    ///
-    /// <para>For each day after today, in the order Morning, Afternoon, Evening, and for
-    /// each bus and shift the roster runs:</para>
-    /// <list type="number">
-    /// <item>A skipped slot gets nothing.</item>
-    /// <item>A slot holding a trip made or edited by hand, or already started, keeps it.</item>
-    /// <item>A slot on a retired bus becomes a gap.</item>
-    /// <item>The crew driver takes it when free: not resting, not on leave, active, not
-    /// booked on that shift, breaking no rest rule, and not into a seventh day running.</item>
-    /// <item>Otherwise, or when the seat has nobody on it, one of the route's floaters free
-    /// by the same test takes it, the floater whose home shift it is first. None free makes
-    /// it a gap, with why.</item>
-    /// </list>
-    /// <para>A roster trip still untouched is rewritten in place when the plan for its slot
-    /// changed, removed when its slot no longer runs or cannot be filled, and left alone
-    /// when it already matches.</para>
-    /// </remarks>
+    // Expands a month's roster into its trips, and rotates a roster into the next month.
+    //
+    // Pure. The dashboard gathers a RosterWorld, asks for a plan, shows
+    // it, and hands it to publish_roster_month, which checks every row of it again before
+    // writing.
+    //
+    // For each day after today, in the order Morning, Afternoon, Evening, and for
+    // each bus and shift the roster runs:
+    // 1. A skipped slot gets nothing.
+    // 2. A slot holding a trip made or edited by hand, or already started, keeps it.
+    // 3. A slot on a retired bus becomes a gap.
+    // 4. The crew driver takes it when free: not resting, not on leave, active, not
+    //    booked on that shift, breaking no rest rule, and not into a seventh day running.
+    // 5. Otherwise, or when the seat has nobody on it, one of the route's floaters free
+    //    by the same test takes it, the floater whose home shift it is first. None free makes
+    //    it a gap, with why.
+    //
+    // A roster trip still untouched is rewritten in place when the plan for its slot
+    // changed, removed when its slot no longer runs or cannot be filled, and left alone
+    // when it already matches.
     public static class RosterGenerator
     {
         private static readonly StringComparer Ci = StringComparer.OrdinalIgnoreCase;
 
-        /// <summary>Backward: each month's shift is the one before it in the day.</summary>
+        // Backward: each month's shift is the one before it in the day.
         private static readonly string[] Backward = { "Morning", "Evening", "Afternoon" };
 
         private static readonly Dictionary<string, string> NextShift = new(StringComparer.OrdinalIgnoreCase)
@@ -120,19 +116,16 @@ namespace FleetWise.Services
 
         private const int MaxRun = 6;
 
-        /// <summary>
-        /// A month's roster carried into the next: the same buses, routes and rest days, each
-        /// shift moved one step backward within the shifts its bus runs.
-        /// </summary>
-        /// <remarks>
-        /// Backward, Morning to Evening to Afternoon to Morning, because it is the one
-        /// direction that leaves eight hours between the last shift of one month and the first
-        /// of the next. A crew of two on Morning and Afternoon swaps. A floater's home shift
-        /// moves the same way within the shifts its route runs.
-        ///
-        /// What auto-fill said about last month's places is not carried: it explained last
-        /// month's choices, not this one's.
-        /// </remarks>
+        // A month's roster carried into the next: the same buses, routes and rest days, each
+        // shift moved one step backward within the shifts its bus runs.
+        //
+        // Backward, Morning to Evening to Afternoon to Morning, because it is the one
+        // direction that leaves eight hours between the last shift of one month and the first
+        // of the next. A crew of two on Morning and Afternoon swaps. A floater's home shift
+        // moves the same way within the shifts its route runs.
+        //
+        // What auto-fill said about last month's places is not carried: it explained last
+        // month's choices, not this one's.
         public static IReadOnlyList<RosterSeat> Rotate(IReadOnlyList<RosterSeat> seats)
         {
             var busShifts = seats.Where(s => s.Kind == RosterRules.Crew && s.VehicleId != null)
@@ -165,7 +158,7 @@ namespace FleetWise.Services
             return shift;
         }
 
-        /// <summary>The trips a publish of the month would write, rewrite, remove and keep.</summary>
+        // The trips a publish of the month would write, rewrite, remove and keep.
         public static PublishPlan Plan(RosterWorld w)
         {
             var monthEnd = w.Month.AddMonths(1).AddDays(-1);
@@ -333,9 +326,9 @@ namespace FleetWise.Services
 
         private const string NobodyRostered = "nobody rostered";
 
-        /// <summary>Why a slot went unfilled, in a line a dispatcher can act on.</summary>
-        /// <example>Pedro Reyes is on a rest day, and no floater is available: 1 on a rest day, 1 on leave</example>
-        /// <param name="crewName">The crew driver, or null for a seat with nobody on it.</param>
+        // Why a slot went unfilled, in a line a dispatcher can act on.
+        // Pedro Reyes is on a rest day, and no floater is available: 1 on a rest day, 1 on leave
+        // crewName: The crew driver, or null for a seat with nobody on it.
         private static string GapReason(string? crewName, string crewReason, IEnumerable<string?> floaterReasons)
         {
             var counts = floaterReasons
@@ -407,7 +400,7 @@ namespace FleetWise.Services
             return name.Length == 0 ? $"Driver {id}" : name;
         }
 
-        /// <summary>Who is booked on which shift of which day, as the plan builds up.</summary>
+        // Who is booked on which shift of which day, as the plan builds up.
         private sealed class Bookings
         {
             private readonly Dictionary<(int Driver, DateTime Day), List<string>> _shifts = new();
@@ -426,7 +419,7 @@ namespace FleetWise.Services
 
             public bool Has(int driverId, DateTime day, string shift) => ShiftsOn(driverId, day).Contains(shift, Ci);
 
-            /// <summary>The days in a row the driver would work, counting this one.</summary>
+            // The days in a row the driver would work, counting this one.
             public int RunWith(int driverId, DateTime day)
             {
                 var back = 0;
@@ -436,7 +429,7 @@ namespace FleetWise.Services
                 return back + forward + 1;
             }
 
-            /// <summary>Shifts in the Monday to Sunday week around a day.</summary>
+            // Shifts in the Monday to Sunday week around a day.
             public int WeekCount(int driverId, DateTime day)
             {
                 var start = day.AddDays(-((int)day.DayOfWeek + 6) % 7);

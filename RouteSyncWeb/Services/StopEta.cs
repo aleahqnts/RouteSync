@@ -1,24 +1,22 @@
 ﻿namespace FleetWise.Services
 {
-    /// <summary>A stop placed on its route line, in metres from the line's start.</summary>
+    // A stop placed on its route line, in metres from the line's start.
     public readonly record struct StopPlace(string Name, double Along);
 
-    /// <summary>Where a bus is among its route's stops.</summary>
-    /// <param name="Leg">The stops either side of it, or null with no stop ahead.</param>
-    /// <param name="AtStop">Index of the stop it is standing at, or -1.</param>
-    /// <param name="StoodAt">Where along the line the stop it has stood at and not yet left is, if any.</param>
+    // Where a bus is among its route's stops.
+    // Leg: The stops either side of it, or null with no stop ahead.
+    // AtStop: Index of the stop it is standing at, or -1.
+    // StoodAt: Where along the line the stop it has stood at and not yet left is, if any.
     public readonly record struct StopState(StopLeg? Leg, int AtStop, double? StoodAt);
 
-    /// <summary>Where a bus is between two stops.</summary>
-    /// <param name="Previous">Index of the last stop passed, or -1 before the first stop of a line that is not a loop.</param>
-    /// <param name="Next">Index of the next stop.</param>
-    /// <param name="Metres">Metres along the route to the next stop.</param>
+    // Where a bus is between two stops.
+    // Previous: Index of the last stop passed, or -1 before the first stop of a line that is not a loop.
+    // Next: Index of the next stop.
+    // Metres: Metres along the route to the next stop.
     public readonly record struct StopLeg(int Previous, int Next, double Metres);
 
-    /// <summary>
-    /// Median stop-to-stop speeds learned from past trips on one route, in metres per second,
-    /// by the stretch that starts at each stop and the Philippine hour the bus left it.
-    /// </summary>
+    // Median stop-to-stop speeds learned from past trips on one route, in metres per second,
+    // by the stretch that starts at each stop and the Philippine hour the bus left it.
     public sealed class SegmentSpeeds
     {
         public static readonly SegmentSpeeds None = new(new(), new(), 0);
@@ -26,7 +24,7 @@
         private readonly Dictionary<(int Segment, int Hour), double> _byHour;
         private readonly Dictionary<int, double> _bySegment;
 
-        /// <summary>Stop-to-stop runs the medians were taken from.</summary>
+        // Stop-to-stop runs the medians were taken from.
         public int Samples { get; }
 
         public SegmentSpeeds(Dictionary<(int Segment, int Hour), double> byHour, Dictionary<int, double> bySegment, int samples)
@@ -36,42 +34,38 @@
             Samples = samples;
         }
 
-        /// <summary>The usual speed over a stretch at this hour, else at any hour, else null.</summary>
+        // The usual speed over a stretch at this hour, else at any hour, else null.
         public double? For(int segment, int hour) =>
             _byHour.TryGetValue((segment, hour), out var v) ? v
             : _bySegment.TryGetValue(segment, out v) ? v
             : null;
     }
 
-    /// <summary>The next stop of a bus on its route, and roughly how long until it gets there.</summary>
-    /// <remarks>
-    /// The time to the next stop is the distance left divided by a speed, taken from the first
-    /// of: how fast buses usually cover that stretch at this hour, how fast this bus has been
-    /// going, and a city bus's typical <see cref="DefaultSpeed"/>. The usual speed is timed
-    /// from stop to stop, so it already holds the waits at lights and at the stops themselves.
-    /// </remarks>
+    // The next stop of a bus on its route, and roughly how long until it gets there.
+    //
+    // The time to the next stop is the distance left divided by a speed, taken from the first
+    // of: how fast buses usually cover that stretch at this hour, how fast this bus has been
+    // going, and a city bus's typical DefaultSpeed. The usual speed is timed
+    // from stop to stop, so it already holds the waits at lights and at the stops themselves.
     public static class StopEta
     {
-        /// <summary>Metres within which a stop counts as on its route line.</summary>
+        // Metres within which a stop counts as on its route line.
         private const double StopRadius = 80;
 
-        /// <summary>About 20 km/h, a city bus's usual pace once stops and lights are counted.</summary>
+        // About 20 km/h, a city bus's usual pace once stops and lights are counted.
         public const double DefaultSpeed = 20 / 3.6;
 
-        /// <summary>Stop-to-stop speeds outside this range are a bad reading or a parked bus, not a run.</summary>
+        // Stop-to-stop speeds outside this range are a bad reading or a parked bus, not a run.
         private const double SlowestRun = 0.5, FastestRun = 25;
 
-        /// <summary>Readings further apart than this leave a gap a run cannot be timed across.</summary>
+        // Readings further apart than this leave a gap a run cannot be timed across.
         private static readonly TimeSpan LongestGap = TimeSpan.FromMinutes(5);
 
-        /// <summary>
-        /// The route's stops placed on its line, in order along it. A stop further than
-        /// <see cref="StopRadius"/> from the line is left out.
-        /// </summary>
-        /// <remarks>
-        /// A road the route drives twice passes a stop twice. The stop is taken at the first
-        /// pass after the stop before it, since stops are listed in route order.
-        /// </remarks>
+        // The route's stops placed on its line, in order along it. A stop further than
+        // StopRadius from the line is left out.
+        //
+        // A road the route drives twice passes a stop twice. The stop is taken at the first
+        // pass after the stop before it, since stops are listed in route order.
         public static IReadOnlyList<StopPlace> Place(RouteLine line, IReadOnlyList<RouteStops.Stop> stops)
         {
             var places = new List<StopPlace>();
@@ -101,17 +95,15 @@
             return places.OrderBy(p => p.Along).ToList();
         }
 
-        /// <summary>Metres before a stop, along the route, where a bus counts as at it.</summary>
+        // Metres before a stop, along the route, where a bus counts as at it.
         public const double ZoneBefore = 30;
 
-        /// <summary>Metres after a stop, along the route, where a bus still counts as at it.</summary>
+        // Metres after a stop, along the route, where a bus still counts as at it.
         public const double ZoneAfter = 20;
 
-        /// <summary>
-        /// The stop whose zone holds a place on the line, or -1. A stop is a stretch of road
-        /// rather than a point: a bus is twelve metres long, drivers stop a little short or
-        /// long, and GPS wanders by a few metres.
-        /// </summary>
+        // The stop whose zone holds a place on the line, or -1. A stop is a stretch of road
+        // rather than a point: a bus is twelve metres long, drivers stop a little short or
+        // long, and GPS wanders by a few metres.
         public static int ZoneAt(RouteLine line, IReadOnlyList<StopPlace> places, double along)
         {
             var best = -1;
@@ -125,12 +117,10 @@
             return best;
         }
 
-        /// <summary>
-        /// Where a bus is among its stops after a reading. A bus standing in a stop's zone is
-        /// at that stop, and counts as having passed it from then on, until it leaves the zone.
-        /// </summary>
-        /// <param name="standing">The bus is standing still.</param>
-        /// <param name="stoodAt">What the last reading returned as <see cref="StopState.StoodAt"/>.</param>
+        // Where a bus is among its stops after a reading. A bus standing in a stop's zone is
+        // at that stop, and counts as having passed it from then on, until it leaves the zone.
+        // standing: The bus is standing still.
+        // stoodAt: What the last reading returned as StopState.StoodAt.
         public static StopState Follow(RouteLine line, IReadOnlyList<StopPlace> places, double along,
             bool standing, double? stoodAt)
         {
@@ -147,15 +137,12 @@
             return new StopState(Locate(line, places, along, stoodAt), atStop, stoodAt);
         }
 
-        /// <summary>
-        /// The stops either side of a place on the line, or null when there is no stop ahead:
-        /// past the last stop of a line that is not a loop, or a route with no stops on it.
-        /// </summary>
-        /// <remarks>
-        /// A stop counts as passed once the bus leaves its zone, not when it crosses the
-        /// stop's point, or as soon as the bus has stood at it.
-        /// </remarks>
-        /// <param name="stoodAt">Where along the line the stop the bus has stood at is, if any.</param>
+        // The stops either side of a place on the line, or null when there is no stop ahead:
+        // past the last stop of a line that is not a loop, or a route with no stops on it.
+        //
+        // A stop counts as passed once the bus leaves its zone, not when it crosses the
+        // stop's point, or as soon as the bus has stood at it.
+        // stoodAt: Where along the line the stop the bus has stood at is, if any.
         public static StopLeg? Locate(RouteLine line, IReadOnlyList<StopPlace> places, double along, double? stoodAt = null)
         {
             if (places.Count == 0)
@@ -177,11 +164,9 @@
             return new StopLeg(next == 0 ? places.Count - 1 : 0, next, line.Length - along + places[next].Along);
         }
 
-        /// <summary>
-        /// How far the bus has come from the last stop toward the next, from 0 to 1, or null
-        /// before the first stop of a line that is not a loop. Inside the next stop's zone it
-        /// is 1: the bus is at that stop, not short of it.
-        /// </summary>
+        // How far the bus has come from the last stop toward the next, from 0 to 1, or null
+        // before the first stop of a line that is not a loop. Inside the next stop's zone it
+        // is 1: the bus is at that stop, not short of it.
         public static double? Progress(RouteLine line, IReadOnlyList<StopPlace> places, StopLeg leg)
         {
             if (leg.Previous < 0)
@@ -192,7 +177,7 @@
             return Span(line, places, leg) is double span ? Math.Clamp(1 - leg.Metres / span, 0, 1) : null;
         }
 
-        /// <summary>Metres from the last stop to the next, or null before the first stop of a line that is not a loop.</summary>
+        // Metres from the last stop to the next, or null before the first stop of a line that is not a loop.
         public static double? Span(RouteLine line, IReadOnlyList<StopPlace> places, StopLeg leg)
         {
             if (leg.Previous < 0)
@@ -203,14 +188,12 @@
             return span <= 0 ? null : span;
         }
 
-        /// <summary>
-        /// Seconds to cover the distance, at the first speed known. A bus moving at under
-        /// half the usual speed is crawling in traffic, and the usual speed is cut to twice
-        /// its own: the slower it crawls, the longer the estimate, without one slow reading
-        /// at a corner doubling it.
-        /// </summary>
-        /// <param name="usual">The stretch's learned speed at this hour, if any.</param>
-        /// <param name="recent">This bus's own recent speed, used only while it is moving.</param>
+        // Seconds to cover the distance, at the first speed known. A bus moving at under
+        // half the usual speed is crawling in traffic, and the usual speed is cut to twice
+        // its own: the slower it crawls, the longer the estimate, without one slow reading
+        // at a corner doubling it.
+        // usual: The stretch's learned speed at this hour, if any.
+        // recent: This bus's own recent speed, used only while it is moving.
         public static double Seconds(double metres, double? usual, double? recent)
         {
             var moving = recent >= RouteSnapper.MovingSpeed ? recent : null;
@@ -220,17 +203,15 @@
             return metres / (speed ?? DefaultSpeed);
         }
 
-        /// <summary>A normal wait at a stop or a light, already inside the usual speeds.</summary>
+        // A normal wait at a stop or a light, already inside the usual speeds.
         public static readonly TimeSpan UsualWait = TimeSpan.FromSeconds(30);
 
-        /// <summary>The most a long standstill adds to the time to the next stop.</summary>
+        // The most a long standstill adds to the time to the next stop.
         public static readonly TimeSpan LongestDelay = TimeSpan.FromMinutes(10);
 
-        /// <summary>
-        /// Seconds to add for a bus that has stood still longer than a normal wait: as long
-        /// again as it has stood past one, so the estimate grows while the bus is held up
-        /// instead of holding still.
-        /// </summary>
+        // Seconds to add for a bus that has stood still longer than a normal wait: as long
+        // again as it has stood past one, so the estimate grows while the bus is held up
+        // instead of holding still.
         public static double Delay(TimeSpan standing)
         {
             // ponytail: a standstill is assumed to last as long again as it has so far. No
@@ -239,16 +220,14 @@
             return extra <= TimeSpan.Zero ? 0 : Math.Min(extra.TotalSeconds, LongestDelay.TotalSeconds);
         }
 
-        /// <summary>Learns the median speed of each stop-to-stop stretch from past trips.</summary>
-        /// <param name="trips">
-        /// Each trip's places on the line while it was on it, in order, with the Philippine
-        /// clock time of each.
-        /// </param>
-        /// <remarks>
-        /// Each stop is timed by where the bus crossed it, between the two readings either
-        /// side, and each run is the time from one stop to the next. Round a loop, a drop of
-        /// more than half the line is the bus starting another lap.
-        /// </remarks>
+        // Learns the median speed of each stop-to-stop stretch from past trips.
+        // trips:
+        // Each trip's places on the line while it was on it, in order, with the Philippine
+        // clock time of each.
+        //
+        // Each stop is timed by where the bus crossed it, between the two readings either
+        // side, and each run is the time from one stop to the next. Round a loop, a drop of
+        // more than half the line is the bus starting another lap.
         public static SegmentSpeeds Learn(RouteLine line, IReadOnlyList<StopPlace> places,
             IEnumerable<IReadOnlyList<(DateTime At, double Along)>> trips)
         {

@@ -8,10 +8,10 @@ namespace FleetWise.Models
 
         public string RouteName { get; set; } = string.Empty;
 
-        /// <summary>Display label: Ready to Deploy / On Trip / Pending / Flagged.</summary>
+        // Display label: Ready to Deploy / On Trip / Pending / Flagged.
         public string Status { get; set; } = string.Empty;
 
-        /// <summary>Derived badge: No Issues / Needs Attention / Under Repair.</summary>
+        // Derived badge: No Issues / Needs Attention / Under Repair.
         public string Maintenance { get; set; } = string.Empty;
     }
 }

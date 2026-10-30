@@ -3,23 +3,20 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// Replaces the name, email, role and permission claims on the signed-in user with what
-    /// their account and role hold now.
-    /// </summary>
-    /// <remarks>
-    /// Done here rather than at each place that asks, so nothing downstream changes. The
-    /// sidebar still calls User.HasClaim to decide which links to draw, and the permission
-    /// filter still calls it to decide who gets in. Both now read a claim set rebuilt for
-    /// this request instead of one written at sign-in and left to go stale.
-    ///
-    /// Runs between authentication and authorization: after the cookie has been read, and
-    /// before anything decides what it allows.
-    ///
-    /// The name, email and role are refreshed for the same reason. The sidebar and the
-    /// audit trail read the name from here, and the permissions are looked up by role, so
-    /// a stale role would carry stale permissions with it.
-    /// </remarks>
+    // Replaces the name, email, role and permission claims on the signed-in user with what
+    // their account and role hold now.
+    //
+    // Done here rather than at each place that asks, so nothing downstream changes. The
+    // sidebar still calls User.HasClaim to decide which links to draw, and the permission
+    // filter still calls it to decide who gets in. Both now read a claim set rebuilt for
+    // this request instead of one written at sign-in and left to go stale.
+    //
+    // Runs between authentication and authorization: after the cookie has been read, and
+    // before anything decides what it allows.
+    //
+    // The name, email and role are refreshed for the same reason. The sidebar and the
+    // audit trail read the name from here, and the permissions are looked up by role, so
+    // a stale role would carry stale permissions with it.
     public class LivePermissionsMiddleware
     {
         private readonly RequestDelegate _next;

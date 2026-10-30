@@ -1,9 +1,9 @@
-// Phase 8e: remote camera calibration (admin). Same coordinate contract as the
-// driver app's editor (REMOTE-CONTROL-plan.md §2): the snapshot IS the camera's
-// display-space frame, the <img> sizes the stage, so normalizing drag positions
-// against the stage rect gives exactly the 0..1 coords the camera's line-cross
-// counter consumes. Service key never reaches this file: every call goes through
-// the VehiclesController proxy endpoints (camUrls, injected by Index.cshtml).
+// Remote camera calibration for admins. Uses the same coordinate contract as the driver
+// app's editor: the snapshot is the camera's display-space frame and the <img> sizes the
+// stage, so normalizing drag positions against the stage rect gives exactly the 0..1
+// coordinates the camera's line-cross counter consumes. The service key never reaches
+// this file: every call goes through the VehiclesController proxy endpoints (camUrls,
+// injected by Index.cshtml).
 //
 // window.camUrls = { state, wake, snapshot, save } set before this runs.
 (function () {

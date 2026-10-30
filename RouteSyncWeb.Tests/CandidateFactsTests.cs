@@ -5,10 +5,8 @@ using static RouteSyncWeb.Tests.World;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>
-/// What a ranking says about each candidate and about the ones it left out, so every screen
-/// can show the same figures and say why nobody fits.
-/// </summary>
+// What a ranking says about each candidate and about the ones it left out, so every screen
+// can show the same figures and say why nobody fits.
 public class CandidateFactsTests
 {
     [Fact]

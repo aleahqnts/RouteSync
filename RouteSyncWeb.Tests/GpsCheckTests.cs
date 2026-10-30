@@ -15,7 +15,7 @@ public class GpsCheckTests
         return new GeoPoint(Origin.Lat + north / mLat, Origin.Lng + east / mLng);
     }
 
-    /// <summary>A road running 1 km due east from the origin.</summary>
+    // A road running 1 km due east from the origin.
     private static RouteLine EastRoad() =>
         RouteLine.From(Enumerable.Range(0, 11).Select(i => Offset(0, i * 100)).ToList())!;
 

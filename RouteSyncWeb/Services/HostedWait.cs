@@ -1,16 +1,15 @@
 namespace FleetWise.Services
 {
-    /// <summary>Waiting inside a background service, without an exception when the host stops.</summary>
-    /// <remarks>
-    /// A cancellable wait ends by raising <see cref="OperationCanceledException"/>, which is not a
-    /// fault: it is how a service is told the application is closing. A debugger set to break on
-    /// that exception pauses on every shutdown because of it, and while it is paused the whole
-    /// application is stopped, so pages served from the same process hang. These waits finish
-    /// quietly and say whether the time passed instead.
-    /// </remarks>
+    // Waiting inside a background service, without an exception when the host stops.
+    //
+    // A cancellable wait ends by raising OperationCanceledException, which is not a
+    // fault: it is how a service is told the application is closing. A debugger set to break on
+    // that exception pauses on every shutdown because of it, and while it is paused the whole
+    // application is stopped, so pages served from the same process hang. These waits finish
+    // quietly and say whether the time passed instead.
     public static class HostedWait
     {
-        /// <summary>Waits for a span. False when the host stopped before it passed.</summary>
+        // Waits for a span. False when the host stopped before it passed.
         public static async Task<bool> ForAsync(TimeSpan span, CancellationToken stoppingToken)
         {
             if (stoppingToken.IsCancellationRequested) return false;

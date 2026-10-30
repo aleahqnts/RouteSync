@@ -4,11 +4,10 @@ using Postgrest.Models;
 
 namespace FleetWise.Models;
 
-/// <summary>Which roster wrote a trip, and whether it has been changed by hand since.</summary>
-/// <remarks>
-/// Read apart from <see cref="Trip"/>, so the trip model never writes either column: both
-/// belong to publish_roster_month and the trigger that marks hand edits.
-/// </remarks>
+// Which roster wrote a trip, and whether it has been changed by hand since.
+//
+// Read apart from Trip, so the trip model never writes either column: both
+// belong to publish_roster_month and the trigger that marks hand edits.
 [Table("trips")]
 public class TripRosterState : BaseModel
 {
@@ -29,7 +28,7 @@ public class TripRosterState : BaseModel
     public DateTime Date { get => _date; set => _date = UnzonedColumn.Day(value); }
 }
 
-/// <summary>A roster slot that must stay empty: a roster trip somebody deleted, or a bus not running that day.</summary>
+// A roster slot that must stay empty: a roster trip somebody deleted, or a bus not running that day.
 [Table("roster_skips")]
 public class RosterSkip : BaseModel
 {
@@ -48,7 +47,7 @@ public class RosterSkip : BaseModel
     [Column("month")]
     public DateTime Month { get => _month; set => _month = UnzonedColumn.Day(value); }
 
-    /// <summary>Deleted or Not running.</summary>
+    // Deleted or Not running.
     [Column("reason")]
     public string Reason { get; set; }
 
@@ -56,7 +55,7 @@ public class RosterSkip : BaseModel
     public string CreatedBy { get; set; }
 }
 
-/// <summary>A roster slot the last publish could not fill, and why.</summary>
+// A roster slot the last publish could not fill, and why.
 [Table("roster_gaps")]
 public class RosterGap : BaseModel
 {

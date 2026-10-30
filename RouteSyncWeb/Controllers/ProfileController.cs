@@ -9,27 +9,24 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Controllers
 {
-    /// <summary>
-    /// The signed-in person's own page, opened from their name at the foot of the rail.
-    /// </summary>
-    /// <remarks>
-    /// The dashboard's counterpart of the driver app's profile: the account, personal
-    /// details, a password change, and leave, with credits, requests and filing.
-    ///
-    /// Open to every role, since everyone has details to keep and leave to take. Only their
-    /// own row is ever read or written: the account comes from the sign-in, never from the
-    /// request. The email address and role are shown and not changed here. The email is
-    /// what they sign in with and the role is what they may do, and both belong to an
-    /// administrator on the Users page.
-    ///
-    /// Leave filed here joins the driver requests on the Requests page, marked as staff,
-    /// and is decided there by anyone with access to it except the person who filed it.
-    /// The rules for filing are the driver app's, from the same LeaveEntitlement.
-    ///
-    /// The forms post with fetch and are answered per field, so a mistake is marked where
-    /// it was made. A save that succeeds reloads the page with a message, since what it
-    /// changed shows in more than one place.
-    /// </remarks>
+    // The signed-in person's own page, opened from their name at the foot of the rail.
+    //
+    // The dashboard's counterpart of the driver app's profile: the account, personal
+    // details, a password change, and leave, with credits, requests and filing.
+    //
+    // Open to every role, since everyone has details to keep and leave to take. Only their
+    // own row is ever read or written: the account comes from the sign-in, never from the
+    // request. The email address and role are shown and not changed here. The email is
+    // what they sign in with and the role is what they may do, and both belong to an
+    // administrator on the Users page.
+    //
+    // Leave filed here joins the driver requests on the Requests page, marked as staff,
+    // and is decided there by anyone with access to it except the person who filed it.
+    // The rules for filing are the driver app's, from the same LeaveEntitlement.
+    //
+    // The forms post with fetch and are answered per field, so a mistake is marked where
+    // it was made. A save that succeeds reloads the page with a message, since what it
+    // changed shows in more than one place.
     [Authorize]
     public class ProfileController : Controller
     {
@@ -158,7 +155,7 @@ namespace FleetWise.Controllers
             public string? EmergencyContactNumber { get; set; }
         }
 
-        /// <summary>Saves the name and the personal details.</summary>
+        // Saves the name and the personal details.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveDetails([FromForm] DetailsInput req)
@@ -217,9 +214,7 @@ namespace FleetWise.Controllers
 
         private static string Clean(string? s) => (s ?? "").Trim();
 
-        /// <summary>
-        /// A mobile number as the driver app keeps it, 09XX XXX XXXX, or null when blank.
-        /// </summary>
+        // A mobile number as the driver app keeps it, 09XX XXX XXXX, or null when blank.
         private static string? Phone(string? input, out bool valid)
         {
             var digits = new string((input ?? "").Where(char.IsDigit).ToArray());
@@ -237,11 +232,10 @@ namespace FleetWise.Controllers
             public string? ConfirmPassword { get; set; }
         }
 
-        /// <summary>Changes the password, given the current one.</summary>
-        /// <remarks>
-        /// The current password is asked for so that a dashboard left signed in on a shared
-        /// desk does not let whoever sits down next lock its owner out.
-        /// </remarks>
+        // Changes the password, given the current one.
+        //
+        // The current password is asked for so that a dashboard left signed in on a shared
+        // desk does not let whoever sits down next lock its owner out.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword([FromForm] PasswordInput req)
@@ -304,11 +298,10 @@ namespace FleetWise.Controllers
             public string? Reason { get; set; }
         }
 
-        /// <summary>Files a leave request, which waits on someone else's decision.</summary>
-        /// <remarks>
-        /// The driver app's checks, in its order: the dates, the type, how late it may be
-        /// filed, days already asked for, and what is left of the allowance.
-        /// </remarks>
+        // Files a leave request, which waits on someone else's decision.
+        //
+        // The driver app's checks, in its order: the dates, the type, how late it may be
+        // filed, days already asked for, and what is left of the allowance.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> FileLeave([FromForm] LeaveInput req)
@@ -381,11 +374,10 @@ namespace FleetWise.Controllers
             return Json(new { ok = true });
         }
 
-        /// <summary>Withdraws a request of one's own that has not been decided.</summary>
-        /// <remarks>
-        /// Filtered on status as well as id, so a request decided while this page was open
-        /// is not withdrawn out from under the decision.
-        /// </remarks>
+        // Withdraws a request of one's own that has not been decided.
+        //
+        // Filtered on status as well as id, so a request decided while this page was open
+        // is not withdrawn out from under the decision.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelLeave(long requestId)
@@ -410,11 +402,10 @@ namespace FleetWise.Controllers
             return Json(new { ok = true });
         }
 
-        /// <summary>Asks for granted leave to be cancelled.</summary>
-        /// <remarks>
-        /// An ask, not an act, as for a driver: it lands on the Requests page, where someone
-        /// else answers it. Only approved leave not yet begun and not already asked about.
-        /// </remarks>
+        // Asks for granted leave to be cancelled.
+        //
+        // An ask, not an act, as for a driver: it lands on the Requests page, where someone
+        // else answers it. Only approved leave not yet begun and not already asked about.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AskToCancel(long requestId, string? reason)

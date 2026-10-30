@@ -3,25 +3,20 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// What a role may see, read from the database rather than from a sign-in cookie.
-    /// </summary>
-    /// <remarks>
-    /// Permissions used to travel in the cookie, written once at sign-in. Granting a
-    /// permission then did nothing for anyone already signed in until they signed in
-    /// again, and revoking one left them holding it, which is the direction that matters.
-    ///
-    /// Reading them per request would be a round trip to Supabase on every page, in an
-    /// authorization filter, where the wait lands straight on the response. So they are
-    /// cached: permissions belong to a role rather than to a person, and there are three
-    /// roles, so under any real traffic this makes far fewer calls than there are page
-    /// loads. The expiry is only a backstop, because saving a role drops the entry.
-    ///
-    /// What this does not fix: the cookie names the role, so moving someone from one role
-    /// to another still waits for their next sign-in. Editing a role is the thing done
-    /// while people are working; reassigning one is rarer and usually agreed with them
-    /// first.
-    /// </remarks>
+    // What a role may see, read from the database rather than from a sign-in cookie.
+    //
+    // Permissions do not travel in the cookie, which is written once at sign-in: granting one would then do nothing for anyone already signed in until they signed in again, and revoking one would leave them holding it, which is the direction that matters.
+    //
+    // Reading them per request would be a round trip to Supabase on every page, in an
+    // authorization filter, where the wait lands straight on the response. So they are
+    // cached: permissions belong to a role rather than to a person, and there are three
+    // roles, so under any real traffic this makes far fewer calls than there are page
+    // loads. The expiry is only a backstop, because saving a role drops the entry.
+    //
+    // What this does not fix: the cookie names the role, so moving someone from one role
+    // to another still waits for their next sign-in. Editing a role is the thing done
+    // while people are working; reassigning one is rarer and usually agreed with them
+    // first.
     public class RolePermissions
     {
         private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(60);
@@ -40,10 +35,10 @@ namespace FleetWise.Services
             _cache = cache;
         }
 
-        /// <summary>Forgets every cached role, so the next read is fresh.</summary>
+        // Forgets every cached role, so the next read is fresh.
         public static void Invalidate() => Interlocked.Increment(ref _generation);
 
-        /// <summary>The permission keys a role currently holds.</summary>
+        // The permission keys a role currently holds.
         public async Task<IReadOnlyList<string>> ForRoleAsync(string? roleName)
         {
             if (string.IsNullOrWhiteSpace(roleName)) return Array.Empty<string>();

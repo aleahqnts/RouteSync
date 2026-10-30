@@ -2,11 +2,9 @@
 
 namespace FleetWise.Models
 {
-    /// <summary>
-    /// The add-vehicle form. The identifier is not on it: bus numbers run in one
-    /// sequence, so the registry assigns the next one rather than asking an
-    /// administrator to remember which are taken.
-    /// </summary>
+    // The add-vehicle form. The identifier is not on it: bus numbers run in one
+    // sequence, so the registry assigns the next one rather than asking an
+    // administrator to remember which are taken.
     public class AddVehicleViewModel
     {
         [Required, StringLength(20)]

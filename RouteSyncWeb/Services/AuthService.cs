@@ -13,21 +13,18 @@ namespace FleetWise.Services
 
         public AuthService(Supabase.Client supabase) => _supabase = supabase;
 
-        /// <summary>
-        /// Checks a dashboard sign-in, and says which account it was for and why it was
-        /// refused.
-        /// </summary>
-        /// <remarks>
-        /// None of this reaches the browser, which is told the same thing whatever the
-        /// reason. It goes to the audit trail, where an attempt on a real account has to be
-        /// told apart from one on an address that belongs to nobody: only the first can be
-        /// broken into, and only the first can be grouped by the account it was aimed at.
-        ///
-        /// The password is checked before the driver role is. A driver typing their own
-        /// correct password here is somebody in the wrong app. A driver's account with the
-        /// wrong password is somebody guessing, and checking the role first would record
-        /// the two identically.
-        /// </remarks>
+        // Checks a dashboard sign-in, and says which account it was for and why it was
+        // refused.
+        //
+        // None of this reaches the browser, which is told the same thing whatever the
+        // reason. It goes to the audit trail, where an attempt on a real account has to be
+        // told apart from one on an address that belongs to nobody: only the first can be
+        // broken into, and only the first can be grouped by the account it was aimed at.
+        //
+        // The password is checked before the driver role is. A driver typing their own
+        // correct password here is somebody in the wrong app. A driver's account with the
+        // wrong password is somebody guessing, and checking the role first would record
+        // the two identically.
         public async Task<SignInCheck> CheckSignInAsync(string email, string password)
         {
             // Addresses are stored in lower case, so the one typed matches whatever its case.
@@ -76,13 +73,12 @@ namespace FleetWise.Services
                 permissions), user.UserId, null);
         }
 
-        /// <summary>Records a dashboard sign-in as the account's last sign-in.</summary>
-        /// <remarks>
-        /// Written in Philippine clock time, as the driver app writes it. Only the one
-        /// column is sent, which the users audit trigger ignores, so a sign-in adds no
-        /// account-change row beside its own login entry. Best effort: a sign-in never
-        /// fails because the stamp could not be written.
-        /// </remarks>
+        // Records a dashboard sign-in as the account's last sign-in.
+        //
+        // Written in Philippine clock time, as the driver app writes it. Only the one
+        // column is sent, which the users audit trigger ignores, so a sign-in adds no
+        // account-change row beside its own login entry. Best effort: a sign-in never
+        // fails because the stamp could not be written.
         public async Task StampSignInAsync(int userId)
         {
             try
@@ -97,8 +93,8 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>Hashes and stores a new password, used by the forced first-sign-in
-        /// change.</summary>
+        // Hashes and stores a new password, used by the forced first-sign-in
+        // change.
         public async Task UpdatePasswordAsync(int userId, string newPassword)
         {
             var resp = await _supabase
@@ -115,7 +111,7 @@ namespace FleetWise.Services
             await _supabase.From<UserModel>().Update(user);
         }
 
-        /// <summary>How a signed-in person is named on the dashboard and in the audit trail.</summary>
+        // How a signed-in person is named on the dashboard and in the audit trail.
         public static string DisplayName(string? firstName, string? middleName, string? lastName)
         {
             var middleInitial = string.IsNullOrWhiteSpace(middleName) ? "" : $" {middleName.Trim()[0]}.";
@@ -125,7 +121,7 @@ namespace FleetWise.Services
 
     public record AuthenticatedUser(int UserId, string FullName, string Email, string RoleName, List<string> Permissions);
 
-    /// <summary>Why a dashboard sign-in was refused.</summary>
+    // Why a dashboard sign-in was refused.
     public enum SignInRefusal
     {
         NoSuchAccount,
@@ -133,25 +129,22 @@ namespace FleetWise.Services
         Inactive,
         WrongPassword,
 
-        /// <summary>
-        /// A driver, with their correct password. Somebody in the wrong app rather than an
-        /// attempt on an account, and kept out of every security rule.
-        /// </summary>
+        // A driver, with their correct password. Somebody in the wrong app rather than an
+        // attempt on an account, and kept out of every security rule.
         WrongApp,
     }
 
-    /// <summary>The outcome of a dashboard sign-in check.</summary>
-    /// <param name="User">Set only when the sign-in succeeded.</param>
-    /// <param name="AccountId">
-    /// The account the email belongs to, whether or not the sign-in succeeded. Null only
-    /// when no account has that email. Recorded against a failure so repeated attempts on
-    /// one account can be recognised as such.
-    /// </param>
+    // The outcome of a dashboard sign-in check.
+    // User: Set only when the sign-in succeeded.
+    // AccountId:
+    // The account the email belongs to, whether or not the sign-in succeeded. Null only
+    // when no account has that email. Recorded against a failure so repeated attempts on
+    // one account can be recognised as such.
     public record SignInCheck(AuthenticatedUser? User, int? AccountId, SignInRefusal? Refusal)
     {
         public static SignInCheck Refused(int? accountId, SignInRefusal why) => new(null, accountId, why);
 
-        /// <summary>The reason as the audit trail words it, matching the driver app's sign-in.</summary>
+        // The reason as the audit trail words it, matching the driver app's sign-in.
         public string? Reason => Refusal switch
         {
             SignInRefusal.NoSuchAccount => "no such account",

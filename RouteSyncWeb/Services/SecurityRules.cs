@@ -1,10 +1,10 @@
 namespace FleetWise.Services;
 
-/// <summary>One audit entry, reduced to what the rules read.</summary>
+// One audit entry, reduced to what the rules read.
 public sealed record SecurityEvent(
     long Id, DateTimeOffset At, string Action, string? Ip, string? TargetId, string? ActorId)
 {
-    /// <summary>The value this entry has in the column a rule groups by.</summary>
+    // The value this entry has in the column a rule groups by.
     public string? KeyFor(string column) => column switch
     {
         "ip" => Ip,
@@ -14,23 +14,20 @@ public sealed record SecurityEvent(
     };
 }
 
-/// <summary>So many entries within so long.</summary>
+// So many entries within so long.
 public sealed record Threshold(int Count, TimeSpan Window);
 
-/// <summary>A burst of activity found by a rule, from its first counted entry to its last.</summary>
+// A burst of activity found by a rule, from its first counted entry to its last.
 public readonly record struct Episode(DateTimeOffset Start, DateTimeOffset End);
 
-/// <summary>
-/// One kind of unusual activity, and how much of it makes an incident.
-/// </summary>
-/// <param name="Code">Stored on every incident the rule raises. Never renamed.</param>
-/// <param name="Actions">What an incident from this rule gathers when opened.</param>
-/// <param name="Counted">What counts toward a threshold.</param>
-/// <param name="Thresholds">Crossing any one of them raises an incident.</param>
-/// <param name="Success">
-/// When set, a threshold is only crossed by an entry of this action, counting the entries
-/// before it. The rule is about something that succeeded after failing.
-/// </param>
+// One kind of unusual activity, and how much of it makes an incident.
+// Code: Stored on every incident the rule raises. Never renamed.
+// Actions: What an incident from this rule gathers when opened.
+// Counted: What counts toward a threshold.
+// Thresholds: Crossing any one of them raises an incident.
+// Success:
+// When set, a threshold is only crossed by an entry of this action, counting the entries
+// before it. The rule is about something that succeeded after failing.
 public sealed record SecurityRule(
     string Code,
     string Title,
@@ -41,15 +38,12 @@ public sealed record SecurityRule(
     IReadOnlyList<Threshold> Thresholds,
     string? Success = null)
 {
-    /// <summary>
-    /// How long activity must stop before an incident is over.
-    /// </summary>
-    /// <remarks>
-    /// Never shorter than the rule's own longest window. A slower rule, such as twenty
-    /// failures across a day, is crossed by activity spaced hours apart. With a shorter
-    /// quiet period each of those entries would close the incident and the next would
-    /// cross the threshold again, raising one incident per entry for a single attack.
-    /// </remarks>
+    // How long activity must stop before an incident is over.
+    //
+    // Never shorter than the rule's own longest window. A slower rule, such as twenty
+    // failures across a day, is crossed by activity spaced hours apart. With a shorter
+    // quiet period each of those entries would close the incident and the next would
+    // cross the threshold again, raising one incident per entry for a single attack.
     public TimeSpan Idle
     {
         get
@@ -60,22 +54,19 @@ public sealed record SecurityRule(
     }
 }
 
-/// <summary>
-/// What the incident detector looks for.
-/// </summary>
-/// <remarks>
-/// Both sign-in paths allow five failures per account in fifteen minutes, counted from the
-/// first failure and checked before the password. The thresholds here are set by that,
-/// rather than chosen freely, in two ways.
-///
-/// A success can follow at most four failures inside one window, because the sixth attempt
-/// is refused even with the right password. A rule asking for five failures before a
-/// success would never fire.
-///
-/// Someone who tries four times every fifteen minutes never trips the throttle at all, and
-/// leaves no sign of having been slowed down. The longer windows here exist to see exactly
-/// that.
-/// </remarks>
+// What the incident detector looks for.
+//
+// Both sign-in paths allow five failures per account in fifteen minutes, counted from the
+// first failure and checked before the password. The thresholds here are set by that,
+// rather than chosen freely, in two ways.
+//
+// A success can follow at most four failures inside one window, because the sixth attempt
+// is refused even with the right password. A rule asking for five failures before a
+// success would never fire.
+//
+// Someone who tries four times every fifteen minutes never trips the throttle at all, and
+// leaves no sign of having been slowed down. The longer windows here exist to see exactly
+// that.
 public static class SecurityRules
 {
     public static readonly TimeSpan MinimumIdle = TimeSpan.FromMinutes(30);
@@ -149,34 +140,28 @@ public static class SecurityRules
     public static SecurityRule? ByCode(string code) =>
         ByCodeMap.TryGetValue(code, out var rule) ? rule : null;
 
-    /// <summary>Every action any rule reads, so the detector can fetch them in one pass.</summary>
+    // Every action any rule reads, so the detector can fetch them in one pass.
     public static readonly IReadOnlyList<string> AllActions =
         All.SelectMany(r => r.Actions).Distinct().ToList();
 
-    /// <summary>
-    /// How far back a scan must look for a threshold that ends now to be seen whole.
-    /// </summary>
+    // How far back a scan must look for a threshold that ends now to be seen whole.
     public static readonly TimeSpan LongestWindow =
         All.SelectMany(r => r.Thresholds).Max(t => t.Window);
 
-    /// <summary>
-    /// The bursts in one key's activity that cross a rule's threshold.
-    /// </summary>
-    /// <param name="events">
-    /// One key's entries for this rule, oldest first, none of them already inside an
-    /// incident.
-    /// </param>
-    /// <remarks>
-    /// A burst starts at the first entry that counted toward crossing, not at the entry
-    /// that crossed. Opening one should show every failure that caused it, not the last.
-    ///
-    /// Once crossed, a burst gathers everything after it until the rule's quiet period
-    /// passes with nothing new. Activity after that is examined afresh and must cross the
-    /// threshold again on its own.
-    ///
-    /// Deterministic for the same entries, which is what lets a scan run twice over the
-    /// same span without raising anything twice.
-    /// </remarks>
+    // The bursts in one key's activity that cross a rule's threshold.
+    // events:
+    // One key's entries for this rule, oldest first, none of them already inside an
+    // incident.
+    //
+    // A burst starts at the first entry that counted toward crossing, not at the entry
+    // that crossed. Opening one should show every failure that caused it, not the last.
+    //
+    // Once crossed, a burst gathers everything after it until the rule's quiet period
+    // passes with nothing new. Activity after that is examined afresh and must cross the
+    // threshold again on its own.
+    //
+    // Deterministic for the same entries, which is what lets a scan run twice over the
+    // same span without raising anything twice.
     public static List<Episode> Episodes(SecurityRule rule, IReadOnlyList<SecurityEvent> events)
     {
         var found = new List<Episode>();
@@ -204,10 +189,8 @@ public static class SecurityRules
         return found;
     }
 
-    /// <summary>
-    /// The first entry at or after <paramref name="from"/> that crosses a threshold, and
-    /// where the window it crossed began.
-    /// </summary>
+    // The first entry at or after from that crosses a threshold, and
+    // where the window it crossed began.
     private static (int At, DateTimeOffset Start)? FindCrossing(
         SecurityRule rule, IReadOnlyList<SecurityEvent> events, HashSet<string> counted, int from)
     {

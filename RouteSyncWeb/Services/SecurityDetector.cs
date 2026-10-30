@@ -1,47 +1,40 @@
 namespace FleetWise.Services;
 
-/// <summary>
-/// Reads the audit trail and raises or extends security incidents.
-/// </summary>
-/// <remarks>
-/// Runs on a timer and on request from the incidents page, and the two share one scan at
-/// a time. Two scans racing over the same span could each decide a burst was new; the
-/// table's uniqueness would stop the second copy, but only after both had done the work.
-///
-/// Reads from where the last scan reached, less the longest window any rule uses, so a
-/// threshold ending now is always seen whole. Where the last scan reached is held in
-/// memory. After a restart, which drops it, the first scan reads the last two days, so
-/// a deploy or a recycle of the host delays an incident rather than losing it, while
-/// drivers' sign-ins go on being recorded by the edge functions.
-///
-/// Every step is safe to repeat. A burst already on record is recognised and extended
-/// rather than raised again, and a count is worked out from the entries rather than added
-/// to, so a scan that re-reads a span it has seen, or stops part way and is run again,
-/// changes nothing it should not.
-/// </remarks>
+// Reads the audit trail and raises or extends security incidents.
+//
+// Runs on a timer and on request from the incidents page, and the two share one scan at
+// a time. Two scans racing over the same span could each decide a burst was new; the
+// table's uniqueness would stop the second copy, but only after both had done the work.
+//
+// Reads from where the last scan reached, less the longest window any rule uses, so a
+// threshold ending now is always seen whole. Where the last scan reached is held in
+// memory. After a restart, which drops it, the first scan reads the last two days, so
+// a deploy or a recycle of the host delays an incident rather than losing it, while
+// drivers' sign-ins go on being recorded by the edge functions.
+//
+// Every step is safe to repeat. A burst already on record is recognised and extended
+// rather than raised again, and a count is worked out from the entries rather than added
+// to, so a scan that re-reads a span it has seen, or stops part way and is run again,
+// changes nothing it should not.
 public sealed class SecurityDetector
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
 
-    /// <summary>
-    /// Read again before the previous scan's end. Identifiers are handed out when a row
-    /// is written but can become visible out of order, so a scan that stopped at one entry
-    /// can have passed a neighbour that committed a moment later.
-    /// </summary>
+    // Read again before the previous scan's end. Identifiers are handed out when a row
+    // is written but can become visible out of order, so a scan that stopped at one entry
+    // can have passed a neighbour that committed a moment later.
     private static readonly TimeSpan Overlap = TimeSpan.FromMinutes(5);
 
-    /// <summary>
-    /// The furthest back a scan will read after a long gap, so waking after months does
-    /// not ask for the whole trail in one go.
-    /// </summary>
+    // The furthest back a scan will read after a long gap, so waking after months does
+    // not ask for the whole trail in one go.
     private static readonly TimeSpan MaxCatchUp = TimeSpan.FromDays(30);
 
-    /// <summary>How far back the first scan after a restart reads.</summary>
+    // How far back the first scan after a restart reads.
     private static readonly TimeSpan AfterRestart = TimeSpan.FromDays(2);
 
     private static DateTimeOffset? _scannedThrough;
 
-    /// <summary>When the last complete scan started, or null before the first one.</summary>
+    // When the last complete scan started, or null before the first one.
     public static DateTimeOffset? ScannedThrough => _scannedThrough;
 
     private const int PageSize = 1000;
@@ -55,7 +48,7 @@ public sealed class SecurityDetector
         _incidents = incidents;
     }
 
-    /// <param name="Ran">False when a scan could not read what it needed and changed nothing.</param>
+    // Ran: False when a scan could not read what it needed and changed nothing.
     public sealed record ScanResult(bool Ran, int Raised, int Extended);
 
     public async Task<ScanResult> ScanAsync(CancellationToken cancellationToken = default)
@@ -151,15 +144,12 @@ public sealed class SecurityDetector
         return new(true, raised, extended);
     }
 
-    /// <summary>
-    /// The number of entries an incident holds through <paramref name="end"/>.
-    /// </summary>
-    /// <remarks>
-    /// Worked out from the entries rather than added to, so an entry seen twice is counted
-    /// once. Counted from what this scan already read when the incident falls inside it,
-    /// and asked of the trail when it began earlier. An older incident that has not grown
-    /// is left as it stands.
-    /// </remarks>
+    // The number of entries an incident holds through end.
+    //
+    // Worked out from the entries rather than added to, so an entry seen twice is counted
+    // once. Counted from what this scan already read when the incident falls inside it,
+    // and asked of the trail when it began earlier. An older incident that has not grown
+    // is left as it stands.
     private async Task<int?> CountAsync(
         SecurityIncident incident, DateTimeOffset end, List<SecurityEvent> keyEvents, DateTimeOffset readFrom)
     {
@@ -181,8 +171,8 @@ public sealed class SecurityDetector
         return rows is null ? null : total;
     }
 
-    /// <summary>Every entry any rule reads, from a point onward, oldest first.</summary>
-    /// <returns>Null when the trail could not be read in full.</returns>
+    // Every entry any rule reads, from a point onward, oldest first.
+    // Returns Null when the trail could not be read in full.
     private async Task<List<SecurityEvent>?> ReadEventsAsync(DateTimeOffset from)
     {
         var actions = string.Join(",", SecurityRules.AllActions);

@@ -69,15 +69,12 @@ namespace FleetWise.Controllers
             return PartialView("_VehicleRows", items);
         }
 
-        /// <summary>
-        /// Sends a browser that arrived here by any means other than the form back to
-        /// the registry.
-        /// </summary>
-        /// <remarks>
-        /// A rejected submission renders the page at this address, so stepping back to
-        /// it later is a plain GET. Without this the visitor meets an error page rather
-        /// than the list they were looking at.
-        /// </remarks>
+        // Sends a browser that arrived here by any means other than the form back to
+        // the registry.
+        //
+        // A rejected submission renders the page at this address, so stepping back to
+        // it later is a plain GET. Without this the visitor meets an error page rather
+        // than the list they were looking at.
         [HttpGet]
         public IActionResult Create() => RedirectToAction(nameof(Index));
 
@@ -116,7 +113,7 @@ namespace FleetWise.Controllers
 
 
 
-        /// <summary>One item of a maintenance order, as posted by the update dialog.</summary>
+        // One item of a maintenance order, as posted by the update dialog.
         public sealed class MaintenanceItemUpdate
         {
             public long ItemId { get; set; }
@@ -124,18 +121,15 @@ namespace FleetWise.Controllers
             public string? Note { get; set; }
         }
 
-        /// <summary>
-        /// Records progress on a maintenance order, and closes it when nothing is left.
-        /// </summary>
-        /// <remarks>
-        /// Closing un-grounds the bus, which is why it happens on an administrator saving
-        /// this dialog rather than on a checkbox: putting a bus back on the road is a
-        /// decision someone makes, not a consequence of a tick count.
-        ///
-        /// A critical fault can only be closed by fixing it. Dismissing one would return a
-        /// bus to service on an opinion that the fault was never real, so the database
-        /// refuses it as well.
-        /// </remarks>
+        // Records progress on a maintenance order, and closes it when nothing is left.
+        //
+        // Closing un-grounds the bus, which is why it happens on an administrator saving
+        // this dialog rather than on a checkbox: putting a bus back on the road is a
+        // decision someone makes, not a consequence of a tick count.
+        //
+        // A critical fault can only be closed by fixing it. Dismissing one would return a
+        // bus to service on an opinion that the fault was never real, so the database
+        // refuses it as well.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateMaintenanceItems(int logId, string updates, string? note)
@@ -279,11 +273,10 @@ namespace FleetWise.Controllers
 
 
 
-        /// <summary>The bus's open faults that ground it, empty when nothing does.</summary>
-        /// <remarks>
-        /// Read across every open order rather than one, so no route back to service can
-        /// miss a fault sitting on another.
-        /// </remarks>
+        // The bus's open faults that ground it, empty when nothing does.
+        //
+        // Read across every open order rather than one, so no route back to service can
+        // miss a fault sitting on another.
         private async Task<List<string>> OpenCriticalFaultsAsync(string vehicleId)
         {
             var openOrders = (await _supabase.From<MaintenanceLog>()
@@ -305,11 +298,10 @@ namespace FleetWise.Controllers
             return faults;
         }
 
-        /// <summary>The bus's open order, or nothing when it has none.</summary>
-        /// <remarks>
-        /// Separate from the version that opens one, because a caller that may still turn
-        /// the request away has to be able to look without writing.
-        /// </remarks>
+        // The bus's open order, or nothing when it has none.
+        //
+        // Separate from the version that opens one, because a caller that may still turn
+        // the request away has to be able to look without writing.
         private async Task<MaintenanceLog?> OpenOrderAsync(string vehicleId) =>
             (await _supabase.From<MaintenanceLog>()
                     .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
@@ -318,12 +310,11 @@ namespace FleetWise.Controllers
                 .OrderBy(l => l.CreatedAt)
                 .FirstOrDefault();
 
-        /// <summary>The bus's open order, opening one when it has none.</summary>
-        /// <remarks>
-        /// A bus has at most one open order. Work raised while it already has one joins
-        /// that order rather than starting a second, which is what kept several open at
-        /// once and hid all but the first.
-        /// </remarks>
+        // The bus's open order, opening one when it has none.
+        //
+        // A bus has at most one open order. Work raised while it already has one joins
+        // that order rather than starting a second, which is what kept several open at
+        // once and hid all but the first.
         private async Task<MaintenanceLog?> OpenOrderForAsync(string vehicleId, string workshopStatus)
         {
             var existing = await OpenOrderAsync(vehicleId);
@@ -350,11 +341,10 @@ namespace FleetWise.Controllers
             return created.Models.FirstOrDefault();
         }
 
-        /// <summary>Puts faults on an order, one line each however often they are raised.</summary>
-        /// <remarks>
-        /// A label matching a configured inspection item carries that item's criticality.
-        /// Anything typed by hand does not, so it never grounds a bus by itself.
-        /// </remarks>
+        // Puts faults on an order, one line each however often they are raised.
+        //
+        // A label matching a configured inspection item carries that item's criticality.
+        // Anything typed by hand does not, so it never grounds a bus by itself.
         private async Task AddOrderItemsAsync(int logId, IEnumerable<string> labels)
         {
             var wanted = labels
@@ -419,22 +409,20 @@ namespace FleetWise.Controllers
             }
         }
 
-        /// <summary>The faults on one order, still open ones first.</summary>
-        /// <remarks>
-        /// Open items lead because they are the work left to do. Within each group the
-        /// order is by criticality then by name, so what grounds the bus reads first.
-        /// </remarks>
+        // The faults on one order, still open ones first.
+        //
+        // Open items lead because they are the work left to do. Within each group the
+        // order is by criticality then by name, so what grounds the bus reads first.
         private async Task<List<MaintenanceItemLineViewModel>> LoadOrderItemsAsync(int logId)
         {
             var byOrder = await LoadOrderItemsAsync(new[] { logId });
             return byOrder.TryGetValue(logId, out var items) ? items : new();
         }
 
-        /// <summary>The faults on several orders, keyed by order.</summary>
-        /// <remarks>
-        /// Read in one request rather than one per order, so a bus with a long service
-        /// record does not cost a round trip for each order it has been through.
-        /// </remarks>
+        // The faults on several orders, keyed by order.
+        //
+        // Read in one request rather than one per order, so a bus with a long service
+        // record does not cost a round trip for each order it has been through.
         private async Task<Dictionary<int, List<MaintenanceItemLineViewModel>>> LoadOrderItemsAsync(
             IEnumerable<int> logIds)
         {
@@ -481,7 +469,7 @@ namespace FleetWise.Controllers
                     .ToList());
         }
 
-        /// <summary>The photographs behind one fault, newest first.</summary>
+        // The photographs behind one fault, newest first.
         private static IReadOnlyList<InspectionPhotoLineViewModel>? PhotosFor(
             Dictionary<(int, long), IReadOnlyList<InspectionPhotoLineViewModel>> photos,
             MaintenanceItem item) =>
@@ -490,7 +478,7 @@ namespace FleetWise.Controllers
                 ? found
                 : null;
 
-        /// <summary>One fault as it reads in the panel, with its outcome in words.</summary>
+        // One fault as it reads in the panel, with its outcome in words.
         private static MaintenanceItemLineViewModel FormatOrderItem(
             MaintenanceItem item, IReadOnlyList<InspectionPhotoLineViewModel>? photos)
         {
@@ -506,15 +494,14 @@ namespace FleetWise.Controllers
                 photos);
         }
 
-        /// <summary>Everything recorded against one bus, newest first.</summary>
-        /// <remarks>
-        /// The audit trail already holds every action taken on a vehicle and who took it,
-        /// including the ones that happen without an incident to hang a note on, so it is
-        /// read directly rather than assembled from maintenance notes.
-        ///
-        /// Only the columns the panel shows are asked for. The row diff a trail entry can
-        /// carry is the largest thing in it and is read on the audit page, not here.
-        /// </remarks>
+        // Everything recorded against one bus, newest first.
+        //
+        // The audit trail already holds every action taken on a vehicle and who took it,
+        // including the ones that happen without an incident to hang a note on, so it is
+        // read directly rather than assembled from maintenance notes.
+        //
+        // Only the columns the panel shows are asked for. The row diff a trail entry can
+        // carry is the largest thing in it and is read on the audit page, not here.
         private async Task<List<VehicleHistoryEntryViewModel>> BuildHistoryAsync(string vehicleId)
         {
             var (rows, _) = await _audit.QueryAsync(
@@ -533,7 +520,7 @@ namespace FleetWise.Controllers
                 .ToList();
         }
 
-        /// <summary>The inspection sections, in the order a bus is walked around.</summary>
+        // The inspection sections, in the order a bus is walked around.
         private static readonly string[] SectionKeys =
         {
             "exterior_inspection", "engine_compartment", "interior_inspection",
@@ -546,7 +533,7 @@ namespace FleetWise.Controllers
             "Brake & Safety Systems", "Passenger & Fare Systems",
         };
 
-        /// <summary>Where a section sits in that order, with anything unknown last.</summary>
+        // Where a section sits in that order, with anything unknown last.
         private static int SectionOrder(string? key)
         {
             var at = Array.IndexOf(SectionKeys, key ?? "");
@@ -559,19 +546,18 @@ namespace FleetWise.Controllers
             return at < 0 ? "Other Checks" : SectionNames[at];
         }
 
-        /// <summary>The next free bus number, as V001, V002 and so on.</summary>
-        /// <remarks>
-        /// Counts from the highest number already issued rather than from how many
-        /// buses exist, so retiring one never hands its number to a new arrival and
-        /// leaves two rows in the trail sharing an identifier.
-        /// </remarks>
+        // The next free bus number, as V001, V002 and so on.
+        //
+        // Counts from the highest number already issued rather than from how many
+        // buses exist, so retiring one never hands its number to a new arrival and
+        // leaves two rows in the trail sharing an identifier.
         private async Task<string> NextVehicleIdAsync()
         {
             var all = await _supabase.From<Vehicle>().Get();
             return NextVehicleId(all.Models);
         }
 
-        /// <summary>The next free bus number for a known set of vehicles.</summary>
+        // The next free bus number for a known set of vehicles.
         private static string NextVehicleId(IEnumerable<Vehicle> vehicles)
         {
             var highest = vehicles
@@ -586,12 +572,11 @@ namespace FleetWise.Controllers
             return $"V{highest + 1:D3}";
         }
 
-        /// <summary>
-        /// Renders the vehicle details modal: the profile, the most recent driver
-        /// inspection, and the maintenance history.
-        /// </summary>
-        /// <remarks>Fetched per vehicle rather than sent with the registry page, which
-        /// would carry this for every row.</remarks>
+        // Renders the vehicle details modal: the profile, the most recent driver
+        // inspection, and the maintenance history.
+        //
+        // Fetched per vehicle rather than sent with the registry page, which
+        // would carry this for every row.
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
@@ -785,8 +770,8 @@ namespace FleetWise.Controllers
             return PartialView("_VehicleDetails", vm);
         }
 
-        /// <summary>Renders the edit vehicle modal: the editable profile and the most
-        /// recent maintenance log, fetched per vehicle.</summary>
+        // Renders the edit vehicle modal: the editable profile and the most
+        // recent maintenance log, fetched per vehicle.
         [HttpGet]
         public async Task<IActionResult> EditForm(string id)
         {
@@ -801,18 +786,15 @@ namespace FleetWise.Controllers
         }
 
 
-        /// <summary>
-        /// Takes a bus out of the fleet, or brings it back.
-        /// </summary>
-        /// <remarks>
-        /// The row survives, because trips, inspections, maintenance logs and the audit
-        /// trail all key on the identifier and would otherwise point at nothing. A
-        /// retired bus is absent from the registry, the counts and every assignment
-        /// list, so it cannot be scheduled by accident.
-        ///
-        /// Retiring also grounds the bus, since the two answers to "can this run today"
-        /// must not disagree.
-        /// </remarks>
+        // Takes a bus out of the fleet, or brings it back.
+        //
+        // The row survives, because trips, inspections, maintenance logs and the audit
+        // trail all key on the identifier and would otherwise point at nothing. A
+        // retired bus is absent from the registry, the counts and every assignment
+        // list, so it cannot be scheduled by accident.
+        //
+        // Retiring also grounds the bus, since the two answers to "can this run today"
+        // must not disagree.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SetRetired(string vehicleId, bool retired, string? reason)
@@ -866,7 +848,7 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <inheritdoc cref="Create()"/>
+        // Same as Create().
         [HttpGet]
         public IActionResult Edit() => RedirectToAction(nameof(Index));
 
@@ -911,14 +893,13 @@ namespace FleetWise.Controllers
 
 
 
-        /// <summary>Grounds a bus so dispatch cannot assign it, or returns it to service.</summary>
+        // Grounds a bus so dispatch cannot assign it, or returns it to service.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        /// <summary>Whether the bus is out on a trip at this moment.</summary>
-        /// <remarks>
-        /// Asked before retiring a bus and before grounding one. Both take it off the
-        /// road, and neither may do so while it is carrying passengers.
-        /// </remarks>
+        // Whether the bus is out on a trip at this moment.
+        //
+        // Asked before retiring a bus and before grounding one. Both take it off the
+        // road, and neither may do so while it is carrying passengers.
         private async Task<bool> OnActiveTripAsync(string vehicleId) =>
             (await _supabase.From<Trip>()
                 .Filter("vehicle_id", Postgrest.Constants.Operator.Equals, vehicleId)
@@ -1024,12 +1005,11 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Puts a bus into scheduled maintenance: opens an under-repair incident and
-        /// grounds the bus, since a bus in the workshop is off the road.
-        /// </summary>
-        /// <remarks>Feeds the scheduled maintenance figure, appears in the vehicle's
-        /// history, and keeps the bus out of dispatch and the schedule planner.</remarks>
+        // Puts a bus into scheduled maintenance: opens an under-repair incident and
+        // grounds the bus, since a bus in the workshop is off the road.
+        //
+        // Feeds the scheduled maintenance figure, appears in the vehicle's
+        // history, and keeps the bus out of dispatch and the schedule planner.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ScheduleMaintenance(string vehicleId, string? note, string? items)
@@ -1089,7 +1069,7 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>The signed-in operator, recorded against thread entries.</summary>
+        // The signed-in operator, recorded against thread entries.
         private (int? Id, string Name) CurrentUser()
         {
             var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -1203,12 +1183,11 @@ namespace FleetWise.Controllers
                 .ToList();
         }
 
-        /// <summary>
-        /// Re-renders the registry with the add vehicle modal open and its validation
-        /// errors shown.
-        /// </summary>
-        /// <remarks>A redirect cannot carry model state, so a failed post returns the view
-        /// directly rather than redirecting.</remarks>
+        // Re-renders the registry with the add vehicle modal open and its validation
+        // errors shown.
+        //
+        // A redirect cannot carry model state, so a failed post returns the view
+        // directly rather than redirecting.
         private async Task<IActionResult> ReRenderIndexAsync(AddVehicleViewModel addModel)
         {
             var (vehicles, routes, maintenance) = await LoadVehicleDataAsync();
@@ -1234,10 +1213,10 @@ namespace FleetWise.Controllers
             return View("Index", vm);
         }
 
-        /// <summary>Builds the edit vehicle modal's model: the editable profile and the
-        /// route list.</summary>
-        /// <param name="posted">Values from a failed submission, preserved so the operator
-        /// does not lose what they typed.</param>
+        // Builds the edit vehicle modal's model: the editable profile and the
+        // route list.
+        // posted: Values from a failed submission, preserved so the operator
+        // does not lose what they typed.
         private async Task<EditVehicleViewModel?> BuildEditViewModelAsync(string id, EditVehicleViewModel? posted)
         {
             var vehicleResp = await _supabase.From<Vehicle>()
@@ -1263,8 +1242,8 @@ namespace FleetWise.Controllers
             };
         }
 
-        /// <summary>Re-renders the registry with the edit modal open and its validation
-        /// errors shown, in the same way as the add path.</summary>
+        // Re-renders the registry with the edit modal open and its validation
+        // errors shown, in the same way as the add path.
         private async Task<IActionResult> ReRenderIndexForEditAsync(EditVehicleViewModel editModel)
         {
             var (vehicles, routes, maintenance) = await LoadVehicleDataAsync();
@@ -1293,8 +1272,8 @@ namespace FleetWise.Controllers
                 .Select(r => new SelectListItem { Value = r.RouteId.ToString(), Text = r.RouteName })
                 .ToList();
 
-        /// <summary>Supplies the add vehicle modal with its model, dropdown data and
-        /// reopen flag.</summary>
+        // Supplies the add vehicle modal with its model, dropdown data and
+        // reopen flag.
         private void SetModalViewData(VehiclesIndexViewModel vm, AddVehicleViewModel addModel, string? openModal)
         {
             ViewBag.AddVehicleModel = addModel;
@@ -1314,11 +1293,10 @@ namespace FleetWise.Controllers
             return open is null ? "No Issues" : NormalizeMaintenance(open.MaintenanceStatus);
         }
 
-        /// <summary>
-        /// Maps a stored maintenance status onto the two badges used for open incidents.
-        /// </summary>
-        /// <remarks>An unresolved log always means there is something to act on, so an
-        /// unrecognized or empty status becomes "Needs Attention".</remarks>
+        // Maps a stored maintenance status onto the two badges used for open incidents.
+        //
+        // An unresolved log always means there is something to act on, so an
+        // unrecognized or empty status becomes "Needs Attention".
         private static string NormalizeMaintenance(string? maintenanceStatus)
         {
             var s = (maintenanceStatus ?? "").Trim();
@@ -1327,13 +1305,12 @@ namespace FleetWise.Controllers
             return "Needs Attention";
         }
 
-        /// <summary>
-        /// The checklist sections containing at least one failed item, or "None" when
-        /// everything passed.
-        /// </summary>
-        /// <remarks>Deliberately section-level. The maintenance issue summary lists the
-        /// individual failed items, so the two complement each other rather than showing
-        /// the same list twice.</remarks>
+        // The checklist sections containing at least one failed item, or "None" when
+        // everything passed.
+        //
+        // Deliberately section-level. The maintenance issue summary lists the
+        // individual failed items, so the two complement each other rather than showing
+        // the same list twice.
         private static string DeriveInspectionIssue(BusChecklist c)
         {
             var sections = new (string Name, Dictionary<string, string> Map)[]
@@ -1353,10 +1330,8 @@ namespace FleetWise.Controllers
             return failed.Count > 0 ? string.Join(", ", failed) : "None";
         }
 
-        /// <summary>
-        /// The badge for a checklist status. The stored enumeration has no flagged value,
-        /// so a failure is shown as flagged and every other status is shown as stored.
-        /// </summary>
+        // The badge for a checklist status. The stored enumeration has no flagged value,
+        // so a failure is shown as flagged and every other status is shown as stored.
         private static string DeriveInspectionBadge(string checklistStatus)
         {
             var s = (checklistStatus ?? "").Trim();
@@ -1371,16 +1346,13 @@ namespace FleetWise.Controllers
             return string.IsNullOrEmpty(s) ? "Pending" : s;
         }
 
-        /// <summary>
-        /// Rewrites a failed checklist item into the problem it describes.
-        /// </summary>
-        /// <remarks>
-        /// Some items were phrased negatively, where passing meant the absence of a fault.
-        /// Listing those unchanged under failures inverts their meaning.
-        ///
-        /// The catalogue no longer holds any of them, but inspections recorded while it did
-        /// are kept as they were submitted, so the wording they used is still read back.
-        /// </remarks>
+        // Rewrites a failed checklist item into the problem it describes.
+        //
+        // Some items were phrased negatively, where passing meant the absence of a fault.
+        // Listing those unchanged under failures inverts their meaning.
+        //
+        // The catalogue no longer holds any of them, but inspections recorded while it did
+        // are kept as they were submitted, so the wording they used is still read back.
         private static readonly Dictionary<string, string> IssuePhrase = new(StringComparer.OrdinalIgnoreCase)
         {
             ["No Visible Body Damage"] = "Visible body damage",
@@ -1392,10 +1364,8 @@ namespace FleetWise.Controllers
         private static string RephraseIssue(string issue) =>
             IssuePhrase.TryGetValue(issue?.Trim() ?? "", out var p) ? p : issue;
 
-        /// <summary>
-        /// Failed checklist items, rewritten and grouped by section, for the detail shown
-        /// beneath the inspection's issue areas. Sections without a failure are omitted.
-        /// </summary>
+        // Failed checklist items, rewritten and grouped by section, for the detail shown
+        // beneath the inspection's issue areas. Sections without a failure are omitted.
         private static List<InspectionSectionViewModel> DeriveInspectionSections(BusChecklist c)
         {
             var sections = new (string Name, Dictionary<string, string> Map)[]
@@ -1421,13 +1391,10 @@ namespace FleetWise.Controllers
             return result;
         }
 
-        /// <summary>
-        /// Every inspected item with how the driver marked it, grouped by section.
-        /// </summary>
-        /// <remarks>
-        /// The flagged list answers what went wrong. This answers what was checked,
-        /// which is the question asked of an inspection that passed.
-        /// </remarks>
+        // Every inspected item with how the driver marked it, grouped by section.
+        //
+        // The flagged list answers what went wrong. This answers what was checked,
+        // which is the question asked of an inspection that passed.
         private static List<InspectionResultSectionViewModel> DeriveInspectionChecklist(
             BusChecklist c, IReadOnlyCollection<ChecklistItem> configured)
         {
@@ -1476,11 +1443,9 @@ namespace FleetWise.Controllers
             return result;
         }
 
-        /// <summary>
-        /// One timeline entry per log: when it happened, what the issue was in plain words,
-        /// and how it ended. The internal log reference is omitted, since it means nothing
-        /// to an operator.
-        /// </summary>
+        // One timeline entry per log: when it happened, what the issue was in plain words,
+        // and how it ended. The internal log reference is omitted, since it means nothing
+        // to an operator.
         private static MaintenanceEntryViewModel FormatMaintenanceEntry(MaintenanceLog log)
         {
             var summary = log.IssueDetails?.Issues is { Count: > 0 } issues
@@ -1506,11 +1471,9 @@ namespace FleetWise.Controllers
             return string.IsNullOrWhiteSpace(name) ? $"Driver {driverId}" : name;
         }
 
-        /// <summary>
-        /// The status of a bus with no active trip. A stored on-trip or flagged value is
-        /// stale in that case, from a trip that ended or a flag since resolved, and
-        /// collapses to ready. Everything else maps through <see cref="DisplayStatus"/>.
-        /// </summary>
+        // The status of a bus with no active trip. A stored on-trip or flagged value is
+        // stale in that case, from a trip that ended or a flag since resolved, and
+        // collapses to ready. Everything else maps through DisplayStatus.
         private static string NonTripStatus(string? vehicleStatus)
         {
             var s = (vehicleStatus ?? "").Trim();
@@ -1519,11 +1482,9 @@ namespace FleetWise.Controllers
             return DisplayStatus(s);
         }
 
-        /// <summary>
-        /// Normalizes a stored vehicle status to the registry's labels, using the same
-        /// vocabulary as the fleet map, where several stored spellings all mean the bus is
-        /// on a live trip.
-        /// </summary>
+        // Normalizes a stored vehicle status to the registry's labels, using the same
+        // vocabulary as the fleet map, where several stored spellings all mean the bus is
+        // on a live trip.
         private static string DisplayStatus(string? vehicleStatus)
         {
             var s = (vehicleStatus ?? "").Trim();
@@ -1574,8 +1535,8 @@ namespace FleetWise.Controllers
             return res.IsSuccessStatusCode;
         }
 
-        /// <summary>Panel state: the device, its desired configuration, and what it
-        /// reports.</summary>
+        // Panel state: the device, its desired configuration, and what it
+        // reports.
         [HttpGet]
         public async Task<IActionResult> CameraState(string vehicleId)
         {
@@ -1592,7 +1553,7 @@ namespace FleetWise.Controllers
             return Json(new { deviceId = dev, config = cfg, status = st });
         }
 
-        /// <summary>Asks the camera to wake and take a fresh photo of the doorway.</summary>
+        // Asks the camera to wake and take a fresh photo of the doorway.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CameraWake(string deviceId)
@@ -1601,15 +1562,12 @@ namespace FleetWise.Controllers
             return ok ? Ok() : StatusCode(502);
         }
 
-        /// <summary>
-        /// Serves the camera's snapshot to the browser.
-        /// </summary>
-        /// <remarks>
-        /// The storage bucket is private and the key stays on the server, so the image is
-        /// proxied rather than linked. Caching is disabled because the object is
-        /// overwritten in place on every wake, and a cached copy would show an earlier
-        /// photo of the doorway.
-        /// </remarks>
+        // Serves the camera's snapshot to the browser.
+        //
+        // The storage bucket is private and the key stays on the server, so the image is
+        // proxied rather than linked. Caching is disabled because the object is
+        // overwritten in place on every wake, and a cached copy would show an earlier
+        // photo of the doorway.
         [HttpGet]
         public async Task<IActionResult> CameraSnapshot(string deviceId)
         {
@@ -1622,13 +1580,10 @@ namespace FleetWise.Controllers
             return File(bytes, "image/jpeg");
         }
 
-        /// <summary>
-        /// Serves an inspection photograph to the browser, by its row.
-        /// </summary>
-        /// <remarks>
-        /// Cached hard, unlike the camera snapshot next to it. A snapshot is overwritten
-        /// in place on every wake, so a cached copy would show an earlier doorway.
-        /// </remarks>
+        // Serves an inspection photograph to the browser, by its row.
+        //
+        // Cached hard, unlike the camera snapshot next to it. A snapshot is overwritten
+        // in place on every wake, so a cached copy would show an earlier doorway.
         [HttpGet]
         public async Task<IActionResult> InspectionPhoto(long photoId,
             [FromServices] InspectionPhotoStore photos)
@@ -1640,19 +1595,16 @@ namespace FleetWise.Controllers
             return File(bytes, "image/jpeg");
         }
 
-        /// <summary>
-        /// Saves a calibration to the camera's configuration.
-        /// </summary>
-        /// <remarks>
-        /// The version is re-read immediately before the write, so a concurrent editor,
-        /// whether the driver app or the camera's own calibration screen, cannot take the
-        /// same number with different content. The camera skips any version that is not
-        /// strictly greater, so a collision would be silently ignored.
-        ///
-        /// The coordinates arrive as invariant-culture strings and are parsed as such.
-        /// Form binding is culture-sensitive and would misread a decimal point under some
-        /// locales.
-        /// </remarks>
+        // Saves a calibration to the camera's configuration.
+        //
+        // The version is re-read immediately before the write, so a concurrent editor,
+        // whether the driver app or the camera's own calibration screen, cannot take the
+        // same number with different content. The camera skips any version that is not
+        // strictly greater, so a collision would be silently ignored.
+        //
+        // The coordinates arrive as invariant-culture strings and are parsed as such.
+        // Form binding is culture-sensitive and would misread a decimal point under some
+        // locales.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CameraSave(

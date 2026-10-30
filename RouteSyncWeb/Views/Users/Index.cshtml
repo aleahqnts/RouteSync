@@ -243,8 +243,7 @@
             });
     }
 
-    // Searching used to mean submitting the form and reloading the page, which on a
-    // phone closes the keyboard on every attempt. The rows are fetched on their own
+    // Searching by submitting the form would reload the page, which on a phone closes the keyboard on every attempt. The rows are fetched on their own
     // anyway, so the box asks for them again as the name is typed.
     document.addEventListener('DOMContentLoaded', function () {
         const box = document.querySelector('.us-search-input');

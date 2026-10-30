@@ -2,12 +2,12 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>What Suggest rest days proposes for a roster, and what it did, in sentences.</summary>
-    /// <param name="Moved">Rest days a driver already had that were moved.</param>
-    /// <param name="Added">Spare drivers added as floaters.</param>
-    /// <param name="RestDaysSet">Rest days set where none was chosen yet.</param>
-    /// <param name="GapsLeft">Crew rest days a week still uncovered once everything was tried.</param>
-    /// <param name="Unmarked">The notes no place carries a mark for: a route that needs another floater.</param>
+    // What Suggest rest days proposes for a roster, and what it did, in sentences.
+    // Moved: Rest days a driver already had that were moved.
+    // Added: Spare drivers added as floaters.
+    // RestDaysSet: Rest days set where none was chosen yet.
+    // GapsLeft: Crew rest days a week still uncovered once everything was tried.
+    // Unmarked: The notes no place carries a mark for: a route that needs another floater.
     public sealed record RestDaySuggestion(
         IReadOnlyList<RosterSeat> Seats, IReadOnlyList<string> Notes, IReadOnlyList<string> Unmarked,
         int Moved, int Added, int RestDaysSet, int GapsLeft)
@@ -17,42 +17,38 @@ namespace FleetWise.Services
 
     public static partial class RosterRules
     {
-        /// <summary>
-        /// The roster with its rest days arranged so the floaters can cover them, disturbing as
-        /// few people as possible. Nothing is saved; the page shows the result for a person to
-        /// keep or change.
-        /// </summary>
-        /// <remarks>
-        /// <para>A rest day is something a driver builds a week around, so the rest days people
-        /// already have are where this starts, never a fresh arrangement. A roster that works
-        /// is handed back as it came.</para>
-        ///
-        /// <para>Per route, each step taken only when the one before it cannot close the
-        /// gaps the planner finds:</para>
-        /// <list type="number">
-        /// <item>Rest days missing are set, and moved if that helps. They were nobody's yet,
-        /// so moving them disturbs nobody.</item>
-        /// <item>Floaters' rest days are moved. A floater's week is built around covering
-        /// others, so theirs is the first to give.</item>
-        /// <item>Crew rest days are moved as well, the fewest that will do, each to the weekday
-        /// that uncovers the least and to a day near the one it was on when two are equal.</item>
-        /// <item>A spare driver, active, unplaced and not held back, is added as a floater, first
-        /// on its own and then with rest days moved around it. Only when moving rest days
-        /// cannot close the gaps: a floater is a whole driver's month, and is not spent on a gap
-        /// that a different rest day would close.</item>
-        /// </list>
-        /// <para>When nothing closes the gaps, the arrangement that leaves fewest is handed back
-        /// and the route is said to need another floater, rather than a pattern that still
-        /// collides being passed off as a fix.</para>
-        ///
-        /// <para>Floaters' usual shifts are left as they are. Only a floater added here is given
-        /// one, the shift the route is shortest on.</para>
-        ///
-        /// <para>Gaps are counted in the pattern and, when the real month is given, in its first
-        /// week as well, where the month before still weighs on who is free. See
-        /// <see cref="RosterStructure.OpeningGapCount"/>.</para>
-        /// </remarks>
-        /// <param name="month">The real month, or null to judge the pattern alone.</param>
+        // The roster with its rest days arranged so the floaters can cover them, disturbing as
+        // few people as possible. Nothing is saved; the page shows the result for a person to
+        // keep or change.
+        //
+        // A rest day is something a driver builds a week around, so the rest days people
+        // already have are where this starts, never a fresh arrangement. A roster that works
+        // is handed back as it came.
+        //
+        // Per route, each step taken only when the one before it cannot close the
+        // gaps the planner finds:
+        // 1. Rest days missing are set, and moved if that helps. They were nobody's yet,
+        //    so moving them disturbs nobody.
+        // 2. Floaters' rest days are moved. A floater's week is built around covering
+        //    others, so theirs is the first to give.
+        // 3. Crew rest days are moved as well, the fewest that will do, each to the weekday
+        //    that uncovers the least and to a day near the one it was on when two are equal.
+        // 4. A spare driver, active, unplaced and not held back, is added as a floater, first
+        //    on its own and then with rest days moved around it. Only when moving rest days
+        //    cannot close the gaps: a floater is a whole driver's month, and is not spent on a gap
+        //    that a different rest day would close.
+        //
+        // When nothing closes the gaps, the arrangement that leaves fewest is handed back
+        // and the route is said to need another floater, rather than a pattern that still
+        // collides being passed off as a fix.
+        //
+        // Floaters' usual shifts are left as they are. Only a floater added here is given
+        // one, the shift the route is shortest on.
+        //
+        // Gaps are counted in the pattern and, when the real month is given, in its first
+        // week as well, where the month before still weighs on who is free. See
+        // RosterStructure.OpeningGapCount.
+        // month: The real month, or null to judge the pattern alone.
         public static RestDaySuggestion SuggestRestDays(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<Vehicle> vehicles,
@@ -220,11 +216,9 @@ namespace FleetWise.Services
             return new RestDaySuggestion(result, notes, unmarked, moved, added, set, gapsLeft);
         }
 
-        /// <summary>
-        /// Moves only the rest days auto-fill has just set, and only where that uncovers less,
-        /// leaving every rest day a driver already had where it was.
-        /// </summary>
-        /// <returns>The new rest day for each place moved, by its position in <paramref name="routeSeats"/>.</returns>
+        // Moves only the rest days auto-fill has just set, and only where that uncovers less,
+        // leaving every rest day a driver already had where it was.
+        // Returns The new rest day for each place moved, by its position in routeSeats.
         internal static Dictionary<int, int> SettleNewRestDays(
             IReadOnlyList<RosterSeat> routeSeats,
             IReadOnlySet<int> justSet,
@@ -248,22 +242,19 @@ namespace FleetWise.Services
             return changed;
         }
 
-        /// <summary>One way of arranging a route, and what it costs.</summary>
-        /// <param name="Moves">Rest days a driver already had that it moves.</param>
-        /// <param name="Spare">The spare driver it adds as a floater, last in <paramref name="Seats"/>, or null.</param>
+        // One way of arranging a route, and what it costs.
+        // Moves: Rest days a driver already had that it moves.
+        // Spare: The spare driver it adds as a floater, last in Seats, or null.
         private sealed record Attempt(List<RosterSeat> Seats, int Gaps, int Moves, UserModel? Spare);
 
-        /// <summary>
-        /// Moves one rest day at a time, each time the one that uncovers the least, until
-        /// nothing is left uncovered or no single move helps.
-        /// </summary>
-        /// <remarks>
-        /// Each move must leave strictly fewer gaps, so this ends. Between two moves that leave
-        /// as many, a floater's is moved before a crew driver's, since a floater's week is
-        /// already arranged around other people's, then the one that moves the day least from
-        /// where it was, so a Wednesday becomes a Thursday before a Sunday, then the day fewest
-        /// crew already rest on, so rest days spread rather than stack.
-        /// </remarks>
+        // Moves one rest day at a time, each time the one that uncovers the least, until
+        // nothing is left uncovered or no single move helps.
+        //
+        // Each move must leave strictly fewer gaps, so this ends. Between two moves that leave
+        // as many, a floater's is moved before a crew driver's, since a floater's week is
+        // already arranged around other people's, then the one that moves the day least from
+        // where it was, so a Wednesday becomes a Thursday before a Sunday, then the day fewest
+        // crew already rest on, so rest days spread rather than stack.
         private static (List<RosterSeat> Seats, int Gaps) MoveRestDays(
             List<RosterSeat> start, int gaps, Func<int, bool> movable, IReadOnlyList<int?> before,
             Func<List<RosterSeat>, int> count)
@@ -309,7 +300,7 @@ namespace FleetWise.Services
             return (current, gaps);
         }
 
-        /// <summary>A spare driver added as a floater on the rest day that uncovers least.</summary>
+        // A spare driver added as a floater on the rest day that uncovers least.
         private static Attempt WithSpare(
             List<RosterSeat> start, UserModel spare, int routeId,
             IReadOnlyList<UserModel> drivers, IReadOnlyList<Vehicle> vehicles,
@@ -341,24 +332,22 @@ namespace FleetWise.Services
                 .First();
         }
 
-        /// <summary>Rest days a driver already had that an arrangement moves.</summary>
+        // Rest days a driver already had that an arrangement moves.
         private static int Moved(List<RosterSeat> seats, IReadOnlyList<int?> before, IReadOnlySet<int> justSet) =>
             Enumerable.Range(0, Math.Min(seats.Count, before.Count))
                 .Count(k => !justSet.Contains(k) && before[k] is int from && seats[k].RestWeekday is int to && from != to);
 
-        /// <summary>Days apart around the week, so Sunday and Monday are neighbours.</summary>
+        // Days apart around the week, so Sunday and Monday are neighbours.
         private static int Distance(int from, int to)
         {
             var d = Math.Abs(from - to);
             return Math.Min(d, 7 - d);
         }
 
-        /// <summary>
-        /// Sets missing rest days on one route the way auto-fill does: a floater on the day
-        /// fewest floaters rest, a crew driver on the day with the most floater cover to spare,
-        /// away from a crewmate's day.
-        /// </summary>
-        /// <returns>The positions given a rest day.</returns>
+        // Sets missing rest days on one route the way auto-fill does: a floater on the day
+        // fewest floaters rest, a crew driver on the day with the most floater cover to spare,
+        // away from a crewmate's day.
+        // Returns The positions given a rest day.
         private static List<int> SetMissingRestDays(List<RosterSeat> seats, int routeId)
         {
             var set = new List<int>();

@@ -4,7 +4,7 @@ using static RouteSyncWeb.Tests.World;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>Covering the shifts that stand in the way of granting leave.</summary>
+// Covering the shifts that stand in the way of granting leave.
 public class CoverTests
 {
     private static readonly DateTime Tuesday = new(2026, 9, 15);

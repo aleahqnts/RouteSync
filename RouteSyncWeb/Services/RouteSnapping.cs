@@ -3,28 +3,27 @@ using System.Text.Json;
 
 namespace FleetWise.Services
 {
-    /// <summary>A position on the map.</summary>
+    // A position on the map.
     public readonly record struct GeoPoint(double Lat, double Lng);
 
-    /// <summary>The nearest place on one stretch of a route line to a reading.</summary>
-    /// <param name="Along">Metres from the start of the line.</param>
-    /// <param name="Distance">Metres from the reading to this place.</param>
-    /// <param name="Bearing">Compass bearing of the stretch, in the route's direction of travel.</param>
+    // The nearest place on one stretch of a route line to a reading.
+    // Along: Metres from the start of the line.
+    // Distance: Metres from the reading to this place.
+    // Bearing: Compass bearing of the stretch, in the route's direction of travel.
     public readonly record struct LinePlace(int Segment, double Along, double Distance, double Bearing, GeoPoint Point);
 
-    /// <summary>A route's line, measured so a bus can be placed on it.</summary>
-    /// <remarks>
-    /// <para>The line is the route as the bus drives it, in its direction of travel. A road
-    /// the route uses both ways appears twice, once for each direction, so the direction of
-    /// each stretch is what tells the two apart.</para>
-    ///
-    /// <para>Distances are worked on a flat projection about the line's first point. A route
-    /// is a few kilometres across, over which the error is a few centimetres, far below
-    /// what a phone's GPS can tell apart.</para>
-    /// </remarks>
+    // A route's line, measured so a bus can be placed on it.
+    //
+    // The line is the route as the bus drives it, in its direction of travel. A road
+    // the route uses both ways appears twice, once for each direction, so the direction of
+    // each stretch is what tells the two apart.
+    //
+    // Distances are worked on a flat projection about the line's first point. A route
+    // is a few kilometres across, over which the error is a few centimetres, far below
+    // what a phone's GPS can tell apart.
     public sealed class RouteLine
     {
-        /// <summary>How close the two ends must be for the line to count as a loop.</summary>
+        // How close the two ends must be for the line to count as a loop.
         private const double LoopClosure = 30;
 
         private readonly double _lat0, _lng0, _mLat, _mLng;
@@ -32,13 +31,13 @@ namespace FleetWise.Services
         private readonly double[] _along;       // metres from the first point to each point
         private readonly double[] _bearing;     // compass bearing of each stretch
 
-        /// <summary>The points of the line, in the direction of travel.</summary>
+        // The points of the line, in the direction of travel.
         public IReadOnlyList<GeoPoint> Points { get; }
 
-        /// <summary>Length of the line in metres.</summary>
+        // Length of the line in metres.
         public double Length => _along[^1];
 
-        /// <summary>Whether the line ends where it starts, so progress runs round a loop.</summary>
+        // Whether the line ends where it starts, so progress runs round a loop.
         public bool IsLoop { get; }
 
         private RouteLine(IReadOnlyList<GeoPoint> points)
@@ -73,11 +72,11 @@ namespace FleetWise.Services
             IsLoop = Distance(_x[0], _y[0], _x[^1], _y[^1]) <= LoopClosure;
         }
 
-        /// <summary>A line through these points, or null when there are too few to make one.</summary>
+        // A line through these points, or null when there are too few to make one.
         public static RouteLine? From(IReadOnlyList<GeoPoint> points) =>
             points.Count < 2 ? null : new RouteLine(points);
 
-        /// <summary>Reads a route's waypoints_json, or returns null when it holds no usable line.</summary>
+        // Reads a route's waypoints_json, or returns null when it holds no usable line.
         public static RouteLine? Parse(string? waypointsJson)
         {
             if (string.IsNullOrWhiteSpace(waypointsJson))
@@ -105,7 +104,7 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>The nearest place on each stretch that lies within the radius of a point.</summary>
+        // The nearest place on each stretch that lies within the radius of a point.
         public IEnumerable<LinePlace> Near(GeoPoint point, double radius)
         {
             var (px, py) = Project(point);
@@ -117,7 +116,7 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>Metres from a point to the nearest place anywhere on the line.</summary>
+        // Metres from a point to the nearest place anywhere on the line.
         public double DistanceTo(GeoPoint point)
         {
             var (px, py) = Project(point);
@@ -127,7 +126,7 @@ namespace FleetWise.Services
             return best;
         }
 
-        /// <summary>The point this many metres along the line, clamped to its ends.</summary>
+        // The point this many metres along the line, clamped to its ends.
         public GeoPoint PointAt(double along)
         {
             var i = SegmentAt(along);
@@ -136,23 +135,19 @@ namespace FleetWise.Services
             return Unproject(_x[i] + t * (_x[i + 1] - _x[i]), _y[i] + t * (_y[i + 1] - _y[i]));
         }
 
-        /// <summary>The direction of travel this many metres along the line.</summary>
+        // The direction of travel this many metres along the line.
         public double BearingAt(double along) => _bearing[SegmentAt(along)];
 
-        /// <summary>
-        /// How far apart two places on the line are, going whichever way is shorter round a
-        /// loop.
-        /// </summary>
+        // How far apart two places on the line are, going whichever way is shorter round a
+        // loop.
         public double Apart(double a, double b)
         {
             var d = Math.Abs(a - b);
             return IsLoop ? Math.Min(d, Length - d) : d;
         }
 
-        /// <summary>
-        /// How far ahead one place on the line is of another, going the shorter way round a
-        /// loop. Negative when it is behind.
-        /// </summary>
+        // How far ahead one place on the line is of another, going the shorter way round a
+        // loop. Negative when it is behind.
         public double Ahead(double from, double to)
         {
             var d = to - from;
@@ -162,10 +157,8 @@ namespace FleetWise.Services
             return d <= Length / 2 ? d : d - Length;
         }
 
-        /// <summary>
-        /// Where the line first passes within the radius of a point, or null when it never
-        /// does. A loop's start and end are the same place, and this names it as the start.
-        /// </summary>
+        // Where the line first passes within the radius of a point, or null when it never
+        // does. A loop's start and end are the same place, and this names it as the start.
         public double? FirstPass(GeoPoint point, double radius)
         {
             double? first = null;
@@ -175,7 +168,7 @@ namespace FleetWise.Services
             return first;
         }
 
-        /// <summary>Metres between two points, on the same flat projection as the line.</summary>
+        // Metres between two points, on the same flat projection as the line.
         public double Between(GeoPoint a, GeoPoint b)
         {
             var (ax, ay) = Project(a);
@@ -222,25 +215,24 @@ namespace FleetWise.Services
             (Math.Atan2(east, north) * 180 / Math.PI + 360) % 360;
     }
 
-    /// <summary>One position the driver app reported.</summary>
-    /// <param name="Heading">Compass course of travel, when the phone had one.</param>
-    /// <param name="Speed">Metres per second.</param>
-    /// <param name="Accuracy">Radius in metres the phone placed the fix within, when it sent one.</param>
+    // One position the driver app reported.
+    // Heading: Compass course of travel, when the phone had one.
+    // Speed: Metres per second.
+    // Accuracy: Radius in metres the phone placed the fix within, when it sent one.
     public readonly record struct GpsReading(GeoPoint Position, double? Heading, double? Speed, double? Accuracy);
 
-    /// <summary>Where a bus is drawn after a reading, and why.</summary>
-    /// <param name="Shown">The position to draw: on the route when snapped, the reading itself when off it.</param>
-    /// <param name="Raw">The reading as the phone reported it.</param>
-    /// <param name="OnRoute">Drawn on the route line.</param>
-    /// <param name="OffRoute">Drawn at the reading, and labelled off route.</param>
-    /// <param name="Held">
-    /// The reading was beyond the snap radius, but the bus stays on the route until a second
-    /// reading in a row agrees, so one bad fix does not pull it off the road.
-    /// </param>
-    /// <param name="Ignored">The reading was too inaccurate to move the bus.</param>
-    /// <param name="Along">Metres along the route, when drawn on it.</param>
-    /// <param name="Bearing">Direction to point the marker, or null when the bus is stopped.</param>
-    /// <param name="DistanceToRoute">Metres from the reading to the route line, or null with no line.</param>
+    // Where a bus is drawn after a reading, and why.
+    // Shown: The position to draw: on the route when snapped, the reading itself when off it.
+    // Raw: The reading as the phone reported it.
+    // OnRoute: Drawn on the route line.
+    // OffRoute: Drawn at the reading, and labelled off route.
+    // Held:
+    // The reading was beyond the snap radius, but the bus stays on the route until a second
+    // reading in a row agrees, so one bad fix does not pull it off the road.
+    // Ignored: The reading was too inaccurate to move the bus.
+    // Along: Metres along the route, when drawn on it.
+    // Bearing: Direction to point the marker, or null when the bus is stopped.
+    // DistanceToRoute: Metres from the reading to the route line, or null with no line.
     public sealed record SnapResult(
         GeoPoint Shown,
         GeoPoint Raw,
@@ -253,95 +245,88 @@ namespace FleetWise.Services
         double? Bearing,
         double? DistanceToRoute);
 
-    /// <summary>What the snapper remembers about one trip between its readings.</summary>
+    // What the snapper remembers about one trip between its readings.
     public sealed class SnapState
     {
-        /// <summary>The last result, which a held or ignored reading repeats.</summary>
+        // The last result, which a held or ignored reading repeats.
         public SnapResult? Last { get; internal set; }
 
-        /// <summary>Where on the route the bus last was, while it is on it.</summary>
+        // Where on the route the bus last was, while it is on it.
         internal double? Along { get; set; }
 
-        /// <summary>Readings in a row beyond the snap radius.</summary>
+        // Readings in a row beyond the snap radius.
         internal int OffStreak { get; set; }
 
-        /// <summary>Readings in a row that placed the bus well behind where it already was.</summary>
+        // Readings in a row that placed the bus well behind where it already was.
         internal int BehindStreak { get; set; }
 
-        /// <summary>
-        /// The terminal the trip starts from, if its route has one. A bus standing near it
-        /// on the trip's first reading is placed at it.
-        /// </summary>
+        // The terminal the trip starts from, if its route has one. A bus standing near it
+        // on the trip's first reading is placed at it.
         public GeoPoint? Terminal { get; set; }
     }
 
-    /// <summary>Places a bus on its route line, the way a navigation app does.</summary>
-    /// <remarks>
-    /// <para>A reading within <see cref="SnapRadius"/> of the line is drawn on the line.
-    /// Between BGC's towers a phone's fix commonly lands 10 to 40 metres off the road, and
-    /// drawn where it lands the bus drives through buildings.</para>
-    ///
-    /// <para>A road the route drives both ways offers two places on the line at the same
-    /// distance. A moving bus takes the one whose direction matches its own heading; a
-    /// stopped one has no useful heading and stays on the stretch it was last on.</para>
-    ///
-    /// <para>A bus leaves the line only after <see cref="OffRouteAfter"/> readings in a row
-    /// beyond the radius, so a single fix bounced off a building does not pull it off the
-    /// road. Once off, it is drawn where it really is, which is also what a phone far from
-    /// any route shows, such as one being tested outside BGC.</para>
-    ///
-    /// <para>A reading less accurate than <see cref="PoorAccuracy"/>, or one with no speed,
-    /// leaves the bus where it was. A phone's GPS always reports a speed, zero when standing;
-    /// a fix without one came from cell towers and wifi, which can place a bus tens of metres
-    /// from where it is while claiming to be accurate. The first reading of a trip is used
-    /// whatever it is, since the bus has to be drawn somewhere.</para>
-    ///
-    /// <para>Progress along the line only goes forward. A reading that places the bus behind
-    /// where it was leaves it there; only <see cref="ReverseAfter"/> readings in a row well
-    /// behind it, a bus that really did turn back, move it backwards.</para>
-    ///
-    /// <para>A trip whose first reading is a bus standing within <see cref="TerminalReach"/>
-    /// of its route's terminal starts at the terminal, so the stop it last passed is the
-    /// terminal rather than the stop before it round a loop.</para>
-    /// </remarks>
+    // Places a bus on its route line, the way a navigation app does.
+    //
+    // A reading within SnapRadius of the line is drawn on the line.
+    // Between BGC's towers a phone's fix commonly lands 10 to 40 metres off the road, and
+    // drawn where it lands the bus drives through buildings.
+    //
+    // A road the route drives both ways offers two places on the line at the same
+    // distance. A moving bus takes the one whose direction matches its own heading; a
+    // stopped one has no useful heading and stays on the stretch it was last on.
+    //
+    // A bus leaves the line only after OffRouteAfter readings in a row
+    // beyond the radius, so a single fix bounced off a building does not pull it off the
+    // road. Once off, it is drawn where it really is, which is also what a phone far from
+    // any route shows, such as one being tested outside BGC.
+    //
+    // A reading less accurate than PoorAccuracy, or one with no speed,
+    // leaves the bus where it was. A phone's GPS always reports a speed, zero when standing;
+    // a fix without one came from cell towers and wifi, which can place a bus tens of metres
+    // from where it is while claiming to be accurate. The first reading of a trip is used
+    // whatever it is, since the bus has to be drawn somewhere.
+    //
+    // Progress along the line only goes forward. A reading that places the bus behind
+    // where it was leaves it there; only ReverseAfter readings in a row well
+    // behind it, a bus that really did turn back, move it backwards.
+    //
+    // A trip whose first reading is a bus standing within TerminalReach
+    // of its route's terminal starts at the terminal, so the stop it last passed is the
+    // terminal rather than the stop before it round a loop.
     public static class RouteSnapper
     {
-        /// <summary>Metres within which a reading is drawn on the route line.</summary>
+        // Metres within which a reading is drawn on the route line.
         public const double SnapRadius = 50;
 
-        /// <summary>Accuracy radius, in metres, beyond which a reading does not move the bus.</summary>
+        // Accuracy radius, in metres, beyond which a reading does not move the bus.
         public const double PoorAccuracy = 25;
 
-        /// <summary>
-        /// Metres behind where the bus was that count as GPS wander rather than the bus
-        /// going back. Wander leaves the bus where it is without counting toward a reverse.
-        /// </summary>
+        // Metres behind where the bus was that count as GPS wander rather than the bus
+        // going back. Wander leaves the bus where it is without counting toward a reverse.
         public const double Wander = 20;
 
-        /// <summary>Readings in a row well behind the bus before it is moved back to them.</summary>
+        // Readings in a row well behind the bus before it is moved back to them.
         public const int ReverseAfter = 3;
 
-        /// <summary>Metres from its terminal within which a trip's first reading starts it there.</summary>
+        // Metres from its terminal within which a trip's first reading starts it there.
         public const double TerminalReach = 100;
 
-        /// <summary>Readings in a row beyond the snap radius before the bus is shown off route.</summary>
+        // Readings in a row beyond the snap radius before the bus is shown off route.
         public const int OffRouteAfter = 2;
 
-        /// <summary>Metres per second below which a bus counts as stopped, about walking pace.</summary>
+        // Metres per second below which a bus counts as stopped, about walking pace.
         public const double MovingSpeed = 1.0;
 
-        /// <summary>Degrees a stretch may differ from the bus's heading and still count as its direction.</summary>
+        // Degrees a stretch may differ from the bus's heading and still count as its direction.
         public const double HeadingTolerance = 60;
 
-        /// <summary>
-        /// Weight, per metre, of how far a candidate place is from where the bus last was.
-        /// Small against the distance to the reading over an ordinary move, and large against
-        /// the far side of the loop, which is what keeps a stopped bus on its own side of a
-        /// two-way road.
-        /// </summary>
+        // Weight, per metre, of how far a candidate place is from where the bus last was.
+        // Small against the distance to the reading over an ordinary move, and large against
+        // the far side of the loop, which is what keeps a stopped bus on its own side of a
+        // two-way road.
         private const double ContinuityWeight = 0.1;
 
-        /// <summary>Takes the next reading of a trip and returns where to draw the bus.</summary>
+        // Takes the next reading of a trip and returns where to draw the bus.
         public static SnapResult Next(RouteLine? line, SnapState state, GpsReading reading)
         {
             var moving = reading.Speed is double speed && speed >= MovingSpeed;
@@ -448,22 +433,19 @@ namespace FleetWise.Services
             Math.Abs((a - b + 540) % 360 - 180);
     }
 
-    /// <summary>
-    /// Keeps each running trip's snapping state between the fleet map's position reads.
-    /// </summary>
-    /// <remarks>
-    /// <para>The map asks for positions every two seconds, from every screen that has it
-    /// open, and the phone reports about every five. Each reading is therefore fed to the
-    /// snapper exactly once, in the order the phone took them, however many screens ask;
-    /// later asks get the answer it already gave.</para>
-    ///
-    /// <para>A reading that arrives after a newer one has been used, from a phone flushing
-    /// what it held in a dead zone, is skipped. The bus has already moved past it, and
-    /// drawing it would send the marker backwards.</para>
-    ///
-    /// <para>State lives in memory. After a restart it is rebuilt from the readings the map
-    /// already reads, the last half hour of each trip.</para>
-    /// </remarks>
+    // Keeps each running trip's snapping state between the fleet map's position reads.
+    //
+    // The map asks for positions every two seconds, from every screen that has it
+    // open, and the phone reports about every five. Each reading is therefore fed to the
+    // snapper exactly once, in the order the phone took them, however many screens ask;
+    // later asks get the answer it already gave.
+    //
+    // A reading that arrives after a newer one has been used, from a phone flushing
+    // what it held in a dead zone, is skipped. The bus has already moved past it, and
+    // drawing it would send the marker backwards.
+    //
+    // State lives in memory. After a restart it is rebuilt from the readings the map
+    // already reads, the last half hour of each trip.
     public sealed class RouteSnapTracker
     {
         private static readonly TimeSpan Idle = TimeSpan.FromHours(2);
@@ -490,13 +472,13 @@ namespace FleetWise.Services
             public double EtaPredicted, EtaMetres;
         }
 
-        /// <summary>How many of a moving bus's latest readings its speed is averaged over.</summary>
+        // How many of a moving bus's latest readings its speed is averaged over.
         private const int SpeedReadings = 4;
 
-        /// <summary>Metres a bus may drift on the line, from GPS jitter alone, and still count as standing.</summary>
+        // Metres a bus may drift on the line, from GPS jitter alone, and still count as standing.
         private const double StandingRadius = 20;
 
-        /// <summary>The measured line for a route, parsed again only when its data changes.</summary>
+        // The measured line for a route, parsed again only when its data changes.
         public RouteLine? LineFor(int routeId, string? waypointsJson)
         {
             var json = waypointsJson ?? "";
@@ -508,10 +490,8 @@ namespace FleetWise.Services
             return line;
         }
 
-        /// <summary>
-        /// The ID of the last reading used for each trip, so a poll can ask for that reading
-        /// and the ones after it rather than the whole recent window.
-        /// </summary>
+        // The ID of the last reading used for each trip, so a poll can ask for that reading
+        // and the ones after it rather than the whole recent window.
         public Dictionary<string, long> LastUsed()
         {
             var used = new Dictionary<string, long>();
@@ -522,12 +502,10 @@ namespace FleetWise.Services
             return used;
         }
 
-        /// <summary>
-        /// Feeds a trip's readings to the snapper and returns where to draw the bus, or null
-        /// when the trip has no reading yet.
-        /// </summary>
-        /// <param name="readings">Any readings of the trip; those already used are skipped.</param>
-        /// <param name="terminal">The terminal the trip's route starts from, if it has one.</param>
+        // Feeds a trip's readings to the snapper and returns where to draw the bus, or null
+        // when the trip has no reading yet.
+        // readings: Any readings of the trip; those already used are skipped.
+        // terminal: The terminal the trip's route starts from, if it has one.
         public SnapResult? Advance(string tripId, RouteLine? line,
             IEnumerable<(long Id, DateTime At, GpsReading Reading)> readings, GeoPoint? terminal = null)
         {
@@ -579,10 +557,8 @@ namespace FleetWise.Services
             return entry.Result;
         }
 
-        /// <summary>
-        /// How long the trip's bus has stood in one place on its line, up to its latest
-        /// reading. Zero while it is moving or off the line.
-        /// </summary>
+        // How long the trip's bus has stood in one place on its line, up to its latest
+        // reading. Zero while it is moving or off the line.
         public TimeSpan Standing(string tripId)
         {
             if (!_trips.TryGetValue(tripId, out var entry))
@@ -591,10 +567,8 @@ namespace FleetWise.Services
                 return entry.StillAlong is null ? TimeSpan.Zero : entry.LastAt - entry.StillSince;
         }
 
-        /// <summary>
-        /// When the trip's bus came to rest where it now stands, by the phone's clock, or
-        /// null while it is moving or off the line.
-        /// </summary>
+        // When the trip's bus came to rest where it now stands, by the phone's clock, or
+        // null while it is moving or off the line.
         public DateTime? StandingSince(string tripId)
         {
             if (!_trips.TryGetValue(tripId, out var entry))
@@ -603,10 +577,8 @@ namespace FleetWise.Services
                 return entry.StillAlong is null ? null : entry.StillSince;
         }
 
-        /// <summary>
-        /// Where along the line the stop is that the trip's bus has stood at and not yet left
-        /// the zone of, or null.
-        /// </summary>
+        // Where along the line the stop is that the trip's bus has stood at and not yet left
+        // the zone of, or null.
         public double? StoodAt(string tripId)
         {
             if (!_trips.TryGetValue(tripId, out var entry))
@@ -615,10 +587,8 @@ namespace FleetWise.Services
                 return entry.StoodAt;
         }
 
-        /// <summary>
-        /// The trip's bus's average speed over its latest moving readings, or null when its
-        /// latest reading has it standing.
-        /// </summary>
+        // The trip's bus's average speed over its latest moving readings, or null when its
+        // latest reading has it standing.
         public double? RecentSpeed(string tripId)
         {
             if (!_trips.TryGetValue(tripId, out var entry))
@@ -627,16 +597,14 @@ namespace FleetWise.Services
                 return entry.Speeds.Count == 0 ? null : entry.Speeds.Average();
         }
 
-        /// <summary>
-        /// Follows the estimate for each stretch: the seconds predicted when the bus was first
-        /// seen heading for a stop, against the seconds it took to reach that stop's zone.
-        /// Returns the pair once, on arrival.
-        /// </summary>
-        /// <param name="inZone">The stop whose zone the bus is in, or -1.</param>
-        /// <param name="next">The stop the bus is heading for, if any.</param>
-        /// <param name="at">The reading's time.</param>
-        /// <param name="seconds">The estimate to that stop at this reading.</param>
-        /// <param name="metres">The distance to that stop at this reading.</param>
+        // Follows the estimate for each stretch: the seconds predicted when the bus was first
+        // seen heading for a stop, against the seconds it took to reach that stop's zone.
+        // Returns the pair once, on arrival.
+        // inZone: The stop whose zone the bus is in, or -1.
+        // next: The stop the bus is heading for, if any.
+        // at: The reading's time.
+        // seconds: The estimate to that stop at this reading.
+        // metres: The distance to that stop at this reading.
         public (int Stop, double Predicted, double Actual, double Metres)? NoteEta(string tripId, int inZone,
             int? next, DateTime at, double? seconds, double metres)
         {
@@ -656,7 +624,7 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>Records the stop the trip's bus has stood at, or clears it with null.</summary>
+        // Records the stop the trip's bus has stood at, or clears it with null.
         public void NoteStoodAt(string tripId, double? stopAlong)
         {
             if (_trips.TryGetValue(tripId, out var entry))
@@ -664,7 +632,7 @@ namespace FleetWise.Services
                     entry.StoodAt = stopAlong;
         }
 
-        /// <summary>Forgets trips nobody has asked about for a while, which have ended.</summary>
+        // Forgets trips nobody has asked about for a while, which have ended.
         private void Sweep()
         {
             var now = DateTime.UtcNow;
@@ -678,13 +646,13 @@ namespace FleetWise.Services
         }
     }
 
-    /// <summary>A route's stops, and the one its parked buses are drawn at.</summary>
+    // A route's stops, and the one its parked buses are drawn at.
     public static class RouteStops
     {
-        /// <summary>One stop from a route's stops_json.</summary>
+        // One stop from a route's stops_json.
         public sealed record Stop(string Name, double Lat, double Lng, bool IsTerminal);
 
-        /// <summary>The stops in a route's stops_json, in route order. Malformed entries are skipped.</summary>
+        // The stops in a route's stops_json, in route order. Malformed entries are skipped.
         public static IReadOnlyList<Stop> Parse(string? stopsJson)
         {
             var stops = new List<Stop>();
@@ -719,10 +687,8 @@ namespace FleetWise.Services
             return stops;
         }
 
-        /// <summary>
-        /// Where a route's parked buses are drawn: the stop marked terminal, else its first
-        /// stop, else the start of its line. Null when the route has neither.
-        /// </summary>
+        // Where a route's parked buses are drawn: the stop marked terminal, else its first
+        // stop, else the start of its line. Null when the route has neither.
         public static Stop? Terminal(string? stopsJson, string? waypointsJson)
         {
             var stops = Parse(stopsJson);

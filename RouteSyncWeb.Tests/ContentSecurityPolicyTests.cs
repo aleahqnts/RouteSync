@@ -2,13 +2,12 @@ using System.Text.RegularExpressions;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>The views against the content security policy.</summary>
-/// <remarks>
-/// The policy runs no inline script that lacks the request's nonce. A handler written as
-/// onclick="…", or a script block without the nonce, still compiles and renders, and then
-/// does nothing in the browser, so nothing short of clicking every button would notice.
-/// These read the view files instead.
-/// </remarks>
+// The views against the content security policy.
+//
+// The policy runs no inline script that lacks the request's nonce. A handler written as
+// onclick="…", or a script block without the nonce, still compiles and renders, and then
+// does nothing in the browser, so nothing short of clicking every button would notice.
+// These read the view files instead.
 public class ContentSecurityPolicyTests
 {
     // An on* attribute, or the same written into a C# string ("onclick=f()"). Lower case
@@ -50,11 +49,10 @@ public class ContentSecurityPolicyTests
         return ExecutableTypes.Contains(type.Success ? type.Groups[1].Value.Trim().ToLowerInvariant() : "");
     }
 
-    /// <summary>Each view's markup, with Razor comments and script bodies blanked out.</summary>
-    /// <remarks>
-    /// A comment or a script may mention onclick or a script tag without being one. Blanking
-    /// keeps every line where it was, so a finding names the right line.
-    /// </remarks>
+    // Each view's markup, with Razor comments and script bodies blanked out.
+    //
+    // A comment or a script may mention onclick or a script tag without being one. Blanking
+    // keeps every line where it was, so a finding names the right line.
     private static IEnumerable<(string Path, string Text)> Views()
     {
         var root = ViewsRoot();
@@ -80,7 +78,7 @@ public class ContentSecurityPolicyTests
         }
     }
 
-    /// <summary>RouteSyncWeb/Views, found by walking up from wherever the tests run.</summary>
+    // RouteSyncWeb/Views, found by walking up from wherever the tests run.
     private static string ViewsRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)

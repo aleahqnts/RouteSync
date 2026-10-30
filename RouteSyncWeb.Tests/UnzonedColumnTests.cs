@@ -3,15 +3,12 @@ using Newtonsoft.Json;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>
-/// Columns with no time zone are written through the Postgrest client's own serializer
-/// settings, which convert every value to UTC and treat an unspecified one as local time.
-/// </summary>
-/// <remarks>
-/// On a machine set to a zone ahead of UTC, such as Philippine time, an unnormalized date
-/// serializes as the previous day. On a UTC machine these tests pass either way; run here,
-/// they are what catches the shift.
-/// </remarks>
+// Columns with no time zone are written through the Postgrest client's own serializer
+// settings, which convert every value to UTC and treat an unspecified one as local time.
+//
+// On a machine set to a zone ahead of UTC, such as Philippine time, an unnormalized date
+// serializes as the previous day. On a UTC machine these tests pass either way; run here,
+// they are what catches the shift.
 public class UnzonedColumnTests
 {
     private static readonly JsonSerializerSettings Settings =

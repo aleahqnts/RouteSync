@@ -392,7 +392,7 @@ namespace FleetWise.Controllers
             return View("Index", new List<UserListItemViewModel>());
         }
 
-        /// <summary>The granted sections as a readable list, for an audit entry.</summary>
+        // The granted sections as a readable list, for an audit entry.
         private static string DescribeAccess(Dictionary<string, bool>? permissions)
         {
             var granted = permissions?.Where(kv => kv.Value).Select(kv => kv.Key).ToList() ?? new();
@@ -407,10 +407,8 @@ namespace FleetWise.Controllers
             return result;
         }
 
-        /// <summary>
-        /// The role the manage-roles modal opens on: the first one, with its stored
-        /// permissions, so the toggles are populated rather than empty.
-        /// </summary>
+        // The role the manage-roles modal opens on: the first one, with its stored
+        // permissions, so the toggles are populated rather than empty.
         private static RoleFormViewModel DefaultRoleForm(List<Role> roles)
         {
             var first = roles.FirstOrDefault();

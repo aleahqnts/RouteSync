@@ -2,7 +2,7 @@
 
 namespace FleetWise.ViewModels
 {
-    /// <summary>The weekly planner grid.</summary>
+    // The weekly planner grid.
     public class ScheduleViewModel
     {
         public DateTime WeekStart { get; set; }
@@ -21,69 +21,60 @@ namespace FleetWise.ViewModels
         public string PrevWeekStart { get; set; }
         public string NextWeekStart { get; set; }
 
-        /// <summary>
-        /// Approved leave falling inside this week: the driver, then each day, then what
-        /// kind of leave it is.
-        /// </summary>
-        /// <remarks>
-        /// Spread out by day rather than left as a span, because the grid asks about one
-        /// day at a time and a driver is off on some of a week's cells and not others.
-        /// </remarks>
+        // Approved leave falling inside this week: the driver, then each day, then what
+        // kind of leave it is.
+        //
+        // Spread out by day rather than left as a span, because the grid asks about one
+        // day at a time and a driver is off on some of a week's cells and not others.
         public Dictionary<int, Dictionary<string, string>> LeaveDays { get; set; } = new();
 
-        /// <summary>The operational day, when it falls inside the week on screen.</summary>
-        /// <remarks>
-        /// The driver availability flag has no date on it. It says a driver cannot work
-        /// now, which is a statement about this day and about no other, so this is the only
-        /// column the grid marks it on.
-        /// </remarks>
+        // The operational day, when it falls inside the week on screen.
+        //
+        // The driver availability flag has no date on it. It says a driver cannot work
+        // now, which is a statement about this day and about no other, so this is the only
+        // column the grid marks it on.
         public string TodayInWeek { get; set; }
 
-        /// <summary>Shift windows in this week that have already closed, as "Shift|date".</summary>
-        /// <remarks>
-        /// Keyed without the route, because a window belongs to the clock and not to a
-        /// route. Held as its own set so an empty slot on a finished shift can be drawn
-        /// read-only, which a cell carrying a trip could not answer for.
-        /// </remarks>
+        // Shift windows in this week that have already closed, as "Shift|date".
+        //
+        // Keyed without the route, because a window belongs to the clock and not to a
+        // route. Held as its own set so an empty slot on a finished shift can be drawn
+        // read-only, which a cell carrying a trip could not answer for.
         public HashSet<string> ClosedSlots { get; set; } = new();
 
-        /// <summary>Whether every shift in the week has finished.</summary>
-        /// <remarks>
-        /// Such a week is a record rather than a plan, so the page withholds Save, Add bus
-        /// and Copy last week rather than offering controls that can only be refused.
-        /// </remarks>
+        // Whether every shift in the week has finished.
+        //
+        // Such a week is a record rather than a plan, so the page withholds Save, Add bus
+        // and Copy last week rather than offering controls that can only be refused.
         public bool WeekClosed { get; set; }
 
-        /// <summary>What the week's save marker read when this grid was drawn.</summary>
-        /// <remarks>
-        /// Handed back with the save and compared against the marker as it stands then.
-        /// Two dispatchers can hold the same week open, and a save rewrites the whole of
-        /// it, so without this the second to save deletes the first one's work without
-        /// either of them seeing it happen.
-        ///
-        /// Carried as the string it will be compared against rather than as a time.
-        /// Nothing reads it: it either matches or the grid is out of date. Empty means the
-        /// week had never been saved when it was drawn, which is a state worth telling
-        /// apart from a week that had.
-        /// </remarks>
+        // What the week's save marker read when this grid was drawn.
+        //
+        // Handed back with the save and compared against the marker as it stands then.
+        // Two dispatchers can hold the same week open, and a save rewrites the whole of
+        // it, so without this the second to save deletes the first one's work without
+        // either of them seeing it happen.
+        //
+        // Carried as the string it will be compared against rather than as a time.
+        // Nothing reads it: it either matches or the grid is out of date. Empty means the
+        // week had never been saved when it was drawn, which is a state worth telling
+        // apart from a week that had.
         public string SavedAt { get; set; } = "";
 
-        /// <summary>The days of this week that belong to a month with a roster, as yyyy-MM-dd.</summary>
-        /// <remarks>
-        /// Copy last week leaves these alone. The roster fills them, and a trip copied in by
-        /// hand is one a publish must build around and can never replace: a slot left empty
-        /// on purpose last week would come back as a trip nobody rostered.
-        /// </remarks>
+        // The days of this week that belong to a month with a roster, as yyyy-MM-dd.
+        //
+        // Copy last week leaves these alone. The roster fills them, and a trip copied in by
+        // hand is one a publish must build around and can never replace: a slot left empty
+        // on purpose last week would come back as a trip nobody rostered.
         public HashSet<string> RosterDays { get; set; } = new();
 
-        /// <summary>The days in <see cref="RosterDays"/> as a phrase, such as "Oct 1 to Oct 5".</summary>
+        // The days in RosterDays as a phrase, such as "Oct 1 to Oct 5".
         public string RosterSpan { get; set; } = "";
 
-        /// <summary>Roster slots with nobody on them, keyed like <see cref="Cells"/>.</summary>
-        /// <remarks>
-        /// Slots the last publish could not fill, still without a trip or a skip, on shifts
-        /// that have not finished.
-        /// </remarks>
+        // Roster slots with nobody on them, keyed like Cells.
+        //
+        // Slots the last publish could not fill, still without a trip or a skip, on shifts
+        // that have not finished.
         public Dictionary<string, List<ScheduleGapMark>> Gaps { get; set; } = new();
 
         public bool AllRostered => RosterDays.Count == Days.Count;
@@ -92,12 +83,12 @@ namespace FleetWise.ViewModels
             ClosedSlots.Contains($"{shift}|{day:yyyy-MM-dd}");
     }
 
-    /// <summary>A bus the roster runs on a shift with no driver on it.</summary>
+    // A bus the roster runs on a shift with no driver on it.
     public class ScheduleGapMark
     {
         public string VehicleId { get; set; }
 
-        /// <summary>Why the publish left it empty, such as a crew driver's rest day with no floater free.</summary>
+        // Why the publish left it empty, such as a crew driver's rest day with no floater free.
         public string Reason { get; set; }
     }
 
@@ -107,15 +98,14 @@ namespace FleetWise.ViewModels
         public string VehicleId { get; set; }
         public int DriverId { get; set; }
 
-        /// <summary>Whether the trip is beyond further change.</summary>
-        /// <remarks>
-        /// A trip that has started or finished, or one whose shift window has closed.
-        /// Worked out where the clock is known rather than from the stored status, which
-        /// says "Not Yet Started" for a shift that ended hours ago.
-        /// </remarks>
+        // Whether the trip is beyond further change.
+        //
+        // A trip that has started or finished, or one whose shift window has closed.
+        // Worked out where the clock is known rather than from the stored status, which
+        // says "Not Yet Started" for a shift that ended hours ago.
         public bool Locked { get; set; }
 
-        /// <summary>How the locked cell names its trip, derived the way the board does.</summary>
+        // How the locked cell names its trip, derived the way the board does.
         public string StatusLabel { get; set; }
     }
 
@@ -134,23 +124,20 @@ namespace FleetWise.ViewModels
         [Required, RegularExpression(@"^\d{4}-\d{2}-\d{2}$", ErrorMessage = "Week end must be yyyy-MM-dd.")]
         public string WeekEnd { get; set; }
 
-        /// <summary>The save marker the grid was loaded with, empty for a week that had none.</summary>
+        // The save marker the grid was loaded with, empty for a week that had none.
         [MaxLength(40, ErrorMessage = "That week could not be read.")]
         public string? SavedAt { get; set; }
 
         // Dispatcher acknowledged the conflict modal and chose to save anyway.
         public bool Override { get; set; }
 
-        /// <summary>
-        /// How many trips this save knowingly writes over, having been saved by somebody
-        /// else since the grid was drawn.
-        /// </summary>
-        /// <remarks>
-        /// Recorded rather than enforced. The grid is refused outright while its marker is
-        /// stale, so by the time a save reaches here it has been built on the current week
-        /// and these are changes the dispatcher has been shown and has chosen to replace.
-        /// What the audit trail needs is that the choice was made.
-        /// </remarks>
+        // How many trips this save knowingly writes over, having been saved by somebody
+        // else since the grid was drawn.
+        //
+        // Recorded rather than enforced. The grid is refused outright while its marker is
+        // stale, so by the time a save reaches here it has been built on the current week
+        // and these are changes the dispatcher has been shown and has chosen to replace.
+        // What the audit trail needs is that the choice was made.
         [Range(0, 500, ErrorMessage = "That week could not be read.")]
         public int Overwrites { get; set; }
     }

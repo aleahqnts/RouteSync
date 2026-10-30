@@ -7,7 +7,7 @@
 // by every entry in the list.
 //
 // A native option cannot be laid out: no columns, no alignment, the browser draws
-// that popup itself. The only thing under our control is the text, so the name is
+// that popup itself. The only thing that can be controlled is the text, so the name is
 // padded to the width of the longest one with a space that does not collapse. The
 // selects that use this are set in a monospace face, without which every character
 // is a different width and the column drifts.

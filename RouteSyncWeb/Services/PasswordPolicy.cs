@@ -1,19 +1,16 @@
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// What counts as an acceptable password, and the temporary one issued to new accounts.
-    /// </summary>
-    /// <remarks>
-    /// A sign-in using exactly the temporary value proves the account is still on it, so
-    /// no column tracks whether the password has been changed. The change form rejects
-    /// that value, so it cannot be kept.
-    ///
-    /// These rules are the browser-side half. _shared/password.ts applies the same policy
-    /// server-side and is the half that holds. Keep the two in step.
-    ///
-    /// Symbols are allowed, not required: length carries the strength, and demanding one
-    /// yields predictable endings and awkward phone typing.
-    /// </remarks>
+    // What counts as an acceptable password, and the temporary one issued to new accounts.
+    //
+    // A sign-in using exactly the temporary value proves the account is still on it, so
+    // no column tracks whether the password has been changed. The change form rejects
+    // that value, so it cannot be kept.
+    //
+    // These rules are the browser-side half. _shared/password.ts applies the same policy
+    // server-side and is the half that holds. Keep the two in step.
+    //
+    // Symbols are allowed, not required: length carries the strength, and demanding one
+    // yields predictable endings and awkward phone typing.
     public static class PasswordPolicy
     {
         public const string TemporaryPassword = "@Temp123";
@@ -37,7 +34,7 @@ namespace FleetWise.Services
         public const string ComplexityMessage =
             "Password needs an uppercase letter, a lowercase letter and a number.";
 
-        /// <summary>The rule in one line, for hint text above a password field.</summary>
+        // The rule in one line, for hint text above a password field.
         public const string Rule = "8+ characters, with upper case, lower case and a number.";
     }
 }

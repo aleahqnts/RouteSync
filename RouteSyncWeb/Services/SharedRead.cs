@@ -2,28 +2,25 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// A read shared by everyone who asks for the same thing within a short time.
-    /// </summary>
-    /// <remarks>
-    /// <para>For figures many people watch at once and the database would otherwise be asked
-    /// for once per viewer. The first caller reads; everyone asking for the same key until
-    /// the answer expires is handed that answer, including callers who arrive while the read
-    /// is still under way, so a room of viewers costs the database one read.</para>
-    ///
-    /// <para>A read that fails is not kept, so the next caller tries again rather than being
-    /// handed the same failure until it expires.</para>
-    /// </remarks>
+    // A read shared by everyone who asks for the same thing within a short time.
+    //
+    // For figures many people watch at once and the database would otherwise be asked
+    // for once per viewer. The first caller reads; everyone asking for the same key until
+    // the answer expires is handed that answer, including callers who arrive while the read
+    // is still under way, so a room of viewers costs the database one read.
+    //
+    // A read that fails is not kept, so the next caller tries again rather than being
+    // handed the same failure until it expires.
     public static class SharedRead
     {
         private static readonly object Gate = new();
 
-        /// <summary>The answer held under <paramref name="key"/>, read afresh once it has expired.</summary>
-        /// <param name="cache">Where answers are held between callers.</param>
-        /// <param name="key">What is being read, including anything that narrows it.</param>
-        /// <param name="lifetime">How long an answer is handed out after it was read.</param>
-        /// <param name="read">Reads the answer.</param>
-        /// <param name="fresh">Read now even if an answer is held, and hold the new one instead.</param>
+        // The answer held under key, read afresh once it has expired.
+        // cache: Where answers are held between callers.
+        // key: What is being read, including anything that narrows it.
+        // lifetime: How long an answer is handed out after it was read.
+        // read: Reads the answer.
+        // fresh: Read now even if an answer is held, and hold the new one instead.
         public static Task<T> GetAsync<T>(IMemoryCache cache, string key, TimeSpan lifetime,
             Func<Task<T>> read, bool fresh = false)
         {

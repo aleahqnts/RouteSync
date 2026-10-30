@@ -2,17 +2,15 @@
 
 namespace FleetWise.Services;
 
-/// <summary>
-/// Keeps the <c>telemetry_data</c> table from growing without bound. The live map only
-/// reads the last ~30 min and Reports read just the latest row per trip; the Dashboard's
-/// hourly passenger chart needs one operational day. Anything past the retention window is
-/// deleted. Window is tunable via <c>Telemetry:RetentionMinutes</c> in configuration
-/// (default 1440 = 1 day; set to 0 or below to disable the sweep).
-///
-/// The configured window is far longer than any screen needs, because accuracy testing
-/// reads position and passenger history back long after the trip it describes, and a
-/// sweep is the one thing that cannot be undone once the run is over.
-/// </summary>
+// Keeps the telemetry_data table from growing without bound. The live map only
+// reads the last ~30 min and Reports read just the latest row per trip; the Dashboard's
+// hourly passenger chart needs one operational day. Anything past the retention window is
+// deleted. Window is tunable via Telemetry:RetentionMinutes in configuration
+// (default 1440 = 1 day; set to 0 or below to disable the sweep).
+//
+// The configured window is far longer than any screen needs, because accuracy testing
+// reads position and passenger history back long after the trip it describes, and a
+// sweep is the one thing that cannot be undone once the run is over.
 public class TelemetryRetentionService : BackgroundService
 {
     private static readonly TimeSpan StartupDelay = TimeSpan.FromMinutes(1);

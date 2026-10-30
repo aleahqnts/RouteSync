@@ -30,7 +30,7 @@ namespace FleetWise.Models
         // Dropdown data.
         public List<SelectListItem> RouteOptions { get; set; } = new();
 
-        /// <summary>Whether this bus has left the fleet, which decides the action offered.</summary>
+        // Whether this bus has left the fleet, which decides the action offered.
         public bool Retired { get; set; }
 
         public string? RetiredReason { get; set; }

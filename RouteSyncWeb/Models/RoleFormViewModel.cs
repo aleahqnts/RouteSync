@@ -10,10 +10,8 @@ namespace FleetWise.Models
         [Required, StringLength(50)]
         public string RoleName { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Legacy column. The permission switches decide what a role may do; this is
-        /// no longer filled in on the form and keeps whatever the row already held.
-        /// </summary>
+        // Legacy column. The permission switches decide what a role may do; this is
+        // no longer filled in on the form and keeps whatever the row already held.
         public string AccessLevel { get; set; } = string.Empty;
 
         // Bound from hidden+checkbox pairs: WebPermissions[Dashboard], WebPermissions[FleetMap], ...

@@ -3,18 +3,15 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// The days a Reports figure covers and the matching days it is compared with.
-    /// </summary>
-    /// <remarks>
-    /// A period still running is compared like for like: October 1 to 20 against September 1
-    /// to 20, today up to this hour against yesterday up to the same hour. Comparing a part
-    /// period with a whole one reads as a collapse every time until the period ends. A period
-    /// already over is compared whole against the one before it.
-    ///
-    /// Days are operational days, and the hour is measured from 06:00, so a shift starting at
-    /// 22:00 comes after one starting at 14:00 and an hour past midnight comes after both.
-    /// </remarks>
+    // The days a Reports figure covers and the matching days it is compared with.
+    //
+    // A period still running is compared like for like: October 1 to 20 against September 1
+    // to 20, today up to this hour against yesterday up to the same hour. Comparing a part
+    // period with a whole one reads as a collapse every time until the period ends. A period
+    // already over is compared whole against the one before it.
+    //
+    // Days are operational days, and the hour is measured from 06:00, so a shift starting at
+    // 22:00 comes after one starting at 14:00 and an hour past midnight comes after both.
     public sealed record ReportWindow(
         DateTime Start,
         DateTime End,
@@ -24,8 +21,8 @@ namespace FleetWise.Services
         TimeSpan? Cutoff,
         string VsLabel)
     {
-        /// <summary>The window for a period around <paramref name="anchor"/>, as of <paramref name="now"/> (Philippine time).</summary>
-        /// <param name="period">"This Day", "This Week", "Last Week" or "This Month".</param>
+        // The window for a period around anchor, as of now (Philippine time).
+        // period: "This Day", "This Week", "Last Week" or "This Month".
         public static ReportWindow For(DateTime anchor, string period, DateTime now)
         {
             anchor = anchor.Date;
@@ -55,13 +52,13 @@ namespace FleetWise.Services
             return new ReportWindow(start, end, lastDay, prevStart, prevEnd, cutoff, vs);
         }
 
-        /// <summary>Whether a trip falls in the days counted so far.</summary>
+        // Whether a trip falls in the days counted so far.
         public bool InCurrent(Trip t) => In(t, Start, LastDay);
 
-        /// <summary>Whether a trip falls in the matching days before.</summary>
+        // Whether a trip falls in the matching days before.
         public bool InPrevious(Trip t) => In(t, PrevStart, PrevEnd);
 
-        /// <summary>Whether a day, or a shift on the last day, has not happened yet.</summary>
+        // Whether a day, or a shift on the last day, has not happened yet.
         public bool IsAhead(DateTime day, TimeSpan? shiftStart = null) =>
             day > LastDay || (day == LastDay && Cutoff is { } c && shiftStart is { } s && SinceDayStart(s) > c);
 

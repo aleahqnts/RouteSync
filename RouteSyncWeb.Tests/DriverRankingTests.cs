@@ -5,7 +5,7 @@ namespace RouteSyncWeb.Tests;
 
 public class DriverRankingTests
 {
-    /// <summary>A Wednesday Morning trip on North Loop whose driver needs replacing.</summary>
+    // A Wednesday Morning trip on North Loop whose driver needs replacing.
     private static (World W, FleetWise.Models.Trip Trip) Setup()
     {
         var w = new World();

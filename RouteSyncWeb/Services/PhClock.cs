@@ -1,12 +1,9 @@
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// Philippine wall-clock time, a fixed offset with no daylight saving.
-    /// </summary>
-    /// <remarks>
-    /// Timestamps are written as Philippine wall-clock rather than UTC throughout, so dates
-    /// and ordering do not drift by eight hours between what is stored and what is shown.
-    /// </remarks>
+    // Philippine wall-clock time, a fixed offset with no daylight saving.
+    //
+    // Timestamps are written as Philippine wall-clock rather than UTC throughout, so dates
+    // and ordering do not drift by eight hours between what is stored and what is shown.
     public static class PhClock
     {
         private static readonly TimeZoneInfo Tz = ResolveTz();

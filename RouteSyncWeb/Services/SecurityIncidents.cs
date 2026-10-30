@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace FleetWise.Services;
 
-/// <summary>A burst of unusual activity, as stored.</summary>
+// A burst of unusual activity, as stored.
 public sealed record SecurityIncident(
     long IncidentId,
     string Rule,
@@ -22,26 +22,23 @@ public sealed record SecurityIncident(
     int? ReviewedEventCount,
     bool NeedsReview)
 {
-    /// <summary>Whether the incident concerns this account rather than an address.</summary>
+    // Whether the incident concerns this account rather than an address.
     public bool IsAbout(string? userId) =>
         userId is not null
         && KeyColumn is "target_id" or "actor_id"
         && KeyValue == userId;
 }
 
-/// <summary>
-/// Reads and writes security incidents.
-/// </summary>
-/// <remarks>
-/// Talks to the database directly, as the audit trail does, and reads every time as an
-/// instant with its offset. The spans stored here are compared against audit entries to
-/// the microsecond, and a time that silently took on the host's zone would move an
-/// incident's filter by eight hours on one machine and not on another.
-///
-/// Every read answers null when it could not reach the table, rather than an empty list.
-/// An empty list claims there is nothing unusual, and that claim is the one thing this
-/// feature must never make falsely.
-/// </remarks>
+// Reads and writes security incidents.
+//
+// Talks to the database directly, as the audit trail does, and reads every time as an
+// instant with its offset. The spans stored here are compared against audit entries to
+// the microsecond, and a time that silently took on the host's zone would move an
+// incident's filter by eight hours on one machine and not on another.
+//
+// Every read answers null when it could not reach the table, rather than an empty list.
+// An empty list claims there is nothing unusual, and that claim is the one thing this
+// feature must never make falsely.
 public sealed class SecurityIncidents
 {
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(15) };
@@ -50,11 +47,11 @@ public sealed class SecurityIncidents
 
     public SecurityIncidents(IConfiguration config) => _config = config;
 
-    /// <summary>A time as the database's filters and columns take it.</summary>
+    // A time as the database's filters and columns take it.
     public static string Stamp(DateTimeOffset t) =>
         t.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'", CultureInfo.InvariantCulture);
 
-    /// <summary>Incidents whose activity reaches back to or past a point.</summary>
+    // Incidents whose activity reaches back to or past a point.
     public async Task<List<SecurityIncident>?> TouchingAsync(DateTimeOffset since)
     {
         var rows = await GetAsync(
@@ -62,14 +59,10 @@ public sealed class SecurityIncidents
         return rows?.Select(Map).ToList();
     }
 
-    /// <summary>
-    /// Raises an incident. A burst already raised is left alone rather than duplicated.
-    /// </summary>
-    /// <returns>
-    /// True when a row was created. A burst that was already on record answers false
-    /// rather than true, since both succeed at the database and only one of them raised
-    /// anything.
-    /// </returns>
+    // Raises an incident. A burst already raised is left alone rather than duplicated.
+    // Returns true when a row was created. A burst that was already on record answers false
+    // rather than true, since both succeed at the database and only one of them raised
+    // anything.
     public async Task<bool> InsertAsync(SecurityRule rule, string key, Episode episode, int count)
     {
         try
@@ -103,22 +96,19 @@ public sealed class SecurityIncidents
         }
     }
 
-    /// <summary>
-    /// The audit trail query that returns exactly this incident's entries.
-    /// </summary>
-    /// <remarks>
-    /// The one definition of which entries belong to an incident. The detector counts with
-    /// it and the incident panel lists with it, so the number on the row and the entries
-    /// behind it cannot disagree.
-    ///
-    /// An exact match on the key, never a search. The audit page's search matches part of
-    /// a value, so an address search for 1.2.3.4 also finds 11.2.3.45, and an incident
-    /// built on that would show other people's activity as part of an attack.
-    ///
-    /// Everything interpolated here came from the incident's own row, which the table's
-    /// constraints limit, and is checked again rather than trusted.
-    /// </remarks>
-    /// <param name="through">A later end than the stored one, while an extension is being counted.</param>
+    // The audit trail query that returns exactly this incident's entries.
+    //
+    // The one definition of which entries belong to an incident. The detector counts with
+    // it and the incident panel lists with it, so the number on the row and the entries
+    // behind it cannot disagree.
+    //
+    // An exact match on the key, never a search. The audit page's search matches part of
+    // a value, so an address search for 1.2.3.4 also finds 11.2.3.45, and an incident
+    // built on that would show other people's activity as part of an attack.
+    //
+    // Everything interpolated here came from the incident's own row, which the table's
+    // constraints limit, and is checked again rather than trusted.
+    // through: A later end than the stored one, while an extension is being counted.
     public static string? FilterFor(SecurityIncident incident, DateTimeOffset? through = null)
     {
         if (incident.KeyColumn is not ("ip" or "target_id" or "actor_id")) return null;
@@ -130,10 +120,8 @@ public sealed class SecurityIncidents
              + $"&occurred_at=lte.{Stamp(through ?? incident.LastSeenAt)}";
     }
 
-    /// <summary>
-    /// Whether a name is shaped like an audit action, so it cannot reshape the list it
-    /// is placed in.
-    /// </summary>
+    // Whether a name is shaped like an audit action, so it cannot reshape the list it
+    // is placed in.
     private static bool IsActionName(string action) =>
         action.Length is > 0 and <= 64 && action.All(c => c is (>= 'a' and <= 'z') or '_');
 
@@ -145,7 +133,7 @@ public sealed class SecurityIncidents
                 ["event_count"] = count,
             });
 
-    /// <summary>What needs review first, then everything else, newest activity first.</summary>
+    // What needs review first, then everything else, newest activity first.
     public async Task<List<SecurityIncident>?> ListAsync(int limit)
     {
         var rows = await GetAsync(
@@ -159,13 +147,10 @@ public sealed class SecurityIncidents
         return rows is { Count: > 0 } ? Map(rows[0]) : null;
     }
 
-    /// <summary>
-    /// Marks an incident reviewed as of what the reviewer was shown.
-    /// </summary>
-    /// <param name="seenCount">
-    /// How many entries were on the reviewer's screen. Anything gathered after they looked
-    /// raises the count past this and returns the incident to needing review.
-    /// </param>
+    // Marks an incident reviewed as of what the reviewer was shown.
+    // seenCount:
+    // How many entries were on the reviewer's screen. Anything gathered after they looked
+    // raises the count past this and returns the incident to needing review.
     public async Task<bool> ReviewAsync(long incidentId, string reviewer, string? note, int seenCount) =>
         await SendAsync(HttpMethod.Patch, $"security_incidents?incident_id=eq.{incidentId}",
             new Dictionary<string, object?>

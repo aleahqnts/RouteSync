@@ -17,11 +17,11 @@ public class StopEtaTests
     private static RouteStops.Stop StopAt(string name, double east) =>
         new(name, Offset(Origin, 0, east).Lat, Offset(Origin, 0, east).Lng, false);
 
-    /// <summary>A road running 1 km due east from the origin.</summary>
+    // A road running 1 km due east from the origin.
     private static RouteLine EastRoad() =>
         RouteLine.From(Enumerable.Range(0, 11).Select(i => Offset(Origin, 0, i * 100)).ToList())!;
 
-    /// <summary>1 km east and back along the same road, ending where it starts.</summary>
+    // 1 km east and back along the same road, ending where it starts.
     private static RouteLine OutAndBack() =>
         RouteLine.From(Enumerable.Range(0, 11).Select(i => Offset(Origin, 0, i * 100))
             .Concat(Enumerable.Range(0, 10).Select(i => Offset(Origin, 0, (9 - i) * 100)))

@@ -467,9 +467,9 @@
     const SCH_WEEK_CLOSED = @(Model.WeekClosed ? "true" : "false");
     const SCH_PREV_WEEK  = '@Model.PrevWeekStart';
     const SCH_DAYS = [@Html.Raw(string.Join(",", Model.Days.Select(d => $"'{d:yyyy-MM-dd}'")))];
-    // Data, not markup. These used to be HTML strings glued together with Html.Raw, which
-    // switches Razor's encoding OFF - so a driver named `"><script>...` (a dispatcher can
-    // create one) escaped the option tag and ran in the next admin's session. JSON keeps
+    // Data, not markup. Option tags glued together with Html.Raw switch Razor's encoding
+    // OFF, so a driver named `"><script>...` (a dispatcher can create one) would escape the
+    // option tag and run in the next admin's session. JSON keeps
     // the values as values; the options are built through the DOM below, where a name is
     // always text and never markup. JsonSerializer escapes < > & by default, so nothing
     // here can close this script tag either.
@@ -1777,8 +1777,8 @@
 
     // A conflict is { text, els }: what is wrong, and the cells it is about.
     //
-    // The two used to travel separately, a list of sentences and a set of cells marked
-    // red, and a week copied forward can raise five at once. Five sentences over eleven
+    // The sentences and the red cells are carried together rather than as two separate
+    // lists. A week copied forward can raise five at once, and five sentences over eleven
     // red cells says which cells are wrong and nothing about which sentence goes with
     // which, so each one has to be worked out from the shift and the date in its wording.
     // Numbering them puts the same figure on the line and on the cells it names.

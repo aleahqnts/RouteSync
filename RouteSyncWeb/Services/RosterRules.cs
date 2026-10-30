@@ -2,72 +2,65 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>One place a driver holds in a month's roster, or a bus shift still waiting for one.</summary>
-    /// <param name="DriverId">Null for a shift the bus runs that has nobody on it yet.</param>
-    /// <param name="Kind"><see cref="RosterRules.Crew"/> or <see cref="RosterRules.Floater"/>.</param>
-    /// <param name="VehicleId">The bus, for crew. Null for a floater.</param>
-    /// <param name="Shift">Crew: the shift driven. Floater: the home shift, preferred and not a lock.</param>
-    /// <param name="RestWeekday">ISO weekday, 1 Monday to 7 Sunday, or null while unset.</param>
-    /// <param name="Suggested">Why auto-fill filled or emptied this place, or null for a place a person set.</param>
+    // One place a driver holds in a month's roster, or a bus shift still waiting for one.
+    // DriverId: Null for a shift the bus runs that has nobody on it yet.
+    // Kind: RosterRules.Crew or RosterRules.Floater.
+    // VehicleId: The bus, for crew. Null for a floater.
+    // Shift: Crew: the shift driven. Floater: the home shift, preferred and not a lock.
+    // RestWeekday: ISO weekday, 1 Monday to 7 Sunday, or null while unset.
+    // Suggested: Why auto-fill filled or emptied this place, or null for a place a person set.
     public sealed record RosterSeat(
         int? DriverId, string Kind, int RouteId, string? VehicleId, string Shift, int? RestWeekday,
         string? Suggested = null);
 
-    /// <summary>How one weekday stands on a route.</summary>
-    /// <param name="Resting">Crew drivers resting that day.</param>
-    /// <param name="Covering">Floaters not resting that day, which is not the same as free.</param>
-    /// <param name="Short">
-    /// A crew rest day that day which no floater can cover, every week, as the planner finds it.
-    /// Not <c>Resting &gt; Covering</c>: a floater working the evening before is not free for a
-    /// morning, whatever the count says.
-    /// </param>
+    // How one weekday stands on a route.
+    // Resting: Crew drivers resting that day.
+    // Covering: Floaters not resting that day, which is not the same as free.
+    // Short:
+    // A crew rest day that day which no floater can cover, every week, as the planner finds it.
+    // Not Resting > Covering: a floater working the evening before is not free for a
+    // morning, whatever the count says.
     public sealed record DayCover(int Weekday, int Resting, int Covering, bool Short);
 
-    /// <summary>What a route is short of, stated rather than hidden.</summary>
-    /// <param name="CrewSeats">Bus shifts the route runs, filled or not.</param>
-    /// <param name="UnfilledSeats">Bus shifts the route runs with nobody on them.</param>
-    /// <param name="FloatersNeeded">
-    /// The usual minimum: one floater for every six bus shifts, since each crew driver rests one
-    /// day in seven. A guide for staffing a route, not a promise the rest days are covered.
-    /// </param>
-    /// <param name="GapsPerWeek">Crew rest days each week that no floater can cover, as the planner finds them.</param>
+    // What a route is short of, stated rather than hidden.
+    // CrewSeats: Bus shifts the route runs, filled or not.
+    // UnfilledSeats: Bus shifts the route runs with nobody on them.
+    // FloatersNeeded:
+    // The usual minimum: one floater for every six bus shifts, since each crew driver rests one
+    // day in seven. A guide for staffing a route, not a promise the rest days are covered.
+    // GapsPerWeek: Crew rest days each week that no floater can cover, as the planner finds them.
     public sealed record RouteShortfall(
         int RouteId, int CrewSeats, int UnfilledSeats, int Floaters, int FloatersNeeded, int GapsPerWeek)
     {
-        /// <summary>Floaters the route needs beyond those it has, by the usual minimum.</summary>
+        // Floaters the route needs beyond those it has, by the usual minimum.
         public int FloatersMissing => Math.Max(0, FloatersNeeded - Floaters);
 
-        /// <summary>Drivers the route needs beyond those placed on it.</summary>
+        // Drivers the route needs beyond those placed on it.
         public int DriversShort => UnfilledSeats + FloatersMissing;
 
-        /// <summary>
-        /// Enough floaters by the usual minimum, and rest days left uncovered anyway: the rest
-        /// days are arranged so one floater is needed in two places at once. Moving a rest day
-        /// fixes it; another floater only hides it.
-        /// </summary>
+        // Enough floaters by the usual minimum, and rest days left uncovered anyway: the rest
+        // days are arranged so one floater is needed in two places at once. Moving a rest day
+        // fixes it; another floater only hides it.
         public bool RestDaysCollide => FloatersMissing == 0 && Floaters > 0 && GapsPerWeek > 0;
     }
 
-    /// <summary>
-    /// The rules for building a month's roster: what makes one savable, how its rest days
-    /// cover, and where rest days are best put.
-    /// </summary>
-    /// <remarks>
-    /// <para>Every function is pure. The Roster page sends the roster as it stands on screen
-    /// and gets back what is wrong with it and how each route covers, so the page and the
-    /// save are judged by the same rules.</para>
-    ///
-    /// <para>A crew driver works six days and rests on a fixed weekday. Floaters belong to a
-    /// route and cover its crew's rest days, one a day each, so a route usually needs a
-    /// floater for every six crew seats, rounded up. Whether a given arrangement of rest days
-    /// is actually covered is the planner's to say, through <see cref="RosterStructure"/>.</para>
-    /// </remarks>
+    // The rules for building a month's roster: what makes one savable, how its rest days
+    // cover, and where rest days are best put.
+    //
+    // Every function is pure. The Roster page sends the roster as it stands on screen
+    // and gets back what is wrong with it and how each route covers, so the page and the
+    // save are judged by the same rules.
+    //
+    // A crew driver works six days and rests on a fixed weekday. Floaters belong to a
+    // route and cover its crew's rest days, one a day each, so a route usually needs a
+    // floater for every six crew seats, rounded up. Whether a given arrangement of rest days
+    // is actually covered is the planner's to say, through RosterStructure.
     public static partial class RosterRules
     {
         public const string Crew = "Crew";
         public const string Floater = "Floater";
 
-        /// <summary>Shifts in the order a day runs them.</summary>
+        // Shifts in the order a day runs them.
         public static readonly IReadOnlyList<string> Shifts = new[] { "Morning", "Afternoon", "Evening" };
 
         private static readonly string[] DayNames = { "", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
@@ -76,24 +69,21 @@ namespace FleetWise.Services
 
         private const int DriverRoleId = 2;
 
-        /// <summary>Monday to Sunday, as ISO weekdays.</summary>
+        // Monday to Sunday, as ISO weekdays.
         public static IEnumerable<int> Weekdays => Enumerable.Range(1, 7);
 
-        /// <summary>A weekday's full name.</summary>
+        // A weekday's full name.
         public static string DayName(int weekday) => weekday is >= 1 and <= 7 ? DayNames[weekday] : "";
 
-        /// <summary>Why a roster cannot be saved as it stands. Empty when it can.</summary>
-        /// <remarks>
-        /// <list type="bullet">
-        /// <item>A driver sits in one place a month: one crew seat or one floater row.</item>
-        /// <item>Every crew driver and floater has a rest day.</item>
-        /// <item>A shift the bus runs has one driver at most. It may have none yet: a publish
-        /// covers such a place from the route's floaters, or leaves it unfilled with a reason,
-        /// and the route's shortfall note counts it.</item>
-        /// <item>A retired bus holds no crew, and a crew sits on the route its bus is based on.</item>
-        /// <item>Only an active driver account is placed.</item>
-        /// </list>
-        /// </remarks>
+        // Why a roster cannot be saved as it stands. Empty when it can.
+        //
+        // - A driver sits in one place a month: one crew seat or one floater row.
+        // - Every crew driver and floater has a rest day.
+        // - A shift the bus runs has one driver at most. It may have none yet: a publish
+        //   covers such a place from the route's floaters, or leaves it unfilled with a reason,
+        //   and the route's shortfall note counts it.
+        // - A retired bus holds no crew, and a crew sits on the route its bus is based on.
+        // - Only an active driver account is placed.
         public static IReadOnlyList<string> Problems(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<Vehicle> vehicles,
@@ -173,16 +163,13 @@ namespace FleetWise.Services
             return problems.Distinct().ToList();
         }
 
-        /// <summary>
-        /// For each weekday, how many of a route's crew rest and how many of its floaters are
-        /// working, and whether a rest day that day goes uncovered.
-        /// </summary>
-        /// <remarks>
-        /// The two counts are for reading at a glance. Whether the day is short comes from the
-        /// planner's weekly gaps, which is the only thing that knows a floater is not free the
-        /// morning after an evening. Crew seats with no driver or no rest day yet count for
-        /// nothing, so the strip shows the roster as far as it has been built.
-        /// </remarks>
+        // For each weekday, how many of a route's crew rest and how many of its floaters are
+        // working, and whether a rest day that day goes uncovered.
+        //
+        // The two counts are for reading at a glance. Whether the day is short comes from the
+        // planner's weekly gaps, which is the only thing that knows a floater is not free the
+        // morning after an evening. Crew seats with no driver or no rest day yet count for
+        // nothing, so the strip shows the roster as far as it has been built.
         public static IReadOnlyList<DayCover> Capacity(
             int routeId, IReadOnlyList<RosterSeat> seats, IReadOnlyList<WeeklyGap> weekly)
         {
@@ -198,13 +185,12 @@ namespace FleetWise.Services
                 .ToList();
         }
 
-        /// <summary>What a route needs that it does not have.</summary>
-        /// <remarks>
-        /// Drivers short counts the route's bus shifts with nobody on them, and the floaters it
-        /// needs beyond those it has by the usual minimum. Gaps per week counts the crew rest
-        /// days the planner cannot cover, which is what the roster will leave unfilled every
-        /// week whatever the minimum says.
-        /// </remarks>
+        // What a route needs that it does not have.
+        //
+        // Drivers short counts the route's bus shifts with nobody on them, and the floaters it
+        // needs beyond those it has by the usual minimum. Gaps per week counts the crew rest
+        // days the planner cannot cover, which is what the roster will leave unfilled every
+        // week whatever the minimum says.
         public static RouteShortfall Shortfall(
             int routeId, IReadOnlyList<RosterSeat> seats, IReadOnlyList<WeeklyGap> weekly)
         {
@@ -217,7 +203,7 @@ namespace FleetWise.Services
             return new RouteShortfall(routeId, crewSeats.Count, unfilled, floaters, needed, gaps);
         }
 
-        /// <summary>Active drivers holding no place on the roster.</summary>
+        // Active drivers holding no place on the roster.
         public static IReadOnlyList<UserModel> Unplaced(IReadOnlyList<RosterSeat> seats, IReadOnlyList<UserModel> drivers)
         {
             var placed = seats.Where(s => s.DriverId is not null).Select(s => s.DriverId!.Value).ToHashSet();

@@ -2,64 +2,62 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>A driver who could take a trip, and why they sit where they do.</summary>
-    /// <param name="Rank">Position in the ranking, from 1. Zero for a driver listed but never ranked.</param>
-    /// <param name="Tier">1 is best. See <see cref="SchedulingRules.RankDrivers"/>.</param>
-    /// <param name="Reason">One line a dispatcher can read without knowing the rules.</param>
-    /// <param name="Warning">What taking this driver costs, or null when it costs nothing.</param>
-    /// <param name="Facts">The figures the driver was ranked on, for showing beside the name.</param>
+    // A driver who could take a trip, and why they sit where they do.
+    // Rank: Position in the ranking, from 1. Zero for a driver listed but never ranked.
+    // Tier: 1 is best. See SchedulingRules.RankDrivers.
+    // Reason: One line a dispatcher can read without knowing the rules.
+    // Warning: What taking this driver costs, or null when it costs nothing.
+    // Facts: The figures the driver was ranked on, for showing beside the name.
     public sealed record DriverCandidate(
         int DriverId, string Name, int Rank, int Tier, string Reason, string? Warning, DriverFacts? Facts = null);
 
-    /// <summary>The figures a driver is ranked on.</summary>
-    /// <param name="RouteTrips">Trips on the trip's route in the last <see cref="SchedulingData.HistoryDays"/> days.</param>
-    /// <param name="RouteName">The trip's route.</param>
-    /// <param name="WeekShifts">Shifts already in the trip's Monday to Sunday week.</param>
-    /// <param name="OtherShift">Another shift the driver has on the trip's day, or null.</param>
-    /// <param name="DaysInRow">How many days in a row taking the trip would make, counting its day.</param>
+    // The figures a driver is ranked on.
+    // RouteTrips: Trips on the trip's route in the last SchedulingData.HistoryDays days.
+    // RouteName: The trip's route.
+    // WeekShifts: Shifts already in the trip's Monday to Sunday week.
+    // OtherShift: Another shift the driver has on the trip's day, or null.
+    // DaysInRow: How many days in a row taking the trip would make, counting its day.
     public sealed record DriverFacts(int RouteTrips, string RouteName, int WeekShifts, string? OtherShift, int DaysInRow);
 
-    /// <summary>A bus that could take a trip, and why it sits where it does.</summary>
-    /// <param name="Facts">The figures the bus was ranked on, for showing beside it.</param>
+    // A bus that could take a trip, and why it sits where it does.
+    // Facts: The figures the bus was ranked on, for showing beside it.
     public sealed record VehicleCandidate(
         string VehicleId, string PlateNumber, int Rank, int Tier, string Reason, string? Warning, VehicleFacts? Facts = null);
 
-    /// <summary>The figures a bus is ranked on.</summary>
-    /// <param name="FewerSeatsThan">The bus it would replace, when it has fewer seats than that bus; otherwise null.</param>
-    /// <param name="HomeRoute">The route it is based on, or null when it has none.</param>
-    /// <param name="SameRoute">Whether it is based on the trip's own route.</param>
-    /// <param name="WeekTrips">Trips already in the trip's Monday to Sunday week.</param>
+    // The figures a bus is ranked on.
+    // FewerSeatsThan: The bus it would replace, when it has fewer seats than that bus; otherwise null.
+    // HomeRoute: The route it is based on, or null when it has none.
+    // SameRoute: Whether it is based on the trip's own route.
+    // WeekTrips: Trips already in the trip's Monday to Sunday week.
     public sealed record VehicleFacts(int Seats, string? FewerSeatsThan, string? HomeRoute, bool SameRoute, int WeekTrips);
 
-    /// <summary>Drivers a ranking left out before ranking anyone, counted by why.</summary>
-    /// <remarks>
-    /// Kept so a list with nobody good on it can say why rather than only that. The driver
-    /// already on the trip and accounts that are not active drivers are not counted: neither
-    /// was ever a candidate.
-    /// </remarks>
+    // Drivers a ranking left out before ranking anyone, counted by why.
+    //
+    // Kept so a list with nobody good on it can say why rather than only that. The driver
+    // already on the trip and accounts that are not active drivers are not counted: neither
+    // was ever a candidate.
     public sealed record DriverExclusions(int OnThatShift, int ReportedUnavailable);
 
-    /// <summary>Drivers ranked for a trip, and those left out of the ranking for being on leave.</summary>
-    /// <remarks>
-    /// Leave is kept to one side rather than dropped. A driver on leave who offers to cover
-    /// is a thing that happens, and the assignment rules let a dispatcher confirm past it,
-    /// so the name has to stay reachable even though it is never suggested.
-    /// </remarks>
+    // Drivers ranked for a trip, and those left out of the ranking for being on leave.
+    //
+    // Leave is kept to one side rather than dropped. A driver on leave who offers to cover
+    // is a thing that happens, and the assignment rules let a dispatcher confirm past it,
+    // so the name has to stay reachable even though it is never suggested.
     public sealed record DriverRanking(
         IReadOnlyList<DriverCandidate> Candidates, IReadOnlyList<DriverCandidate> OnLeave, DriverExclusions? Excluded = null);
 
-    /// <summary>Buses a ranking left out before ranking any, counted by why. Retired buses are not counted.</summary>
+    // Buses a ranking left out before ranking any, counted by why. Retired buses are not counted.
     public sealed record VehicleExclusions(int OnThatShift, int OutOfService);
 
-    /// <summary>Buses ranked for a trip, and how many were left out.</summary>
+    // Buses ranked for a trip, and how many were left out.
     public sealed record VehicleRanking(IReadOnlyList<VehicleCandidate> Candidates, VehicleExclusions Excluded);
 
-    /// <summary>Where a chosen replacement sat in the ranking offered for it.</summary>
-    /// <param name="Rank">Its position, or null when it was not on the list.</param>
-    /// <param name="Of">How many candidates were ranked.</param>
+    // Where a chosen replacement sat in the ranking offered for it.
+    // Rank: Its position, or null when it was not on the list.
+    // Of: How many candidates were ranked.
     public sealed record RankedPick(int? Rank, int? Tier, int Of);
 
-    /// <summary>The screens a pick from a ranking is made on, as recorded in the audit trail.</summary>
+    // The screens a pick from a ranking is made on, as recorded in the audit trail.
     public static class PickScreen
     {
         public const string Board = "board";
@@ -68,14 +66,14 @@ namespace FleetWise.Services
         public const string Roster = "roster";
         public const string Planner = "planner";
 
-        /// <summary>Every screen, in the order a report lists them.</summary>
+        // Every screen, in the order a report lists them.
         public static readonly IReadOnlyList<string> All = new[] { Board, Reassign, Cover, Roster, Planner };
 
         public static bool IsKnown(string? screen) => screen is not null && All.Contains(screen);
     }
 
-    /// <summary>What a reassignment chose, measured against what was suggested.</summary>
-    /// <param name="Screen">Where the pick was made, one of <see cref="PickScreen"/>, or null when not known.</param>
+    // What a reassignment chose, measured against what was suggested.
+    // Screen: Where the pick was made, one of PickScreen, or null when not known.
     public sealed record ReassignmentTag(
         bool TookTopSuggestion,
         IReadOnlyList<string> Issues,
@@ -83,11 +81,10 @@ namespace FleetWise.Services
         RankedPick? Vehicle,
         string? Screen = null)
     {
-        /// <summary>The value written to <c>audit_log.changes</c>.</summary>
-        /// <remarks>
-        /// Nested under its own key so the audit page, which reads <c>old</c> and <c>new</c>
-        /// as a row edit, never mistakes it for one.
-        /// </remarks>
+        // The value written to audit_log.changes.
+        //
+        // Nested under its own key so the audit page, which reads old and new
+        // as a row edit, never mistakes it for one.
         public Dictionary<string, object?> ToAuditChanges() => new()
         {
             ["recommendation"] = new Dictionary<string, object?>
@@ -108,20 +105,19 @@ namespace FleetWise.Services
         };
     }
 
-    /// <summary>A shift standing in the way of leave, and who could take it over.</summary>
-    /// <param name="Candidates">Drivers who could cover it at no cost worth a confirm, best first.</param>
-    /// <param name="Suggested">The one offered by default, or null when nobody qualifies.</param>
-    /// <param name="Shortfall">Why nobody qualifies, when nobody does; see <see cref="SchedulingRules.DriverShortfall"/>.</param>
-    /// <param name="PinnedDriverId">
-    /// The driver the dispatcher already chose for this shift, when they did, or
-    /// <see cref="SchedulingRules.LeftForNow"/> when they chose to leave it uncovered for now.
-    /// </param>
-    /// <param name="PinnedProblem">Why that choice can no longer be saved, or null when it can.</param>
+    // A shift standing in the way of leave, and who could take it over.
+    // Candidates: Drivers who could cover it at no cost worth a confirm, best first.
+    // Suggested: The one offered by default, or null when nobody qualifies.
+    // Shortfall: Why nobody qualifies, when nobody does; see SchedulingRules.DriverShortfall.
+    // PinnedDriverId:
+    // The driver the dispatcher already chose for this shift, when they did, or
+    // SchedulingRules.LeftForNow when they chose to leave it uncovered for now.
+    // PinnedProblem: Why that choice can no longer be saved, or null when it can.
     public sealed record CoverShift(
         Trip Trip, IReadOnlyList<DriverCandidate> Candidates, DriverCandidate? Suggested,
         string? Shortfall = null, int? PinnedDriverId = null, string? PinnedProblem = null);
 
-    /// <summary>The reasons a trip cannot run as it is assigned.</summary>
+    // The reasons a trip cannot run as it is assigned.
     public static class AssignmentIssue
     {
         public const string VehicleOutOfService = "vehicle_out_of_service";
@@ -129,23 +125,20 @@ namespace FleetWise.Services
         public const string DriverOnLeave = "driver_on_leave";
     }
 
-    /// <summary>
-    /// The published rules for choosing a replacement driver or bus.
-    /// </summary>
-    /// <remarks>
-    /// Every function here is pure: it reads a <see cref="SchedulingSnapshot"/> and
-    /// returns an answer, and never writes. The dispatch board, the reassign modal and the
-    /// audit trail all rank through this class, so a suggestion made on one screen is the
-    /// suggestion measured on another.
-    ///
-    /// Ranking is by tier and then by tie-breakers, never by weighted points. Each position
-    /// is explained by a rule that can be said out loud, which is the whole case for
-    /// trusting it. Nothing here applies a suggestion; a dispatcher does.
-    ///
-    /// The eligibility tests mirror the assignment rules in TripAssignments, so that a
-    /// candidate in tiers 1 to 3 saves without a conflict and one in tier 4 raises exactly
-    /// the conflict its warning names.
-    /// </remarks>
+    // The published rules for choosing a replacement driver or bus.
+    //
+    // Every function here is pure: it reads a SchedulingSnapshot and
+    // returns an answer, and never writes. The dispatch board, the reassign modal and the
+    // audit trail all rank through this class, so a suggestion made on one screen is the
+    // suggestion measured on another.
+    //
+    // Ranking is by tier and then by tie-breakers, never by weighted points. Each position
+    // is explained by a rule that can be said out loud, which is the whole case for
+    // trusting it. Nothing here applies a suggestion; a dispatcher does.
+    //
+    // The eligibility tests mirror the assignment rules in TripAssignments, so that a
+    // candidate in tiers 1 to 3 saves without a conflict and one in tier 4 raises exactly
+    // the conflict its warning names.
     public static class SchedulingRules
     {
         private const int DriverRoleId = 2;
@@ -158,15 +151,12 @@ namespace FleetWise.Services
             ["Afternoon"] = "Evening",
         };
 
-        /// <summary>
-        /// Why a trip cannot run as assigned, in the vocabulary of <see cref="AssignmentIssue"/>.
-        /// Empty when it can.
-        /// </summary>
-        /// <remarks>
-        /// The availability flag carries no date. It speaks for the operational day it is
-        /// read on and no other, so a driver who called in sick this morning is not an issue
-        /// on next Thursday's trip. Leave has dates and is read for the trip's own day.
-        /// </remarks>
+        // Why a trip cannot run as assigned, in the vocabulary of AssignmentIssue.
+        // Empty when it can.
+        //
+        // The availability flag carries no date. It speaks for the operational day it is
+        // read on and no other, so a driver who called in sick this morning is not an issue
+        // on next Thursday's trip. Leave has dates and is read for the trip's own day.
         public static IReadOnlyList<string> IssuesOf(Trip trip, SchedulingSnapshot s)
         {
             var issues = new List<string>();
@@ -190,32 +180,29 @@ namespace FleetWise.Services
             return issues;
         }
 
-        /// <summary>Whether any of the issues is about the driver rather than the bus.</summary>
+        // Whether any of the issues is about the driver rather than the bus.
         public static bool IsDriverIssue(IEnumerable<string> issues) =>
             issues.Any(i => i is AssignmentIssue.DriverUnavailable or AssignmentIssue.DriverOnLeave);
 
-        /// <summary>Whether any of the issues is about the bus.</summary>
+        // Whether any of the issues is about the bus.
         public static bool IsVehicleIssue(IEnumerable<string> issues) =>
             issues.Contains(AssignmentIssue.VehicleOutOfService);
 
-        /// <summary>Drivers who could take this trip instead of the one on it, best first.</summary>
-        /// <remarks>
-        /// <para>Never ranked: the driver already on the trip, an account that is not
-        /// active, a driver who reported they cannot drive today when the trip is today, and
-        /// a driver already booked on the same shift that day. A driver on approved leave is
-        /// listed apart, in <see cref="DriverRanking.OnLeave"/>.</para>
-        ///
-        /// <para>Tiers, best first:</para>
-        /// <list type="number">
-        /// <item>No other shift that day.</item>
-        /// <item>Another shift that day that breaks no rule.</item>
-        /// <item>Would make seven or more working days in a row.</item>
-        /// <item>Breaks a back-to-back or an Evening then Morning rule.</item>
-        /// </list>
-        ///
-        /// <para>Inside a tier: most trips on this route in the last 30 days, then fewest
-        /// shifts this week, then name.</para>
-        /// </remarks>
+        // Drivers who could take this trip instead of the one on it, best first.
+        //
+        // Never ranked: the driver already on the trip, an account that is not
+        // active, a driver who reported they cannot drive today when the trip is today, and
+        // a driver already booked on the same shift that day. A driver on approved leave is
+        // listed apart, in DriverRanking.OnLeave.
+        //
+        // Tiers, best first:
+        // 1. No other shift that day.
+        // 2. Another shift that day that breaks no rule.
+        // 3. Would make seven or more working days in a row.
+        // 4. Breaks a back-to-back or an Evening then Morning rule.
+        //
+        // Inside a tier: most trips on this route in the last 30 days, then fewest
+        // shifts this week, then name.
         public static DriverRanking RankDrivers(Trip trip, SchedulingSnapshot s)
         {
             var day = trip.Date.Date;
@@ -308,25 +295,22 @@ namespace FleetWise.Services
                 new DriverExclusions(onThatShift, unavailable));
         }
 
-        /// <summary>Buses that could take this trip instead of the one on it, best first.</summary>
-        /// <remarks>
-        /// <para>Never ranked: the bus already on the trip, a retired bus, a bus out of
-        /// service, and a bus already booked on the same shift that day.</para>
-        ///
-        /// <para>Tiers, best first:</para>
-        /// <list type="number">
-        /// <item>Based on the trip's route.</item>
-        /// <item>Based on another route, or on none.</item>
-        /// <item>Carries an open maintenance incident that did not ground it.</item>
-        /// </list>
-        ///
-        /// <para>Inside a tier: at least as many seats as the bus it replaces, then fewest
-        /// trips this week, then bus ID.</para>
-        ///
-        /// <para>Maintenance recency and mileage are deliberately absent. There is no
-        /// odometer, and nothing keeps the last maintenance date reliably current, so a
-        /// ranking on either would be a ranking on noise.</para>
-        /// </remarks>
+        // Buses that could take this trip instead of the one on it, best first.
+        //
+        // Never ranked: the bus already on the trip, a retired bus, a bus out of
+        // service, and a bus already booked on the same shift that day.
+        //
+        // Tiers, best first:
+        // 1. Based on the trip's route.
+        // 2. Based on another route, or on none.
+        // 3. Carries an open maintenance incident that did not ground it.
+        //
+        // Inside a tier: at least as many seats as the bus it replaces, then fewest
+        // trips this week, then bus ID.
+        //
+        // Maintenance recency and mileage are deliberately absent. There is no
+        // odometer, and nothing keeps the last maintenance date reliably current, so a
+        // ranking on either would be a ranking on noise.
         public static VehicleRanking RankVehicles(Trip trip, SchedulingSnapshot s)
         {
             var day = trip.Date.Date;
@@ -398,19 +382,16 @@ namespace FleetWise.Services
             return new VehicleRanking(ordered, new VehicleExclusions(onThatShift, outOfService));
         }
 
-        /// <summary>The worst tier a pick can come from and still cost nothing worth a warning.</summary>
+        // The worst tier a pick can come from and still cost nothing worth a warning.
         public const int NoCostTier = 2;
 
-        /// <summary>
-        /// Why no driver can take a trip at no cost, or null when one can.
-        /// </summary>
-        /// <remarks>
-        /// Said in counts, because what the dispatcher does next depends on why: drivers who
-        /// would each break a rule are a decision to make, and drivers who are all booked are
-        /// a plan to change. "No driver is free without a cost: 2 would break a rest rule." or
-        /// "No driver can take this shift: 9 are already on that shift, 1 reported unable to
-        /// drive."
-        /// </remarks>
+        // Why no driver can take a trip at no cost, or null when one can.
+        //
+        // Said in counts, because what the dispatcher does next depends on why: drivers who
+        // would each break a rule are a decision to make, and drivers who are all booked are
+        // a plan to change. "No driver is free without a cost: 2 would break a rest rule." or
+        // "No driver can take this shift: 9 are already on that shift, 1 reported unable to
+        // drive."
         public static string? DriverShortfall(DriverRanking ranking)
         {
             if (ranking.Candidates.Any(c => c.Tier <= NoCostTier)) return null;
@@ -436,7 +417,7 @@ namespace FleetWise.Services
                 : "No driver can take this shift: " + JoinList(parts) + ".";
         }
 
-        /// <summary>Why no bus can take a trip at no cost, or null when one can.</summary>
+        // Why no bus can take a trip at no cost, or null when one can.
         public static string? VehicleShortfall(VehicleRanking ranking)
         {
             if (ranking.Candidates.Any(c => c.Tier <= NoCostTier)) return null;
@@ -458,15 +439,12 @@ namespace FleetWise.Services
                 : "No bus can take this trip: " + JoinList(parts) + ".";
         }
 
-        /// <summary>
-        /// A driver pick in one line, for where a single pick is shown rather than a list:
-        /// "Free all day, 2 North Loop trips in the last 30 days".
-        /// </summary>
-        /// <remarks>
-        /// Only the facts that decided the pick: whether the day is otherwise free, and how
-        /// well they know the route. The full figures belong in a list, where they can be
-        /// compared.
-        /// </remarks>
+        // A driver pick in one line, for where a single pick is shown rather than a list:
+        // "Free all day, 2 North Loop trips in the last 30 days".
+        //
+        // Only the facts that decided the pick: whether the day is otherwise free, and how
+        // well they know the route. The full figures belong in a list, where they can be
+        // compared.
         public static string PickSentence(DriverCandidate c)
         {
             if (c.Facts is not { } f) return c.Reason;
@@ -479,7 +457,7 @@ namespace FleetWise.Services
             return $"{free}, {route}";
         }
 
-        /// <summary>A bus pick in one line: "Based on North Loop, 40 seats".</summary>
+        // A bus pick in one line: "Based on North Loop, 40 seats".
         public static string PickSentence(VehicleCandidate c)
         {
             if (c.Facts is not { } f) return c.Reason;
@@ -494,11 +472,10 @@ namespace FleetWise.Services
             return $"{home}, {seats}";
         }
 
-        /// <summary>A shift nobody is on yet, as a trip, for ranking who could take it.</summary>
-        /// <remarks>
-        /// Carries no trip ID and no driver, so nobody is left out of the ranking for already
-        /// holding it.
-        /// </remarks>
+        // A shift nobody is on yet, as a trip, for ranking who could take it.
+        //
+        // Carries no trip ID and no driver, so nobody is left out of the ranking for already
+        // holding it.
         public static Trip OpenSlot(DateTime day, string shift, int routeId, string vehicleId)
         {
             var window = TripStatus.Windows[shift];
@@ -516,13 +493,12 @@ namespace FleetWise.Services
             };
         }
 
-        /// <summary>Where a driver booked into an empty shift sat in the ranking for it.</summary>
-        /// <remarks>
-        /// For a roster gap filled from the Roster page or the planner. Worked out on the server
-        /// against the schedule as it stood before the booking, like
-        /// <see cref="TagReassignment"/>. An empty shift has nothing wrong with an existing
-        /// assignment, so no issues are recorded.
-        /// </remarks>
+        // Where a driver booked into an empty shift sat in the ranking for it.
+        //
+        // For a roster gap filled from the Roster page or the planner. Worked out on the server
+        // against the schedule as it stood before the booking, like
+        // TagReassignment. An empty shift has nothing wrong with an existing
+        // assignment, so no issues are recorded.
         public static ReassignmentTag TagFill(Trip slot, int driverId, SchedulingSnapshot s, string screen)
         {
             var ranking = RankDrivers(slot, s).Candidates;
@@ -536,15 +512,12 @@ namespace FleetWise.Services
                 screen);
         }
 
-        /// <summary>
-        /// Where the driver and bus a reassignment chose sat in the rankings for the trip as
-        /// it stood before the change. Null when neither changed.
-        /// </summary>
-        /// <remarks>
-        /// Worked out on the server at the moment of saving, never taken from the browser,
-        /// so the figure reported on the Reports page cannot be written by the page it
-        /// measures.
-        /// </remarks>
+        // Where the driver and bus a reassignment chose sat in the rankings for the trip as
+        // it stood before the change. Null when neither changed.
+        //
+        // Worked out on the server at the moment of saving, never taken from the browser,
+        // so the figure reported on the Reports page cannot be written by the page it
+        // measures.
         public static ReassignmentTag? TagReassignment(
             Trip before, int? newDriverId, string? newVehicleId, SchedulingSnapshot s)
         {
@@ -574,23 +547,21 @@ namespace FleetWise.Services
             return new ReassignmentTag(top, IssuesOf(before, s), driver, vehicle);
         }
 
-        /// <summary>The worst tier a cover arranged from the leave queue may come from.</summary>
-        /// <remarks>
-        /// Covers there are saved together under one button. A cover that makes a driver
-        /// work a seventh day in a row, or breaks a rest rule, deserves a decision of its
-        /// own, so it is left for the planner or the board, where the cost is confirmed.
-        /// </remarks>
+        // The worst tier a cover arranged from the leave queue may come from.
+        //
+        // Covers there are saved together under one button. A cover that makes a driver
+        // work a seventh day in a row, or breaks a rest rule, deserves a decision of its
+        // own, so it is left for the planner or the board, where the cost is confirmed.
         public const int CoverMaxTier = NoCostTier;
 
-        /// <summary>The pinned driver of a shift the dispatcher is leaving uncovered for now.</summary>
+        // The pinned driver of a shift the dispatcher is leaving uncovered for now.
         public const int LeftForNow = 0;
 
-        /// <summary>The schedule as it would stand with this leave granted.</summary>
-        /// <remarks>
-        /// A request still waiting is not leave yet, so a plain snapshot does not say the
-        /// driver is away. Ranking and the audit tag both need it to, or a cover for leave
-        /// would be recorded as a reassignment with nothing wrong.
-        /// </remarks>
+        // The schedule as it would stand with this leave granted.
+        //
+        // A request still waiting is not leave yet, so a plain snapshot does not say the
+        // driver is away. Ranking and the audit tag both need it to, or a cover for leave
+        // would be recorded as a reassignment with nothing wrong.
         public static SchedulingSnapshot AsIfGranted(SchedulingSnapshot s, LeaveRequest request)
         {
             var granted = new LeaveRequest
@@ -610,15 +581,12 @@ namespace FleetWise.Services
             };
         }
 
-        /// <summary>
-        /// The schedule with drivers counted as on a shift they have been placed on in a plan
-        /// not saved yet.
-        /// </summary>
-        /// <remarks>
-        /// Each placement is a trip of its own that nothing else can mistake for a real one or
-        /// for the slot being ranked, so a placed driver is left out as already on that shift,
-        /// and counted as such in the reason nobody fits.
-        /// </remarks>
+        // The schedule with drivers counted as on a shift they have been placed on in a plan
+        // not saved yet.
+        //
+        // Each placement is a trip of its own that nothing else can mistake for a real one or
+        // for the slot being ranked, so a placed driver is left out as already on that shift,
+        // and counted as such in the reason nobody fits.
         public static SchedulingSnapshot WithPlaced(SchedulingSnapshot s, DateTime day, string shift, IEnumerable<int> driverIds)
         {
             var window = TripStatus.Windows[shift];
@@ -640,29 +608,26 @@ namespace FleetWise.Services
             return placed.Count == 0 ? s : s with { Trips = s.Trips.Concat(placed).ToList() };
         }
 
-        /// <summary>The schedule with one trip handed to another driver.</summary>
+        // The schedule with one trip handed to another driver.
         public static SchedulingSnapshot WithDriver(SchedulingSnapshot s, string tripId, int driverId) =>
             s with
             {
                 Trips = s.Trips.Select(t => t.TripId == tripId ? Reassigned(t, driverId) : t).ToList(),
             };
 
-        /// <summary>
-        /// A cover for each shift, suggested in date order, each one ranked as though the
-        /// covers suggested before it were already saved.
-        /// </summary>
-        /// <remarks>
-        /// <para>Ranked one at a time rather than all at once. A driver free all week would
-        /// otherwise top every shift of it and be suggested for a Morning and the Afternoon
-        /// straight after, a pairing the rules refuse the moment the first is saved.</para>
-        ///
-        /// <para>A shift the dispatcher has already chosen a driver for keeps that driver,
-        /// whatever the ranking now says, and the shifts after it are ranked around the
-        /// choice. When the choice can no longer be saved, the shift says why instead of
-        /// swapping in someone else. A shift left uncovered for now is suggested nobody, and
-        /// the shifts after it are ranked as though nobody were on it.</para>
-        /// </remarks>
-        /// <param name="pinned">Drivers already chosen, by trip ID; <see cref="LeftForNow"/> for a shift left uncovered.</param>
+        // A cover for each shift, suggested in date order, each one ranked as though the
+        // covers suggested before it were already saved.
+        //
+        // Ranked one at a time rather than all at once. A driver free all week would
+        // otherwise top every shift of it and be suggested for a Morning and the Afternoon
+        // straight after, a pairing the rules refuse the moment the first is saved.
+        //
+        // A shift the dispatcher has already chosen a driver for keeps that driver,
+        // whatever the ranking now says, and the shifts after it are ranked around the
+        // choice. When the choice can no longer be saved, the shift says why instead of
+        // swapping in someone else. A shift left uncovered for now is suggested nobody, and
+        // the shifts after it are ranked as though nobody were on it.
+        // pinned: Drivers already chosen, by trip ID; LeftForNow for a shift left uncovered.
         public static IReadOnlyList<CoverShift> SuggestCovers(
             IEnumerable<Trip> shifts, SchedulingSnapshot s, IReadOnlyDictionary<string, int>? pinned = null)
         {
@@ -707,22 +672,17 @@ namespace FleetWise.Services
             return covers;
         }
 
-        /// <summary>
-        /// Why a driver cannot be saved as cover for a trip from the leave queue, or null
-        /// when they can.
-        /// </summary>
-        /// <remarks>
-        /// Asked again at save time against the schedule as it stands, whatever the page
-        /// offered, so a list left open while the week changed cannot book a driver who has
-        /// since been given the shift beside it.
-        /// </remarks>
+        // Why a driver cannot be saved as cover for a trip from the leave queue, or null
+        // when they can.
+        //
+        // Asked again at save time against the schedule as it stands, whatever the page
+        // offered, so a list left open while the week changed cannot book a driver who has
+        // since been given the shift beside it.
         public static string? CoverRefusal(Trip trip, int driverId, SchedulingSnapshot s) =>
             RefusalFrom(RankDrivers(trip, s), trip, driverId, s);
 
-        /// <summary>
-        /// Why a driver the dispatcher has chosen for a shift could not be saved with it, said
-        /// as it stands before anything is saved, or null when they could.
-        /// </summary>
+        // Why a driver the dispatcher has chosen for a shift could not be saved with it, said
+        // as it stands before anything is saved, or null when they could.
         private static string? PinnedProblemOf(DriverRanking ranking, int driverId)
         {
             var pick = ranking.Candidates.FirstOrDefault(c => c.DriverId == driverId);
@@ -754,7 +714,7 @@ namespace FleetWise.Services
             return null;
         }
 
-        /// <summary>A copy of a trip with another driver on it, carrying the fields the rules read.</summary>
+        // A copy of a trip with another driver on it, carrying the fields the rules read.
         private static Trip Reassigned(Trip t, int driverId) => new()
         {
             TripId = t.TripId,
@@ -770,12 +730,11 @@ namespace FleetWise.Services
             ActualEndTime = t.ActualEndTime,
         };
 
-        /// <summary>The rest rule this shift would break for a driver, or null.</summary>
-        /// <remarks>
-        /// The same three cases the assignment check refuses without an override: the shift
-        /// straight after or straight before on the same day, and an Evening shift that ends
-        /// as a Morning shift begins.
-        /// </remarks>
+        // The rest rule this shift would break for a driver, or null.
+        //
+        // The same three cases the assignment check refuses without an override: the shift
+        // straight after or straight before on the same day, and an Evening shift that ends
+        // as a Morning shift begins.
         private static string? RestRuleBroken(string shift, DateTime day, List<Trip> mine)
         {
             foreach (var t in mine.Where(t => t.Date.Date == day))
@@ -797,14 +756,11 @@ namespace FleetWise.Services
             return null;
         }
 
-        /// <summary>
-        /// How many days in a row the driver would be working if they took a shift on this
-        /// day, counting it.
-        /// </summary>
-        /// <remarks>
-        /// A day counts when the driver has a trip on it that is not missed. Followed at most
-        /// a week either way, which is as far as the snapshot is guaranteed to reach.
-        /// </remarks>
+        // How many days in a row the driver would be working if they took a shift on this
+        // day, counting it.
+        //
+        // A day counts when the driver has a trip on it that is not missed. Followed at most
+        // a week either way, which is as far as the snapshot is guaranteed to reach.
         private static int ConsecutiveRun(DateTime day, List<Trip> mine, DateTime now)
         {
             bool Works(DateTime d) => mine.Any(t => t.Date.Date == d && !Missed(t, now));
@@ -818,13 +774,13 @@ namespace FleetWise.Services
             return back + forward + 1;
         }
 
-        /// <summary>A trip whose window closed without it ever starting.</summary>
+        // A trip whose window closed without it ever starting.
         private static bool Missed(Trip t, DateTime now) =>
             !Ci.Equals(t.TripStatus, "Active")
             && !Ci.Equals(t.TripStatus, "Completed")
             && TripStatus.Closed(t, now);
 
-        /// <summary>Monday to Sunday around a day.</summary>
+        // Monday to Sunday around a day.
         private static (DateTime Start, DateTime End) WeekOf(DateTime day)
         {
             var start = day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
@@ -840,15 +796,12 @@ namespace FleetWise.Services
             return name.Length == 0 ? $"Driver {d.UserId}" : name;
         }
 
-        /// <summary>
-        /// A driver's name as a list shows it, with their ID added when another driver
-        /// account carries the same name.
-        /// </summary>
-        /// <remarks>
-        /// Names repeat. Two identical entries leave a dispatcher guessing which account
-        /// they are booking, and an entry matching the driver on the trip reads as that
-        /// driver being offered to replace themselves.
-        /// </remarks>
+        // A driver's name as a list shows it, with their ID added when another driver
+        // account carries the same name.
+        //
+        // Names repeat. Two identical entries leave a dispatcher guessing which account
+        // they are booking, and an entry matching the driver on the trip reads as that
+        // driver being offered to replace themselves.
         private static string LabelOf(UserModel d, SchedulingSnapshot s)
         {
             var name = NameOf(d);
@@ -868,7 +821,7 @@ namespace FleetWise.Services
 
         private static string IsAre(int n) => n == 1 ? "is" : "are";
 
-        /// <summary>"a", "a and b", "a, b and c".</summary>
+        // "a", "a and b", "a, b and c".
         private static string JoinList(IReadOnlyList<string> parts) => parts.Count switch
         {
             0 => "",

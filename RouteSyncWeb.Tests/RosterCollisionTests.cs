@@ -4,16 +4,13 @@ using static FleetWise.Services.RosterRules;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>
-/// Rest days a single floater cannot cover because of when they fall, not how many there are.
-/// </summary>
-/// <remarks>
-/// The October 2026 roster published with every Wednesday Morning empty on two buses. On each
-/// route a Morning driver rested Wednesday, an Evening driver rested Tuesday, and one floater
-/// covered both: the Tuesday Evening, then nothing, because a Morning straight after an Evening
-/// breaks the rest between shifts. A weekday head count saw one resting and one working on each
-/// day and called it covered.
-/// </remarks>
+// Rest days a single floater cannot cover because of when they fall, not how many there are.
+//
+// The October 2026 roster published with every Wednesday Morning empty on two buses. On each
+// route a Morning driver rested Wednesday, an Evening driver rested Tuesday, and one floater
+// covered both: the Tuesday Evening, then nothing, because a Morning straight after an Evening
+// breaks the rest between shifts. A weekday head count saw one resting and one working on each
+// day and called it covered.
 public class RosterCollisionTests
 {
     private const int North = 1;
@@ -223,11 +220,9 @@ public class RosterCollisionTests
 
     // ---- The turn of the month -------------------------------------------------------------
 
-    /// <summary>
-    /// North Express as rostered for November 2026. The V022 Evening driver rested on Sundays in
-    /// October and on Mondays in November, so Sunday 1 November would be their seventh day
-    /// running. A floater covers it and is then not free for the Monday Morning after.
-    /// </summary>
+    // North Express as rostered for November 2026. The V022 Evening driver rested on Sundays in
+    // October and on Mondays in November, so Sunday 1 November would be their seventh day
+    // running. A floater covers it and is then not free for the Monday Morning after.
     private static (List<RosterSeat> Seats, List<UserModel> Drivers, List<Vehicle> Buses, RosterWorld Month) November()
     {
         var seats = new List<RosterSeat>

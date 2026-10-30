@@ -3,16 +3,15 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace FleetWise.Services
 {
-    /// <summary>The newest driver app a GitHub Release carries as an APK.</summary>
+    // The newest driver app a GitHub Release carries as an APK.
     public record DriverUpdate(string Version, string ApkUrl);
 
-    /// <summary>Tells the driver app which version is newest, without every phone asking GitHub.</summary>
-    /// <remarks>
-    /// GitHub allows sixty unauthenticated requests an hour per address, which phones sharing
-    /// one network could use up. The dashboard asks once in a while and answers every phone
-    /// from memory. A release counts only when it carries an asset named
-    /// RouteSync-Driver-X.Y.Z.apk, so a release made for the dashboard alone offers nothing.
-    /// </remarks>
+    // Tells the driver app which version is newest, without every phone asking GitHub.
+    //
+    // GitHub allows sixty unauthenticated requests an hour per address, which phones sharing
+    // one network could use up. The dashboard asks once in a while and answers every phone
+    // from memory. A release counts only when it carries an asset named
+    // RouteSync-Driver-X.Y.Z.apk, so a release made for the dashboard alone offers nothing.
     public class DriverUpdateFeed
     {
         private const string ReleasesUrl = "https://api.github.com/repos/aleahqnts/RouteSync/releases?per_page=10";
@@ -45,7 +44,7 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>The highest-numbered driver APK among published (not draft, not pre-release) releases.</summary>
+        // The highest-numbered driver APK among published (not draft, not pre-release) releases.
         public static DriverUpdate? Pick(string releasesJson)
         {
             Version? best = null;

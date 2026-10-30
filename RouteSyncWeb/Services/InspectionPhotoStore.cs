@@ -3,20 +3,17 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// Reads inspection photographs out of the private bucket for the dashboard.
-    /// </summary>
-    /// <remarks>
-    /// A photograph is asked for by its row, never by its stored path. The browser can
-    /// already see which photographs belong to a fault, so naming one costs it nothing,
-    /// while accepting a path would let anyone signed in fetch any object in the bucket:
-    /// the key used here is the service key, and it fetches whatever it is given.
-    ///
-    /// Shared by every page that shows photographs, so that rule is written once. Each
-    /// page still serves the bytes from its own controller, because the controllers are
-    /// gated by different permissions and a dispatcher who cannot open the vehicle pages
-    /// must still see the photograph on a trip.
-    /// </remarks>
+    // Reads inspection photographs out of the private bucket for the dashboard.
+    //
+    // A photograph is asked for by its row, never by its stored path. The browser can
+    // already see which photographs belong to a fault, so naming one costs it nothing,
+    // while accepting a path would let anyone signed in fetch any object in the bucket:
+    // the key used here is the service key, and it fetches whatever it is given.
+    //
+    // Shared by every page that shows photographs, so that rule is written once. Each
+    // page still serves the bytes from its own controller, because the controllers are
+    // gated by different permissions and a dispatcher who cannot open the vehicle pages
+    // must still see the photograph on a trip.
     public class InspectionPhotoStore
     {
         private static readonly HttpClient _http = new();
@@ -30,12 +27,11 @@ namespace FleetWise.Services
             _config = config;
         }
 
-        /// <summary>The photograph's bytes, or null when there is nothing to show.</summary>
-        /// <remarks>
-        /// Null covers a row that does not exist, a row whose photograph has been swept,
-        /// and an object the bucket would not return. The caller answers all three the
-        /// same way, since none of them is something the browser can act on.
-        /// </remarks>
+        // The photograph's bytes, or null when there is nothing to show.
+        //
+        // Null covers a row that does not exist, a row whose photograph has been swept,
+        // and an object the bucket would not return. The caller answers all three the
+        // same way, since none of them is something the browser can act on.
         public async Task<byte[]?> ReadAsync(long photoId)
         {
             var row = (await _supabase.From<InspectionPhoto>()
@@ -60,10 +56,8 @@ namespace FleetWise.Services
             return res.IsSuccessStatusCode ? await res.Content.ReadAsByteArrayAsync() : null;
         }
 
-        /// <summary>
-        /// Cache header for a photograph. A photograph is written once under a name nothing
-        /// reuses, so a second look at the same one need not travel again.
-        /// </summary>
+        // Cache header for a photograph. A photograph is written once under a name nothing
+        // reuses, so a second look at the same one need not travel again.
         public const string CacheControl = "private, max-age=31536000, immutable";
     }
 }

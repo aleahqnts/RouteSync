@@ -25,18 +25,15 @@ namespace FleetWise.Controllers
             _audit = audit;
         }
 
-        /// <summary>
-        /// How often a pick from a ranking took the Best match, over a month or a year
-        /// around the chosen day, overall and screen by screen. Every member of staff's
-        /// picks are counted together.
-        /// </summary>
-        /// <remarks>
-        /// Read from the audit trail, where every reassignment records where its choice sat
-        /// in the ranking. A span runs by operational day, from 06:00 on its first day to
-        /// 06:00 on the day after its last. Philippine time keeps no daylight saving, so the
-        /// offset is fixed.
-        /// </remarks>
-        /// <param name="range">"month", "lastMonth", "year" (the default) or "lastYear".</param>
+        // How often a pick from a ranking took the Best match, over a month or a year
+        // around the chosen day, overall and screen by screen. Every member of staff's
+        // picks are counted together.
+        //
+        // Read from the audit trail, where every reassignment records where its choice sat
+        // in the ranking. A span runs by operational day, from 06:00 on its first day to
+        // 06:00 on the day after its last. Philippine time keeps no daylight saving, so the
+        // offset is fixed.
+        // range: "month", "lastMonth", "year" (the default) or "lastYear".
         [HttpGet]
         public async Task<IActionResult> SuggestionStats(DateTime? date, string? range)
         {
@@ -91,12 +88,11 @@ namespace FleetWise.Controllers
 
         public async Task<IActionResult> Index() => View();
 
-        /// <summary>
-        /// Main data endpoint for the reports page: the stat cards, one page of the table,
-        /// its pagination, and the passenger and revenue summary cards.
-        /// </summary>
-        /// <remarks>Everything is filtered by the page's route and date selection, and the
-        /// summary cards additionally by their own period.</remarks>
+        // Main data endpoint for the reports page: the stat cards, one page of the table,
+        // its pagination, and the passenger and revenue summary cards.
+        //
+        // Everything is filtered by the page's route and date selection, and the
+        // summary cards additionally by their own period.
         [HttpGet]
         public async Task<IActionResult> GetData(
             int? routeId,
@@ -361,16 +357,13 @@ namespace FleetWise.Controllers
             };
         }
 
-        /// <summary>
-        /// Trips dated from <paramref name="from"/> to <paramref name="to"/>, either end
-        /// optional, with every column or only <paramref name="columns"/>.
-        /// </summary>
-        /// <remarks>
-        /// The database answers at most a thousand rows per request, so a plain read of the
-        /// table drops the rest without saying so once there are more trips than that, and
-        /// the newest are the ones lost. The dates are filtered in the database, and the
-        /// rows are read a thousand at a time, in trip order, until a page comes back short.
-        /// </remarks>
+        // Trips dated from from to to, either end
+        // optional, with every column or only columns.
+        //
+        // The database answers at most a thousand rows per request, so a plain read of the
+        // table drops the rest without saying so once there are more trips than that, and
+        // the newest are the ones lost. The dates are filtered in the database, and the
+        // rows are read a thousand at a time, in trip order, until a page comes back short.
         private async Task<List<Trip>> TripsAsync(DateTime? from = null, DateTime? to = null, string? columns = null)
         {
             const int PageRows = 1000;
@@ -396,12 +389,11 @@ namespace FleetWise.Controllers
             }
         }
 
-        /// <summary>The trips behind one of the figures on a summary card.</summary>
-        /// <remarks>
-        /// A card states a number and nothing else, so an operator reading a bad one has to
-        /// go looking for the trips that made it. Each card answers for itself here, with
-        /// the same day and route the page is already showing.
-        /// </remarks>
+        // The trips behind one of the figures on a summary card.
+        //
+        // A card states a number and nothing else, so an operator reading a bad one has to
+        // go looking for the trips that made it. Each card answers for itself here, with
+        // the same day and route the page is already showing.
         [HttpGet]
         public async Task<IActionResult> StatBreakdown(string kind, int? routeId, DateTime? date)
         {
@@ -465,7 +457,7 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>Trip detail for the modal, requested when a row's view button is used.</summary>
+        // Trip detail for the modal, requested when a row's view button is used.
         [HttpGet]
         public async Task<IActionResult> TripDetail(string tripId)
         {
@@ -564,7 +556,7 @@ namespace FleetWise.Controllers
 
             return Json(result);
         }
-        /// <summary>Filter options for the report generation modal.</summary>
+        // Filter options for the report generation modal.
         [HttpGet]
         public async Task<IActionResult> GetFilterOptions()
         {
@@ -616,7 +608,7 @@ namespace FleetWise.Controllers
             return Json(new { routes, drivers, vehicles });
         }
 
-        /// <summary>Builds the report preview, grouped by route.</summary>
+        // Builds the report preview, grouped by route.
         [HttpGet]
         public async Task<IActionResult> GenerateReport(
             string reportType,
@@ -667,16 +659,15 @@ namespace FleetWise.Controllers
             return Json(new { groups, totals, period = PeriodLabel(from, to) });
         }
 
-        /// <summary>The trips a report covers, filtered and in reading order.</summary>
-        /// <remarks>
-        /// A report says what happened, so a trip still running or not yet due out is left
-        /// out: it has nothing to report and would arrive as a row of zeroes, reading as a
-        /// service that ran and carried nobody.
-        ///
-        /// One that never ran is kept and marked missed. A shift the fleet failed to cover
-        /// is part of the day's account, and a report that hid it would show a day going
-        /// better than it did.
-        /// </remarks>
+        // The trips a report covers, filtered and in reading order.
+        //
+        // A report says what happened, so a trip still running or not yet due out is left
+        // out: it has nothing to report and would arrive as a row of zeroes, reading as a
+        // service that ran and carried nobody.
+        //
+        // One that never ran is kept and marked missed. A shift the fleet failed to cover
+        // is part of the day's account, and a report that hid it would show a day going
+        // better than it did.
         private static List<Trip> ReportableTrips(
             IEnumerable<Trip> all, DateTime from, DateTime to,
             int? routeId, int? driverId, string? vehicleId) =>
@@ -690,13 +681,12 @@ namespace FleetWise.Controllers
                .ThenBy(t => t.ShiftStartTime)
                .ToList();
 
-        /// <summary>The days a report covers, as a pair of operational days.</summary>
-        /// <remarks>
-        /// Both ends default to the current operational day, so asking for no dates gives
-        /// the same single day it always did. A pair given backwards is read as the range
-        /// the reader meant rather than refused, since the two boxes carry no order of
-        /// their own and an empty report would not say why.
-        /// </remarks>
+        // The days a report covers, as a pair of operational days.
+        //
+        // Both ends default to the current operational day, so asking for no dates gives
+        // the same single day it always did. A pair given backwards is read as the range
+        // the reader meant rather than refused, since the two boxes carry no order of
+        // their own and an empty report would not say why.
         private static (DateTime From, DateTime To) Period(DateTime? from, DateTime? to)
         {
             var a = (from ?? PhClock.OperationalDay).Date;
@@ -704,34 +694,31 @@ namespace FleetWise.Controllers
             return b < a ? (b, a) : (a, b);
         }
 
-        /// <summary>How the covered days read on the report itself.</summary>
+        // How the covered days read on the report itself.
         private static string PeriodLabel(DateTime from, DateTime to) =>
             from == to
                 ? OpDayLabel(from)
                 : $"{from:MMMM d, yyyy} to {to:MMMM d, yyyy}"
                   + $"  •  {(to - from).Days + 1} operational days";
 
-        /// <summary>The covered days as a file name fragment.</summary>
+        // The covered days as a file name fragment.
         private static string PeriodStamp(DateTime from, DateTime to) =>
             from == to ? $"{from:yyyy-MM-dd}" : $"{from:yyyy-MM-dd}_to_{to:yyyy-MM-dd}";
 
-        /// <summary>Whether a trip has finished, whether by running or by being missed.</summary>
+        // Whether a trip has finished, whether by running or by being missed.
         private static bool Concluded(Trip t) => DeriveStatus(t) is "Completed" or "Missed";
 
-        /// <summary>
-        /// What a trip took, which is nothing unless it ran.
-        /// </summary>
-        /// <remarks>
-        /// A missed trip carries whatever revenue was planned for it. Printing that figure
-        /// beside the trips that earned theirs would add money to the day that nobody paid.
-        /// </remarks>
+        // What a trip took, which is nothing unless it ran.
+        //
+        // A missed trip carries whatever revenue was planned for it. Printing that figure
+        // beside the trips that earned theirs would add money to the day that nobody paid.
         private static string Money(Trip t) => $"₱{EarnedAmount(t):N2}";
 
-        /// <summary>The plate of the bus that ran the trip, or N/A for a bus no longer on file.</summary>
+        // The plate of the bus that ran the trip, or N/A for a bus no longer on file.
         private static string PlateOf(Dictionary<string, Vehicle> vehiclesById, Trip t) =>
             vehiclesById.TryGetValue(t.VehicleId, out var v) ? v.PlateNumber : "N/A";
 
-        /// <summary>The same figure unformatted, for a column a spreadsheet will add up.</summary>
+        // The same figure unformatted, for a column a spreadsheet will add up.
         private static decimal EarnedAmount(Trip t) => Earned(t) ? t.EstimatedRevenue : 0m;
 
         private static object BuildDailyTripReport(
@@ -825,7 +812,7 @@ namespace FleetWise.Controllers
             return groups;
         }
 
-        /// <summary>Renders the report as a PDF.</summary>
+        // Renders the report as a PDF.
         [HttpGet]
         public async Task<IActionResult> DownloadReport(
             string reportType,
@@ -1072,7 +1059,7 @@ namespace FleetWise.Controllers
             return File(pdfBytes, "application/pdf", fileName);
         }
 
-        /// <summary>Renders the report as CSV.</summary>
+        // Renders the report as CSV.
         [HttpGet]
         public async Task<IActionResult> DownloadReportCsv(
             string reportType,
@@ -1188,11 +1175,10 @@ namespace FleetWise.Controllers
             return File(bytes, "text/csv", fileName);
         }
 
-        /// <summary>Records a report handed out as a file: which one, in what form, for which days and filters.</summary>
-        /// <remarks>
-        /// Only the file is recorded. The preview is drawn again on every change of filter,
-        /// and an entry for each would bury the report that was actually taken away.
-        /// </remarks>
+        // Records a report handed out as a file: which one, in what form, for which days and filters.
+        //
+        // Only the file is recorded. The preview is drawn again on every change of filter,
+        // and an entry for each would bury the report that was actually taken away.
         private Task LogReportAsync(string reportType, string format, DateTime from, DateTime to,
             int? routeId, int? driverId, string? vehicleId,
             IReadOnlyDictionary<int, string> routeNames, IReadOnlyDictionary<int, string> userNames, int trips)
@@ -1228,17 +1214,14 @@ namespace FleetWise.Controllers
         private static DateTime ShiftEndAt(Trip t) => t.Date.Date + t.ShiftEndTime
             + (IsOvernight(t) ? TimeSpan.FromDays(1) : TimeSpan.Zero);
 
-        /// <summary>Whether a trip has earned its revenue, which only a finished one has.</summary>
-        /// <remarks>
-        /// estimated_revenue is written when a trip completes, so summing every row trusts
-        /// the column over the trip's state.
-        /// </remarks>
+        // Whether a trip has earned its revenue, which only a finished one has.
+        //
+        // estimated_revenue is written when a trip completes, so summing every row trusts
+        // the column over the trip's state.
         private static bool Earned(Trip t) => t.TripStatus == "Completed";
 
-        /// <summary>
-        /// The trip's status, with missed derived rather than stored: a trip past its shift
-        /// window that never started or completed was missed. Matches the dispatch board.
-        /// </summary>
+        // The trip's status, with missed derived rather than stored: a trip past its shift
+        // window that never started or completed was missed. Matches the dispatch board.
         private static string DeriveStatus(Trip t)
         {
             if (string.Equals(t.TripStatus, "Completed", StringComparison.OrdinalIgnoreCase)) return "Completed";
@@ -1247,25 +1230,23 @@ namespace FleetWise.Controllers
             return "Not Yet Started";
         }
 
-        /// <summary>
-        /// The end time alone, without a date or a next-day marker. The operational-day
-        /// header already establishes the window the report covers.
-        /// </summary>
+        // The end time alone, without a date or a next-day marker. The operational-day
+        // header already establishes the window the report covers.
         private static string ShiftEndLabel(Trip t) => ShiftEndAt(t).ToString("h:mm tt");
 
-        /// <summary>The full shift window, for example "10:00 PM - 06:00 AM".</summary>
+        // The full shift window, for example "10:00 PM - 06:00 AM".
         private static string ShiftRange(Trip t, string dash = "–") =>
             $"{ShiftStartAt(t):h:mm tt} {dash} {ShiftEndLabel(t)}";
 
-        /// <summary>
-        /// The logged start or end time, or a placeholder when the trip never recorded one.
-        /// </summary>
-        /// <remarks>Written in Philippine clock time.</remarks>
+        // The logged start or end time, or a placeholder when the trip never recorded one.
+        //
+        // Written in Philippine clock time.
         private static string FmtActual(DateTime? dt) =>
             dt.HasValue ? StoredTimes.FromWall(dt.Value).ToString("h:mm tt") : "—";
 
-        /// <summary>How long the trip ran, start to end, or a placeholder until it has both.</summary>
-        /// <remarks>Both ends are stored the same way, so the difference needs no correction.</remarks>
+        // How long the trip ran, start to end, or a placeholder until it has both.
+        //
+        // Both ends are stored the same way, so the difference needs no correction.
         private static string TripDuration(Trip t)
         {
             if (t.ActualStartTime is not DateTime start || t.ActualEndTime is not DateTime end) return "—";
@@ -1274,7 +1255,7 @@ namespace FleetWise.Controllers
             return span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:D2}m" : $"{span.Minutes}m";
         }
 
-        /// <summary>The operational-day banner, naming both ends of the service window.</summary>
+        // The operational-day banner, naming both ends of the service window.
         private static string OpDayLabel(DateTime anchor) =>
             $"{anchor:MMMM d, yyyy}  •  6:00 AM – {anchor.AddDays(1):MMMM d}, 5:59 AM";
 

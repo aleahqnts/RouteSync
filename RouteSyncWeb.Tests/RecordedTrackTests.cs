@@ -2,18 +2,15 @@ using FleetWise.Services;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>
-/// A real field test replayed through the snapper: two laps of a 780 m loop on a
-/// motorcycle at 13 to 20 km/h, as the driver app reported them every five seconds or so.
-/// The positions are moved by a fixed offset to an arbitrary spot, which keeps every
-/// distance and turn as recorded.
-/// </summary>
-/// <remarks>
-/// The recording holds the faults that made the map's marker jump backwards: fixes from
-/// cell towers and wifi, with no speed and a claimed accuracy of 11 to 100 m, landing up
-/// to 65 m behind the bus. It also starts with the bus standing a few metres before its
-/// terminal, which is where the loop's line begins and ends.
-/// </remarks>
+// A real field test replayed through the snapper: two laps of a 780 m loop on a
+// motorcycle at 13 to 20 km/h, as the driver app reported them every five seconds or so.
+// The positions are moved by a fixed offset to an arbitrary spot, which keeps every
+// distance and turn as recorded.
+//
+// The recording holds the faults that made the map's marker jump backwards: fixes from
+// cell towers and wifi, with no speed and a claimed accuracy of 11 to 100 m, landing up
+// to 65 m behind the bus. It also starts with the bus standing a few metres before its
+// terminal, which is where the loop's line begins and ends.
 public class RecordedTrackTests
 {
     private static readonly RouteLine Loop = RouteLine.From(new GeoPoint[]
@@ -113,7 +110,7 @@ public class RecordedTrackTests
 
     private static readonly DateTime Start = new(2026, 10, 17, 17, 35, 25);
 
-    /// <summary>Feeds the readings in as the map would see them arrive, one poll per reading.</summary>
+    // Feeds the readings in as the map would see them arrive, one poll per reading.
     private static List<(GpsReading Reading, SnapResult Result)> Replay()
     {
         var tracker = new RouteSnapTracker();
@@ -142,7 +139,7 @@ public class RecordedTrackTests
         }
     }
 
-    /// <summary>Where the bus stood among its stops after each reading, as the map works it out.</summary>
+    // Where the bus stood among its stops after each reading, as the map works it out.
     private static List<StopState> StopStates()
     {
         var places = StopEta.Place(Loop, Stops);

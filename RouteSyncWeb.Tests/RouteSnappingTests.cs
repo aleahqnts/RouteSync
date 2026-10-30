@@ -6,7 +6,7 @@ public class RouteSnappingTests
 {
     private static readonly GeoPoint Origin = new(14.55, 121.04);
 
-    /// <summary>A point this many metres north and east of another.</summary>
+    // A point this many metres north and east of another.
     private static GeoPoint Offset(GeoPoint p, double north, double east)
     {
         var phi = p.Lat * Math.PI / 180;
@@ -15,14 +15,12 @@ public class RouteSnappingTests
         return new GeoPoint(p.Lat + north / mLat, p.Lng + east / mLng);
     }
 
-    /// <summary>A road running 1 km due east from the origin.</summary>
+    // A road running 1 km due east from the origin.
     private static RouteLine EastRoad() =>
         RouteLine.From(Enumerable.Range(0, 11).Select(i => Offset(Origin, 0, i * 100)).ToList())!;
 
-    /// <summary>
-    /// A route that drives 1 km east and back along the same road, so every point on the
-    /// road lies on the line twice, once for each direction.
-    /// </summary>
+    // A route that drives 1 km east and back along the same road, so every point on the
+    // road lies on the line twice, once for each direction.
     private static RouteLine OutAndBack() =>
         RouteLine.From(Enumerable.Range(0, 11).Select(i => Offset(Origin, 0, i * 100))
             .Concat(Enumerable.Range(0, 10).Select(i => Offset(Origin, 0, (9 - i) * 100)))

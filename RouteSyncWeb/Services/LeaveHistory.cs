@@ -2,21 +2,18 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// What happened to a leave request, in the order it happened.
-    /// </summary>
-    /// <remarks>
-    /// Read off the row rather than kept in a table of its own. A request is filed once,
-    /// decided once, asked about and answered at most once, and revoked at most once as a
-    /// whole, and each of those moments has columns of its own. None of them overwrites
-    /// another, so granted leave that was later cancelled or taken back still reads as
-    /// granted first.
-    /// </remarks>
+    // What happened to a leave request, in the order it happened.
+    //
+    // Read off the row rather than kept in a table of its own. A request is filed once,
+    // decided once, asked about and answered at most once, and revoked at most once as a
+    // whole, and each of those moments has columns of its own. None of them overwrites
+    // another, so granted leave that was later cancelled or taken back still reads as
+    // granted first.
     public static class LeaveHistory
     {
         private const string Stamp = "MMM d, yyyy h:mm tt";
 
-        /// <param name="names">Display names by user id, operators as well as drivers.</param>
+        // names: Display names by user id, operators as well as drivers.
         public static List<LeaveEventViewModel> Of(LeaveRequest r, IReadOnlyDictionary<int, string> names)
         {
             string Who(int? id) =>
@@ -94,10 +91,8 @@ namespace FleetWise.Services
             return events.OrderBy(e => e.At).ToList();
         }
 
-        /// <summary>
-        /// The note a request's status stands on: why it was cancelled for a cancellation
-        /// that was accepted, and the decision's own note for everything else.
-        /// </summary>
+        // The note a request's status stands on: why it was cancelled for a cancellation
+        // that was accepted, and the decision's own note for everything else.
         public static string? StatusNote(LeaveRequest r) =>
             LeaveEntitlement.AskAccepted(r) && !LeaveEntitlement.DecisionIsAcceptance(r)
                 ? r.WithdrawAnswerNote

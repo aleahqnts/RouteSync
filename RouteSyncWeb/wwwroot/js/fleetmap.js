@@ -1,5 +1,5 @@
 (function () {
-    // BGC, Taguig — default center used until route bounds are available
+    // BGC, Taguig, default center used until route bounds are available
     var DEFAULT_CENTER = [14.5508, 121.0509];
     var DEFAULT_ZOOM = 16;
     // The counter phone sends its figure every five seconds, so a poll on the same period
@@ -257,7 +257,7 @@
         });
     }
 
-    // Side panel — tracks which bus is open so each poll refreshes it live.
+    // Side panel, tracks which bus is open so each poll refreshes it live.
     var panel = document.getElementById('fmPanel');
     var panelClose = document.getElementById('fmPanelClose');
     var selectedVehicleId = null;
@@ -275,9 +275,9 @@
     }
 
     function statusColor(status) {
-        if (status === 'On Trip') return '#34C759'; // green — moving / on trip
+        if (status === 'On Trip') return '#34C759'; // green, moving / on trip
         if (status === 'Flagged') return '#DC2626'; // red
-        if (status === 'Out of Service') return '#6B7280'; // slate — grounded
+        if (status === 'Out of Service') return '#6B7280'; // slate, grounded
         if (status === 'Offline') return '#9CA3AF'; // grey
         if (status === 'Pending') return '#F59E0B'; // amber, waiting on its checklist, as on Dispatch
         return '#3B82F6'; // blue, ready to deploy and other parked, as on Dispatch
@@ -1016,7 +1016,7 @@
         });
     }
 
-    // Shared filter handler — narrows polylines, stops, and live buses together
+    // Shared filter handler, narrows polylines, stops, and live buses together
     function refetch() {
         var routeId = parseInt(routeSelect.value) || null;
         applyRouteFilter(routeId);
@@ -1131,7 +1131,7 @@
     }
 
     // Single source of truth for routes: assign colors, draw polylines, fill the
-    // dropdown and legend — then start stops + live polling once colors are ready.
+    // dropdown and legend, then start stops + live polling once colors are ready.
     fetch('/FleetMap/Routes')
         .then(r => r.json())
         .then(function (routes) {

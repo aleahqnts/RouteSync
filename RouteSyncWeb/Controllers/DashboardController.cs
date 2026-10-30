@@ -19,55 +19,43 @@ namespace FleetWise.Controllers
             _cache = cache;
         }
 
-        /// <summary>How many past weeks the usual day is averaged over.</summary>
+        // How many past weeks the usual day is averaged over.
         private const int UsualWeeks = 4;
 
-        /// <summary>
-        /// How long the usual day is kept between refreshes. It is built from days already
-        /// over, so it changes only when the day does, and the page asks every few seconds.
-        /// </summary>
+        // How long the usual day is kept between refreshes. It is built from days already
+        // over, so it changes only when the day does, and the page asks every few seconds.
         private static readonly TimeSpan UsualFreshness = TimeSpan.FromMinutes(10);
 
-        /// <summary>
-        /// The trip columns the dashboard reads. The page asks every few seconds, so each
-        /// read carries only what the figures and the chart are worked out from.
-        /// dashboard_figures reads the same columns for the cards.
-        /// </summary>
+        // The trip columns the dashboard reads. The page asks every few seconds, so each
+        // read carries only what the figures and the chart are worked out from.
+        // dashboard_figures reads the same columns for the cards.
         private const string TripColumns =
             "trip_id,date,route_id,vehicle_id,shift_type,shift_start_time,shift_end_time," +
             "trip_status,estimated_revenue,total_boarded,actual_end_time";
 
-        /// <summary>
-        /// How long the figures are shared between everyone watching the same route.
-        /// </summary>
-        /// <remarks>
-        /// Just under the page's five-second refresh. A single viewer finds the last answer
-        /// expired every time and is read for afresh, exactly as without sharing, while a
-        /// room of viewers costs one read per refresh between them. Nobody is shown figures
-        /// older than a refresh and a few seconds.
-        /// </remarks>
+        // How long the figures are shared between everyone watching the same route.
+        //
+        // Just under the page's five-second refresh. A single viewer finds the last answer
+        // expired every time and is read for afresh, exactly as without sharing, while a
+        // room of viewers costs one read per refresh between them. Nobody is shown figures
+        // older than a refresh and a few seconds.
         private static readonly TimeSpan FiguresShared = TimeSpan.FromSeconds(4);
 
-        /// <summary>
-        /// How long the hourly chart is shared, just under the minute the page waits between
-        /// asking for it, on the same terms as <see cref="FiguresShared"/>.
-        /// </summary>
+        // How long the hourly chart is shared, just under the minute the page waits between
+        // asking for it, on the same terms as FiguresShared.
         private static readonly TimeSpan ChartShared = TimeSpan.FromSeconds(55);
 
-        /// <summary>
-        /// How long yesterday's trips are kept for the comparison with today.
-        /// </summary>
-        /// <remarks>
-        /// Yesterday's shifts have ended, so its figures do not move. The trips of yesterday
-        /// still running are read on every refresh regardless, since an overnight shift is
-        /// counted in today's figures.
-        /// </remarks>
+        // How long yesterday's trips are kept for the comparison with today.
+        //
+        // Yesterday's shifts have ended, so its figures do not move. The trips of yesterday
+        // still running are read on every refresh regardless, since an overnight shift is
+        // counted in today's figures.
         private static readonly TimeSpan YesterdayShared = TimeSpan.FromMinutes(10);
 
-        /// <summary>Set once the database is found to have no dashboard_figures that takes p_yesterday_active_only.</summary>
+        // Set once the database is found to have no dashboard_figures that takes p_yesterday_active_only.
         private static volatile bool _yesterdayFlagUnsupported;
 
-        /// <summary>The dashboard's figures at one moment, for everyone watching one route.</summary>
+        // The dashboard's figures at one moment, for everyone watching one route.
         private sealed record Figures(
             DateTime Today,
             IReadOnlyList<Trip> TodayTrips,
@@ -80,31 +68,27 @@ namespace FleetWise.Controllers
             IReadOnlyList<BusRoute> Routes,
             IReadOnlyList<ActiveTripRow> Breakdown);
 
-        /// <summary>The hourly chart at one moment: today's bars, the average, and the hour now.</summary>
+        // The hourly chart at one moment: today's bars, the average, and the hour now.
         private sealed record HourlyChart(int?[] Bars, double[]? Usual, int NowIndex);
 
         public async Task<IActionResult> Index(int? routeId) => View(await BuildAsync(routeId));
 
-        /// <summary>
-        /// The figures the dashboard is watching, without the page around them.
-        /// </summary>
-        /// <remarks>
-        /// The page refreshes itself often enough that re-rendering the whole of it each
-        /// time was the most expensive thing the dashboard did: every poll ran the view,
-        /// sent the markup for cards and a map that never change, and threw all but the
-        /// numbers away. Only the figures travel here, so the refresh can be frequent
-        /// enough to be worth having.
-        ///
-        /// The hourly chart is the largest part of the answer and moves the least, so the page
-        /// asks for it on only some refreshes. Without it, chartData is null and none of the
-        /// boardings behind it are read.
-        /// </remarks>
-        /// <param name="routeId">The route the page is narrowed to, if any.</param>
-        /// <param name="chart">Whether to include the hourly chart.</param>
-        /// <param name="fresh">
-        /// Read now rather than share what another viewer was just given, for a refresh asked
-        /// for by hand.
-        /// </param>
+        // The figures the dashboard is watching, without the page around them.
+        //
+        // The page refreshes itself often enough that re-rendering the whole of it each
+        // time was the most expensive thing the dashboard did: every poll ran the view,
+        // sent the markup for cards and a map that never change, and threw all but the
+        // numbers away. Only the figures travel here, so the refresh can be frequent
+        // enough to be worth having.
+        //
+        // The hourly chart is the largest part of the answer and moves the least, so the page
+        // asks for it on only some refreshes. Without it, chartData is null and none of the
+        // boardings behind it are read.
+        // routeId: The route the page is narrowed to, if any.
+        // chart: Whether to include the hourly chart.
+        // fresh:
+        // Read now rather than share what another viewer was just given, for a refresh asked
+        // for by hand.
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Stats(int? routeId, bool chart = true, bool fresh = false)
@@ -133,7 +117,7 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>The dashboard for one route, or all of them, from answers shared between viewers.</summary>
+        // The dashboard for one route, or all of them, from answers shared between viewers.
         private async Task<DashboardViewModel> BuildAsync(int? routeId, bool withChart = true, bool fresh = false)
         {
             var scope = routeId?.ToString() ?? "all";
@@ -173,7 +157,7 @@ namespace FleetWise.Controllers
             };
         }
 
-        /// <summary>The cards' figures and the trips behind them, read from the database.</summary>
+        // The cards' figures and the trips behind them, read from the database.
         private async Task<Figures> ReadFiguresAsync(int? routeId)
         {
             // The service day is the current operational cycle, 06:00 to 05:59 the next
@@ -291,7 +275,7 @@ namespace FleetWise.Controllers
                 routeRows, tripBreakdown);
         }
 
-        /// <summary>How many a trip had boarded by a moment, Philippine time.</summary>
+        // How many a trip had boarded by a moment, Philippine time.
         private static int BoardedBy(Trip t, DateTime at)
         {
             // The start time is not among the columns read, so the shift's own start stands in.
@@ -304,7 +288,7 @@ namespace FleetWise.Controllers
             return (int)Math.Round(t.TotalBoarded * share);
         }
 
-        /// <summary>Every trip of a past day, kept for <see cref="YesterdayShared"/>.</summary>
+        // Every trip of a past day, kept for YesterdayShared.
         private Task<List<Trip>> YesterdayAsync(DateTime day) =>
             SharedRead.GetAsync(_cache, $"dashboard:yesterday:{day:yyyy-MM-dd}", YesterdayShared,
                 () => PagedRead.AllAsync(() => _supabase.From<Trip>()
@@ -312,10 +296,8 @@ namespace FleetWise.Controllers
                     .Filter("date", Postgrest.Constants.Operator.Equals, day.ToString("yyyy-MM-dd"))
                     .Order("trip_id", Postgrest.Constants.Ordering.Ascending)));
 
-        /// <summary>
-        /// Boardings hour by hour across the service day, 06:00 to 05:59, with the usual day
-        /// beside them: the same hours on the same weekday in the weeks before.
-        /// </summary>
+        // Boardings hour by hour across the service day, 06:00 to 05:59, with the usual day
+        // beside them: the same hours on the same weekday in the weeks before.
         private async Task<HourlyChart> ReadChartAsync(Figures figures, int? routeId)
         {
             var now = PhClock.Now;
@@ -334,17 +316,16 @@ namespace FleetWise.Controllers
             _ => $"{at.Hour - 12}:00 PM",
         };
 
-        /// <summary>The boardings of one day's trips, counted by trip and hour.</summary>
-        /// <remarks>
-        /// <para>Counted in the database, which answers a full day with a few hundred small rows
-        /// however many passengers rode, where reading the events themselves meant one row per
-        /// passenger on every refresh. The trip identifiers travel in the request body, so a
-        /// day's worth is never too long to send.</para>
-        ///
-        /// <para>The answer is one read, which the API caps at a thousand rows. A day's trips
-        /// board in eight or nine hours each, so a day would need more than a hundred trips to
-        /// reach it; a single day is asked for at a time to keep it that way.</para>
-        /// </remarks>
+        // The boardings of one day's trips, counted by trip and hour.
+        //
+        // Counted in the database, which answers a full day with a few hundred small rows
+        // however many passengers rode, where reading the events themselves meant one row per
+        // passenger on every refresh. The trip identifiers travel in the request body, so a
+        // day's worth is never too long to send.
+        //
+        // The answer is one read, which the API caps at a thousand rows. A day's trips
+        // board in eight or nine hours each, so a day would need more than a hundred trips to
+        // reach it; a single day is asked for at a time to keep it that way.
         private async Task<List<BoardedHour>> BoardedHoursAsync(IEnumerable<Trip> trips)
         {
             var ids = trips.Select(t => t.TripId).Distinct().ToList();
@@ -357,10 +338,8 @@ namespace FleetWise.Controllers
             return HourlyBoardings.ParseHours(response.Content);
         }
 
-        /// <summary>
-        /// The average boardings for each hour on the same weekday over the past four weeks,
-        /// or null when none of those days had any.
-        /// </summary>
+        // The average boardings for each hour on the same weekday over the past four weeks,
+        // or null when none of those days had any.
         private async Task<double[]?> UsualAsync(DateTime today, int? routeId)
         {
             var key = $"dashboard_usual:{today:yyyy-MM-dd}:{routeId?.ToString() ?? "all"}";

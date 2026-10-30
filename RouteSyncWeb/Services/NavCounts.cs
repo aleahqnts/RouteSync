@@ -6,23 +6,21 @@ using Newtonsoft.Json;
 
 namespace FleetWise.Services
 {
-    /// <summary>What one tab is carrying, and how loudly it should say so.</summary>
-    /// <param name="Count">How many things are waiting. Nothing is drawn at zero.</param>
-    /// <param name="Urgent">
-    /// Whether any one of them cannot wait for somebody to open the tab.
-    /// </param>
-    /// <remarks>
-    /// Severity belongs to the thing, not to the tab it lives under. A tab takes the
-    /// highest severity of anything it holds, so one urgent request among five ordinary
-    /// ones makes the Requests badge urgent and the other four do not quieten it.
-    /// </remarks>
-    /// <param name="Note">What the count is about, for a tab whose number alone does not say.</param>
+    // What one tab is carrying, and how loudly it should say so.
+    // Count: How many things are waiting. Nothing is drawn at zero.
+    // Urgent:
+    // Whether any one of them cannot wait for somebody to open the tab.
+    //
+    // Severity belongs to the thing, not to the tab it lives under. A tab takes the
+    // highest severity of anything it holds, so one urgent request among five ordinary
+    // ones makes the Requests badge urgent and the other four do not quieten it.
+    // Note: What the count is about, for a tab whose number alone does not say.
     public sealed record NavBadge(int Count, bool Urgent, string? Note = null)
     {
         public static readonly NavBadge None = new(0, false);
     }
 
-    /// <summary>Every badge the sidebar can draw.</summary>
+    // Every badge the sidebar can draw.
     public sealed record NavBadges(
         NavBadge Dispatch, NavBadge Requests, NavBadge Vehicles, NavBadge Roster, NavBadge Audit)
     {
@@ -30,35 +28,31 @@ namespace FleetWise.Services
             new(NavBadge.None, NavBadge.None, NavBadge.None, NavBadge.None, NavBadge.None);
     }
 
-    /// <summary>
-    /// What needs a dispatcher's attention, counted for the navigation rail.
-    /// </summary>
-    /// <remarks>
-    /// The tabs already know these numbers; the point of counting them here is that a
-    /// dispatcher on the dashboard should not have to open Requests to learn there is a
-    /// sick call against tonight's shift.
-    ///
-    /// Counted for the fleet rather than per signed-in user, so one cache entry serves
-    /// everybody. What each of them is allowed to see is decided where the badges are
-    /// drawn, not here.
-    ///
-    /// Only what is actionable is counted. Users has nothing but activated and
-    /// deactivated accounts, and the dashboard, the map, reports and the audit trail are
-    /// all read.
-    /// </remarks>
-    /// <summary>Drops the standing count after anything is written.</summary>
-    /// <remarks>
-    /// Registered over every controller rather than at the handful of places that change a
-    /// count today, because the list of those places is not stable and a badge that goes
-    /// quietly stale is worse than one that is worked out more often than it needs to be.
-    ///
-    /// Only writes, and only writes that were accepted. A read cannot change a count, and a
-    /// request that was refused did not change one either.
-    ///
-    /// The cost of being wrong is one recount on the next reading of the rail, which is a
-    /// handful of queries at human pace. The cost of being right is a badge that answers for
-    /// what has just been done.
-    /// </remarks>
+    // What needs a dispatcher's attention, counted for the navigation rail.
+    //
+    // The tabs already know these numbers; the point of counting them here is that a
+    // dispatcher on the dashboard should not have to open Requests to learn there is a
+    // sick call against tonight's shift.
+    //
+    // Counted for the fleet rather than per signed-in user, so one cache entry serves
+    // everybody. What each of them is allowed to see is decided where the badges are
+    // drawn, not here.
+    //
+    // Only what is actionable is counted. Users has nothing but activated and
+    // deactivated accounts, and the dashboard, the map, reports and the audit trail are
+    // all read.
+    // Drops the standing count after anything is written.
+    //
+    // Registered over every controller rather than at the handful of places that change a
+    // count today, because the list of those places is not stable and a badge that goes
+    // quietly stale is worse than one that is worked out more often than it needs to be.
+    //
+    // Only writes, and only writes that were accepted. A read cannot change a count, and a
+    // request that was refused did not change one either.
+    //
+    // The cost of being wrong is one recount on the next reading of the rail, which is a
+    // handful of queries at human pace. The cost of being right is a badge that answers for
+    // what has just been done.
     public sealed class NavCountsFreshener : IActionFilter
     {
         private readonly NavCounts _counts;
@@ -95,62 +89,50 @@ namespace FleetWise.Services
 
         private const string ProjectedKey = "nav_roster_projected";
 
-        /// <summary>
-        /// How long the upcoming roster's projected gaps stand before the plan is run again.
-        /// </summary>
-        /// <remarks>
-        /// Running a month's plan reads six weeks of trips, far more than a badge should cost
-        /// every five seconds. It is only run between the draft day and the upcoming month
-        /// being published, held this long, and dropped with the rest of the counts whenever
-        /// something is written here, so a person who fixes the roster sees the badge follow
-        /// at once. What changes elsewhere, a draft made on schedule or leave filed from a
-        /// phone, waits at most this long, against a window of days.
-        /// </remarks>
+        // How long the upcoming roster's projected gaps stand before the plan is run again.
+        //
+        // Running a month's plan reads six weeks of trips, far more than a badge should cost
+        // every five seconds. It is only run between the draft day and the upcoming month
+        // being published, held this long, and dropped with the rest of the counts whenever
+        // something is written here, so a person who fixes the roster sees the badge follow
+        // at once. What changes elsewhere, a draft made on schedule or leave filed from a
+        // phone, waits at most this long, against a window of days.
         private static readonly TimeSpan ProjectedFreshness = TimeSpan.FromMinutes(30);
 
-        /// <summary>Slots a publish of the month as saved would leave empty.</summary>
+        // Slots a publish of the month as saved would leave empty.
         private sealed record Projected(DateTime Month, int Gaps);
 
-        /// <summary>
-        /// How long a count stands before it is worked out again.
-        /// </summary>
-        /// <remarks>
-        /// Matched to the rail's own poll, so a badge is never older than a poll and a
-        /// tick. A room of dispatchers still costs the database the same as one of them,
-        /// because the count is worked out once and served to all of them: what sets the
-        /// cost is how often it expires, not how many people ask.
-        ///
-        /// This is the only thing watching for work filed somewhere the dashboard cannot
-        /// see. A driver's leave request arrives without any page here being told, so the
-        /// rail is what notices, whichever page its reader happens to be on, within
-        /// <see cref="SlowFreshness"/>.
-        /// </remarks>
+        // How long a count stands before it is worked out again.
+        //
+        // Matched to the rail's own poll, so a badge is never older than a poll and a
+        // tick. A room of dispatchers still costs the database the same as one of them,
+        // because the count is worked out once and served to all of them: what sets the
+        // cost is how often it expires, not how many people ask.
+        //
+        // This is the only thing watching for work filed somewhere the dashboard cannot
+        // see. A driver's leave request arrives without any page here being told, so the
+        // rail is what notices, whichever page its reader happens to be on, within
+        // SlowFreshness.
         private static readonly TimeSpan Freshness = TimeSpan.FromSeconds(5);
 
         private const string SlowKey = "nav_badge_slow";
 
-        /// <summary>
-        /// How long the leave requests and the roster stand before they are read again.
-        /// </summary>
-        /// <remarks>
-        /// They change at human pace and are the larger half of what the badges are counted
-        /// from, so they are read once a minute while the rest keeps the rail's five-second
-        /// pace. A write made here drops them with the rest of the counts, so only leave filed
-        /// from a phone waits, and at most this long.
-        /// </remarks>
+        // How long the leave requests and the roster stand before they are read again.
+        //
+        // They change at human pace and are the larger half of what the badges are counted
+        // from, so they are read once a minute while the rest keeps the rail's five-second
+        // pace. A write made here drops them with the rest of the counts, so only leave filed
+        // from a phone waits, and at most this long.
         private static readonly TimeSpan SlowFreshness = TimeSpan.FromSeconds(60);
 
-        /// <summary>Set once the database is found to have no nav_badge_inputs that takes p_sections.</summary>
+        // Set once the database is found to have no nav_badge_inputs that takes p_sections.
         private static volatile bool _sectionsUnsupported;
 
-        /// <summary>
-        /// How close a shift has to be before a request against it is urgent.
-        /// </summary>
-        /// <remarks>
-        /// Longer than the two hours a driver is asked to give, because two hours is the
-        /// notice a driver owes, not the time a dispatcher needs to find somebody else,
-        /// reach them and get them to the terminal.
-        /// </remarks>
+        // How close a shift has to be before a request against it is urgent.
+        //
+        // Longer than the two hours a driver is asked to give, because two hours is the
+        // notice a driver owes, not the time a dispatcher needs to find somebody else,
+        // reach them and get them to the terminal.
         public static readonly TimeSpan UrgentWithin = TimeSpan.FromHours(4);
 
         public NavCounts(
@@ -162,24 +144,23 @@ namespace FleetWise.Services
             _roster = roster;
         }
 
-        /// <summary>A security incident's severity, as nav_badge_inputs lists those needing review.</summary>
+        // A security incident's severity, as nav_badge_inputs lists those needing review.
         private sealed class IncidentRow
         {
             [JsonProperty("severity")]
             public string? Severity { get; set; }
         }
 
-        /// <summary>Drops the standing count, so the next reading is worked out again.</summary>
-        /// <remarks>
-        /// Called whenever something is written that could change what is being counted.
-        /// Without it the dispatcher who has just cleared an incident asks for the count,
-        /// is served the reading taken before they cleared it, and watches the badge sit
-        /// there saying the work is still waiting.
-        ///
-        /// Dropped rather than recomputed. Nothing is owed a count until somebody asks for
-        /// one, and a write that changes nothing anybody is looking at should not pay for a
-        /// round of queries.
-        /// </remarks>
+        // Drops the standing count, so the next reading is worked out again.
+        //
+        // Called whenever something is written that could change what is being counted.
+        // Without it the dispatcher who has just cleared an incident asks for the count,
+        // is served the reading taken before they cleared it, and watches the badge sit
+        // there saying the work is still waiting.
+        //
+        // Dropped rather than recomputed. Nothing is owed a count until somebody asks for
+        // one, and a write that changes nothing anybody is looking at should not pay for a
+        // round of queries.
         public void Invalidate()
         {
             _cache.Remove(Key);
@@ -217,7 +198,7 @@ namespace FleetWise.Services
             // page and read again every few seconds, and the API logs each request it answers,
             // so the reads are made together rather than one at a time.
             //
-            // Each list is what its own read used to fetch, and nav_badge_inputs says which
+            // Each list is what the read behind that badge fetches, and nav_badge_inputs says which
             // rows and columns: trips for today and tomorrow, since a shift further out cannot
             // be inside the urgent window; every bus and every driver's availability, the size
             // of the fleet and the roster; and only the open incidents and the leave that is
@@ -319,11 +300,9 @@ namespace FleetWise.Services
                 CountAudit(read));
         }
 
-        /// <summary>
-        /// The badge inputs: the fast part read now, and the leave and roster part as held for
-        /// <see cref="SlowFreshness"/>. Both are the one full answer on a database whose
-        /// nav_badge_inputs cannot be asked for a part.
-        /// </summary>
+        // The badge inputs: the fast part read now, and the leave and roster part as held for
+        // SlowFreshness. Both are the one full answer on a database whose
+        // nav_badge_inputs cannot be asked for a part.
         private async Task<(ReadBundle Fast, ReadBundle Slow)> ReadInputsAsync(DateTime today)
         {
             if (!_sectionsUnsupported)
@@ -366,16 +345,15 @@ namespace FleetWise.Services
             return ReadBundle.Parse(response.Content);
         }
 
-        /// <summary>Security incidents waiting for somebody to look at them.</summary>
-        /// <remarks>
-        /// Urgent only for a sign-in that succeeded after failed attempts: the one incident
-        /// that says somebody may already be in rather than that somebody tried. Every
-        /// other rule is a grey number, because a rail that shouts about every failed
-        /// password soon stops being listened to.
-        ///
-        /// Counted on its own and failing on its own, like the roster, so a table that
-        /// cannot be read takes this badge down and leaves the rest of the rail standing.
-        /// </remarks>
+        // Security incidents waiting for somebody to look at them.
+        //
+        // Urgent only for a sign-in that succeeded after failed attempts: the one incident
+        // that says somebody may already be in rather than that somebody tried. Every
+        // other rule is a grey number, because a rail that shouts about every failed
+        // password soon stops being listened to.
+        //
+        // Counted on its own and failing on its own, like the roster, so a table that
+        // cannot be read takes this badge down and leaves the rest of the rail standing.
         private static NavBadge CountAudit(ReadBundle read)
         {
             if (!read.Has("incidents")) return NavBadge.None;
@@ -386,24 +364,21 @@ namespace FleetWise.Services
                 urgent ? "A sign-in succeeded after failed attempts" : null);
         }
 
-        /// <summary>
-        /// Roster slots nobody is on for the days ahead, a month's roster waiting on a person
-        /// once the draft day has come, and places on this month's published roster that no
-        /// longer hold: a driver no longer active, or a bus retired or moved.
-        /// </summary>
-        /// <remarks>
-        /// Counted on its own and failing on its own, so a roster table that cannot be read
-        /// takes down the roster badge rather than every badge on the rail. The database
-        /// sends the section as null when it could not read it.
-        ///
-        /// Urgent when a slot is empty within the next two days: that is a bus with nobody to
-        /// drive it, and time is short to find somebody.
-        ///
-        /// A published month is never auto-filled by itself, since it is already running. Its
-        /// broken places are counted instead, so the deactivation is noticed and dealt with on
-        /// the Roster page, where Auto-fill and Publish changes move the trips and tell the
-        /// drivers.
-        /// </remarks>
+        // Roster slots nobody is on for the days ahead, a month's roster waiting on a person
+        // once the draft day has come, and places on this month's published roster that no
+        // longer hold: a driver no longer active, or a bus retired or moved.
+        //
+        // Counted on its own and failing on its own, so a roster table that cannot be read
+        // takes down the roster badge rather than every badge on the rail. The database
+        // sends the section as null when it could not read it.
+        //
+        // Urgent when a slot is empty within the next two days: that is a bus with nobody to
+        // drive it, and time is short to find somebody.
+        //
+        // A published month is never auto-filled by itself, since it is already running. Its
+        // broken places are counted instead, so the deactivation is noticed and dealt with on
+        // the Roster page, where Auto-fill and Publish changes move the trips and tell the
+        // drivers.
         private async Task<NavBadge> CountRosterAsync(DateTime today, ReadBundle? roster)
         {
             if (roster is null) return NavBadge.None;
@@ -470,14 +445,11 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>
-        /// Slots publishing the upcoming month as saved would leave empty, worked out by the
-        /// same plan the publish runs.
-        /// </summary>
-        /// <remarks>
-        /// A plan that cannot be run leaves the badge on its ordinary review note rather than
-        /// inventing a number, and the failure is not held, so the next reading tries again.
-        /// </remarks>
+        // Slots publishing the upcoming month as saved would leave empty, worked out by the
+        // same plan the publish runs.
+        //
+        // A plan that cannot be run leaves the badge on its ordinary review note rather than
+        // inventing a number, and the failure is not held, so the next reading tries again.
         private async Task<int> ProjectedGapsAsync(DateTime month)
         {
             if (_cache.TryGetValue<Projected>(ProjectedKey, out var held) && held is not null && held.Month == month)
@@ -497,9 +469,9 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>Places on a roster whose driver is no longer active, or whose bus is retired, unrouted or moved route.</summary>
-        /// <param name="slots">This month's places.</param>
-        /// <param name="roster">The roster section, holding the drivers and buses those places name.</param>
+        // Places on a roster whose driver is no longer active, or whose bus is retired, unrouted or moved route.
+        // slots: This month's places.
+        // roster: The roster section, holding the drivers and buses those places name.
         private static int CountBrokenPlaces(IReadOnlyList<RosterSlot> slots, ReadBundle roster)
         {
             if (slots.Count == 0) return 0;

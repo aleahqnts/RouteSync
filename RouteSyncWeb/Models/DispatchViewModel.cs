@@ -11,14 +11,11 @@ namespace FleetWise.ViewModels
         public int ActiveTrips { get; set; }
         public int TripsNotStarted { get; set; }
 
-        /// <summary>
-        /// Trips inside their window that should have departed and have not.
-        /// </summary>
-        /// <remarks>
-        /// Counted apart from the ones awaiting departure rather than among them. A shift
-        /// that has not begun and a shift that has begun without the bus moving are the
-        /// same figure only until somebody has to act on one of them.
-        /// </remarks>
+        // Trips inside their window that should have departed and have not.
+        //
+        // Counted apart from the ones awaiting departure rather than among them. A shift
+        // that has not begun and a shift that has begun without the bus moving are the
+        // same figure only until somebody has to act on one of them.
         public int DelayedTrips { get; set; }
 
         public int UnassignedTrips { get; set; }
@@ -53,12 +50,11 @@ namespace FleetWise.ViewModels
         public string VehicleStatus { get; set; }
         public string DriverName { get; set; }
 
-        /// <summary>The driver's user id, shown beside the name.</summary>
-        /// <remarks>
-        /// The only identifier a person has in this system. It is printed here so the
-        /// cell reads the way the bus cell beside it does, and so the board's search,
-        /// which matches the text of a row, can be given one.
-        /// </remarks>
+        // The driver's user id, shown beside the name.
+        //
+        // The only identifier a person has in this system. It is printed here so the
+        // cell reads the way the bus cell beside it does, and so the board's search,
+        // which matches the text of a row, can be given one.
         public int DriverId { get; set; }
 
         public string DriverStatus { get; set; }
@@ -79,38 +75,33 @@ namespace FleetWise.ViewModels
         // Null when there is nothing wrong.
         public string AssignmentIssueReason { get; set; }
 
-        /// <summary>How long a trip that should have departed has not, if it has not.</summary>
+        // How long a trip that should have departed has not, if it has not.
         public TimeSpan? LateBy { get; set; }
 
-        /// <summary>The best driver to put on this trip instead, when its driver cannot run it.</summary>
+        // The best driver to put on this trip instead, when its driver cannot run it.
         public DriverCandidate SuggestedDriver { get; set; }
 
-        /// <summary>Why that driver, in one line: "Free all day, 2 North Loop trips in the last 30 days".</summary>
+        // Why that driver, in one line: "Free all day, 2 North Loop trips in the last 30 days".
         public string? SuggestedDriverReason { get; set; }
 
-        /// <summary>
-        /// Why no driver can take this trip without a cost, in counts, when its driver cannot
-        /// run it and nobody can. Null otherwise.
-        /// </summary>
+        // Why no driver can take this trip without a cost, in counts, when its driver cannot
+        // run it and nobody can. Null otherwise.
         public string? DriverShortfall { get; set; }
 
-        /// <summary>The best bus to put on this trip instead, when its bus cannot run it.</summary>
+        // The best bus to put on this trip instead, when its bus cannot run it.
         public VehicleCandidate SuggestedVehicle { get; set; }
 
-        /// <summary>Why that bus, in one line: "Based on North Loop, 40 seats".</summary>
+        // Why that bus, in one line: "Based on North Loop, 40 seats".
         public string? SuggestedVehicleReason { get; set; }
 
-        /// <summary>
-        /// Why no bus can take this trip without a cost, in counts, when its bus cannot run it
-        /// and no other bus can. Null otherwise.
-        /// </summary>
+        // Why no bus can take this trip without a cost, in counts, when its bus cannot run it
+        // and no other bus can. Null otherwise.
         public string? VehicleShortfall { get; set; }
 
-        /// <summary>How late, in the fewest words that still say it.</summary>
-        /// <remarks>
-        /// Rounded down to the unit above it once an hour has passed. A dispatcher reading
-        /// a board decides from "over an hour", not from the minutes on top of it.
-        /// </remarks>
+        // How late, in the fewest words that still say it.
+        //
+        // Rounded down to the unit above it once an hour has passed. A dispatcher reading
+        // a board decides from "over an hour", not from the minutes on top of it.
         public string LateLabel =>
             LateBy is not TimeSpan by ? null
             : by.TotalHours >= 1

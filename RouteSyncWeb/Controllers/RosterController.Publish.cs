@@ -7,16 +7,15 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Controllers
 {
-    /// <summary>Carrying a roster forward, publishing it as trips, and what publishing leaves behind.</summary>
-    /// <remarks>
-    /// The work itself is <see cref="RosterPublisher"/>'s, shared with the monthly cycle that
-    /// drafts and publishes on schedule. These actions only turn its answers into responses.
-    /// </remarks>
+    // Carrying a roster forward, publishing it as trips, and what publishing leaves behind.
+    //
+    // The work itself is RosterPublisher's, shared with the monthly cycle that
+    // drafts and publishes on schedule. These actions only turn its answers into responses.
     public partial class RosterController
     {
         private static readonly CultureInfo En = CultureInfo.InvariantCulture;
 
-        /// <summary>Fills this month's draft with last month's roster, every shift rotated one step backward, then auto-filled.</summary>
+        // Fills this month's draft with last month's roster, every shift rotated one step backward, then auto-filled.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Generate([FromBody] RosterMonthInput req)
@@ -34,7 +33,7 @@ namespace FleetWise.Controllers
                 }));
         }
 
-        /// <summary>What publishing the saved roster would write, without writing it.</summary>
+        // What publishing the saved roster would write, without writing it.
         [HttpPost]
         public async Task<IActionResult> Preview([FromBody] RosterMonthInput req)
         {
@@ -44,11 +43,10 @@ namespace FleetWise.Controllers
             return Answer(await _publisher.PreviewAsync(month, req.Version), r => Json(new { lines = r.Lines }));
         }
 
-        /// <summary>Publishes the saved roster as the month's trips.</summary>
-        /// <remarks>
-        /// The plan is worked out again from the roster as saved, never taken from the page,
-        /// and publish_roster_month checks every row of it once more under a lock.
-        /// </remarks>
+        // Publishes the saved roster as the month's trips.
+        //
+        // The plan is worked out again from the roster as saved, never taken from the page,
+        // and publish_roster_month checks every row of it once more under a lock.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Publish([FromBody] RosterMonthInput req)
@@ -67,7 +65,7 @@ namespace FleetWise.Controllers
             _ => BadRequest(new { problems = r.Problems ?? new[] { r.Message ?? "That could not be done." } }),
         };
 
-        /// <summary>Marks a gap as a bus not running that day, so no publish fills it.</summary>
+        // Marks a gap as a bus not running that day, so no publish fills it.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SkipGap([FromBody] RosterSlotInput req)
@@ -102,7 +100,7 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>Lets the next publish fill a skipped slot again.</summary>
+        // Lets the next publish fill a skipped slot again.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RestoreSkip([FromBody] RosterSlotInput req)
@@ -123,7 +121,7 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>Drivers who could fill a gap, ranked by the same rules as every replacement.</summary>
+        // Drivers who could fill a gap, ranked by the same rules as every replacement.
         [HttpGet]
         [RequirePermission("routes")]
         public async Task<IActionResult> GapCandidates(string date, string vehicleId, string shift)
@@ -145,11 +143,10 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>Books a driver into a gap as a trip made by hand.</summary>
-        /// <remarks>
-        /// Made by hand rather than by the roster, so a later publish builds around it
-        /// instead of rewriting a choice a person made. The gap reads as filled from then on.
-        /// </remarks>
+        // Books a driver into a gap as a trip made by hand.
+        //
+        // Made by hand rather than by the roster, so a later publish builds around it
+        // instead of rewriting a choice a person made. The gap reads as filled from then on.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("routes")]
@@ -201,8 +198,8 @@ namespace FleetWise.Controllers
             return Ok(new { tripId = result.Trip?.TripId });
         }
 
-        /// <summary>The publish state, gaps and skips the Roster page shows under its header.</summary>
-        /// <param name="openGaps">The month's open gaps, already being read; null when there is no roster.</param>
+        // The publish state, gaps and skips the Roster page shows under its header.
+        // openGaps: The month's open gaps, already being read; null when there is no roster.
         private async Task FillPublishStateAsync(RosterViewModel vm, RosterMonth? roster, IReadOnlyList<BusRoute> routes,
             bool hasPreviousRoster, Task<List<RosterGap>>? openGaps, List<RosterSkip> skips)
         {

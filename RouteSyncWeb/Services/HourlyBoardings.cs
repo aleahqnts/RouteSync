@@ -3,37 +3,33 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>A service day's boardings, hour by hour from 06:00 to 05:59.</summary>
-    /// <remarks>
-    /// <para>Built from the counter's boardings, which the database counts by trip and hour.
-    /// A trip's count can run ahead of them, since a driver can add passengers by hand during
-    /// a camera outage and those carry no time. That remainder is placed in the hour the trip
-    /// ended, or the current hour for a trip still running, so the hours add up to the trips'
-    /// reported totals.</para>
-    ///
-    /// <para>The counted hours are instants and are moved to Philippine time here. Trip start
-    /// and end times are stored as Philippine clock time already and are read as they are.</para>
-    /// </remarks>
+    // A service day's boardings, hour by hour from 06:00 to 05:59.
+    //
+    // Built from the counter's boardings, which the database counts by trip and hour.
+    // A trip's count can run ahead of them, since a driver can add passengers by hand during
+    // a camera outage and those carry no time. That remainder is placed in the hour the trip
+    // ended, or the current hour for a trip still running, so the hours add up to the trips'
+    // reported totals.
+    //
+    // The counted hours are instants and are moved to Philippine time here. Trip start
+    // and end times are stored as Philippine clock time already and are read as they are.
     public static class HourlyBoardings
     {
         public const int Hours = 24;
 
         private static readonly TimeSpan Ph = TimeSpan.FromHours(8);
 
-        /// <summary>When the service day's first hour starts.</summary>
+        // When the service day's first hour starts.
         public static DateTime CycleStart(DateTime day) => day.Date.Add(PhClock.DayStartTime);
 
-        /// <summary>
-        /// Passengers boarded in each hour of the day, or null for an hour that has not
-        /// started yet.
-        /// </summary>
-        /// <param name="day">The operational day.</param>
-        /// <param name="trips">The day's trips, already narrowed to the routes wanted.</param>
-        /// <param name="boarded">
-        /// Boardings by trip and hour. Other trips' hours are ignored, and a trip's hours outside
-        /// the day still count toward what its camera saw.
-        /// </param>
-        /// <param name="now">Philippine time now. A past day passes its end or later.</param>
+        // Passengers boarded in each hour of the day, or null for an hour that has not
+        // started yet.
+        // day: The operational day.
+        // trips: The day's trips, already narrowed to the routes wanted.
+        // boarded:
+        // Boardings by trip and hour. Other trips' hours are ignored, and a trip's hours outside
+        // the day still count toward what its camera saw.
+        // now: Philippine time now. A past day passes its end or later.
         public static int?[] ByHour(DateTime day, IReadOnlyList<Trip> trips, IEnumerable<BoardedHour> boarded, DateTime now)
         {
             var start = CycleStart(day);
@@ -74,17 +70,15 @@ namespace FleetWise.Services
                 .ToArray();
         }
 
-        /// <summary>The rows boardings_by_hour returns, read from its JSON.</summary>
+        // The rows boardings_by_hour returns, read from its JSON.
         public static List<BoardedHour> ParseHours(string? json) =>
             string.IsNullOrWhiteSpace(json)
                 ? new List<BoardedHour>()
                 : JsonSerializer.Deserialize<List<BoardedHour>>(json) ?? new List<BoardedHour>();
 
-        /// <summary>
-        /// The average for each hour across past days, leaving out days nobody boarded on,
-        /// which are days the service or the counting was not running rather than quiet ones.
-        /// </summary>
-        /// <returns>One figure per hour, or null when no past day had boardings.</returns>
+        // The average for each hour across past days, leaving out days nobody boarded on,
+        // which are days the service or the counting was not running rather than quiet ones.
+        // Returns One figure per hour, or null when no past day had boardings.
         public static double[]? Usual(IEnumerable<int?[]> days)
         {
             var counted = days.Where(d => d.Any(v => v > 0)).ToList();

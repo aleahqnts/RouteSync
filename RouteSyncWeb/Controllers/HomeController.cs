@@ -10,14 +10,13 @@ using FleetWise.Services;
 
 namespace FleetWise.Controllers
 {
-    /// <summary>Signing in and out, and setting a password, both forgotten and first-time.</summary>
-    /// <remarks>
-    /// Anonymous access is granted action by action rather than on the class.
-    /// [AllowAnonymous] on a controller overrides [Authorize] on every action inside it,
-    /// so a class-wide grant would leave the password change open to a caller who has not
-    /// signed in. Each action carries one attribute or the other, so which it is reads at
-    /// the action itself.
-    /// </remarks>
+    // Signing in and out, and setting a password, both forgotten and first-time.
+    //
+    // Anonymous access is granted action by action rather than on the class.
+    // [AllowAnonymous] on a controller overrides [Authorize] on every action inside it,
+    // so a class-wide grant would leave the password change open to a caller who has not
+    // signed in. Each action carries one attribute or the other, so which it is reads at
+    // the action itself.
     public class HomeController : Controller
     {
         private readonly AuthService _authService;
@@ -34,17 +33,16 @@ namespace FleetWise.Controllers
             _reset = reset;
         }
 
-        /// <summary>The sign-in page, or the dashboard for somebody already signed in.</summary>
-        /// <remarks>
-        /// Signing in redirects to the dashboard, which leaves the sign-in page one step
-        /// back in the browser's history. Pressing back from the dashboard therefore
-        /// landed on a sign-in form belonging to a session that is still open, which reads
-        /// as having been signed out.
-        ///
-        /// Sending them on lands them where they already were, so back does nothing rather
-        /// than something alarming. Leaving is what the sign-out button is for, and it asks
-        /// first.
-        /// </remarks>
+        // The sign-in page, or the dashboard for somebody already signed in.
+        //
+        // Signing in redirects to the dashboard, which leaves the sign-in page one step
+        // back in the browser's history. Pressing back from the dashboard therefore
+        // landed on a sign-in form belonging to a session that is still open, which reads
+        // as having been signed out.
+        //
+        // Sending them on lands them where they already were, so back does nothing rather
+        // than something alarming. Leaving is what the sign-out button is for, and it asks
+        // first.
         [AllowAnonymous]
         public IActionResult Index(int? throttled)
         {
@@ -171,10 +169,8 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>
-        /// A step of the reset reached without its form, such as by stepping back to
-        /// it, restarts the flow rather than answering with an error.
-        /// </summary>
+        // A step of the reset reached without its form, such as by stepping back to
+        // it, restarts the flow rather than answering with an error.
         [AllowAnonymous]
         [HttpGet]
         public IActionResult VerifyResetCode() => RedirectToAction(nameof(ForgotPassword));
@@ -204,7 +200,7 @@ namespace FleetWise.Controllers
                 new ResetPasswordViewModel { ResetToken = r.Token! });
         }
 
-        /// <inheritdoc cref="VerifyResetCode()"/>
+        // Same as VerifyResetCode().
         [AllowAnonymous]
         [HttpGet]
         public IActionResult ResetPassword() => RedirectToAction(nameof(ForgotPassword));
@@ -313,16 +309,13 @@ namespace FleetWise.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        /// <summary>
-        /// Where UseExceptionHandler sends a request that faulted.
-        /// </summary>
-        /// <remarks>
-        /// Without this the handler path resolves to nothing, the handler answers 404, and
-        /// the browser shows its own blank page instead of the error view.
-        ///
-        /// The identifier shown is the one the server logs against the same request, so a
-        /// report of a failure can be matched to the entry that describes it.
-        /// </remarks>
+        // Where UseExceptionHandler sends a request that faulted.
+        //
+        // Without this the handler path resolves to nothing, the handler answers 404, and
+        // the browser shows its own blank page instead of the error view.
+        //
+        // The identifier shown is the one the server logs against the same request, so a
+        // report of a failure can be matched to the entry that describes it.
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error() => View(new ErrorViewModel
@@ -330,10 +323,8 @@ namespace FleetWise.Controllers
             RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier,
         });
 
-        /// <summary>
-        /// The email as typed on a failed attempt. Untrusted input, so it is length-capped
-        /// before being stored.
-        /// </summary>
+        // The email as typed on a failed attempt. Untrusted input, so it is length-capped
+        // before being stored.
         private static string Attempted(string? email)
         {
             var e = (email ?? "").Trim();

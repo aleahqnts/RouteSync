@@ -2,11 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace FleetWise.Models.ViewModels;
 
-/// <summary>
-/// The contract the Fleet Map consumes: one live bus, with its passenger count and estimated
-/// revenue computed server-side so every consumer (markers, tooltip, side panel) shows
-/// identical numbers.
-/// </summary>
+// The contract the Fleet Map consumes: one live bus, with its passenger count and estimated
+// revenue computed server-side so every consumer (markers, tooltip, side panel) shows
+// identical numbers.
 public class BusPositionDto
 {
     [JsonPropertyName("tripId")]

@@ -13,12 +13,11 @@ public class DriverAvailability : BaseModel
     [Column("availability_status")]
     public string AvailabilityStatus { get; set; }
 
-    /// <summary>Why, in the driver's own words: sickness, an emergency, a fault with the bus.</summary>
-    /// <remarks>
-    /// The driver app has always asked for this and always written it. Reading it here is
-    /// what lets the board say which of those it was, which is the difference between a
-    /// dispatcher knowing to send a relief driver and knowing only that somebody stopped.
-    /// </remarks>
+    // Why, in the driver's own words: sickness, an emergency, a fault with the bus.
+    //
+    // The driver app has always asked for this and always written it. Reading it here is
+    // what lets the board say which of those it was, which is the difference between a
+    // dispatcher knowing to send a relief driver and knowing only that somebody stopped.
     [Column("reason")]
     public string Reason { get; set; }
 

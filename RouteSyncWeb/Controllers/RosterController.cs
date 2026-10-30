@@ -8,21 +8,18 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Controllers
 {
-    /// <summary>
-    /// The standing monthly roster: each bus's crew, each route's floaters, and every rest day.
-    /// </summary>
-    /// <remarks>
-    /// <para>Built by hand, or by auto-fill for a person to review, and carried from month
-    /// to month, rotating only the shift. It writes no trips. What it holds is expanded into
-    /// the month's trips when the roster is published.</para>
-    ///
-    /// <para>Gated on its own permission. Deciding who drives which bus for a month is a
-    /// different job from running the day's dispatch, which keeps the routes permission.</para>
-    ///
-    /// <para>Every judgement about the roster, from what blocks a save to how the rest
-    /// days cover, is made by <see cref="RosterRules"/>. The page asks as it is edited and
-    /// the save asks again, so the two cannot disagree.</para>
-    /// </remarks>
+    // The standing monthly roster: each bus's crew, each route's floaters, and every rest day.
+    //
+    // Built by hand, or by auto-fill for a person to review, and carried from month
+    // to month, rotating only the shift. It writes no trips. What it holds is expanded into
+    // the month's trips when the roster is published.
+    //
+    // Gated on its own permission. Deciding who drives which bus for a month is a
+    // different job from running the day's dispatch, which keeps the routes permission.
+    //
+    // Every judgement about the roster, from what blocks a save to how the rest
+    // days cover, is made by RosterRules. The page asks as it is edited and
+    // the save asks again, so the two cannot disagree.
     [Authorize]
     [RequirePermission("roster")]
     public partial class RosterController : Controller
@@ -186,17 +183,14 @@ namespace FleetWise.Controllers
             return View(vm);
         }
 
-        /// <summary>
-        /// What is wrong with the roster as it stands on the page, how each route's rest
-        /// days cover, what publishing it now would leave empty, and who has no place.
-        /// </summary>
-        /// <remarks>
-        /// Two questions, answered by the same planner a publish uses. Whether the pattern of
-        /// shifts and rest days works at all is asked of a clean month, so it names what moving
-        /// a rest day would fix and does not move when somebody files leave. What a publish
-        /// would actually leave is asked of the real month, leave and all, so the page never
-        /// says fine about a roster the publish then leaves short.
-        /// </remarks>
+        // What is wrong with the roster as it stands on the page, how each route's rest
+        // days cover, what publishing it now would leave empty, and who has no place.
+        //
+        // Two questions, answered by the same planner a publish uses. Whether the pattern of
+        // shifts and rest days works at all is asked of a clean month, so it names what moving
+        // a rest day would fix and does not move when somebody files leave. What a publish
+        // would actually leave is asked of the real month, leave and all, so the page never
+        // says fine about a roster the publish then leaves short.
         [HttpPost]
         public async Task<IActionResult> Check([FromBody] RosterCheckInput req)
         {
@@ -268,11 +262,10 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>
-        /// The roster on the page with drivers and buses that can no longer be on it cleared,
-        /// and its empty places filled by rule. Nothing is saved.
-        /// </summary>
-        /// <remarks>See <see cref="RosterRules.AutoFill"/> for the rules and their order.</remarks>
+        // The roster on the page with drivers and buses that can no longer be on it cleared,
+        // and its empty places filled by rule. Nothing is saved.
+        //
+        // See RosterRules.AutoFill for the rules and their order.
         [HttpPost]
         public async Task<IActionResult> AutoFill([FromBody] RosterCheckInput req)
         {
@@ -300,11 +293,10 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>
-        /// The roster with its rest days arranged so the floaters can cover them, disturbing as
-        /// few people as possible. Nothing is saved.
-        /// </summary>
-        /// <remarks>See <see cref="RosterRules.SuggestRestDays"/> for the order fixes are tried in.</remarks>
+        // The roster with its rest days arranged so the floaters can cover them, disturbing as
+        // few people as possible. Nothing is saved.
+        //
+        // See RosterRules.SuggestRestDays for the order fixes are tried in.
         [HttpPost]
         public async Task<IActionResult> Suggest([FromBody] RosterCheckInput req)
         {
@@ -343,13 +335,12 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>Saves the month's roster whole, if nothing blocks it and nobody saved it first.</summary>
-        /// <remarks>
-        /// The version the page was built on goes to the database with the roster, and the
-        /// check and the write happen under one lock there. A page left open while someone
-        /// else saved is refused rather than written over their work, the same way the
-        /// planner refuses a stale week.
-        /// </remarks>
+        // Saves the month's roster whole, if nothing blocks it and nobody saved it first.
+        //
+        // The version the page was built on goes to the database with the roster, and the
+        // check and the write happen under one lock there. A page left open while someone
+        // else saved is refused rather than written over their work, the same way the
+        // planner refuses a stale week.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save([FromBody] RosterSaveInput req)

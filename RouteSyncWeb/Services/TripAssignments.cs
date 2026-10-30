@@ -3,8 +3,8 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Services
 {
-    /// <summary>A change to a trip's bus, driver or route. A null side is left as it is.</summary>
-    /// <param name="Override">The dispatcher was shown a scheduling conflict and chose to save anyway.</param>
+    // A change to a trip's bus, driver or route. A null side is left as it is.
+    // Override: The dispatcher was shown a scheduling conflict and chose to save anyway.
     public sealed record ReassignChange(
         string TripId, int? DriverId, string? VehicleId, int? RouteId, bool Override);
 
@@ -13,33 +13,30 @@ namespace FleetWise.Services
         Done,
         NotFound,
 
-        /// <summary>Refused for good: the trip is finished or its shift is over.</summary>
+        // Refused for good: the trip is finished or its shift is over.
         Refused,
 
-        /// <summary>A scheduling conflict a dispatcher may confirm past.</summary>
+        // A scheduling conflict a dispatcher may confirm past.
         Conflict,
     }
 
-    /// <param name="Message">What to tell the dispatcher when the change was not made.</param>
-    /// <param name="Trip">The trip as saved, when it was.</param>
+    // Message: What to tell the dispatcher when the change was not made.
+    // Trip: The trip as saved, when it was.
     public sealed record ReassignResult(ReassignOutcome Outcome, string? Message = null, Trip? Trip = null);
 
-    /// <summary>A trip to add by hand: one bus and one driver on one shift of one day.</summary>
-    /// <param name="Override">The dispatcher was shown a scheduling conflict and chose to save anyway.</param>
+    // A trip to add by hand: one bus and one driver on one shift of one day.
+    // Override: The dispatcher was shown a scheduling conflict and chose to save anyway.
     public sealed record NewTrip(
         DateTime Date, string Shift, TimeSpan Start, TimeSpan End,
         int RouteId, string VehicleId, int DriverId, bool Override);
 
-    /// <summary>
-    /// Who drives what: the one path every reassignment goes through, and the assignment
-    /// rules it enforces.
-    /// </summary>
-    /// <remarks>
-    /// The dispatch board and the leave queue both move drivers between trips. Going
-    /// through the same checks, the same conflict gate, the same notice and the same audit
-    /// row is what makes a cover arranged from the leave queue indistinguishable from one
-    /// made on the board.
-    /// </remarks>
+    // Who drives what: the one path every reassignment goes through, and the assignment
+    // rules it enforces.
+    //
+    // The dispatch board and the leave queue both move drivers between trips. Going
+    // through the same checks, the same conflict gate, the same notice and the same audit
+    // row is what makes a cover arranged from the leave queue indistinguishable from one
+    // made on the board.
     public class TripAssignments
     {
         private readonly Supabase.Client _supabase;
@@ -53,19 +50,17 @@ namespace FleetWise.Services
             _scheduling = scheduling;
         }
 
-        /// <summary>Moves a trip to another bus, driver or route.</summary>
-        /// <param name="senderId">The signed-in dispatcher, named as the sender of any notice.</param>
-        /// <param name="snapshot">
-        /// What the change is measured against for the audit trail. Loaded for the trip's day
-        /// when not given. A caller passes its own when the schedule it ranked against is not
-        /// the one stored, such as leave about to be granted.
-        /// </param>
-        /// <param name="purpose">Appended to the audit summary, saying why the change was made.</param>
-        /// <param name="syncStatuses">
-        /// Whether to bring today's trip statuses up to date afterwards. A caller making
-        /// several changes in a row does it once at the end instead.
-        /// </param>
-        /// <param name="screen">Where the change was made, one of <see cref="PickScreen"/>, recorded with its rank.</param>
+        // Moves a trip to another bus, driver or route.
+        // senderId: The signed-in dispatcher, named as the sender of any notice.
+        // snapshot:
+        // What the change is measured against for the audit trail. Loaded for the trip's day
+        // when not given. A caller passes its own when the schedule it ranked against is not
+        // the one stored, such as leave about to be granted.
+        // purpose: Appended to the audit summary, saying why the change was made.
+        // syncStatuses:
+        // Whether to bring today's trip statuses up to date afterwards. A caller making
+        // several changes in a row does it once at the end instead.
+        // screen: Where the change was made, one of PickScreen, recorded with its rank.
         public async Task<ReassignResult> ReassignAsync(
             ReassignChange change,
             int senderId,
@@ -179,18 +174,17 @@ namespace FleetWise.Services
             return new(ReassignOutcome.Done, Trip: trip);
         }
 
-        /// <summary>Adds a trip by hand, after the same checks every booking goes through.</summary>
-        /// <param name="purpose">Appended to the audit summary, saying why the trip was added.</param>
-        /// <remarks>
-        /// A shift that has finished cannot be booked into, and that is not overridable:
-        /// confirming it would not put the shift back. A scheduling conflict can be confirmed
-        /// past. The break takes the least-used slot among the route's buses already on that
-        /// shift that day.
-        ///
-        /// The trip carries no roster month, so a re-publish of the roster treats it as made
-        /// by hand and builds around it.
-        /// </remarks>
-        /// <param name="tag">Where the driver sat in the ranking for the shift, when the trip fills a slot a ranking was offered for.</param>
+        // Adds a trip by hand, after the same checks every booking goes through.
+        // purpose: Appended to the audit summary, saying why the trip was added.
+        //
+        // A shift that has finished cannot be booked into, and that is not overridable:
+        // confirming it would not put the shift back. A scheduling conflict can be confirmed
+        // past. The break takes the least-used slot among the route's buses already on that
+        // shift that day.
+        //
+        // The trip carries no roster month, so a re-publish of the roster treats it as made
+        // by hand and builds around it.
+        // tag: Where the driver sat in the ranking for the shift, when the trip fills a slot a ranking was offered for.
         public async Task<ReassignResult> CreateAsync(NewTrip t, int senderId, string? purpose = null, ReassignmentTag? tag = null)
         {
             var day = t.Date.Date;
@@ -241,14 +235,11 @@ namespace FleetWise.Services
             return new(ReassignOutcome.Done, Trip: inserted);
         }
 
-        /// <summary>
-        /// Tells a driver they have been given a shift they did not have.
-        /// </summary>
-        /// <remarks>
-        /// For a shift days away, which nobody on dispatch is going to ring about. Says when,
-        /// where and on which bus, and nothing about whose shift it was: why another driver
-        /// is off is theirs to share.
-        /// </remarks>
+        // Tells a driver they have been given a shift they did not have.
+        //
+        // For a shift days away, which nobody on dispatch is going to ring about. Says when,
+        // where and on which bus, and nothing about whose shift it was: why another driver
+        // is off is theirs to share.
         public async Task NotifyNewShiftAsync(Trip trip, int senderId)
         {
             var routes = (await _supabase.From<BusRoute>().Get()).Models;
@@ -269,23 +260,19 @@ namespace FleetWise.Services
             });
         }
 
-        /// <summary>
-        /// Tells the driver their shift has been moved to a different route.
-        /// </summary>
-        /// <remarks>
-        /// Through the messages table, which is what the driver app's notifications page
-        /// reads, so this arrives in the same place as everything else they are told. Sent
-        /// at high priority: it is the difference between a bus running the route it is
-        /// needed on and a bus running the one it was given at the start of the day.
-        ///
-        /// Addressed to the driver the trip now has. Where the driver was swapped in the
-        /// same edit, that is the person who needs to know.
-        /// </remarks>
-        /// <param name="wasVehicle">
-        /// The bus the trip held before this edit. Named only when it changed, since a
-        /// route change and a bus change often arrive in the same edit and a driver told
-        /// about one and not the other walks to the wrong bay.
-        /// </param>
+        // Tells the driver their shift has been moved to a different route.
+        //
+        // Through the messages table, which is what the driver app's notifications page
+        // reads, so this arrives in the same place as everything else they are told. Sent
+        // at high priority: it is the difference between a bus running the route it is
+        // needed on and a bus running the one it was given at the start of the day.
+        //
+        // Addressed to the driver the trip now has. Where the driver was swapped in the
+        // same edit, that is the person who needs to know.
+        // wasVehicle:
+        // The bus the trip held before this edit. Named only when it changed, since a
+        // route change and a bus change often arrive in the same edit and a driver told
+        // about one and not the other walks to the wrong bay.
         private async Task NotifyRouteChangeAsync(Trip trip, int wasRoute, string wasVehicle, int senderId)
         {
             var routes = (await _supabase.From<BusRoute>().Get()).Models;
@@ -324,11 +311,9 @@ namespace FleetWise.Services
             });
         }
 
-        /// <summary>
-        /// Formats a trip's shift window against its own date. An end at or before the
-        /// start means an overnight shift, whose end rolls to the next morning and is
-        /// marked so it cannot be read as ending the morning it began.
-        /// </summary>
+        // Formats a trip's shift window against its own date. An end at or before the
+        // start means an overnight shift, whose end rolls to the next morning and is
+        // marked so it cannot be read as ending the morning it began.
         public static (string Start, string End) ShiftWindow(Trip t)
         {
             bool overnight = t.ShiftEndTime <= t.ShiftStartTime;
@@ -337,22 +322,19 @@ namespace FleetWise.Services
             return (s.ToString("h:mm tt"), overnight ? $"{e:h:mm tt} (+1)" : e.ToString("h:mm tt"));
         }
 
-        /// <summary>The shift that immediately follows this one on the same day.</summary>
+        // The shift that immediately follows this one on the same day.
         private static readonly Dictionary<string, string> NextShift = new()
         {
             ["Morning"] = "Afternoon",
             ["Afternoon"] = "Evening",
         };
 
-        /// <summary>
-        /// Checks a proposed vehicle and driver assignment against existing trips.
-        /// </summary>
-        /// <returns>A description of the clash, or null when the assignment is clear.</returns>
-        /// <remarks>
-        /// The rules match the schedule planner: no driver or vehicle twice in the same
-        /// shift on the same day, and no driver in consecutive shifts, which includes an
-        /// evening shift followed by the next morning.
-        /// </remarks>
+        // Checks a proposed vehicle and driver assignment against existing trips.
+        // Returns A description of the clash, or null when the assignment is clear.
+        //
+        // The rules match the schedule planner: no driver or vehicle twice in the same
+        // shift on the same day, and no driver in consecutive shifts, which includes an
+        // evening shift followed by the next morning.
         public async Task<string> ValidateAssignmentAsync(
             DateTime date, string shift, string vehicleId, int driverId, string excludeTripId)
         {
@@ -411,16 +393,13 @@ namespace FleetWise.Services
             return null;
         }
 
-        /// <summary>
-        /// Drivers whose approved leave covers a day, written over their availability.
-        /// </summary>
-        /// <remarks>
-        /// Availability answers whether a driver can work right now and carries no date,
-        /// so it cannot say that somebody is off next Tuesday. Leave can, and on the day
-        /// itself the two mean the same thing to a board: this trip needs another driver.
-        /// Folded in here rather than at each place that reads availability, so the board,
-        /// the stored status and the reason shown all come from one rule.
-        /// </remarks>
+        // Drivers whose approved leave covers a day, written over their availability.
+        //
+        // Availability answers whether a driver can work right now and carries no date,
+        // so it cannot say that somebody is off next Tuesday. Leave can, and on the day
+        // itself the two mean the same thing to a board: this trip needs another driver.
+        // Folded in here rather than at each place that reads availability, so the board,
+        // the stored status and the reason shown all come from one rule.
         public async Task<Dictionary<int, string>> WithLeaveAsync(
             Dictionary<int, string> availability, DateTime day)
         {
@@ -436,7 +415,7 @@ namespace FleetWise.Services
             return availability;
         }
 
-        /// <summary>Recomputes the stored status of a day's trips from buses, availability and leave.</summary>
+        // Recomputes the stored status of a day's trips from buses, availability and leave.
         public async Task SyncTripStatusesAsync(string date = null)
         {
             date ??= PhClock.Today.ToString("yyyy-MM-dd");

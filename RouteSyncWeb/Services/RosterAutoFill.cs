@@ -2,12 +2,11 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>How often each driver drove each bus and each route lately.</summary>
-    /// <remarks>
-    /// What auto-fill chooses by: the driver who knows the bus, then the route. Counted over
-    /// whatever trips it is given, which is the last <see cref="SchedulingData.HistoryDays"/>
-    /// days, whatever their status.
-    /// </remarks>
+    // How often each driver drove each bus and each route lately.
+    //
+    // What auto-fill chooses by: the driver who knows the bus, then the route. Counted over
+    // whatever trips it is given, which is the last SchedulingData.HistoryDays
+    // days, whatever their status.
     public sealed class RosterHistory
     {
         private static readonly StringComparer Ci = StringComparer.OrdinalIgnoreCase;
@@ -42,16 +41,15 @@ namespace FleetWise.Services
         public int Anywhere(int driverId) => _any.GetValueOrDefault(driverId);
     }
 
-    /// <summary>A roster after auto-fill, and what it did, in sentences.</summary>
-    /// <param name="Filled">Places given a driver.</param>
-    /// <param name="Emptied">Places emptied or taken off the roster: an inactive driver, a retired or moved bus.</param>
-    /// <param name="RestDaysSet">Rest days and floaters' usual shifts set where they were missing.</param>
-    /// <param name="LeftEmpty">Places still without a driver, for want of anybody free.</param>
-    /// <param name="Notes">Everything auto-fill did, a sentence each.</param>
-    /// <param name="Unmarked">
-    /// The notes that say what no place's mark says: places and rows that came off, crews
-    /// released, and floaters nobody could be found for. The rest are said by a mark as well.
-    /// </param>
+    // A roster after auto-fill, and what it did, in sentences.
+    // Filled: Places given a driver.
+    // Emptied: Places emptied or taken off the roster: an inactive driver, a retired or moved bus.
+    // RestDaysSet: Rest days and floaters' usual shifts set where they were missing.
+    // LeftEmpty: Places still without a driver, for want of anybody free.
+    // Notes: Everything auto-fill did, a sentence each.
+    // Unmarked:
+    // The notes that say what no place's mark says: places and rows that came off, crews
+    // released, and floaters nobody could be found for. The rest are said by a mark as well.
     public sealed record AutoFillResult(
         IReadOnlyList<RosterSeat> Seats, IReadOnlyList<string> Notes, IReadOnlyList<string> Unmarked,
         int Filled, int Emptied, int RestDaysSet, int LeftEmpty)
@@ -61,39 +59,35 @@ namespace FleetWise.Services
 
     public static partial class RosterRules
     {
-        /// <summary>
-        /// Clears a roster of drivers and buses that can no longer be on it, then fills its empty
-        /// places by rule. Nothing is saved; the page shows the result for a person to review.
-        /// </summary>
-        /// <remarks>
-        /// <para>Clean-up first:</para>
-        /// <list type="bullet">
-        /// <item>A crew place held by an inactive driver is emptied. An inactive floater's row goes.</item>
-        /// <item>A retired bus, a bus with no route and a bus that no longer exists come off the
-        /// roster, and their crew are released.</item>
-        /// <item>A bus now based on another route takes the shifts it runs there, empty, and its
-        /// crew are released.</item>
-        /// </list>
-        /// <para>Then only empty places are filled. A driver already validly placed keeps their
-        /// bus, shift and rest day, and a person decides which shifts a bus runs.</para>
-        /// <list type="number">
-        /// <item>Empty crew places, from active drivers with no place. Each goes to the pairing
-        /// with the most trips on that bus in the last 30 days, then on that route; a driver new
-        /// to the fleet before one who knows only other routes; then the place's order on the
-        /// page, the driver's name and id.</item>
-        /// <item>Floaters, up to one for every six crew places on the route, chosen by trips on
-        /// the route the same way. Crew places come first, because an empty crew place is a gap
-        /// every day and a missing floater only on rest days.</item>
-        /// <item>Rest days where missing: a floater on the weekday fewest of the route's floaters
-        /// rest, a crew driver on the weekday with the most floater cover to spare, avoiding a
-        /// crewmate's day. A new floater's usual shift goes where the route is shortest of them.
-        /// Those new rest days are then settled against the planner, and moved where that
-        /// uncovers less. A rest day a driver already had is never moved.</item>
-        /// </list>
-        /// <para>A driver held back is never placed. They stay available for one-off cover, and
-        /// a person may still place them by hand.</para>
-        /// <para>Every place it changes carries a sentence saying why, for the page to show.</para>
-        /// </remarks>
+        // Clears a roster of drivers and buses that can no longer be on it, then fills its empty
+        // places by rule. Nothing is saved; the page shows the result for a person to review.
+        //
+        // Clean-up first:
+        // - A crew place held by an inactive driver is emptied. An inactive floater's row goes.
+        // - A retired bus, a bus with no route and a bus that no longer exists come off the
+        //   roster, and their crew are released.
+        // - A bus now based on another route takes the shifts it runs there, empty, and its
+        //   crew are released.
+        //
+        // Then only empty places are filled. A driver already validly placed keeps their
+        // bus, shift and rest day, and a person decides which shifts a bus runs.
+        // 1. Empty crew places, from active drivers with no place. Each goes to the pairing
+        //    with the most trips on that bus in the last 30 days, then on that route; a driver new
+        //    to the fleet before one who knows only other routes; then the place's order on the
+        //    page, the driver's name and id.
+        // 2. Floaters, up to one for every six crew places on the route, chosen by trips on
+        //    the route the same way. Crew places come first, because an empty crew place is a gap
+        //    every day and a missing floater only on rest days.
+        // 3. Rest days where missing: a floater on the weekday fewest of the route's floaters
+        //    rest, a crew driver on the weekday with the most floater cover to spare, avoiding a
+        //    crewmate's day. A new floater's usual shift goes where the route is shortest of them.
+        //    Those new rest days are then settled against the planner, and moved where that
+        //    uncovers less. A rest day a driver already had is never moved.
+        //
+        // A driver held back is never placed. They stay available for one-off cover, and
+        // a person may still place them by hand.
+        //
+        // Every place it changes carries a sentence saying why, for the page to show.
         public static AutoFillResult AutoFill(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<Vehicle> vehicles,
@@ -452,19 +446,16 @@ namespace FleetWise.Services
             return new AutoFillResult(result, notes, unmarked, filled, emptied, restSet, leftEmpty);
         }
 
-        /// <summary>How a mark that sets a rest day begins.</summary>
+        // How a mark that sets a rest day begins.
         private const string RestDayMark = "Rests ";
 
-        /// <summary>
-        /// Whether a place's auto-fill mark is about who is in the place, rather than only its
-        /// rest day.
-        /// </summary>
-        /// <remarks>
-        /// A place whose driver a person chose is only ever given a rest day, so a mark that is
-        /// nothing but the rest day leaves the driver as the person chose them. Any other mark
-        /// begins with what auto-fill did about the driver: chose one, found nobody, or took one
-        /// off. Read from the mark itself, so a mark saved with the roster answers the same.
-        /// </remarks>
+        // Whether a place's auto-fill mark is about who is in the place, rather than only its
+        // rest day.
+        //
+        // A place whose driver a person chose is only ever given a rest day, so a mark that is
+        // nothing but the rest day leaves the driver as the person chose them. Any other mark
+        // begins with what auto-fill did about the driver: chose one, found nobody, or took one
+        // off. Read from the mark itself, so a mark saved with the roster answers the same.
         public static bool MarkIsAboutDriver(string? suggested) =>
             !string.IsNullOrEmpty(suggested) && !suggested.StartsWith(RestDayMark, StringComparison.Ordinal);
 
@@ -481,7 +472,7 @@ namespace FleetWise.Services
             _ => string.Join(", ", items.Take(items.Count - 1)) + $" and {items[^1]}",
         };
 
-        /// <summary>A place on the roster while auto-fill works on it.</summary>
+        // A place on the roster while auto-fill works on it.
         private sealed class Place
         {
             public Place(int order, RosterSeat seat)
@@ -490,15 +481,15 @@ namespace FleetWise.Services
                 Seat = seat;
             }
 
-            /// <summary>Where it sits on the page; rows auto-fill adds come after every other.</summary>
+            // Where it sits on the page; rows auto-fill adds come after every other.
             public int Order { get; }
 
             public RosterSeat Seat { get; set; }
 
-            /// <summary>A floater row auto-fill added, dropped again if nobody can take it.</summary>
+            // A floater row auto-fill added, dropped again if nobody can take it.
             public bool NewFloater { get; init; }
 
-            /// <summary>What auto-fill did to this place, in the order it did it.</summary>
+            // What auto-fill did to this place, in the order it did it.
             public List<string> Said { get; } = new();
         }
     }

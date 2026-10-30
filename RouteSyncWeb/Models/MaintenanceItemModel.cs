@@ -4,16 +4,13 @@ using Postgrest.Models;
 
 namespace FleetWise.Models;
 
-/// <summary>
-/// One fault being worked under a maintenance order.
-/// </summary>
-/// <remarks>
-/// One row per fault however often it is reported, so each closes on its own and the list
-/// describes the bus as it stands.
-///
-/// Criticality comes from checklist_items and decides whether the fault grounds the bus.
-/// A hand-typed item carries none.
-/// </remarks>
+// One fault being worked under a maintenance order.
+//
+// One row per fault however often it is reported, so each closes on its own and the list
+// describes the bus as it stands.
+//
+// Criticality comes from checklist_items and decides whether the fault grounds the bus.
+// A hand-typed item carries none.
 [Table("maintenance_items")]
 public class MaintenanceItem : BaseModel
 {
@@ -36,11 +33,11 @@ public class MaintenanceItem : BaseModel
     [Column("is_critical")]
     public bool IsCritical { get; set; }
 
-    /// <summary>checklist when the fault names an inspected item, otherwise manual.</summary>
+    // checklist when the fault names an inspected item, otherwise manual.
     [Column("source")]
     public string Source { get; set; }
 
-    /// <summary>open, fixed, or dismissed.</summary>
+    // open, fixed, or dismissed.
     [Column("state")]
     public string State { get; set; }
 
@@ -50,7 +47,7 @@ public class MaintenanceItem : BaseModel
     [Column("closed_by")]
     public string ClosedBy { get; set; }
 
-    /// <summary>Required when dismissing, explaining why the fault was not real.</summary>
+    // Required when dismissing, explaining why the fault was not real.
     [Column("note")]
     public string Note { get; set; }
 

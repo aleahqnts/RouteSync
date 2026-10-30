@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FleetWise.ViewModels
 {
-    /// <summary>The Roster page for one month.</summary>
+    // The Roster page for one month.
     public class RosterViewModel
     {
         public DateTime Month { get; set; }
@@ -10,48 +10,48 @@ namespace FleetWise.ViewModels
         public string PrevMonthKey { get; set; } = "";
         public string NextMonthKey { get; set; } = "";
 
-        /// <summary>Not started, Draft or Published.</summary>
+        // Not started, Draft or Published.
         public string Status { get; set; } = "";
 
-        /// <summary>The version this page was built on, sent back with a save. Zero for a month never saved.</summary>
+        // The version this page was built on, sent back with a save. Zero for a month never saved.
         public int Version { get; set; }
 
-        /// <summary>A month already over is a record and cannot be changed.</summary>
+        // A month already over is a record and cannot be changed.
         public bool ReadOnly { get; set; }
 
-        /// <summary>"Saved Sep 15, 3:40 PM by Ana Reyes", or null for a month never saved.</summary>
+        // "Saved Sep 15, 3:40 PM by Ana Reyes", or null for a month never saved.
         public string? SavedLine { get; set; }
 
         public List<RosterRouteView> Routes { get; set; } = new();
         public List<RosterDriverOption> Drivers { get; set; } = new();
         public List<RosterSeatInput> Seats { get; set; } = new();
 
-        /// <summary>Drivers held back from this month's roster automation.</summary>
+        // Drivers held back from this month's roster automation.
         public List<int> Held { get; set; } = new();
 
-        /// <summary>Active buses with no home route, which no route's crew can be put on.</summary>
+        // Active buses with no home route, which no route's crew can be put on.
         public List<string> UnroutedBuses { get; set; } = new();
 
-        /// <summary>"Published Sep 15, 3:40 PM", or null for a month never published.</summary>
+        // "Published Sep 15, 3:40 PM", or null for a month never published.
         public string? PublishedLine { get; set; }
 
-        /// <summary>Saved since it was last published, so the trips do not yet show the latest roster.</summary>
+        // Saved since it was last published, so the trips do not yet show the latest roster.
         public bool ChangedSincePublish { get; set; }
 
-        /// <summary>The month before has a roster to carry forward.</summary>
+        // The month before has a roster to carry forward.
         public bool HasPreviousRoster { get; set; }
 
-        /// <summary>The signed-in role may add trips, which filling a gap does.</summary>
+        // The signed-in role may add trips, which filling a gap does.
         public bool CanFillGaps { get; set; }
 
-        /// <summary>Slots the last publish could not fill and nothing has filled since.</summary>
+        // Slots the last publish could not fill and nothing has filled since.
         public List<RosterSlotView> Gaps { get; set; } = new();
 
-        /// <summary>Slots kept empty on purpose.</summary>
+        // Slots kept empty on purpose.
         public List<RosterSlotView> Skips { get; set; } = new();
     }
 
-    /// <summary>One bus shift on one day, as the gaps and skips lists show it.</summary>
+    // One bus shift on one day, as the gaps and skips lists show it.
     public class RosterSlotView
     {
         public string Date { get; set; } = "";
@@ -74,7 +74,7 @@ namespace FleetWise.ViewModels
         public string VehicleId { get; set; } = "";
         public string PlateNumber { get; set; } = "";
 
-        /// <summary>Why a bus the roster still holds can no longer be crewed here, or null.</summary>
+        // Why a bus the roster still holds can no longer be crewed here, or null.
         public string? Warning { get; set; }
     }
 
@@ -85,7 +85,7 @@ namespace FleetWise.ViewModels
         public bool Active { get; set; }
     }
 
-    /// <summary>One place on the roster as the page holds it.</summary>
+    // One place on the roster as the page holds it.
     public class RosterSeatInput
     {
         public int? DriverId { get; set; }
@@ -105,23 +105,21 @@ namespace FleetWise.ViewModels
         [Range(1, 7, ErrorMessage = "A rest day is a day of the week.")]
         public int? RestWeekday { get; set; }
 
-        /// <summary>Why auto-fill filled or emptied this place, kept until a person changes it.</summary>
+        // Why auto-fill filled or emptied this place, kept until a person changes it.
         [MaxLength(600, ErrorMessage = "That note about an auto-filled place is too long.")]
         public string? Suggested { get; set; }
     }
 
     public class RosterCheckInput
     {
-        /// <summary>
-        /// The month on the page, so the check can say what publishing it now would leave
-        /// empty. Without it only the pattern is judged.
-        /// </summary>
+        // The month on the page, so the check can say what publishing it now would leave
+        // empty. Without it only the pattern is judged.
         [RegularExpression(@"^\d{4}-(0[1-9]|1[0-2])$", ErrorMessage = "That is not a month.")]
         public string? Month { get; set; }
 
         public List<RosterSeatInput> Seats { get; set; } = new();
 
-        /// <summary>Drivers held back: auto-fill and the suggestions pass them over.</summary>
+        // Drivers held back: auto-fill and the suggestions pass them over.
         public List<int> Held { get; set; } = new();
     }
 
@@ -135,14 +133,14 @@ namespace FleetWise.ViewModels
 
         public List<RosterSeatInput> Seats { get; set; } = new();
 
-        /// <summary>Drivers held back, saved with the roster. A driver placed on it is no longer held.</summary>
+        // Drivers held back, saved with the roster. A driver placed on it is no longer held.
         public List<int> Held { get; set; } = new();
     }
 }
 
 namespace FleetWise.ViewModels
 {
-    /// <summary>A month and the roster version the page was built on.</summary>
+    // A month and the roster version the page was built on.
     public class RosterMonthInput
     {
         [Required, RegularExpression(@"^\d{4}-(0[1-9]|1[0-2])$", ErrorMessage = "That is not a month.")]
@@ -152,7 +150,7 @@ namespace FleetWise.ViewModels
         public int Version { get; set; }
     }
 
-    /// <summary>One bus shift on one day.</summary>
+    // One bus shift on one day.
     public class RosterSlotInput
     {
         [Required, RegularExpression(@"^\d{4}-\d{2}-\d{2}$", ErrorMessage = "That is not a date.")]
@@ -165,13 +163,13 @@ namespace FleetWise.ViewModels
         public string Shift { get; set; } = "";
     }
 
-    /// <summary>A driver chosen to fill a gap.</summary>
+    // A driver chosen to fill a gap.
     public class RosterFillInput : RosterSlotInput
     {
         [Range(1, int.MaxValue, ErrorMessage = "That is not a driver.")]
         public int DriverId { get; set; }
 
-        /// <summary>The dispatcher was shown a scheduling conflict and chose to book anyway.</summary>
+        // The dispatcher was shown a scheduling conflict and chose to book anyway.
         public bool Override { get; set; }
     }
 }

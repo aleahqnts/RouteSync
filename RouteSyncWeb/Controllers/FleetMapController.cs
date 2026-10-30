@@ -17,87 +17,68 @@ namespace FleetWise.Controllers
         private readonly FareCalculator _fareCalculator;
         private readonly IMemoryCache _cache;
 
-        /// <summary>
-        /// How long the fleet, staff and open fault lists are reused between position reads.
-        /// The routes are held longer, see <see cref="RoutesLifetime"/>.
-        /// </summary>
-        /// <remarks>
-        /// Only the trips and their positions change while a bus is running. Registering a
-        /// vehicle, renaming a route or adding a driver is an operator action, and a minute
-        /// of staleness on those is invisible on a map. Reusing them turns every poll from
-        /// six reads of the database into two, which is what makes polling often enough to
-        /// look live affordable at all.
-        /// </remarks>
+        // How long the fleet, staff and open fault lists are reused between position reads.
+        // The routes are held longer, see RoutesLifetime.
+        //
+        // Only the trips and their positions change while a bus is running. Registering a
+        // vehicle, renaming a route or adding a driver is an operator action, and a minute
+        // of staleness on those is invisible on a map. Reusing them turns every poll from
+        // six reads of the database into two, which is what makes polling often enough to
+        // look live affordable at all.
         private static readonly TimeSpan ReferenceLifetime = TimeSpan.FromSeconds(60);
 
-        /// <summary>
-        /// How long the routes are reused, map paths included.
-        /// </summary>
-        /// <remarks>
-        /// Each route carries its stops and its line, about sixteen kilobytes, which makes the
-        /// route list the largest of the reference reads by far. Routes are drawn once and
-        /// edited in the database by hand, so ten minutes of staleness after an edit costs
-        /// nothing, while a read a minute would be a gigabyte a month at full service.
-        /// </remarks>
+        // How long the routes are reused, map paths included.
+        //
+        // Each route carries its stops and its line, about sixteen kilobytes, which makes the
+        // route list the largest of the reference reads by far. Routes are drawn once and
+        // edited in the database by hand, so ten minutes of staleness after an edit costs
+        // nothing, while a read a minute would be a gigabyte a month at full service.
         private static readonly TimeSpan RoutesLifetime = TimeSpan.FromMinutes(10);
 
-        /// <summary>
-        /// How recent a telemetry reading must be to count as live.
-        /// </summary>
-        /// <remarks>
-        /// An older position means the bus is offline or in a dead zone, and it is shown
-        /// parked. Bounding the read to this window avoids scanning the whole table on
-        /// every poll. The value is generous enough to absorb the phone's own heartbeat
-        /// interval and brief gaps without the map flickering.
-        /// </remarks>
+        // How recent a telemetry reading must be to count as live.
+        //
+        // An older position means the bus is offline or in a dead zone, and it is shown
+        // parked. Bounding the read to this window avoids scanning the whole table on
+        // every poll. The value is generous enough to absorb the phone's own heartbeat
+        // interval and brief gaps without the map flickering.
         private const int RecentTelemetryMinutes = 30;
 
-        /// <summary>
-        /// Where a parked bus is drawn when neither its route nor any other route has a
-        /// terminal, stop or line to place it by: the EDSA-Ayala terminal, where the fleet
-        /// starts its day.
-        /// </summary>
+        // Where a parked bus is drawn when neither its route nor any other route has a
+        // terminal, stop or line to place it by: the EDSA-Ayala terminal, where the fleet
+        // starts its day.
         private static readonly RouteStops.Stop DefaultTerminal = new("EDSA-Ayala Terminal", 14.549272, 121.029103, true);
 
         private readonly RouteSnapTracker _snaps;
         private readonly TripAssignments _assignments;
         private readonly ILogger<FleetMapController> _logger;
 
-        /// <summary>
-        /// How long one read of the live positions is shared, just under the map's
-        /// two-second poll.
-        /// </summary>
+        // How long one read of the live positions is shared, just under the map's
+        // two-second poll.
         private static readonly TimeSpan LiveShared = TimeSpan.FromMilliseconds(1500);
 
-        /// <summary>
-        /// How long the stop-to-stop speeds learned from past trips are reused. They are
-        /// medians over two weeks of trips, which a day more or less does not move, and each
-        /// refresh reads the route's recent readings out of the database.
-        /// </summary>
+        // How long the stop-to-stop speeds learned from past trips are reused. They are
+        // medians over two weeks of trips, which a day more or less does not move, and each
+        // refresh reads the route's recent readings out of the database.
         private static readonly TimeSpan SpeedsLifetime = TimeSpan.FromHours(24);
 
-        /// <summary>
-        /// Seconds between the readings the speeds are learned from. The phones report every
-        /// five, and one in thirty still places each stop crossing within a few seconds.
-        /// Older readings are thinned to these same windows, so they stay readable here.
-        /// </summary>
+        // Seconds between the readings the speeds are learned from. The phones report every
+        // five, and one in thirty still places each stop crossing within a few seconds.
+        // Older readings are thinned to these same windows, so they stay readable here.
         public const int SpeedSampleSeconds = 30;
 
-        /// <summary>Days of past trips the speeds are learned from, within the telemetry kept.</summary>
+        // Days of past trips the speeds are learned from, within the telemetry kept.
         private const int SpeedHistoryDays = 14;
 
-        /// <summary>Most recent trips per route the speeds are learned from.</summary>
+        // Most recent trips per route the speeds are learned from.
         private const int SpeedHistoryTrips = 60;
 
-        /// <summary>
-        /// How long a finished trip's thinned readings are kept for learning: the history
-        /// window and a day, after which the trip is too old to be learned from anyway.
-        /// </summary>
+        // How long a finished trip's thinned readings are kept for learning: the history
+        // window and a day, after which the trip is too old to be learned from anyway.
         private static readonly TimeSpan SampleLifetime = TimeSpan.FromDays(SpeedHistoryDays + 1);
 
         private static string SampleKey(string tripId) => $"fleetmap:sample:{tripId}";
 
-        /// <summary>Set once the database is found to have no fleetmap_live that takes p_seen.</summary>
+        // Set once the database is found to have no fleetmap_live that takes p_seen.
         private static volatile bool _seenUnsupported;
 
         public FleetMapController(Supabase.Client supabase, FareCalculator fareCalculator, IMemoryCache cache,
@@ -111,7 +92,7 @@ namespace FleetWise.Controllers
             _assignments = assignments;
         }
 
-        /// <summary>The active trips, their readings since the last one used, and the fare, as sent.</summary>
+        // The active trips, their readings since the last one used, and the fare, as sent.
         private async Task<string> ReadLiveAsync(int? routeId)
         {
             var recentCutoff = PhClock.NowForDb.AddMinutes(-RecentTelemetryMinutes);
@@ -141,13 +122,11 @@ namespace FleetWise.Controllers
             return liveResponse.Content ?? "";
         }
 
-        /// <summary>
-        /// A UTC instant as the map's scripts read it: the UTC digits with no zone marked,
-        /// to which they add the "Z" themselves.
-        /// </summary>
+        // A UTC instant as the map's scripts read it: the UTC digits with no zone marked,
+        // to which they add the "Z" themselves.
         private static DateTime ForMap(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
 
-        /// <summary>Reads a reference list, reusing the last one for <see cref="ReferenceLifetime"/> or the lifetime given.</summary>
+        // Reads a reference list, reusing the last one for ReferenceLifetime or the lifetime given.
         private async Task<List<T>> ReferenceAsync<T>(string key, Func<Task<List<T>>> read, TimeSpan? lifetime = null)
             where T : Postgrest.Models.BaseModel, new()
         {
@@ -159,7 +138,7 @@ namespace FleetWise.Controllers
             return fresh;
         }
 
-        /// <summary>Every route in full, reused for <see cref="RoutesLifetime"/>.</summary>
+        // Every route in full, reused for RoutesLifetime.
         private Task<List<BusRoute>> RoutesAsync() =>
             ReferenceAsync("fleetmap:routes", async () => (await _supabase.From<BusRoute>().Get()).Models, RoutesLifetime);
 
@@ -240,12 +219,11 @@ namespace FleetWise.Controllers
             return Json(routeData);
         }
 
-        /// <summary>
-        /// Live bus positions: the newest telemetry reading for each active trip, joined to
-        /// its vehicle, route and driver.
-        /// </summary>
-        /// <remarks>Occupancy and revenue are calculated here rather than in the browser,
-        /// so the markers, tooltips and side panel all show the same numbers.</remarks>
+        // Live bus positions: the newest telemetry reading for each active trip, joined to
+        // its vehicle, route and driver.
+        //
+        // Occupancy and revenue are calculated here rather than in the browser,
+        // so the markers, tooltips and side panel all show the same numbers.
         public async Task<IActionResult> Positions(int? routeId, string? status)
         {
             // What changes from one poll to the next, in one request: the active trips, the
@@ -540,11 +518,9 @@ namespace FleetWise.Controllers
             return Json(positions);
         }
 
-        /// <summary>
-        /// The route's learned stop-to-stop speeds, or none while they are first being worked
-        /// out. A poll never waits for them: the first after they expire starts the read and
-        /// the polls after it pick up the answer.
-        /// </summary>
+        // The route's learned stop-to-stop speeds, or none while they are first being worked
+        // out. A poll never waits for them: the first after they expire starts the read and
+        // the polls after it pick up the answer.
         private SegmentSpeeds SpeedsFor(int routeId, RouteLine line, IReadOnlyList<StopPlace> places)
         {
             var read = SharedRead.GetAsync(_cache, $"fleetmap:speeds:{routeId}", SpeedsLifetime,
@@ -552,7 +528,7 @@ namespace FleetWise.Controllers
             return read.IsCompletedSuccessfully ? read.Result : SegmentSpeeds.None;
         }
 
-        /// <summary>Learns a route's stop-to-stop speeds from its recent trips' readings.</summary>
+        // Learns a route's stop-to-stop speeds from its recent trips' readings.
         private async Task<SegmentSpeeds> LearnSpeedsAsync(int routeId, RouteLine line, IReadOnlyList<StopPlace> places)
         {
             if (places.Count < 2)
@@ -628,14 +604,11 @@ namespace FleetWise.Controllers
             return StopEta.Learn(line, places, paths);
         }
 
-        /// <summary>
-        /// A parked bus's day: its trips this operational day with each one's status, its
-        /// last inspection, and its open faults.
-        /// </summary>
-        /// <remarks>
-        /// Trip status comes from <see cref="TripStatus.Resolve"/> with the inputs the dispatch
-        /// board gives it, leave included, so the two never disagree.
-        /// </remarks>
+        // A parked bus's day: its trips this operational day with each one's status, its
+        // last inspection, and its open faults.
+        //
+        // Trip status comes from TripStatus.Resolve with the inputs the dispatch
+        // board gives it, leave included, so the two never disagree.
         [RequirePermission("routes")]
         public async Task<IActionResult> BusDetail(string vehicleId)
         {
@@ -739,7 +712,7 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>A Philippine clock time as "6:12 AM", with the day once it is not today.</summary>
+        // A Philippine clock time as "6:12 AM", with the day once it is not today.
         private static string WhenSaid(DateTime ph, DateTime now)
         {
             var time = ph.ToString("h:mm tt", CultureInfo.InvariantCulture);
@@ -748,15 +721,13 @@ namespace FleetWise.Controllers
                 : ph.ToString("MMM d", CultureInfo.InvariantCulture) + ", " + time;
         }
 
-        /// <summary>
-        /// The GPS check: every trip of one day replayed through the map's own snapping, to
-        /// show how the phones' GPS behaved on the real routes.
-        /// </summary>
+        // The GPS check: every trip of one day replayed through the map's own snapping, to
+        // show how the phones' GPS behaved on the real routes.
         [RequirePermission("routes")]
         public async Task<IActionResult> GpsCheck(DateTime? date) =>
             View(await BuildGpsCheckAsync(date));
 
-        /// <summary>The GPS check for one day as a spreadsheet, one row per trip and a total.</summary>
+        // The GPS check for one day as a spreadsheet, one row per trip and a total.
         [RequirePermission("routes")]
         public async Task<IActionResult> GpsCheckCsv(DateTime? date)
         {
@@ -789,13 +760,12 @@ namespace FleetWise.Controllers
                 $"GpsCheck_{model.Date.ToString("yyyy-MM-dd", inv)}.csv");
         }
 
-        /// <summary>Reads one day's trips and their readings, and replays each trip.</summary>
-        /// <remarks>
-        /// A trip counts when it has readings, or when it was started, since a started trip
-        /// with none is itself something the check should show. The route line is the
-        /// route's current one; a trip moved to another route mid-shift is measured against
-        /// the route it ended on.
-        /// </remarks>
+        // Reads one day's trips and their readings, and replays each trip.
+        //
+        // A trip counts when it has readings, or when it was started, since a started trip
+        // with none is itself something the check should show. The route line is the
+        // route's current one; a trip moved to another route mid-shift is measured against
+        // the route it ended on.
         private async Task<GpsCheckViewModel> BuildGpsCheckAsync(DateTime? date)
         {
             var day = (date ?? PhClock.OperationalDay).Date;
@@ -864,7 +834,7 @@ namespace FleetWise.Controllers
             return model;
         }
 
-        /// <summary>The trip's shift window as a short label.</summary>
+        // The trip's shift window as a short label.
         private static string FormatShift(Trip trip)
         {
             static string Fmt(TimeSpan t) =>
@@ -882,10 +852,8 @@ namespace FleetWise.Controllers
             return string.IsNullOrEmpty(name) ? "Unassigned" : name;
         }
 
-        /// <summary>
-        /// A parked bus's status in the registry's vocabulary. Such a bus has no live trip,
-        /// so a stored moving or flagged value is stale and reads as ready to deploy.
-        /// </summary>
+        // A parked bus's status in the registry's vocabulary. Such a bus has no live trip,
+        // so a stored moving or flagged value is stale and reads as ready to deploy.
         private static string NormalizeParked(string? vehicleStatus)
         {
             var s = (vehicleStatus ?? "").Trim();

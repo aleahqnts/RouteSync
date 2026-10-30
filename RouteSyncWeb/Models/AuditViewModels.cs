@@ -1,6 +1,6 @@
 namespace FleetWise.Models
 {
-    /// <summary>One entry of the audit trail, as shown on the audit log page.</summary>
+    // One entry of the audit trail, as shown on the audit log page.
     public class AuditEntryViewModel
     {
         public long Id { get; set; }
@@ -16,16 +16,14 @@ namespace FleetWise.Models
         public string? Summary { get; set; }
         public string? Ip { get; set; }
 
-        /// <summary>Whether the entry recorded a row edit at all.</summary>
+        // Whether the entry recorded a row edit at all.
         public bool HasChanges { get; set; }
 
-        /// <summary>The row edit read field by field, empty when it cannot be expressed that way.</summary>
+        // The row edit read field by field, empty when it cannot be expressed that way.
         public List<AuditFieldChange> FieldChanges { get; set; } = new();
     }
 
-    /// <summary>
-    /// One column of a row edit. From is null on an insert, To is null on a delete.
-    /// </summary>
+    // One column of a row edit. From is null on an insert, To is null on a delete.
     public sealed record AuditFieldChange(string Field, string? From, string? To);
 
     public class AuditIndexViewModel

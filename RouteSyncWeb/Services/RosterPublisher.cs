@@ -10,17 +10,17 @@ namespace FleetWise.Services
     {
         Done,
 
-        /// <summary>The roster was saved after the version the caller worked from.</summary>
+        // The roster was saved after the version the caller worked from.
         Stale,
 
-        /// <summary>Refused for a reason a person has to fix, listed in Problems.</summary>
+        // Refused for a reason a person has to fix, listed in Problems.
         Refused,
 
-        /// <summary>The schedule moved while publishing; nothing was written and it can be tried again.</summary>
+        // The schedule moved while publishing; nothing was written and it can be tried again.
         Clash,
     }
 
-    /// <param name="Lines">For a preview or a publish, what it would do or did, in sentences.</param>
+    // Lines: For a preview or a publish, what it would do or did, in sentences.
     public sealed record RosterStepResult(
         RosterStep Step,
         int Version = 0,
@@ -29,15 +29,12 @@ namespace FleetWise.Services
         string? Message = null,
         IReadOnlyList<string>? Unmarked = null);
 
-    /// <summary>
-    /// Saving, generating and publishing a month's roster, for the Roster page and for the
-    /// service that runs the monthly cycle when nobody does.
-    /// </summary>
-    /// <remarks>
-    /// One path whoever asks. A publish from the page and one made on schedule by the server
-    /// are worked out, checked, written, reported and announced the same way. Only the
-    /// author differs: a person's id, or none, which the audit trail shows as the server.
-    /// </remarks>
+    // Saving, generating and publishing a month's roster, for the Roster page and for the
+    // service that runs the monthly cycle when nobody does.
+    //
+    // One path whoever asks. A publish from the page and one made on schedule by the server
+    // are worked out, checked, written, reported and announced the same way. Only the
+    // author differs: a person's id, or none, which the audit trail shows as the server.
     public class RosterPublisher
     {
         private const int DriverRoleId = 2;
@@ -47,16 +44,13 @@ namespace FleetWise.Services
         private readonly AuditLog _audit;
         private readonly IMemoryCache _cache;
 
-        /// <summary>
-        /// How long the month around a draft is held while somebody edits it.
-        /// </summary>
-        /// <remarks>
-        /// The Roster page asks what a publish would leave after every edit. The trips, leave
-        /// and skips around the month do not change because a rest day was moved on screen, so
-        /// they are read once and held briefly rather than read again on every keystroke. A
-        /// publish never uses this: it reads the month fresh, because what it writes has to be
-        /// exact.
-        /// </remarks>
+        // How long the month around a draft is held while somebody edits it.
+        //
+        // The Roster page asks what a publish would leave after every edit. The trips, leave
+        // and skips around the month do not change because a rest day was moved on screen, so
+        // they are read once and held briefly rather than read again on every keystroke. A
+        // publish never uses this: it reads the month fresh, because what it writes has to be
+        // exact.
         private static readonly TimeSpan DraftWorldFreshness = TimeSpan.FromSeconds(30);
 
         public RosterPublisher(Supabase.Client supabase, AuditLog audit, IMemoryCache cache)
@@ -78,21 +72,18 @@ namespace FleetWise.Services
                 .Filter("month", Operator.Equals, month.ToString("yyyy-MM-dd"))
                 .Get()).Models;
 
-        /// <summary>Drivers held back from a month's roster automation.</summary>
+        // Drivers held back from a month's roster automation.
         public async Task<HashSet<int>> ReadHoldsAsync(DateTime month) =>
             (await _supabase.From<RosterHold>()
                 .Select("driver_id")
                 .Filter("month", Operator.Equals, month.ToString("yyyy-MM-dd"))
                 .Get()).Models.Select(h => h.DriverId).ToHashSet();
 
-        /// <summary>
-        /// Holds that still mean something: a driver placed on the roster is no longer held back
-        /// from it.
-        /// </summary>
-        /// <remarks>
-        /// A person who puts a held-back driver in a seat has decided, and a hold kept behind
-        /// their back would reappear the day that driver is unplaced again.
-        /// </remarks>
+        // Holds that still mean something: a driver placed on the roster is no longer held back
+        // from it.
+        //
+        // A person who puts a held-back driver in a seat has decided, and a hold kept behind
+        // their back would reappear the day that driver is unplaced again.
         public static HashSet<int> LiveHolds(IEnumerable<int> held, IReadOnlyList<RosterSeat> seats)
         {
             var placed = seats.Where(s => s.DriverId is not null).Select(s => s.DriverId!.Value).ToHashSet();
@@ -116,7 +107,7 @@ namespace FleetWise.Services
             new(s.DriverId, s.Kind, s.RouteId, s.VehicleId, s.Shift, s.RestWeekday,
                 string.IsNullOrWhiteSpace(s.Suggested) ? null : s.Suggested);
 
-        /// <summary>Who drove which bus and route over the last <see cref="SchedulingData.HistoryDays"/> days.</summary>
+        // Who drove which bus and route over the last SchedulingData.HistoryDays days.
         public async Task<RosterHistory> ReadHistoryAsync()
         {
             var today = PhClock.OperationalDay;
@@ -127,8 +118,9 @@ namespace FleetWise.Services
             return new RosterHistory(trips);
         }
 
-        /// <summary>A roster cleared of drivers and buses that can no longer be on it, and its empty places filled by rule.</summary>
-        /// <remarks>Nothing is saved. See <see cref="RosterRules.AutoFill"/>.</remarks>
+        // A roster cleared of drivers and buses that can no longer be on it, and its empty places filled by rule.
+        //
+        // Nothing is saved. See RosterRules.AutoFill.
         public async Task<AutoFillResult> AutoFillAsync(IReadOnlyList<RosterSeat> seats, IReadOnlySet<int> held)
         {
             var fleetTask = ReadFleetAsync();
@@ -139,7 +131,7 @@ namespace FleetWise.Services
             return RosterRules.AutoFill(seats, vehicles, drivers, routes, historyTask.Result, held);
         }
 
-        /// <summary>Gaps still to come that nothing has filled: no trip on the slot and no skip.</summary>
+        // Gaps still to come that nothing has filled: no trip on the slot and no skip.
         public async Task<List<RosterGap>> OpenGapsAsync(
             IReadOnlyList<RosterGap> gaps, IReadOnlyList<RosterSkip> skips, DateTime today)
         {
@@ -158,11 +150,10 @@ namespace FleetWise.Services
 
         // ---- Saving and generating ---------------------------------------------------------------
 
-        /// <summary>Saves a month's seats and holds whole through save_roster_month.</summary>
-        /// <remarks>
-        /// Holds travel with the seats and are written under the same lock and the same
-        /// version, so a roster and who is held back from it can never be saved apart.
-        /// </remarks>
+        // Saves a month's seats and holds whole through save_roster_month.
+        //
+        // Holds travel with the seats and are written under the same lock and the same
+        // version, so a roster and who is held back from it can never be saved apart.
         public async Task<RosterStepResult> SaveAsync(
             DateTime month, int baseVersion, IReadOnlyList<RosterSeat> seats, IEnumerable<int> held,
             int? savedBy, string auditAction)
@@ -204,16 +195,13 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>
-        /// Fills a month's draft with the month before's roster, every shift rotated one step
-        /// backward, then auto-filled.
-        /// </summary>
-        /// <remarks>
-        /// Auto-filled so a driver deactivated or a bus retired since last month is dealt with in
-        /// the draft, with what changed marked for review, rather than stopping the publish on
-        /// the 25th. Lines says what auto-fill did.
-        /// </remarks>
-        /// <param name="by">The person generating it, or null when the monthly cycle does.</param>
+        // Fills a month's draft with the month before's roster, every shift rotated one step
+        // backward, then auto-filled.
+        //
+        // Auto-filled so a driver deactivated or a bus retired since last month is dealt with in
+        // the draft, with what changed marked for review, rather than stopping the publish on
+        // the 25th. Lines says what auto-fill did.
+        // by: The person generating it, or null when the monthly cycle does.
         public async Task<RosterStepResult> GenerateAsync(DateTime month, int baseVersion, int? by)
         {
             var roster = await ReadMonthAsync(month);
@@ -261,7 +249,7 @@ namespace FleetWise.Services
             };
         }
 
-        /// <summary>What auto-fill did, counted, for an audit line or a badge.</summary>
+        // What auto-fill did, counted, for an audit line or a badge.
         public static string AutoFillSummary(AutoFillResult fill)
         {
             var parts = new List<string>();
@@ -274,7 +262,7 @@ namespace FleetWise.Services
 
         // ---- Publishing -----------------------------------------------------------------------------
 
-        /// <summary>What publishing the saved roster would write, without writing it.</summary>
+        // What publishing the saved roster would write, without writing it.
         public async Task<RosterStepResult> PreviewAsync(DateTime month, int version)
         {
             var built = await BuildPlanAsync(month, version);
@@ -283,9 +271,9 @@ namespace FleetWise.Services
             return new(RosterStep.Done, version, ReportLines(month, built.Plan!, built.Names!, built.Seats!, result: null));
         }
 
-        /// <summary>Publishes the saved roster as the month's trips, and tells the drivers.</summary>
-        /// <param name="version">The version the caller worked from, or null to take the roster as it stands.</param>
-        /// <param name="by">The person publishing, or null when the monthly cycle does.</param>
+        // Publishes the saved roster as the month's trips, and tells the drivers.
+        // version: The version the caller worked from, or null to take the roster as it stands.
+        // by: The person publishing, or null when the monthly cycle does.
         public async Task<RosterStepResult> PublishAsync(DateTime month, int? version, int? by)
         {
             var built = await BuildPlanAsync(month, version);
@@ -362,19 +350,18 @@ namespace FleetWise.Services
             return new(RosterStep.Done, result.Version, lines);
         }
 
-        /// <summary>Who a roster's notices to drivers are sent from.</summary>
-        /// <remarks>
-        /// A message has to name a real user as its sender, and the monthly cycle is not one.
-        /// Defaulting to 0 named a user who does not exist, and the database refused every
-        /// notice of every scheduled publish.
-        ///
-        /// The person publishing, when there is one. Otherwise whoever saved this roster,
-        /// the person a driver would ask about it. A roster the cycle drafted and published
-        /// on its own has neither, so it falls to whoever saved a roster most recently, the
-        /// person running the rosters. Drivers are not shown the sender, so this decides
-        /// only whose name the record carries. Null only when no roster was ever saved by
-        /// anyone.
-        /// </remarks>
+        // Who a roster's notices to drivers are sent from.
+        //
+        // A message has to name a real user as its sender, and the monthly cycle is not one.
+        // Defaulting to 0 named a user who does not exist, and the database refused every
+        // notice of every scheduled publish.
+        //
+        // The person publishing, when there is one. Otherwise whoever saved this roster,
+        // the person a driver would ask about it. A roster the cycle drafted and published
+        // on its own has neither, so it falls to whoever saved a roster most recently, the
+        // person running the rosters. Drivers are not shown the sender, so this decides
+        // only whose name the record carries. Null only when no roster was ever saved by
+        // anyone.
         private async Task<int?> NoticeSenderAsync(int? by, RosterMonth roster)
         {
             if (by is int person) return person;
@@ -408,7 +395,7 @@ namespace FleetWise.Services
 
         private static RosterStepResult Refused(string problem) => new(RosterStep.Refused, Problems: new[] { problem });
 
-        /// <summary>The publish plan for the month as saved, or why there cannot be one.</summary>
+        // The publish plan for the month as saved, or why there cannot be one.
         private async Task<Built> BuildPlanAsync(DateTime month, int? version)
         {
             Built No(RosterStepResult r) => new(null, null, null, null, null, null, r);
@@ -445,21 +432,18 @@ namespace FleetWise.Services
             return new(roster, RosterGenerator.Plan(world), names, seats, routes, around.Trips, null);
         }
 
-        /// <summary>
-        /// What publishing the month would leave empty if the roster were as given, saved or not.
-        /// </summary>
-        /// <remarks>
-        /// The same planner and the same month a publish uses: trips a week either side,
-        /// approved leave, and slots kept empty on purpose. So the number the Roster page shows
-        /// while a roster is edited is the number a publish would leave, leave and all. The month
-        /// around it is held briefly between edits; see <see cref="DraftWorldFreshness"/>.
-        /// </remarks>
+        // What publishing the month would leave empty if the roster were as given, saved or not.
+        //
+        // The same planner and the same month a publish uses: trips a week either side,
+        // approved leave, and slots kept empty on purpose. So the number the Roster page shows
+        // while a roster is edited is the number a publish would leave, leave and all. The month
+        // around it is held briefly between edits; see DraftWorldFreshness.
         public async Task<PublishPlan> PlanDraftAsync(
             DateTime month, IReadOnlyList<RosterSeat> seats,
             IReadOnlyDictionary<int, string> routes, IReadOnlyList<Vehicle> vehicles, IReadOnlyList<UserModel> drivers) =>
             RosterGenerator.Plan(await DraftWorldAsync(month, seats, routes, vehicles, drivers));
 
-        /// <summary>The month a publish would plan, around a roster that may not be saved yet.</summary>
+        // The month a publish would plan, around a roster that may not be saved yet.
         public async Task<RosterWorld> DraftWorldAsync(
             DateTime month, IReadOnlyList<RosterSeat> seats,
             IReadOnlyDictionary<int, string> routes, IReadOnlyList<Vehicle> vehicles, IReadOnlyList<UserModel> drivers)
@@ -474,17 +458,15 @@ namespace FleetWise.Services
             return WorldFor(month, seats, around, routes, vehicles, drivers);
         }
 
-        /// <summary>
-        /// What publishing the month as saved would leave empty, or null when there is no saved
-        /// roster to plan, or it cannot be saved as it stands.
-        /// </summary>
+        // What publishing the month as saved would leave empty, or null when there is no saved
+        // roster to plan, or it cannot be saved as it stands.
         public async Task<PublishPlan?> PlanSavedAsync(DateTime month)
         {
             var built = await BuildPlanAsync(month, version: null);
             return built.Plan;
         }
 
-        /// <summary>Everything a month's plan needs besides the roster itself.</summary>
+        // Everything a month's plan needs besides the roster itself.
         private sealed record MonthAround(
             IReadOnlyList<Trip> Trips, IReadOnlyList<TripRosterState> Marks,
             IReadOnlyList<RosterSkip> Skips, IReadOnlyList<LeaveRequest> Leave);
@@ -536,7 +518,7 @@ namespace FleetWise.Services
             RouteNames = routes,
         };
 
-        /// <summary>The plan as publish_roster_month reads it.</summary>
+        // The plan as publish_roster_month reads it.
         private static Dictionary<string, object?> PlanJson(PublishPlan plan) => new()
         {
             ["inserts"] = plan.Inserts.Select(i => new Dictionary<string, object?>
@@ -567,8 +549,8 @@ namespace FleetWise.Services
             }).ToList(),
         };
 
-        /// <summary>What a publish would do, or did, in plain sentences.</summary>
-        /// <param name="result">Null for a preview, which is written in the future tense.</param>
+        // What a publish would do, or did, in plain sentences.
+        // result: Null for a preview, which is written in the future tense.
         private static List<string> ReportLines(
             DateTime month, PublishPlan plan, IReadOnlyDictionary<int, string> names,
             IReadOnlyList<RosterSeat> seats, PublishResult? result)
@@ -637,12 +619,11 @@ namespace FleetWise.Services
 
         // ---- Telling drivers --------------------------------------------------------------------------
 
-        /// <summary>One message to each driver on a newly published roster, saying what their month is.</summary>
-        /// <remarks>
-        /// Written to be understood at a glance: the bus, the shift and its hours, the rest day
-        /// and the break for a crew driver; the route, the usual shift and the rest day for a
-        /// floater, whose days are in their calendar.
-        /// </remarks>
+        // One message to each driver on a newly published roster, saying what their month is.
+        //
+        // Written to be understood at a glance: the bus, the shift and its hours, the rest day
+        // and the break for a crew driver; the route, the usual shift and the rest day for a
+        // floater, whose days are in their calendar.
         private async Task TellEveryDriverAsync(
             DateTime month, IReadOnlyList<RosterSeat> seats, IReadOnlyDictionary<int, string> routes, int sender)
         {
@@ -688,13 +669,10 @@ namespace FleetWise.Services
             if (messages.Count > 0) await _supabase.From<Message>().Insert(messages);
         }
 
-        /// <summary>
-        /// On a re-publish, one notice to each driver whose own days changed, naming those days.
-        /// </summary>
-        /// <remarks>
-        /// The same notice a planner save sends, so a change reaches a driver in the same words
-        /// whichever screen made it. A driver taken off a trip and the one put on it both hear.
-        /// </remarks>
+        // On a re-publish, one notice to each driver whose own days changed, naming those days.
+        //
+        // The same notice a planner save sends, so a change reaches a driver in the same words
+        // whichever screen made it. A driver taken off a trip and the one put on it both hear.
         private async Task TellChangedDriversAsync(PublishPlan plan, IReadOnlyList<Trip> trips, int sender)
         {
             var byId = trips.ToDictionary(t => t.TripId);
@@ -731,7 +709,7 @@ namespace FleetWise.Services
             if (messages.Count > 0) await _supabase.From<Message>().Insert(messages);
         }
 
-        /// <summary>Days as they would be read aloud, or as a count and a span once there are too many to read.</summary>
+        // Days as they would be read aloud, or as a count and a span once there are too many to read.
         private static string DayList(List<DateTime> days)
         {
             if (days.Count > 6)
@@ -752,7 +730,7 @@ namespace FleetWise.Services
         public static string StaleMessage(DateTime month) =>
             $"Someone saved the {month:MMMM} roster after this page was opened. Reload to see their changes first.";
 
-        /// <summary>The SQLSTATE PostgREST reports for a refused call, or null.</summary>
+        // The SQLSTATE PostgREST reports for a refused call, or null.
         public static string? DatabaseCode(string? content) => ReadErrorField(content, "code");
 
         public static string? DatabaseMessage(string? content) => ReadErrorField(content, "message");

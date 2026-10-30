@@ -4,11 +4,10 @@ using Postgrest.Models;
 
 namespace FleetWise.Models;
 
-/// <summary>A month's roster: whether it is published, and the version a save is checked against.</summary>
-/// <remarks>
-/// Written only through save_roster_month, which bumps the version under a row lock. The
-/// dashboard reads it here and never writes it directly.
-/// </remarks>
+// A month's roster: whether it is published, and the version a save is checked against.
+//
+// Written only through save_roster_month, which bumps the version under a row lock. The
+// dashboard reads it here and never writes it directly.
 [Table("roster_months")]
 public class RosterMonth : BaseModel
 {
@@ -18,7 +17,7 @@ public class RosterMonth : BaseModel
     [PrimaryKey("month", false)]
     public DateTime Month { get => _month; set => _month = UnzonedColumn.Day(value); }
 
-    /// <summary>Draft or Published.</summary>
+    // Draft or Published.
     [Column("status")]
     public string Status { get; set; }
 
@@ -34,16 +33,16 @@ public class RosterMonth : BaseModel
     [Column("published_at")]
     public DateTime? PublishedAt { get; set; }
 
-    /// <summary>When the roster was carried forward from the month before.</summary>
+    // When the roster was carried forward from the month before.
     [Column("generated_at")]
     public DateTime? GeneratedAt { get; set; }
 
-    /// <summary>Who carried it forward: a user id, or "system" for the monthly cycle.</summary>
+    // Who carried it forward: a user id, or "system" for the monthly cycle.
     [Column("generated_by")]
     public string GeneratedBy { get; set; }
 }
 
-/// <summary>A place in a month's roster: a crew seat on a bus shift, or a floater on a route.</summary>
+// A place in a month's roster: a crew seat on a bus shift, or a floater on a route.
 [Table("roster_slots")]
 public class RosterSlot : BaseModel
 {
@@ -52,42 +51,39 @@ public class RosterSlot : BaseModel
     [Column("month")]
     public DateTime Month { get => _month; set => _month = UnzonedColumn.Day(value); }
 
-    /// <summary>Null for a crew seat the bus runs with nobody on it yet. A floater always has a driver.</summary>
+    // Null for a crew seat the bus runs with nobody on it yet. A floater always has a driver.
     [Column("driver_id")]
     public int? DriverId { get; set; }
 
-    /// <summary>Crew or Floater.</summary>
+    // Crew or Floater.
     [Column("kind")]
     public string Kind { get; set; }
 
     [Column("route_id")]
     public int RouteId { get; set; }
 
-    /// <summary>The bus, for crew. Null for a floater.</summary>
+    // The bus, for crew. Null for a floater.
     [Column("vehicle_id")]
     public string VehicleId { get; set; }
 
-    /// <summary>Crew: the shift driven. Floater: the home shift.</summary>
+    // Crew: the shift driven. Floater: the home shift.
     [Column("shift")]
     public string Shift { get; set; }
 
-    /// <summary>ISO weekday, 1 Monday to 7 Sunday. Null exactly when the seat has no driver.</summary>
+    // ISO weekday, 1 Monday to 7 Sunday. Null exactly when the seat has no driver.
     [Column("rest_weekday")]
     public int? RestWeekday { get; set; }
 
-    /// <summary>Why auto-fill filled or emptied this place. Null for a place a person set.</summary>
+    // Why auto-fill filled or emptied this place. Null for a place a person set.
     [Column("suggested")]
     public string Suggested { get; set; }
 }
 
-/// <summary>
-/// A driver held back from a month's roster automation: auto-fill does not place them and the
-/// suggestions do not offer them. They stay available for one-off cover.
-/// </summary>
-/// <remarks>
-/// Saved with the month's roster and carried into the next with it, so a driver kept in
-/// reserve stays in reserve without anyone holding them back again each month.
-/// </remarks>
+// A driver held back from a month's roster automation: auto-fill does not place them and the
+// suggestions do not offer them. They stay available for one-off cover.
+//
+// Saved with the month's roster and carried into the next with it, so a driver kept in
+// reserve stays in reserve without anyone holding them back again each month.
 [Table("roster_holds")]
 public class RosterHold : BaseModel
 {

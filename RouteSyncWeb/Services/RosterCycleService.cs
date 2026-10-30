@@ -2,31 +2,28 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// Runs the monthly roster cycle when nobody does: drafts next month's roster from this
-    /// month's, and publishes it if it is still a draft by the publish day.
-    /// </summary>
-    /// <remarks>
-    /// <para>From the draft day (the 20th unless <c>Roster:DraftDay</c> says otherwise), a month
-    /// with no roster yet is drafted from the month before, every shift rotated, then
-    /// auto-filled: a driver no longer active or a bus no longer running comes off, and empty
-    /// places are filled by rule and marked for review, so neither stops the publish. From the
-    /// publish day (the 25th, <c>Roster:PublishDay</c>), a roster still in draft is published
-    /// as trips and every driver on it is told.</para>
-    ///
-    /// <para>The host sleeps when nobody is using it, so nothing here can wait for the
-    /// morning of the 20th. It looks on startup and every half hour, and every step is safe
-    /// to take twice: a month is drafted only when it has no roster at all, and published
-    /// only while it is still a draft. A draft that should have been published before its
-    /// month began is published on waking, late rather than never.</para>
-    ///
-    /// <para>A roster a person started during its own month is theirs to publish. Only a
-    /// draft that existed before the month began is published for them.</para>
-    ///
-    /// <para>Every dashboard instance runs this against the same database, and the version
-    /// check in the save and publish functions makes all but the first a no-op.
-    /// <c>Roster:AutoCycle</c> set to false turns it off.</para>
-    /// </remarks>
+    // Runs the monthly roster cycle when nobody does: drafts next month's roster from this
+    // month's, and publishes it if it is still a draft by the publish day.
+    //
+    // From the draft day (the 20th unless Roster:DraftDay says otherwise), a month
+    // with no roster yet is drafted from the month before, every shift rotated, then
+    // auto-filled: a driver no longer active or a bus no longer running comes off, and empty
+    // places are filled by rule and marked for review, so neither stops the publish. From the
+    // publish day (the 25th, Roster:PublishDay), a roster still in draft is published
+    // as trips and every driver on it is told.
+    //
+    // The host sleeps when nobody is using it, so nothing here can wait for the
+    // morning of the 20th. It looks on startup and every half hour, and every step is safe
+    // to take twice: a month is drafted only when it has no roster at all, and published
+    // only while it is still a draft. A draft that should have been published before its
+    // month began is published on waking, late rather than never.
+    //
+    // A roster a person started during its own month is theirs to publish. Only a
+    // draft that existed before the month began is published for them.
+    //
+    // Every dashboard instance runs this against the same database, and the version
+    // check in the save and publish functions makes all but the first a no-op.
+    // Roster:AutoCycle set to false turns it off.
     public sealed class RosterCycleService : BackgroundService
     {
         private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(60);
@@ -36,7 +33,7 @@ namespace FleetWise.Services
         private readonly IConfiguration _config;
         private readonly ILogger<RosterCycleService> _logger;
 
-        /// <summary>Refusals already recorded today, so a roster that cannot be published is reported once a day, not every sweep.</summary>
+        // Refusals already recorded today, so a roster that cannot be published is reported once a day, not every sweep.
         private readonly HashSet<string> _reported = new();
 
         public RosterCycleService(IServiceScopeFactory scopes, IConfiguration config, ILogger<RosterCycleService> logger)
@@ -132,7 +129,7 @@ namespace FleetWise.Services
                 "roster_months", month.ToString("yyyy-MM-dd"), outcome: "failed");
         }
 
-        /// <summary>Whether a roster was drafted or saved before its month began, in Philippine time.</summary>
+        // Whether a roster was drafted or saved before its month began, in Philippine time.
         private static bool ExistedBefore(RosterMonth roster, DateTime month)
         {
             var at = roster.GeneratedAt ?? roster.SavedAt;

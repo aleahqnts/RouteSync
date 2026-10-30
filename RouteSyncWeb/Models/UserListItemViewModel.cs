@@ -4,7 +4,7 @@ namespace FleetWise.Models
     {
         public int UserId { get; set; }
 
-        /// <summary>Formatted as "Last, First M."</summary>
+        // Formatted as "Last, First M."
         public string FullName { get; set; } = string.Empty;
 
         public string Email { get; set; } = string.Empty;

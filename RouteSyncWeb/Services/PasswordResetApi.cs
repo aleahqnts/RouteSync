@@ -4,20 +4,17 @@ using System.Text.Json;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// Client for the password reset edge functions, shared with the driver app.
-    /// </summary>
-    /// <remarks>
-    /// The reset runs on the edge rather than here so that both surfaces use one
-    /// implementation, one rate limiter and one audit shape. Codes, hashing and the
-    /// account lookup never happen in this process.
-    ///
-    /// The functions are deployed without gateway JWT verification, since the caller
-    /// is locked out by definition, so no key is sent with these calls.
-    ///
-    /// Results are three-way rather than a boolean so a caller can tell an unreachable
-    /// function apart from a definitive rejection, and never treats the two the same way.
-    /// </remarks>
+    // Client for the password reset edge functions, shared with the driver app.
+    //
+    // The reset runs on the edge rather than here so that both surfaces use one
+    // implementation, one rate limiter and one audit shape. Codes, hashing and the
+    // account lookup never happen in this process.
+    //
+    // The functions are deployed without gateway JWT verification, since the caller
+    // is locked out by definition, so no key is sent with these calls.
+    //
+    // Results are three-way rather than a boolean so a caller can tell an unreachable
+    // function apart from a definitive rejection, and never treats the two the same way.
     public class PasswordResetApi
     {
         private readonly HttpClient _http;
@@ -34,14 +31,11 @@ namespace FleetWise.Services
         public record CallResult(Outcome Outcome, string? Message);
         public record TokenResult(Outcome Outcome, string? Token, string? Message);
 
-        /// <summary>
-        /// Asks for a code to be mailed to the address on the account.
-        /// </summary>
-        /// <remarks>
-        /// Success means the request was accepted, not that an account exists. The
-        /// function answers the same way for an address it has never seen, so the page
-        /// must not say anything more specific than "check your mail" either.
-        /// </remarks>
+        // Asks for a code to be mailed to the address on the account.
+        //
+        // Success means the request was accepted, not that an account exists. The
+        // function answers the same way for an address it has never seen, so the page
+        // must not say anything more specific than "check your mail" either.
         public async Task<CallResult> RequestAsync(string email)
         {
             try
@@ -60,9 +54,7 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>
-        /// Exchanges a mailed code for a short-lived token authorising one password change.
-        /// </summary>
+        // Exchanges a mailed code for a short-lived token authorising one password change.
         public async Task<TokenResult> VerifyAsync(string email, string otp)
         {
             try
@@ -92,13 +84,10 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>
-        /// Sets the new password using the token from <see cref="VerifyAsync"/>.
-        /// </summary>
-        /// <remarks>
-        /// No session comes back. The user signs in with the new password, which keeps
-        /// the reset path from becoming a second way to obtain a dashboard cookie.
-        /// </remarks>
+        // Sets the new password using the token from VerifyAsync.
+        //
+        // No session comes back. The user signs in with the new password, which keeps
+        // the reset path from becoming a second way to obtain a dashboard cookie.
         public async Task<CallResult> CompleteAsync(string resetToken, string newPassword)
         {
             try

@@ -2,14 +2,13 @@ using System.Net.Sockets;
 
 namespace FleetWise.Services
 {
-    /// <summary>Retries a call that died before the server answered.</summary>
-    /// <remarks>
-    /// A pooled connection closed at the far end is refused at the socket, so the request
-    /// never arrives and the pool replaces it. The second attempt therefore succeeds.
-    ///
-    /// Only wire failures qualify. Anything answered, timeouts included, passes through:
-    /// repeating an insert that already ran is worse than failing.
-    /// </remarks>
+    // Retries a call that died before the server answered.
+    //
+    // A pooled connection closed at the far end is refused at the socket, so the request
+    // never arrives and the pool replaces it. The second attempt therefore succeeds.
+    //
+    // Only wire failures qualify. Anything answered, timeouts included, passes through:
+    // repeating an insert that already ran is worse than failing.
     public static class Transient
     {
         private const int Attempts = 3;
@@ -33,7 +32,7 @@ namespace FleetWise.Services
         public static async Task RunAsync(Func<Task> call)
             => await RunAsync<bool>(async () => { await call(); return true; });
 
-        /// <summary>Whether the request died on the wire rather than being answered.</summary>
+        // Whether the request died on the wire rather than being answered.
         private static bool IsBrokenConnection(Exception ex)
         {
             for (var e = ex; e is not null; e = e.InnerException)

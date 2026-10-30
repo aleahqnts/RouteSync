@@ -2,45 +2,39 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// A bus shift nobody on the roster can cover, on the same weekday every week.
-    /// </summary>
-    /// <param name="Weekday">ISO weekday, 1 Monday to 7 Sunday.</param>
-    /// <param name="Reason">Why the planner left it empty, as the unfilled list words it.</param>
-    /// <param name="RestDay">
-    /// The shift has a crew driver, so the gap is their rest day going uncovered. False for a
-    /// shift nobody is rostered on and for a retired bus, which the page already names apart.
-    /// </param>
+    // A bus shift nobody on the roster can cover, on the same weekday every week.
+    // Weekday: ISO weekday, 1 Monday to 7 Sunday.
+    // Reason: Why the planner left it empty, as the unfilled list words it.
+    // RestDay:
+    // The shift has a crew driver, so the gap is their rest day going uncovered. False for a
+    // shift nobody is rostered on and for a retired bus, which the page already names apart.
     public sealed record WeeklyGap(int RouteId, int Weekday, string VehicleId, string Shift, string Reason, bool RestDay);
 
-    /// <summary>
-    /// What a roster's pattern of shifts and rest days can cover, asked of the planner that
-    /// publishes it.
-    /// </summary>
-    /// <remarks>
-    /// <para>There is one answer to whether a floater is free, and it is
-    /// <see cref="RosterGenerator.Plan"/>. It applies the rest between shifts, the limit on
-    /// days worked in a row, and every booking a floater has already taken. A weekday head
-    /// count of crew resting against floaters working cannot see any of that: one floater
-    /// covering an Evening rest day is not free for a Morning rest day the next morning, and
-    /// a count says they are.</para>
-    ///
-    /// <para>The month planned here is clean. There is no leave, no trip already written and
-    /// nothing kept empty on purpose, so the answer is about the pattern alone and does not
-    /// move when somebody files leave. What a publish would actually leave, leave and all, is
-    /// the real month's plan, asked for separately.</para>
-    ///
-    /// <para>The month is February 2027, which starts on a Monday and runs exactly four
-    /// weeks, so every weekday falls four times and none is favoured.</para>
-    /// </remarks>
+    // What a roster's pattern of shifts and rest days can cover, asked of the planner that
+    // publishes it.
+    //
+    // There is one answer to whether a floater is free, and it is
+    // RosterGenerator.Plan. It applies the rest between shifts, the limit on
+    // days worked in a row, and every booking a floater has already taken. A weekday head
+    // count of crew resting against floaters working cannot see any of that: one floater
+    // covering an Evening rest day is not free for a Morning rest day the next morning, and
+    // a count says they are.
+    //
+    // The month planned here is clean. There is no leave, no trip already written and
+    // nothing kept empty on purpose, so the answer is about the pattern alone and does not
+    // move when somebody files leave. What a publish would actually leave, leave and all, is
+    // the real month's plan, asked for separately.
+    //
+    // The month is February 2027, which starts on a Monday and runs exactly four
+    // weeks, so every weekday falls four times and none is favoured.
     public static class RosterStructure
     {
-        /// <summary>Four whole weeks, Monday to Sunday.</summary>
+        // Four whole weeks, Monday to Sunday.
         public static readonly DateTime Month = new(2027, 2, 1);
 
         private static readonly StringComparer Ci = StringComparer.OrdinalIgnoreCase;
 
-        /// <summary>The planner's answer for the pattern, with nothing else in the world.</summary>
+        // The planner's answer for the pattern, with nothing else in the world.
         public static PublishPlan CleanPlan(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<UserModel> drivers,
@@ -61,15 +55,12 @@ namespace FleetWise.Services
                 RouteNames = routeNames,
             });
 
-        /// <summary>
-        /// Crew rest days left uncovered across the four weeks. What a repair of rest days works
-        /// to bring down.
-        /// </summary>
-        /// <remarks>
-        /// A shift with nobody rostered on it is left out. It is a gap every day whatever the
-        /// rest days are, and the fix for it is a driver in the seat, which is auto-fill's work.
-        /// It still takes up a floater in the plan, so its effect on the rest days is counted.
-        /// </remarks>
+        // Crew rest days left uncovered across the four weeks. What a repair of rest days works
+        // to bring down.
+        //
+        // A shift with nobody rostered on it is left out. It is a gap every day whatever the
+        // rest days are, and the fix for it is a driver in the seat, which is auto-fill's work.
+        // It still takes up a floater in the plan, so its effect on the rest days is counted.
         public static int RestDayGapCount(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<UserModel> drivers,
@@ -81,20 +72,17 @@ namespace FleetWise.Services
                 .Count(g => crewed.Contains((g.RouteId, g.VehicleId.ToUpperInvariant(), g.Shift.ToUpperInvariant())));
         }
 
-        /// <summary>
-        /// Crew rest days left uncovered in the first week of the real month, where it meets the
-        /// month before.
-        /// </summary>
-        /// <remarks>
-        /// <para>The clean month above cannot see this week. A driver whose rest day moved at the
-        /// turn of the month can reach a seventh day running on the first days of the new one,
-        /// and a floater who covers for them is then not free the next morning. Only the real
-        /// month knows what the last days of the month before booked.</para>
-        ///
-        /// <para>Leave is left out, as it is from the clean month: a rest day is not moved to
-        /// work around somebody's leave. Slots kept empty on purpose stay empty.</para>
-        /// </remarks>
-        /// <param name="month">The real month as a publish would plan it.</param>
+        // Crew rest days left uncovered in the first week of the real month, where it meets the
+        // month before.
+        //
+        // The clean month above cannot see this week. A driver whose rest day moved at the
+        // turn of the month can reach a seventh day running on the first days of the new one,
+        // and a floater who covers for them is then not free the next morning. Only the real
+        // month knows what the last days of the month before booked.
+        //
+        // Leave is left out, as it is from the clean month: a rest day is not moved to
+        // work around somebody's leave. Slots kept empty on purpose stay empty.
+        // month: The real month as a publish would plan it.
         public static int OpeningGapCount(IReadOnlyList<RosterSeat> seats, RosterWorld month)
         {
             var plan = RosterGenerator.Plan(new RosterWorld
@@ -118,7 +106,7 @@ namespace FleetWise.Services
                 && crewed.Contains((g.RouteId, g.VehicleId.ToUpperInvariant(), g.Shift.ToUpperInvariant())));
         }
 
-        /// <summary>The pattern's gaps, one per bus shift and weekday however many weeks it repeats.</summary>
+        // The pattern's gaps, one per bus shift and weekday however many weeks it repeats.
         public static IReadOnlyList<WeeklyGap> WeeklyGaps(
             IReadOnlyList<RosterSeat> seats,
             IReadOnlyList<UserModel> drivers,
@@ -139,7 +127,7 @@ namespace FleetWise.Services
                 .ToList();
         }
 
-        /// <summary>Bus shifts with a crew driver on them, whose gaps are rest days.</summary>
+        // Bus shifts with a crew driver on them, whose gaps are rest days.
         private static HashSet<(int RouteId, string Bus, string Shift)> Crewed(IReadOnlyList<RosterSeat> seats) =>
             seats.Where(s => s.Kind == RosterRules.Crew && s.DriverId is not null && s.VehicleId is not null)
                  .Select(s => (s.RouteId, s.VehicleId!.ToUpperInvariant(), s.Shift.ToUpperInvariant()))

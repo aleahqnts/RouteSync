@@ -1,16 +1,13 @@
 namespace FleetWise.Services;
 
-/// <summary>
-/// Runs the security incident detector every few minutes.
-/// </summary>
-/// <remarks>
-/// A short interval, because an incident is only useful while there is still time to act
-/// on it. The incidents page also offers a scan on request, which is what anybody
-/// demonstrating a rule will reach for rather than waiting.
-///
-/// While the host sleeps nothing runs, and nothing is lost: the detector reads from where
-/// it last reached, so the first scan after waking covers the whole gap.
-/// </remarks>
+// Runs the security incident detector every few minutes.
+//
+// A short interval, because an incident is only useful while there is still time to act
+// on it. The incidents page also offers a scan on request, which is what anybody
+// demonstrating a rule will reach for rather than waiting.
+//
+// While the host sleeps nothing runs, and nothing is lost: the detector reads from where
+// it last reached, so the first scan after waking covers the whole gap.
 public sealed class SecurityDetectorService : BackgroundService
 {
     public static readonly TimeSpan Interval = TimeSpan.FromMinutes(2);

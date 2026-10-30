@@ -6,16 +6,13 @@ using FleetWise.Services;
 
 namespace FleetWise.Controllers
 {
-    /// <summary>
-    /// Read-only viewer for the audit trail.
-    /// </summary>
-    /// <remarks>
-    /// Gated on its own permission, which no role holds until it is granted explicitly:
-    /// reading the trail is a separate decision from operating the fleet.
-    ///
-    /// There is no edit or delete action here, and adding one would achieve nothing. The
-    /// table refuses both through triggers of its own.
-    /// </remarks>
+    // Read-only viewer for the audit trail.
+    //
+    // Gated on its own permission, which no role holds until it is granted explicitly:
+    // reading the trail is a separate decision from operating the fleet.
+    //
+    // There is no edit or delete action here, and adding one would achieve nothing. The
+    // table refuses both through triggers of its own.
     [Authorize]
     [RequirePermission("audit")]
     public class AuditController : Controller
@@ -36,18 +33,15 @@ namespace FleetWise.Controllers
             _supabase = supabase;
         }
 
-        /// <summary>How many incidents the list shows, newest activity first.</summary>
+        // How many incidents the list shows, newest activity first.
         private const int IncidentListSize = 200;
 
-        /// <summary>How many entries an incident's panel lists.</summary>
+        // How many entries an incident's panel lists.
         private const int IncidentEntryLimit = 500;
 
-        /// <summary>
-        /// Unusual activity, one row per burst.
-        /// </summary>
-        /// <remarks>
-        /// Detection only. Nothing on this page, and nothing behind it, blocks anybody.
-        /// </remarks>
+        // Unusual activity, one row per burst.
+        //
+        // Detection only. Nothing on this page, and nothing behind it, blocks anybody.
         [HttpGet]
         public async Task<IActionResult> Incidents()
         {
@@ -61,7 +55,7 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>One incident and the audit entries behind it, for the panel.</summary>
+        // One incident and the audit entries behind it, for the panel.
         [HttpGet]
         public async Task<IActionResult> Incident(long id)
         {
@@ -92,11 +86,10 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>Marks an incident reviewed, as of what the reviewer was shown.</summary>
-        /// <param name="seen">
-        /// The number of entries on the reviewer's screen. Anything gathered since is
-        /// activity they did not see, and returns the incident to needing review.
-        /// </param>
+        // Marks an incident reviewed, as of what the reviewer was shown.
+        // seen:
+        // The number of entries on the reviewer's screen. Anything gathered since is
+        // activity they did not see, and returns the incident to needing review.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReviewIncident(long id, int seen, string? note)
@@ -139,7 +132,7 @@ namespace FleetWise.Controllers
             return RedirectToAction(nameof(Incidents));
         }
 
-        /// <summary>Runs the detector now rather than waiting for its next turn.</summary>
+        // Runs the detector now rather than waiting for its next turn.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ScanIncidents()
@@ -159,14 +152,11 @@ namespace FleetWise.Controllers
             return RedirectToAction(nameof(Incidents));
         }
 
-        /// <summary>
-        /// Puts names to the incidents, and decides which of them the reader may review.
-        /// </summary>
-        /// <remarks>
-        /// An account is shown by name rather than by number, looked up in one request for
-        /// the whole list. An account that no longer exists keeps its number, which is still
-        /// what the audit entries behind it say.
-        /// </remarks>
+        // Puts names to the incidents, and decides which of them the reader may review.
+        //
+        // An account is shown by name rather than by number, looked up in one request for
+        // the whole list. An account that no longer exists keeps its number, which is still
+        // what the audit entries behind it say.
         private async Task<List<SecurityIncidentRow>> RowsForAsync(List<SecurityIncident> incidents)
         {
             var ids = incidents
@@ -275,14 +265,11 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>
-        /// Prepares a search term for use inside a PostgREST or-list.
-        /// </summary>
-        /// <remarks>
-        /// Commas and parentheses are structural in that syntax. They are removed, along
-        /// with the wildcard character, rather than escaped, so no input can reshape the
-        /// query.
-        /// </remarks>
+        // Prepares a search term for use inside a PostgREST or-list.
+        //
+        // Commas and parentheses are structural in that syntax. They are removed, along
+        // with the wildcard character, rather than escaped, so no input can reshape the
+        // query.
         private static string Sanitize(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return "";

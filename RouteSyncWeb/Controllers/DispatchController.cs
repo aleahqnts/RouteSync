@@ -19,20 +19,16 @@ namespace FleetWise.Controllers
         private readonly TripAssignments _assignments;
         private readonly IMemoryCache _cache;
 
-        /// <summary>
-        /// How long a board's fingerprint is shared between everyone watching that day.
-        /// </summary>
-        /// <remarks>
-        /// Just under the board's five-second check, so one viewer is read for afresh on
-        /// every check and a room of them costs one read between them.
-        /// </remarks>
+        // How long a board's fingerprint is shared between everyone watching that day.
+        //
+        // Just under the board's five-second check, so one viewer is read for afresh on
+        // every check and a room of them costs one read between them.
         private static readonly TimeSpan PulseShared = TimeSpan.FromSeconds(4);
 
-        /// <summary>How long one needs-attention read is shared between viewers.</summary>
-        /// <remarks>
-        /// The list reads eight tables. Each open dashboard and fleet map asks every thirty
-        /// seconds, so a room of them costs one read between them instead of one each.
-        /// </remarks>
+        // How long one needs-attention read is shared between viewers.
+        //
+        // The list reads eight tables. Each open dashboard and fleet map asks every thirty
+        // seconds, so a room of them costs one read between them instead of one each.
         private static readonly TimeSpan AttentionShared = TimeSpan.FromSeconds(20);
 
         public DispatchController(
@@ -46,19 +42,18 @@ namespace FleetWise.Controllers
             _cache = cache;
         }
 
-        /// <summary>A short summary of everything the board would show differently.</summary>
-        /// <remarks>
-        /// Rebuilding the board is expensive: it reads eight tables and renders the whole
-        /// page, and on a quiet afternoon almost every rebuild produces exactly what was
-        /// already on screen. This reads the three things a change would have to show up
-        /// in and returns a fingerprint of them, so the board can be watched closely and
-        /// rebuilt only when it would actually differ.
-        ///
-        /// Trips carry the assignments and their progress. Vehicles carry grounding, which
-        /// turns an assignment into a problem without the trip itself changing. Driver
-        /// availability does the same from the other side. Anything that moves one of
-        /// those moves this fingerprint.
-        /// </remarks>
+        // A short summary of everything the board would show differently.
+        //
+        // Rebuilding the board is expensive: it reads eight tables and renders the whole
+        // page, and on a quiet afternoon almost every rebuild produces exactly what was
+        // already on screen. This reads the three things a change would have to show up
+        // in and returns a fingerprint of them, so the board can be watched closely and
+        // rebuilt only when it would actually differ.
+        //
+        // Trips carry the assignments and their progress. Vehicles carry grounding, which
+        // turns an assignment into a problem without the trip itself changing. Driver
+        // availability does the same from the other side. Anything that moves one of
+        // those moves this fingerprint.
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Pulse(string date)
@@ -69,7 +64,7 @@ namespace FleetWise.Controllers
             return Json(new { pulse });
         }
 
-        /// <summary>The fingerprint of one day's board, read from the database.</summary>
+        // The fingerprint of one day's board, read from the database.
         private async Task<string> ReadPulseAsync(DateTime selected)
         {
             var tripsTask = _supabase.From<Trip>()
@@ -299,12 +294,11 @@ namespace FleetWise.Controllers
             return View(vm);
         }
 
-        /// <summary>What on today's board needs a dispatcher, most urgent first.</summary>
-        /// <remarks>
-        /// Read from the same resolution as the board, so the list and the board never
-        /// disagree. A bus that has stopped reporting is the map's to say, and is added by
-        /// the page from the positions it already reads.
-        /// </remarks>
+        // What on today's board needs a dispatcher, most urgent first.
+        //
+        // Read from the same resolution as the board, so the list and the board never
+        // disagree. A bus that has stopped reporting is the map's to say, and is added by
+        // the page from the positions it already reads.
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Attention()
@@ -314,23 +308,19 @@ namespace FleetWise.Controllers
                 () => ReadAttentionAsync(today)));
         }
 
-        /// <summary>A delay in hours and minutes, written as the board's late badge writes it.</summary>
+        // A delay in hours and minutes, written as the board's late badge writes it.
         private static string LateText(TimeSpan late) =>
             late.TotalMinutes < 60 ? $"{(int)late.TotalMinutes}m"
             : late.Minutes == 0 ? $"{(int)late.TotalHours}h"
             : $"{(int)late.TotalHours}h {late.Minutes}m";
 
-        /// <summary>
-        /// How long a camera-bound bus has gone without a count while on its trip. The driver
-        /// app calls a camera stale after 12 seconds; the list waits a minute, so a brief
-        /// drop does not come and go on it.
-        /// </summary>
+        // How long a camera-bound bus has gone without a count while on its trip. The driver
+        // app calls a camera stale after 12 seconds; the list waits a minute, so a brief
+        // drop does not come and go on it.
         private static readonly TimeSpan CameraSilentAfter = TimeSpan.FromMinutes(1);
 
-        /// <summary>
-        /// Time since the bus's Sentinel last counted, and whether it ever did on this trip,
-        /// or null while it is counting, or the bus has no Sentinel bound to it.
-        /// </summary>
+        // Time since the bus's Sentinel last counted, and whether it ever did on this trip,
+        // or null while it is counting, or the bus has no Sentinel bound to it.
         public static (TimeSpan For, bool Seen)? CameraSilence(Trip trip, Vehicle? vehicle,
             DateTimeOffset? utcNow = null, DateTime? phNow = null)
         {
@@ -350,7 +340,7 @@ namespace FleetWise.Controllers
             return since >= CameraSilentAfter ? (since, false) : null;
         }
 
-        /// <summary>The needs-attention list for one day, read from the database.</summary>
+        // The needs-attention list for one day, read from the database.
         private async Task<List<object>> ReadAttentionAsync(DateTime today)
         {
             var day = await ResolveDayAsync(today);
@@ -400,8 +390,9 @@ namespace FleetWise.Controllers
             Dictionary<string, MaintenanceLog> OpenIncidents,
             Dictionary<string, (Vehicle Vehicle, UserModel Driver, string VehicleStatus, string DriverStatus, string TripStatus, bool Flagged, TimeSpan? Late)> Resolved);
 
-        /// <summary>One operational day's trips with each one's status worked out.</summary>
-        /// <remarks>Shared by the board and the needs-attention list so the two never disagree.</remarks>
+        // One operational day's trips with each one's status worked out.
+        //
+        // Shared by the board and the needs-attention list so the two never disagree.
         private async Task<BoardDay> ResolveDayAsync(DateTime selected)
         {
             var selStr = selected.ToString("yyyy-MM-dd");
@@ -666,21 +657,18 @@ namespace FleetWise.Controllers
             return Json(vm);
         }
 
-        /// <summary>
-        /// The failed items of one inspection, each with its photographs.
-        /// </summary>
-        /// <remarks>
-        /// The inspection records each item under the label it had on the day, and a
-        /// photograph records the item by its identifier. The two meet through the
-        /// configured items. An item reworded since the inspection no longer meets its
-        /// photograph that way, so any photograph left over is given a line of its own
-        /// under the item's current wording rather than being dropped: a photograph that
-        /// silently fails to appear is indistinguishable from one never taken.
-        ///
-        /// Criticality is read from the configured items, and from the order's own record
-        /// of what grounded the bus for inspections stored under older wording, so that
-        /// what stopped the bus still reads first.
-        /// </remarks>
+        // The failed items of one inspection, each with its photographs.
+        //
+        // The inspection records each item under the label it had on the day, and a
+        // photograph records the item by its identifier. The two meet through the
+        // configured items. An item reworded since the inspection no longer meets its
+        // photograph that way, so any photograph left over is given a line of its own
+        // under the item's current wording rather than being dropped: a photograph that
+        // silently fails to appear is indistinguishable from one never taken.
+        //
+        // Criticality is read from the configured items, and from the order's own record
+        // of what grounded the bus for inspections stored under older wording, so that
+        // what stopped the bus still reads first.
         private static List<TripInspectionIssueViewModel> BuildInspectionIssues(
             BusChecklist checklist,
             List<ChecklistItem> configured,
@@ -757,14 +745,11 @@ namespace FleetWise.Controllers
             return issues.OrderByDescending(i => i.IsCritical).ToList();
         }
 
-        /// <summary>
-        /// Serves an inspection photograph shown on a trip, by its row.
-        /// </summary>
-        /// <remarks>
-        /// The vehicle pages serve the same photographs, but behind a different permission.
-        /// A dispatcher who cannot open those still has to see what grounded the bus on the
-        /// trip in front of them.
-        /// </remarks>
+        // Serves an inspection photograph shown on a trip, by its row.
+        //
+        // The vehicle pages serve the same photographs, but behind a different permission.
+        // A dispatcher who cannot open those still has to see what grounded the bus on the
+        // trip in front of them.
         [HttpGet]
         public async Task<IActionResult> InspectionPhoto(long photoId,
             [FromServices] InspectionPhotoStore photos)
@@ -1052,12 +1037,11 @@ namespace FleetWise.Controllers
             };
         }
 
-        /// <summary>Moves a trip's break to another of its shift's slots.</summary>
-        /// <remarks>
-        /// Allowed while the trip is running, since the hour a bus was due to park can be the
-        /// hour it is needed most. The driver is told, because the slot is what their app
-        /// shows them and what the fleet map labels the bus with.
-        /// </remarks>
+        // Moves a trip's break to another of its shift's slots.
+        //
+        // Allowed while the trip is running, since the hour a bus was due to park can be the
+        // hour it is needed most. The driver is told, because the slot is what their app
+        // shows them and what the fleet map labels the bus with.
         [HttpPost]
         public async Task<IActionResult> SetBreak([FromBody] SetBreakRequest req)
         {
@@ -1314,23 +1298,20 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// A line for a narrow column, with each figure held on the same line as the word after
-        /// it, so it wraps as "40 seats" and never as "40" above "seats".
-        /// </summary>
+        // A line for a narrow column, with each figure held on the same line as the word after
+        // it, so it wraps as "40 seats" and never as "40" above "seats".
         private static string KeepFiguresWhole(string text) =>
             System.Text.RegularExpressions.Regex.Replace(text, @"(\d) ", "$1\u00A0");
 
-        /// <summary>The message subject for an audit entry. The body is never recorded.</summary>
+        // The message subject for an audit entry. The body is never recorded.
         private static string Topic(string? subject) =>
             string.IsNullOrWhiteSpace(subject) ? "no subject" : subject.Trim();
 
-        /// <summary>Short reason a trip is an assignment issue, shown in the badge tooltip.</summary>
-        /// <remarks>
-        /// A grounded bus is named along with what grounded it, because "out of service"
-        /// alone leaves a dispatcher to go hunting through the vehicles tab to find out
-        /// whether this is a reassignment or something being repaired.
-        /// </remarks>
+        // Short reason a trip is an assignment issue, shown in the badge tooltip.
+        //
+        // A grounded bus is named along with what grounded it, because "out of service"
+        // alone leaves a dispatcher to go hunting through the vehicles tab to find out
+        // whether this is a reassignment or something being repaired.
         private static string BuildIssueReason(Vehicle vehicle, string driverStatus,
             MaintenanceLog openIncident, string awayReason = null)
         {

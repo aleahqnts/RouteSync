@@ -5,29 +5,26 @@ using FleetWise.Models;
 
 namespace FleetWise.Services
 {
-    /// <summary>One recorded reassignment, as the suggestions saw it.</summary>
-    /// <param name="TookTopSuggestion">Every side that changed went to the top-ranked candidate.</param>
-    /// <param name="FixedIssue">The trip could not run as assigned before the change.</param>
-    /// <param name="Screen">Where the pick was made, one of <see cref="PickScreen"/>, or null for a pick recorded before screens were.</param>
+    // One recorded reassignment, as the suggestions saw it.
+    // TookTopSuggestion: Every side that changed went to the top-ranked candidate.
+    // FixedIssue: The trip could not run as assigned before the change.
+    // Screen: Where the pick was made, one of PickScreen, or null for a pick recorded before screens were.
     public sealed record ReassignmentPick(bool TookTopSuggestion, bool FixedIssue, string? Screen = null);
 
-    /// <summary>
-    /// Records administrator actions in the audit trail.
-    /// </summary>
-    /// <remarks>
-    /// The dashboard reaches the database through one shared service key, so every write
-    /// arrives at the database triggers as the same anonymous role. Which administrator
-    /// acted is known only here, from the authentication cookie. This service supplies
-    /// that half: one entry per action, with the actor taken from the signed-in principal
-    /// rather than the request body, which a client could forge.
-    ///
-    /// The two records are complementary. The trigger's entry says what changed, as a
-    /// before and after difference. This one says who asked for it and from which address.
-    ///
-    /// Recording must never break the action being recorded. Every failure is swallowed
-    /// and each write is time-boxed, so an unreachable audit table cannot slow anything
-    /// down or lock anyone out.
-    /// </remarks>
+    // Records administrator actions in the audit trail.
+    //
+    // The dashboard reaches the database through one shared service key, so every write
+    // arrives at the database triggers as the same anonymous role. Which administrator
+    // acted is known only here, from the authentication cookie. This service supplies
+    // that half: one entry per action, with the actor taken from the signed-in principal
+    // rather than the request body, which a client could forge.
+    //
+    // The two records are complementary. The trigger's entry says what changed, as a
+    // before and after difference. This one says who asked for it and from which address.
+    //
+    // Recording must never break the action being recorded. Every failure is swallowed
+    // and each write is time-boxed, so an unreachable audit table cannot slow anything
+    // down or lock anyone out.
     public class AuditLog
     {
         // One client for every audit read and write. Its pooling is set here because the
@@ -56,16 +53,15 @@ namespace FleetWise.Services
             _accessor = accessor;
         }
 
-        /// <summary>The signed-in operator's display name, used in entry summaries.</summary>
+        // The signed-in operator's display name, used in entry summaries.
         public string ActorName =>
             _accessor.HttpContext?.User?.FindFirst(ClaimTypes.Name)?.Value ?? "An admin";
 
-        /// <summary>Appends one entry to the trail.</summary>
-        /// <param name="phrase">
-        /// The predicate only. The operator's name is prepended here, so every entry reads
-        /// the same way: "<c>{name} reset the password for Juan Dela Cruz</c>". Never pass
-        /// a password, a hash, or a key.
-        /// </param>
+        // Appends one entry to the trail.
+        // phrase:
+        // The predicate only. The operator's name is prepended here, so every entry reads
+        // the same way: "{name} reset the password for Juan Dela Cruz". Never pass
+        // a password, a hash, or a key.
         public async Task WriteAsync(
             string action,
             string phrase,
@@ -92,21 +88,19 @@ namespace FleetWise.Services
             });
         }
 
-        /// <summary>Appends an entry for a dashboard sign-in attempt.</summary>
-        /// <remarks>
-        /// Separate from <see cref="WriteAsync"/> because there may be no principal to read
-        /// at this point. A failed attempt has no identity at all, and a successful one is
-        /// signed in on the response rather than the current request. The caller therefore
-        /// passes what authentication has just established, and nothing more.
-        ///
-        /// Never pass the password, whether it was correct or not.
-        /// </remarks>
-        /// <param name="attemptedAccount">
-        /// On a failure, the account the typed email belongs to. Recorded as the target and
-        /// never as the actor: whoever typed it has not shown they own it. It is what lets
-        /// repeated attempts on one account be recognised as one attack, which the address
-        /// alone cannot do when many people share it.
-        /// </param>
+        // Appends an entry for a dashboard sign-in attempt.
+        //
+        // Separate from WriteAsync because there may be no principal to read
+        // at this point. A failed attempt has no identity at all, and a successful one is
+        // signed in on the response rather than the current request. The caller therefore
+        // passes what authentication has just established, and nothing more.
+        //
+        // Never pass the password, whether it was correct or not.
+        // attemptedAccount:
+        // On a failure, the account the typed email belongs to. Recorded as the target and
+        // never as the actor: whoever typed it has not shown they own it. It is what lets
+        // repeated attempts on one account be recognised as one attack, which the address
+        // alone cannot do when many people share it.
         public async Task WriteSignInAsync(
             string action, string summary, int? userId, string outcome = "ok", string? role = null,
             int? attemptedAccount = null)
@@ -128,13 +122,11 @@ namespace FleetWise.Services
             });
         }
 
-        /// <summary>Reads the trail back for the audit log page.</summary>
-        /// <param name="query">A PostgREST query string built by the controller.</param>
-        /// <returns>
-        /// The matching entries and the unpaged total. The entries are null when the read
-        /// itself failed, so the page can report that rather than showing an empty trail,
-        /// which would suggest nothing had ever happened.
-        /// </returns>
+        // Reads the trail back for the audit log page.
+        // query: A PostgREST query string built by the controller.
+        // Returns the matching entries and the unpaged total. The entries are null when the read
+        // itself failed, so the page can report that rather than showing an empty trail,
+        // which would suggest nothing had ever happened.
         public async Task<(List<AuditEntryViewModel>? Rows, int Total)> QueryAsync(string query)
         {
             try
@@ -167,18 +159,13 @@ namespace FleetWise.Services
             }
         }
 
-        /// <summary>
-        /// What each pick from a ranking in a span chose, measured against the suggestions
-        /// offered at the time.
-        /// </summary>
-        /// <remarks>
-        /// Reassignments, and trips made by hand into a roster gap, which carry the same
-        /// record. A trip made by hand anywhere else carries none and is not counted.
-        /// </remarks>
-        /// <returns>
-        /// One entry per pick, or null when the read failed, so a figure that could not be
-        /// read is not shown as a month with none.
-        /// </returns>
+        // What each pick from a ranking in a span chose, measured against the suggestions
+        // offered at the time.
+        //
+        // Reassignments, and trips made by hand into a roster gap, which carry the same
+        // record. A trip made by hand anywhere else carries none and is not counted.
+        // Returns one entry per pick, or null when the read failed, so a figure that could not be
+        // read is not shown as a month with none.
         public async Task<List<ReassignmentPick>?> ReassignmentPicksAsync(DateTimeOffset from, DateTimeOffset to)
         {
             // The server returns at most this many rows a request, so a year is read a page
@@ -289,14 +276,11 @@ namespace FleetWise.Services
         }
 
 
-        /// <summary>
-        /// Reads a row edit as the columns that actually differ.
-        /// </summary>
-        /// <remarks>
-        /// The trigger stores the whole row twice, as `old` and `new`. Most columns are
-        /// identical between them and say nothing, so only the differences are kept, and
-        /// each value is written the way it reads on the rest of the dashboard.
-        /// </remarks>
+        // Reads a row edit as the columns that actually differ.
+        //
+        // The trigger stores the whole row twice, as `old` and `new`. Most columns are
+        // identical between them and say nothing, so only the differences are kept, and
+        // each value is written the way it reads on the rest of the dashboard.
         private static List<AuditFieldChange> FieldChangesOf(JsonElement changes)
         {
             var result = new List<AuditFieldChange>();
@@ -324,14 +308,14 @@ namespace FleetWise.Services
             return result;
         }
 
-        /// <summary>A column name as a heading: `email_address` reads "Email address".</summary>
+        // A column name as a heading: `email_address` reads "Email address".
         private static string FieldLabel(string column)
         {
             var words = column.Replace('_', ' ').Trim();
             return words.Length == 0 ? column : char.ToUpperInvariant(words[0]) + words[1..];
         }
 
-        /// <summary>One stored value, written for a reader rather than a parser.</summary>
+        // One stored value, written for a reader rather than a parser.
         private static string? Cell(JsonElement value) => value.ValueKind switch
         {
             JsonValueKind.Null or JsonValueKind.Undefined => null,

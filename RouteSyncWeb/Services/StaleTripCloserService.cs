@@ -3,26 +3,23 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Services
 {
-    /// <summary>
-    /// Closes trips that were started but never ended.
-    /// </summary>
-    /// <remarks>
-    /// A driver who finishes a route without pressing End Trip leaves the trip active
-    /// indefinitely. It keeps its bus marked as on trip, keeps appearing on the fleet map
-    /// and the dispatch board, and its duration grows without limit.
-    ///
-    /// The cutoff is measured from the shift's scheduled end rather than from the start,
-    /// so a long shift is judged by when it was meant to finish. A full day past that is
-    /// deliberately generous: an overnight shift already ends the following morning, and a
-    /// driver who is simply late must never have their trip closed underneath them.
-    ///
-    /// The recorded end is the scheduled end, not the moment this runs. Writing the current
-    /// time would claim a trip ran for as long as nobody noticed, which is exactly the
-    /// figure this service exists to prevent.
-    /// </remarks>
+    // Closes trips that were started but never ended.
+    //
+    // A driver who finishes a route without pressing End Trip leaves the trip active
+    // indefinitely. It keeps its bus marked as on trip, keeps appearing on the fleet map
+    // and the dispatch board, and its duration grows without limit.
+    //
+    // The cutoff is measured from the shift's scheduled end rather than from the start,
+    // so a long shift is judged by when it was meant to finish. A full day past that is
+    // deliberately generous: an overnight shift already ends the following morning, and a
+    // driver who is simply late must never have their trip closed underneath them.
+    //
+    // The recorded end is the scheduled end, not the moment this runs. Writing the current
+    // time would claim a trip ran for as long as nobody noticed, which is exactly the
+    // figure this service exists to prevent.
     public class StaleTripCloserService : BackgroundService
     {
-        /// <summary>How far past its scheduled end a trip may run before it is closed.</summary>
+        // How far past its scheduled end a trip may run before it is closed.
         private static readonly TimeSpan Grace = TimeSpan.FromHours(24);
 
         private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(45);
@@ -106,10 +103,8 @@ namespace FleetWise.Services
             _logger.LogInformation("Stale trip closer completed {Count} forgotten trip(s).", stale.Count);
         }
 
-        /// <summary>
-        /// When the shift was meant to finish, on the trip's own date. An end at or before
-        /// the start means the shift runs overnight, so it lands on the following day.
-        /// </summary>
+        // When the shift was meant to finish, on the trip's own date. An end at or before
+        // the start means the shift runs overnight, so it lands on the following day.
         private static DateTime ScheduledEnd(Trip t) =>
             t.Date.Date + t.ShiftEndTime +
             (t.ShiftEndTime <= t.ShiftStartTime ? TimeSpan.FromDays(1) : TimeSpan.Zero);

@@ -27,7 +27,7 @@ namespace FleetWise.Controllers
             = TripStatus.Windows;
         private static readonly string[] ShiftOrder = { "Morning", "Afternoon", "Evening" };
 
-        /// <summary>The role a bus is driven by, which is the only one this page books.</summary>
+        // The role a bus is driven by, which is the only one this page books.
         private const int DriverRoleId = 2;
 
         // GET weekly planner.
@@ -180,14 +180,13 @@ namespace FleetWise.Controllers
         private static string GapKey(DateTime day, string shift, string vehicleId) =>
             $"{day:yyyy-MM-dd}|{shift}|{vehicleId.ToUpperInvariant()}";
 
-        /// <summary>Drivers who could take a roster gap, ranked by the same rules as every replacement.</summary>
-        /// <remarks>
-        /// Under the planner's own permission, so a dispatcher without the roster permission
-        /// can use it. It reads the schedule as saved, with the drivers the page has placed on
-        /// the same shift and day in cells not saved yet counted as on it. A save measures the
-        /// pick against the same list.
-        /// </remarks>
-        /// <param name="placed">Drivers in the page's other cells on this shift and day.</param>
+        // Drivers who could take a roster gap, ranked by the same rules as every replacement.
+        //
+        // Under the planner's own permission, so a dispatcher without the roster permission
+        // can use it. It reads the schedule as saved, with the drivers the page has placed on
+        // the same shift and day in cells not saved yet counted as on it. A save measures the
+        // pick against the same list.
+        // placed: Drivers in the page's other cells on this shift and day.
         [HttpGet]
         public async Task<IActionResult> GapCandidates(string date, string vehicleId, string shift, int routeId, [FromQuery] int[]? placed)
         {
@@ -214,15 +213,12 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>
-        /// The roster gaps a save fills with a new trip, keyed by <see cref="GapKey"/>, each
-        /// with where its driver sat in the ranking for the gap.
-        /// </summary>
-        /// <remarks>
-        /// Ranked against the schedule before the save writes anything. Measuring must never
-        /// stand in the way of saving, so a failure leaves the fills unrecorded and is itself
-        /// recorded.
-        /// </remarks>
+        // The roster gaps a save fills with a new trip, keyed by GapKey, each
+        // with where its driver sat in the ranking for the gap.
+        //
+        // Ranked against the schedule before the save writes anything. Measuring must never
+        // stand in the way of saving, so a failure leaves the fills unrecorded and is itself
+        // recorded.
         private async Task<Dictionary<string, (int DriverId, ReassignmentTag Tag)>> RankGapFillsAsync(
             List<ScheduleCellInput> cells, List<Trip> existing, DateTime weekStart, DateTime weekEnd, DateTime now)
         {
@@ -281,11 +277,10 @@ namespace FleetWise.Controllers
             return fills;
         }
 
-        /// <summary>The rosters, gaps and skips touching a week.</summary>
-        /// <remarks>
-        /// Empty rather than failing when the roster tables do not exist. The week can still
-        /// be planned by hand, and only the roster's marks are missing from it.
-        /// </remarks>
+        // The rosters, gaps and skips touching a week.
+        //
+        // Empty rather than failing when the roster tables do not exist. The week can still
+        // be planned by hand, and only the roster's marks are missing from it.
         private async Task<RosterWeek> ReadRosterWeekAsync(DateTime weekStart, DateTime weekEnd)
         {
             var from = weekStart.ToString("yyyy-MM-dd");
@@ -315,7 +310,7 @@ namespace FleetWise.Controllers
             }
         }
 
-        /// <summary>Marks the days a roster covers, and the roster slots nobody is on.</summary>
+        // Marks the days a roster covers, and the roster slots nobody is on.
         private static void FillRoster(ScheduleViewModel vm, RosterWeek roster, List<Trip> trips, List<Vehicle> vehicles)
         {
             var en = System.Globalization.CultureInfo.InvariantCulture;
@@ -347,7 +342,7 @@ namespace FleetWise.Controllers
             }
         }
 
-        /// <summary>A run of days as "Oct 1", or "Sep 29 to Oct 1". Empty for none.</summary>
+        // A run of days as "Oct 1", or "Sep 29 to Oct 1". Empty for none.
         private static string Span(List<DateTime> days, IFormatProvider en) => days.Count switch
         {
             0 => "",
@@ -355,13 +350,12 @@ namespace FleetWise.Controllers
             _ => $"{days[0].ToString("MMM d", en)} to {days[^1].ToString("MMM d", en)}",
         };
 
-        /// <summary>One week's trips, laid out the way the planner draws them.</summary>
-        /// <remarks>
-        /// The planner loads its own week and no other, so filling one from another needs
-        /// a way to read the other. Lanes are numbered here exactly as Index numbers them,
-        /// by vehicle, or a row copied forward would land in a different lane than the one
-        /// it came from.
-        /// </remarks>
+        // One week's trips, laid out the way the planner draws them.
+        //
+        // The planner loads its own week and no other, so filling one from another needs
+        // a way to read the other. Lanes are numbered here exactly as Index numbers them,
+        // by vehicle, or a row copied forward would land in a different lane than the one
+        // it came from.
         [HttpGet]
         public async Task<IActionResult> Week(string start)
         {
@@ -747,15 +741,14 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>Whether the week on screen has been saved by somebody else since.</summary>
-        /// <remarks>
-        /// Polled by the open planner. A dispatcher told only at the moment of saving has
-        /// already done the work twice over, so the same answer is offered while there is
-        /// still little of it to redo.
-        ///
-        /// The name behind the save is looked up only once the marker has moved, so the
-        /// ordinary answer, which is the one given nearly every time, costs one row.
-        /// </remarks>
+        // Whether the week on screen has been saved by somebody else since.
+        //
+        // Polled by the open planner. A dispatcher told only at the moment of saving has
+        // already done the work twice over, so the same answer is offered while there is
+        // still little of it to redo.
+        //
+        // The name behind the save is looked up only once the marker has moved, so the
+        // ordinary answer, which is the one given nearly every time, costs one row.
         [HttpGet]
         public async Task<IActionResult> Marker(string start, string have)
         {
@@ -777,26 +770,23 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>How a week's last save is named, for holding one reading against another.</summary>
-        /// <remarks>
-        /// Spelled without a zone or a kind, so the same instant reads the same way whether
-        /// it was taken when the grid was drawn or when the grid came back. Nothing reads
-        /// the value itself. A week nobody has saved has no marker, and empty is how a grid
-        /// says it was drawn on one.
-        /// </remarks>
+        // How a week's last save is named, for holding one reading against another.
+        //
+        // Spelled without a zone or a kind, so the same instant reads the same way whether
+        // it was taken when the grid was drawn or when the grid came back. Nothing reads
+        // the value itself. A week nobody has saved has no marker, and empty is how a grid
+        // says it was drawn on one.
         private static string WeekMarker(ScheduleWeek? week) =>
             week?.SavedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffffff") ?? "";
 
-        /// <summary>Why the week on screen is not the week that is saved.</summary>
-        /// <remarks>
-        /// Names who and when rather than only that the week changed, because what this
-        /// usually calls for is going to ask them. A refusal naming nobody leaves the
-        /// dispatcher reloading to work out what moved and who to talk to about it.
-        /// </remarks>
-        /// <param name="refused">
-        /// Whether a save was turned away, as against a warning raised while one is still
-        /// being worked on.
-        /// </param>
+        // Why the week on screen is not the week that is saved.
+        //
+        // Names who and when rather than only that the week changed, because what this
+        // usually calls for is going to ask them. A refusal naming nobody leaves the
+        // dispatcher reloading to work out what moved and who to talk to about it.
+        // refused:
+        // Whether a save was turned away, as against a warning raised while one is still
+        // being worked on.
         private async Task<string> WeekMovedMessageAsync(ScheduleWeek? week, bool refused)
         {
             if (week == null)
@@ -827,12 +817,11 @@ namespace FleetWise.Controllers
                  + "reapplied, and any that conflict will be listed for review.";
         }
 
-        /// <summary>Who saved the week, or "Somebody" where that cannot be answered.</summary>
-        /// <remarks>
-        /// The marker predates the column naming the saver, so early rows carry no id. A
-        /// refusal is worth making either way, and one that names nobody still says what
-        /// happened and what to do about it.
-        /// </remarks>
+        // Who saved the week, or "Somebody" where that cannot be answered.
+        //
+        // The marker predates the column naming the saver, so early rows carry no id. A
+        // refusal is worth making either way, and one that names nobody still says what
+        // happened and what to do about it.
         private async Task<string> SavedByNameAsync(ScheduleWeek week)
         {
             if (week.SavedBy is not int id) return "Somebody";
@@ -845,17 +834,14 @@ namespace FleetWise.Controllers
             return string.IsNullOrWhiteSpace(name) ? "Somebody" : name;
         }
 
-        /// <summary>
-        /// Refuses cells booking a bus or a driver that cannot take the work.
-        /// </summary>
-        /// <remarks>
-        /// The dropdowns already withhold a grounded or retired bus, and a driver whose
-        /// account is closed, but they were filled when the page loaded. This is the same
-        /// question asked of the fleet as it stands at the moment of saving.
-        ///
-        /// Unlike a double booking, none of this can be forced past: the answer is not that
-        /// the schedule is awkward but that the bus or the driver is unavailable.
-        /// </remarks>
+        // Refuses cells booking a bus or a driver that cannot take the work.
+        //
+        // The dropdowns already withhold a grounded or retired bus, and a driver whose
+        // account is closed, but they were filled when the page loaded. This is the same
+        // question asked of the fleet as it stands at the moment of saving.
+        //
+        // Unlike a double booking, none of this can be forced past: the answer is not that
+        // the schedule is awkward but that the bus or the driver is unavailable.
         private async Task<List<object>> RefuseUnusableAsync(
             List<(ScheduleCellInput cell, bool locked)> effective)
         {
@@ -918,22 +904,18 @@ namespace FleetWise.Controllers
             return refused;
         }
 
-        /// <summary>
-        /// Tells each driver whose week changed, once, whatever moved.
-        /// </summary>
-        /// <remarks>
-        /// A planner save can move a dozen drivers at once, so this is one message each
-        /// naming that driver's own days rather than one per trip. Dispatch already tells a
-        /// driver when it reassigns them; a planner save used to tell nobody, so the same
-        /// change reached them or not depending on which screen was used to make it.
-        ///
-        /// Days already gone are left out. A driver cannot act on a shift that was moved
-        /// off last Tuesday, and a notice about one reads as a mistake.
-        ///
-        /// High only when a changed day is today or tomorrow. Anything further out is worth
-        /// knowing and not worth interrupting for, and a priority that means everything
-        /// means nothing.
-        /// </remarks>
+        // Tells each driver whose week changed, once, whatever moved.
+        //
+        // A planner save can move a dozen drivers at once, so this is one message each
+        // naming that driver's own days rather than one per trip. Dispatch already tells a
+        // driver when it reassigns them; a planner save that told nobody would make the same change reach them or not depending on which screen was used to make it.
+        //
+        // Days already gone are left out. A driver cannot act on a shift that was moved
+        // off last Tuesday, and a notice about one reads as a mistake.
+        //
+        // High only when a changed day is today or tomorrow. Anything further out is worth
+        // knowing and not worth interrupting for, and a priority that means everything
+        // means nothing.
         private async Task NotifyScheduleChangedAsync(Dictionary<int, SortedSet<DateTime>> moved)
         {
             var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -961,7 +943,7 @@ namespace FleetWise.Controllers
             }
         }
 
-        /// <summary>Days written as they would be read aloud.</summary>
+        // Days written as they would be read aloud.
         private static string DayList(List<DateTime> days)
         {
             var written = days.Select(d => d.ToString("MMM d")).ToList();
@@ -973,31 +955,28 @@ namespace FleetWise.Controllers
                  + $" and {written[^1]}";
         }
 
-        /// <summary>
-        /// Cells booking a driver who is away, split by what may be done about it.
-        /// </summary>
-        /// <remarks>
-        /// Approved leave is refused, not warned about. Granting leave already refuses to
-        /// complete while the driver holds shifts on those days, and a warning that can be
-        /// saved past would let the same contradiction in through the other door: the leave
-        /// granted cleanly first, the assignment added over it afterwards. The driver's
-        /// calendar shows an approved day as leave and draws no assignment on it, so a
-        /// contradiction that survives ends with somebody staying home while their bus is
-        /// on the board.
-        ///
-        /// A driver who wants to work through their own leave is not blocked by this, they
-        /// are served by Revoke, which hands the days back and leaves a record of who did
-        /// it and why.
-        ///
-        /// The availability flag stays a warning. It says a driver cannot drive right now,
-        /// which is theirs to report and the dispatcher's to weigh, and it carries no dates
-        /// to be wrong about later.
-        ///
-        /// The two are read differently because they say different things. Leave carries
-        /// its dates and is checked against the day each cell sits on. The availability
-        /// flag carries none: it says a driver cannot work now, so it is read against the
-        /// operational day and no other.
-        /// </remarks>
+        // Cells booking a driver who is away, split by what may be done about it.
+        //
+        // Approved leave is refused, not warned about. Granting leave already refuses to
+        // complete while the driver holds shifts on those days, and a warning that can be
+        // saved past would let the same contradiction in through the other door: the leave
+        // granted cleanly first, the assignment added over it afterwards. The driver's
+        // calendar shows an approved day as leave and draws no assignment on it, so a
+        // contradiction that survives ends with somebody staying home while their bus is
+        // on the board.
+        //
+        // A driver who wants to work through their own leave is not blocked by this, they
+        // are served by Revoke, which hands the days back and leaves a record of who did
+        // it and why.
+        //
+        // The availability flag stays a warning. It says a driver cannot drive right now,
+        // which is theirs to report and the dispatcher's to weigh, and it carries no dates
+        // to be wrong about later.
+        //
+        // The two are read differently because they say different things. Leave carries
+        // its dates and is checked against the day each cell sits on. The availability
+        // flag carries none: it says a driver cannot work now, so it is read against the
+        // operational day and no other.
         private async Task<(List<ConflictDto> Refuse, List<ConflictDto> Warn)> DriverAwayConflictsAsync(
             List<(ScheduleCellInput cell, bool locked)> effective)
         {
@@ -1084,15 +1063,12 @@ namespace FleetWise.Controllers
             return (refuse, warn);
         }
 
-        /// <summary>
-        /// Finds conflicts in the schedule as it will be after the save.
-        /// </summary>
-        /// <remarks>
-        /// A conflict is reported only when at least one cell involved is editable. Two
-        /// locked trips clashing is history that cannot be fixed, so it never blocks a
-        /// save. Each conflict carries the editable cells so the planner can highlight
-        /// exactly what needs changing.
-        /// </remarks>
+        // Finds conflicts in the schedule as it will be after the save.
+        //
+        // A conflict is reported only when at least one cell involved is editable. Two
+        // locked trips clashing is history that cannot be fixed, so it never blocks a
+        // save. Each conflict carries the editable cells so the planner can highlight
+        // exactly what needs changing.
 
         private static (List<ConflictDto> Refuse, List<ConflictDto> Warn) FindConflicts(
             List<(ScheduleCellInput cell, bool locked)> all)

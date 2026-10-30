@@ -3,30 +3,28 @@ using static Postgrest.Constants;
 
 namespace FleetWise.Services;
 
-/// <summary>
-/// Removes ghost trips from the shared database: active rows that neither a real driver
-/// nor this build produced. Their signature is unambiguous:
-///
-///   trip_status = "Active"  AND  actual_start_time IS NULL  AND  is_simulated = false
-///
-/// • A real driver trip always stamps <c>actual_start_time</c> the moment it goes Active
-///   (mobile <c>StartTripAsync</c> writes both in one PATCH), so a null start on an Active
-///   trip can never be a legitimate trip.
-/// • Rows tagged <c>is_simulated = true</c> were produced by the retired telemetry
-///   simulator. They are excluded so that any left in the database are not mistaken for
-///   the ghosts this service removes.
-///
-/// What remains matches exactly what an outdated build leaves on the shared database:
-/// untagged active trips it created before the simulated tag and the operational-day
-/// rollover existed.
-///
-/// Those rows stay active across days and reach both the fleet map, which filters on active
-/// trips with no date bound, and the dashboard, which folds in trips still active from
-/// yesterday. This service cannot stop the process writing them, but it can remove what
-/// they leave behind on every sweep, so they are never on screen for long.
-///
-/// Telemetry is deleted first, then the trip.
-/// </summary>
+// Removes ghost trips from the shared database: active rows that neither a real driver
+// nor this build produced. Their signature is unambiguous:
+//
+// trip_status = "Active"  AND  actual_start_time IS NULL  AND  is_simulated = false
+//
+// • A real driver trip always stamps actual_start_time the moment it goes Active
+// (mobile StartTripAsync writes both in one PATCH), so a null start on an Active
+// trip can never be a legitimate trip.
+// • Rows tagged is_simulated = true were produced by the retired telemetry
+// simulator. They are excluded so that any left in the database are not mistaken for
+// the ghosts this service removes.
+//
+// What remains matches exactly what an outdated build leaves on the shared database:
+// untagged active trips it created before the simulated tag and the operational-day
+// rollover existed.
+//
+// Those rows stay active across days and reach both the fleet map, which filters on active
+// trips with no date bound, and the dashboard, which folds in trips still active from
+// yesterday. This service cannot stop the process writing them, but it can remove what
+// they leave behind on every sweep, so they are never on screen for long.
+//
+// Telemetry is deleted first, then the trip.
 public class TripReaperService : BackgroundService
 {
     private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(30);

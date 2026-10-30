@@ -3,11 +3,9 @@ using FleetWise.Services;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>
-/// The wait a background service sleeps on between sweeps. It has to end quietly when the host
-/// stops: an exception there pauses a debugger set to break on one, and a paused process serves
-/// no pages.
-/// </summary>
+// The wait a background service sleeps on between sweeps. It has to end quietly when the host
+// stops: an exception there pauses a debugger set to break on one, and a paused process serves
+// no pages.
 public class HostedWaitTests
 {
     [Fact]

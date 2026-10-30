@@ -8,19 +8,16 @@ using Postgrest;
 
 namespace FleetWise.Controllers
 {
-    /// <summary>
-    /// Leave filed by drivers, and the decisions made about it.
-    /// </summary>
-    /// <remarks>
-    /// Gated on its own permission rather than riding on "users": deciding who is off is
-    /// a different job from managing accounts, and a dispatcher who does the first has no
-    /// business doing the second.
-    ///
-    /// BGC asks for three days' notice on a vacation and two hours on a sick call, and
-    /// treats both as practice rather than a rule. Nothing here refuses a request for
-    /// being late. The notice is recorded and shown, and the decision stays with the
-    /// person making it.
-    /// </remarks>
+    // Leave filed by drivers, and the decisions made about it.
+    //
+    // Gated on its own permission rather than riding on "users": deciding who is off is
+    // a different job from managing accounts, and a dispatcher who does the first has no
+    // business doing the second.
+    //
+    // BGC asks for three days' notice on a vacation and two hours on a sick call, and
+    // treats both as practice rather than a rule. Nothing here refuses a request for
+    // being late. The notice is recorded and shown, and the decision stays with the
+    // person making it.
     [Authorize]
     [RequirePermission("requests")]
     public class RequestsController : Controller
@@ -31,10 +28,8 @@ namespace FleetWise.Controllers
         private readonly TripAssignments _assignments;
         private readonly IMemoryCache _cache;
 
-        /// <summary>
-        /// How long the queue's fingerprint is shared between everyone watching it, just
-        /// under the page's five-second check.
-        /// </summary>
+        // How long the queue's fingerprint is shared between everyone watching it, just
+        // under the page's five-second check.
         private static readonly TimeSpan PulseShared = TimeSpan.FromSeconds(4);
 
         public RequestsController(
@@ -48,29 +43,27 @@ namespace FleetWise.Controllers
             _cache = cache;
         }
 
-        /// <summary>A driver's asking that nobody has answered yet.</summary>
-        /// <remarks>
-        /// Only on leave that still stands. Leave revoked outright has nothing left to hand
-        /// back, so an asking on it is settled whether or not it was answered, and holding it
-        /// open would keep a request in the queue that neither answer can be given to.
-        /// </remarks>
+        // A driver's asking that nobody has answered yet.
+        //
+        // Only on leave that still stands. Leave revoked outright has nothing left to hand
+        // back, so an asking on it is settled whether or not it was answered, and holding it
+        // open would keep a request in the queue that neither answer can be given to.
         private static bool IsAskOutstanding(LeaveRequest r) =>
             r.WithdrawRequestedAt is not null && r.WithdrawAnsweredAt is null
             && string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase);
 
-        /// <summary>A short summary of everything the queue would show differently.</summary>
-        /// <remarks>
-        /// Rebuilding the page re-renders every row and the counts above them, which is
-        /// more than a queue that changes a handful of times a day needs on a timer. This
-        /// reads the requests alone, without the names and trips the rows are dressed
-        /// with, and returns a fingerprint, so the page can be watched closely and rebuilt
-        /// only when it would actually differ.
-        ///
-        /// Every field a row shows or a decision writes is included, so filing, deciding,
-        /// withdrawing and revoking all move it. The status tab is not: it selects which
-        /// requests are on screen, and a request leaving the current tab is a change to
-        /// the fingerprint anyway.
-        /// </remarks>
+        // A short summary of everything the queue would show differently.
+        //
+        // Rebuilding the page re-renders every row and the counts above them, which is
+        // more than a queue that changes a handful of times a day needs on a timer. This
+        // reads the requests alone, without the names and trips the rows are dressed
+        // with, and returns a fingerprint, so the page can be watched closely and rebuilt
+        // only when it would actually differ.
+        //
+        // Every field a row shows or a decision writes is included, so filing, deciding,
+        // withdrawing and revoking all move it. The status tab is not: it selects which
+        // requests are on screen, and a request leaving the current tab is a change to
+        // the fingerprint anyway.
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Pulse()
@@ -79,14 +72,13 @@ namespace FleetWise.Controllers
             return Json(new { pulse });
         }
 
-        /// <summary>The queue's fingerprint, read from the database.</summary>
-        /// <remarks>
-        /// Only requests that can still change are read: those awaiting a decision, and
-        /// any whose leave has not yet ended, which can still be revoked or given back. A
-        /// request settled and in the past stays as it is, so reading it on every check
-        /// would cost more each month for nothing. One leaving this set changes the
-        /// fingerprint as it goes, so a decision is still seen.
-        /// </remarks>
+        // The queue's fingerprint, read from the database.
+        //
+        // Only requests that can still change are read: those awaiting a decision, and
+        // any whose leave has not yet ended, which can still be revoked or given back. A
+        // request settled and in the past stays as it is, so reading it on every check
+        // would cost more each month for nothing. One leaving this set changes the
+        // fingerprint as it goes, so a decision is still seen.
         private async Task<string> ReadPulseAsync()
         {
             var since = PhClock.OperationalDay.AddDays(-1).ToString("yyyy-MM-dd");
@@ -215,20 +207,17 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// The shifts holding an approval, each with the drivers who could take it over.
-        /// </summary>
-        /// <remarks>
-        /// Gated on routes as well as requests, because what it leads to is a change to the
-        /// schedule. A role that decides leave without running dispatch still sees the
-        /// shifts in the way, and leaves clearing them to someone who does.
-        ///
-        /// A driver the dispatcher has already chosen for a shift is sent back as a pin,
-        /// "TRIP000123:45", and kept: the shifts after it are ranked around the choice, and a
-        /// choice that no longer fits says why rather than being replaced. A shift left
-        /// uncovered for now is pinned to driver 0, "TRIP000123:0".
-        /// </remarks>
-        /// <param name="pin">Chosen drivers, each "tripId:driverId". Pins for trips not in the way are ignored.</param>
+        // The shifts holding an approval, each with the drivers who could take it over.
+        //
+        // Gated on routes as well as requests, because what it leads to is a change to the
+        // schedule. A role that decides leave without running dispatch still sees the
+        // shifts in the way, and leaves clearing them to someone who does.
+        //
+        // A driver the dispatcher has already chosen for a shift is sent back as a pin,
+        // "TRIP000123:45", and kept: the shifts after it are ranked around the choice, and a
+        // choice that no longer fits says why rather than being replaced. A shift left
+        // uncovered for now is pinned to driver 0, "TRIP000123:0".
+        // pin: Chosen drivers, each "tripId:driverId". Pins for trips not in the way are ignored.
         [HttpGet]
         [RequirePermission("routes")]
         public async Task<IActionResult> CoverOptions(long requestId, [FromQuery] string[]? pin)
@@ -283,7 +272,7 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>A driver chosen to take over one shift.</summary>
+        // A driver chosen to take over one shift.
         public sealed class CoverPickInput
         {
             [Required, RegularExpression(@"^[A-Za-z0-9_-]{1,64}$", ErrorMessage = "That is not a trip ID.")]
@@ -303,22 +292,19 @@ namespace FleetWise.Controllers
             public string? Note { get; set; }
         }
 
-        /// <summary>
-        /// Hands the shifts in the way to the drivers chosen for them, then approves the
-        /// leave if nothing is left in the way.
-        /// </summary>
-        /// <remarks>
-        /// <para>Each cover goes through the same reassignment the dispatch board makes,
-        /// with its checks, its conflict gate and its audit row. The approval is then the
-        /// same check a plain approval runs, against the schedule as it stands once the
-        /// covers are saved. Nothing about the first step is believed by the second.</para>
-        ///
-        /// <para>Only a cover at no cost worth a confirm is saved here, re-ranked on the
-        /// server whatever the page sent. A cover that fails, or a shift left without one,
-        /// leaves the request held with the shifts still in the way listed. Covers that
-        /// did save stay saved: each is a sound reassignment on its own, and the leave is
-        /// never granted while a shift is still uncovered.</para>
-        /// </remarks>
+        // Hands the shifts in the way to the drivers chosen for them, then approves the
+        // leave if nothing is left in the way.
+        //
+        // Each cover goes through the same reassignment the dispatch board makes,
+        // with its checks, its conflict gate and its audit row. The approval is then the
+        // same check a plain approval runs, against the schedule as it stands once the
+        // covers are saved. Nothing about the first step is believed by the second.
+        //
+        // Only a cover at no cost worth a confirm is saved here, re-ranked on the
+        // server whatever the page sent. A cover that fails, or a shift left without one,
+        // leaves the request held with the shifts still in the way listed. Covers that
+        // did save stay saved: each is a sound reassignment on its own, and the leave is
+        // never granted while a shift is still uncovered.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("routes")]
@@ -413,12 +399,11 @@ namespace FleetWise.Controllers
             int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
                 ? id : null;
 
-        /// <summary>Whether the request is the signed-in person's own.</summary>
-        /// <remarks>
-        /// Staff file leave from their profile, and it comes to this same queue. Whoever
-        /// filed a request is never the one to grant it, refuse it, cancel it, take it back
-        /// or move it along, whatever their role, so every action here asks this first.
-        /// </remarks>
+        // Whether the request is the signed-in person's own.
+        //
+        // Staff file leave from their profile, and it comes to this same queue. Whoever
+        // filed a request is never the one to grant it, refuse it, cancel it, take it back
+        // or move it along, whatever their role, so every action here asks this first.
         private bool IsOwn(LeaveRequest r) => SenderId() is int me && r.UserId == me;
 
         private const string OwnRequest =
@@ -429,16 +414,15 @@ namespace FleetWise.Controllers
                 ? "This driver is still assigned to a shift during this leave."
                 : $"This driver is still assigned to {count} shifts during this leave.";
 
-        /// <summary>Why this leave is filed too late to be granted, or null.</summary>
-        /// <remarks>
-        /// How late leave may be filed is decided here as well as in the driver's app. The
-        /// app inserts its own rows under the driver's own token, so the form it fills in
-        /// is a courtesy; granting the days is what spends the allowance, and this is the
-        /// point that can refuse.
-        ///
-        /// Only approval is gated. A request that should never have been filed can still be
-        /// rejected, which is how it leaves the queue.
-        /// </remarks>
+        // Why this leave is filed too late to be granted, or null.
+        //
+        // How late leave may be filed is decided here as well as in the driver's app. The
+        // app inserts its own rows under the driver's own token, so the form it fills in
+        // is a courtesy; granting the days is what spends the allowance, and this is the
+        // point that can refuse.
+        //
+        // Only approval is gated. A request that should never have been filed can still be
+        // rejected, which is how it leaves the queue.
         private async Task<string?> LateApprovalAsync(LeaveRequest found)
         {
             var late = LeaveEntitlement.BackdatingProblem(
@@ -455,10 +439,8 @@ namespace FleetWise.Controllers
             return late;
         }
 
-        /// <summary>
-        /// The shifts standing in the way of approving this leave, holding the request when
-        /// there are any.
-        /// </summary>
+        // The shifts standing in the way of approving this leave, holding the request when
+        // there are any.
         private async Task<List<BlockingShift>> HoldIfBlockedAsync(LeaveRequest found)
         {
             var blocking = (await BlockingTripRowsAsync(found)).Select(ToBlockingShift).ToList();
@@ -483,7 +465,7 @@ namespace FleetWise.Controllers
             return blocking;
         }
 
-        /// <summary>Stores a decision on a request still waiting, and tells the driver.</summary>
+        // Stores a decision on a request still waiting, and tells the driver.
         private async Task RecordDecisionAsync(LeaveRequest found, string decision, string? note)
         {
             var requestId = found.RequestId;
@@ -535,22 +517,19 @@ namespace FleetWise.Controllers
                 "requests", requestId.ToString());
         }
 
-        /// <summary>
-        /// Takes back leave already granted, whole or a day at a time.
-        /// </summary>
-        /// <remarks>
-        /// The planner refuses to book a driver on approved leave, which without this
-        /// would leave no way to put them back on a day they are off for. A driver who
-        /// agrees to come in could not be assigned at all, and the only move left would be
-        /// editing the row by hand.
-        ///
-        /// The dispatcher's to make and not the driver's to refuse. The driver is told,
-        /// and the days return to their allowance on their own, because the balance is
-        /// derived from what is granted rather than counted into a column.
-        ///
-        /// Days already past are not offered: a day off that has been taken cannot be
-        /// handed back.
-        /// </remarks>
+        // Takes back leave already granted, whole or a day at a time.
+        //
+        // The planner refuses to book a driver on approved leave, which without this
+        // would leave no way to put them back on a day they are off for. A driver who
+        // agrees to come in could not be assigned at all, and the only move left would be
+        // editing the row by hand.
+        //
+        // The dispatcher's to make and not the driver's to refuse. The driver is told,
+        // and the days return to their allowance on their own, because the balance is
+        // derived from what is granted rather than counted into a column.
+        //
+        // Days already past are not offered: a day off that has been taken cannot be
+        // handed back.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Revoke(long requestId, string? dates, string? note)
@@ -647,7 +626,7 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>Tells the driver which days were taken back, and why.</summary>
+        // Tells the driver which days were taken back, and why.
         private async Task NotifyRevoked(
             LeaveRequest r, List<DateTime> taken, bool whole, string note)
         {
@@ -671,25 +650,22 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>
-        /// Answers a driver asking for granted leave back.
-        /// </summary>
-        /// <remarks>
-        /// Accepting cancels the leave outright. The driver's shifts on those days were
-        /// handed to other drivers before the leave could be approved, and cancelling does
-        /// not hand them back: the buses stay covered and the driver returns with nothing
-        /// scheduled. The answer carries a reminder to give them shifts if they should
-        /// drive, since nothing here does it for them.
-        ///
-        /// Declining leaves the leave exactly as it was. Either way the driver is told, the
-        /// row keeps who answered and what they wrote, and the audit trail keeps both the
-        /// asking and the answer.
-        ///
-        /// Accepting changes the status and nothing of the approval. The approval stays in
-        /// the decision fields, so the history reads approved, asked about, then cancelled.
-        ///
-        /// Whole only. Handing part of a leave back is Revoke, which is the dispatcher's.
-        /// </remarks>
+        // Answers a driver asking for granted leave back.
+        //
+        // Accepting cancels the leave outright. The driver's shifts on those days were
+        // handed to other drivers before the leave could be approved, and cancelling does
+        // not hand them back: the buses stay covered and the driver returns with nothing
+        // scheduled. The answer carries a reminder to give them shifts if they should
+        // drive, since nothing here does it for them.
+        //
+        // Declining leaves the leave exactly as it was. Either way the driver is told, the
+        // row keeps who answered and what they wrote, and the audit trail keeps both the
+        // asking and the answer.
+        //
+        // Accepting changes the status and nothing of the approval. The approval stays in
+        // the decision fields, so the history reads approved, asked about, then cancelled.
+        //
+        // Whole only. Handing part of a leave back is Revoke, which is the dispatcher's.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnswerWithdrawal(long requestId, bool accept, string? note)
@@ -750,7 +726,7 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>Tells the driver what was decided about their cancellation.</summary>
+        // Tells the driver what was decided about their cancellation.
         private async Task NotifyWithdrawal(LeaveRequest r, bool accept, string? note)
         {
             var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -772,30 +748,27 @@ namespace FleetWise.Controllers
             });
         }
 
-        /// <summary>One shift standing in the way of an approval.</summary>
+        // One shift standing in the way of an approval.
         public sealed class BlockingShift
         {
             public string TripId { get; set; } = "";
             public string Date { get; set; } = "";
             public string Shift { get; set; } = "";
 
-            /// <summary>The Monday of the week it sits in, for the link into the planner.</summary>
+            // The Monday of the week it sits in, for the link into the planner.
             public string Week { get; set; } = "";
         }
 
-        /// <summary>
-        /// Shifts the driver is still booked for inside the leave, which an approval must
-        /// clear first.
-        /// </summary>
-        /// <remarks>
-        /// Only shifts a dispatcher can still act on. A trip already running or driven is
-        /// left out, and so is one whose shift has finished: the planner will not rewrite
-        /// either, so holding an approval for them would demand a change that cannot be
-        /// made and leave the request unanswerable in both directions.
-        ///
-        /// This is what lets leave be filed for a day already past. The shift on it has
-        /// finished, so it asks nothing of the schedule and blocks nothing.
-        /// </remarks>
+        // Shifts the driver is still booked for inside the leave, which an approval must
+        // clear first.
+        //
+        // Only shifts a dispatcher can still act on. A trip already running or driven is
+        // left out, and so is one whose shift has finished: the planner will not rewrite
+        // either, so holding an approval for them would demand a change that cannot be
+        // made and leave the request unanswerable in both directions.
+        //
+        // This is what lets leave be filed for a day already past. The shift on it has
+        // finished, so it asks nothing of the schedule and blocks nothing.
         private async Task<List<Trip>> BlockingTripRowsAsync(LeaveRequest r)
         {
             var trips = await _supabase.From<Trip>()
@@ -825,14 +798,11 @@ namespace FleetWise.Controllers
         private static string MondayOf(DateTime day) =>
             day.AddDays(-(((int)day.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");
 
-        /// <summary>
-        /// Puts a held approval back in the queue.
-        /// </summary>
-        /// <remarks>
-        /// An approval begun and abandoned would otherwise sit in AwaitingChange for ever,
-        /// with the driver reading Pending and nobody looking at it. This is the way out
-        /// that does not require deciding it.
-        /// </remarks>
+        // Puts a held approval back in the queue.
+        //
+        // An approval begun and abandoned would otherwise sit in AwaitingChange for ever,
+        // with the driver reading Pending and nobody looking at it. This is the way out
+        // that does not require deciding it.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReleaseHold(long requestId)
@@ -860,25 +830,19 @@ namespace FleetWise.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// A notice, and whatever the dispatcher wrote, kept apart.
-        /// </summary>
-        /// <remarks>
-        /// Run together into one paragraph there was no telling where the system stopped
-        /// speaking and a person started, so a note about the evening shift read as part
-        /// of the decision itself. The blank line is what separates them, and the driver's
-        /// app renders it.
-        /// </remarks>
+        // A notice, and whatever the dispatcher wrote, kept apart.
+        //
+        // Run together into one paragraph there was no telling where the system stopped
+        // speaking and a person started, so a note about the evening shift read as part
+        // of the decision itself. The blank line is what separates them, and the driver's
+        // app renders it.
         private static string WithNote(string body, string? note) =>
             string.IsNullOrWhiteSpace(note) ? body : $"{body}\n\nFrom dispatch: {note.Trim()}";
 
-        /// <summary>
-        /// Tells the driver what was decided, through the channel their app already reads.
-        /// </summary>
-        /// <remarks>
-        /// The messages table drives the app's Notifications page, so a decision reaches
-        /// the driver without a second notification path existing to be kept working.
-        /// </remarks>
+        // Tells the driver what was decided, through the channel their app already reads.
+        //
+        // The messages table drives the app's Notifications page, so a decision reaches
+        // the driver without a second notification path existing to be kept working.
         private async Task Notify(LeaveRequest r, string decision)
         {
             var senderStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -965,14 +929,11 @@ namespace FleetWise.Controllers
             };
         }
 
-        /// <summary>
-        /// Days of an approved leave that could still be taken back.
-        /// </summary>
-        /// <remarks>
-        /// Empty for anything not approved, and for approved leave whose days have all
-        /// passed or already been revoked. The board draws Revoke only where this has
-        /// something in it, so a request with nothing to take back offers no button.
-        /// </remarks>
+        // Days of an approved leave that could still be taken back.
+        //
+        // Empty for anything not approved, and for approved leave whose days have all
+        // passed or already been revoked. The board draws Revoke only where this has
+        // something in it, so a request with nothing to take back offers no button.
         private static List<LeaveDayOption> RevokableDaysOf(LeaveRequest r)
         {
             if (!string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase))

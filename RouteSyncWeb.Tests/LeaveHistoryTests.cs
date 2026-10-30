@@ -3,7 +3,7 @@ using FleetWise.Services;
 
 namespace RouteSyncWeb.Tests;
 
-/// <summary>A leave request's history, read off its row.</summary>
+// A leave request's history, read off its row.
 public class LeaveHistoryTests
 {
     private const int Driver = 1020;

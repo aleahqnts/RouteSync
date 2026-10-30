@@ -17,11 +17,10 @@ namespace FleetWise.ViewModels
         public List<VehicleOption> Vehicles { get; set; } = new();
         public List<DriverOption> Drivers { get; set; } = new();
 
-        /// <summary>Shifts on this operational day whose window has already closed.</summary>
-        /// <remarks>
-        /// Decided on the server. The browser's clock is the user's own and may be set to
-        /// another timezone, which would offer a finished shift or withhold a running one.
-        /// </remarks>
+        // Shifts on this operational day whose window has already closed.
+        //
+        // Decided on the server. The browser's clock is the user's own and may be set to
+        // another timezone, which would offer a finished shift or withhold a running one.
         public List<string> ClosedShifts { get; set; } = new();
     }
 
@@ -37,10 +36,8 @@ namespace FleetWise.ViewModels
         public string PlateNumber { get; set; }
         public string VehicleType { get; set; }
 
-        /// <summary>
-        /// Whether this can be booked now. One that cannot is listed only where a slot
-        /// already holds it, so the slot still shows what it holds.
-        /// </summary>
+        // Whether this can be booked now. One that cannot is listed only where a slot
+        // already holds it, so the slot still shows what it holds.
         public bool Offered { get; set; } = true;
         // Shifts this vehicle is already booked for today.
         public List<string> BookedShifts { get; set; } = new();
@@ -51,22 +48,16 @@ namespace FleetWise.ViewModels
         public int DriverId { get; set; }
         public string DriverName { get; set; }
 
-        /// <summary>
-        /// Whether this can be booked now. One that cannot is listed only where a slot
-        /// already holds it, so the slot still shows what it holds.
-        /// </summary>
+        // Whether this can be booked now. One that cannot is listed only where a slot
+        // already holds it, so the slot still shows what it holds.
         public bool Offered { get; set; } = true;
 
-        /// <summary>
-        /// Whether the account is still activated. A deactivated driver is listed only
-        /// where a trip already holds them, so a trip they drove keeps their name.
-        /// </summary>
+        // Whether the account is still activated. A deactivated driver is listed only
+        // where a trip already holds them, so a trip they drove keeps their name.
         public bool Active { get; set; } = true;
 
-        /// <summary>
-        /// Why this driver is not free, when they are not. Shown beside the name so the
-        /// reason is read before the choice rather than after it.
-        /// </summary>
+        // Why this driver is not free, when they are not. Shown beside the name so the
+        // reason is read before the choice rather than after it.
         public string? Unavailable { get; set; }
 
         // Shifts this driver is already booked for today.
@@ -124,8 +115,9 @@ namespace FleetWise.ViewModels
         // Dispatcher acknowledged the conflict and chose to save the reassignment anyway.
         public bool Override { get; set; }
 
-        /// <summary>The screen the change was made on, board or reassign, for the audit trail.</summary>
-        /// <remarks>Only labels the record. The pick's rank is always worked out on the server.</remarks>
+        // The screen the change was made on, board or reassign, for the audit trail.
+        //
+        // Only labels the record. The pick's rank is always worked out on the server.
         [RegularExpression(@"^(board|reassign)?$", ErrorMessage = "That is not a screen.")]
         public string? Source { get; set; }
     }

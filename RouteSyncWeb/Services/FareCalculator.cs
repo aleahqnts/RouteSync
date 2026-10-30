@@ -11,15 +11,12 @@ namespace FleetWise.Services
             _fallbackRate = config.GetValue<decimal?>("FleetWise:FareRate") ?? 15.00m;
         }
 
-        /// <summary>
-        /// The fleet's standard fare, from the fare configuration rows read from the database.
-        /// </summary>
-        /// <remarks>
-        /// Falls back to the application settings value, and then to a default, if that
-        /// table is empty, so revenue figures never fail outright.
-        ///
-        /// Callers read the rate once per request and reuse it for every bus.
-        /// </remarks>
+        // The fleet's standard fare, from the fare configuration rows read from the database.
+        //
+        // Falls back to the application settings value, and then to a default, if that
+        // table is empty, so revenue figures never fail outright.
+        //
+        // Callers read the rate once per request and reuse it for every bus.
         public decimal RateFrom(IEnumerable<FareConfig> rows) =>
             rows.FirstOrDefault()?.StandardFare is decimal fare && fare > 0 ? fare : _fallbackRate;
 
