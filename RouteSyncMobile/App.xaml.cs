@@ -7,10 +7,10 @@ public partial class App : Application
 		InitializeComponent();
 	}
 
-	/// <summary>Whether the app is on screen, for polling that only serves someone looking at it.</summary>
+	// Whether the app is on screen, for polling that only serves someone looking at it.
 	public static bool InForeground { get; private set; } = true;
 
-	/// <summary>Raised when the app comes back on screen from the background.</summary>
+	// Raised when the app comes back on screen from the background.
 	public static event Action? Returned;
 
 	protected override Window CreateWindow(IActivationState? activationState)

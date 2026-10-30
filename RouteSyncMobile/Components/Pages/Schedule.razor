@@ -157,11 +157,10 @@
         _ => "#8896A2",
     };
 
-    /// <summary>Ink that can be read on a given fill.</summary>
-    /// <remarks>
-    /// Two of the three shifts are light enough that white numbers disappear on them, so
-    /// the ink follows the fill rather than being set once for every filled day.
-    /// </remarks>
+    // Ink that can be read on a given fill.
+    //
+    // Two of the three shifts are light enough that white numbers disappear on them, so
+    // the ink follows the fill rather than being set once for every filled day.
     private static string ShiftInk(string shift) => shift switch
     {
         "Morning" => DarkInk,
@@ -171,13 +170,12 @@
 
     private const string DarkInk = "#001A26";
 
-    /// <summary>Days with more shifts on them than a square can draw.</summary>
-    /// <remarks>
-    /// Outside the palette on purpose. The three shift colours are the palette, and a
-    /// fourth state drawn in the darkest of them was indistinguishable from the evening,
-    /// which is the one thing this must not be mistaken for. Slate says none of the
-    /// above, which is what it means.
-    /// </remarks>
+    // Days with more shifts on them than a square can draw.
+    //
+    // Outside the palette on purpose. The three shift colours are the palette, and a
+    // fourth state drawn in the darkest of them was indistinguishable from the evening,
+    // which is the one thing this must not be mistaken for. Slate says none of the
+    // above, which is what it means.
     private const string ManyColour = "#64748B";
 
     private const string LeaveColour = "#2E8B57";
@@ -188,18 +186,15 @@
         _ = PollLoop();
     }
 
-    /// <summary>
-    /// Keeps the month current while it is on screen.
-    /// </summary>
-    /// <remarks>
-    /// Slower than the tab pages poll, because a month is read rather than acted on and
-    /// an approval or a roster change is not something a driver is waiting on the second
-    /// of. The cost is three queries a tick against a month either side.
-    ///
-    /// A month that has finished is left alone. Nothing in it can change in a way that
-    /// matters, and a driver reading back through the year is not asking to be kept up to
-    /// date with it.
-    /// </remarks>
+    // Keeps the month current while it is on screen.
+    //
+    // Slower than the tab pages poll, because a month is read rather than acted on and
+    // an approval or a roster change is not something a driver is waiting on the second
+    // of. The cost is three queries a tick against a month either side.
+    //
+    // A month that has finished is left alone. Nothing in it can change in a way that
+    // matters, and a driver reading back through the year is not asking to be kept up to
+    // date with it.
     private readonly CancellationTokenSource pollCts = new();
 
     private async Task PollLoop()
@@ -240,12 +235,11 @@
         _ptrRef?.Dispose();
     }
 
-    /// <summary>Reads the month on show, and the days either side of it.</summary>
-    /// <param name="silent">
-    /// Leaves the grid on screen while the month is re-read. The skeleton belongs to
-    /// opening the page and to changing month, where there is nothing to show yet; raised
-    /// on a refresh it blanks a calendar the driver is looking at.
-    /// </param>
+    // Reads the month on show, and the days either side of it.
+    // silent:
+    // Leaves the grid on screen while the month is re-read. The skeleton belongs to
+    // opening the page and to changing month, where there is nothing to show yet; raised
+    // on a refresh it blanks a calendar the driver is looking at.
     private async Task Load(bool silent = false)
     {
         if (!silent) loading = true;
@@ -296,45 +290,40 @@
 
     private int LeadingBlanks => ((int)new DateTime(month.Year, month.Month, 1).DayOfWeek + 6) % 7;
 
-    /// <summary>Whether a day has been planned, so that no trip on it means no work.</summary>
-    /// <remarks>
-    /// The day's week has to be marked as built. A week the planner saved answers all of
-    /// its days. A week only a roster publish marked answers the days of a published month
-    /// and no others: its days in the month next door were never planned.
-    ///
-    /// The mark is needed even inside a published month. A roster first published part
-    /// way through its month wrote only the days after that, and the weeks before it were
-    /// never marked, so a driver's empty days there read as unplanned rather than as
-    /// rest days.
-    /// </remarks>
+    // Whether a day has been planned, so that no trip on it means no work.
+    //
+    // The day's week has to be marked as built. A week the planner saved answers all of
+    // its days. A week only a roster publish marked answers the days of a published month
+    // and no others: its days in the month next door were never planned.
+    //
+    // The mark is needed even inside a published month. A roster first published part
+    // way through its month wrote only the days after that, and the weeks before it were
+    // never marked, so a driver's empty days there read as unplanned rather than as
+    // rest days.
     private bool IsScheduled(DateTime d) =>
         scheduledWeeks.TryGetValue(MondayOf(d), out var rosterOnly)
         && (!rosterOnly || publishedMonths.Contains(new DateTime(d.Year, d.Month, 1)));
 
     private DateTime ThisMonth => new(PhTime.Now.Date.Year, PhTime.Now.Date.Month, 1);
 
-    /// <summary>The furthest month ahead the calendar will open.</summary>
-    /// <remarks>
-    /// One. Rotation is decided a month at a time and the planner builds next month
-    /// shortly before it starts, so the month after next is a guess however much of it
-    /// happens to be in the database. A week that runs across the turn of the month can
-    /// put rows in it without any of it being planned.
-    /// </remarks>
+    // The furthest month ahead the calendar will open.
+    //
+    // One. Rotation is decided a month at a time and the planner builds next month
+    // shortly before it starts, so the month after next is a guess however much of it
+    // happens to be in the database. A week that runs across the turn of the month can
+    // put rows in it without any of it being planned.
     private DateTime FurthestMonth => ThisMonth.AddMonths(1);
 
-    /// <summary>
-    /// Whether there is a month ahead worth opening.
-    /// </summary>
-    /// <remarks>
-    /// One bound, and it does not apply to going back: any month up to this one has
-    /// happened or is happening, and a driver who stepped back to August has to be able
-    /// to return.
-    ///
-    /// Next month opens whether or not it has been planned. Refusing it while it was
-    /// empty was guarding against a blank grid being read as a month off, and the
-    /// hatching answers that now: an unplanned month draws as unplanned rather than as
-    /// free, so there is nothing left to protect the driver from.
-    /// </remarks>
+    // Whether there is a month ahead worth opening.
+    //
+    // One bound, and it does not apply to going back: any month up to this one has
+    // happened or is happening, and a driver who stepped back to August has to be able
+    // to return.
+    //
+    // Next month opens whether or not it has been planned. Refusing it while it was
+    // empty was guarding against a blank grid being read as a month off, and the
+    // hatching answers that now: an unplanned month draws as unplanned rather than as
+    // free, so there is nothing left to protect the driver from.
     private bool CanGoForward => month.AddMonths(1) <= FurthestMonth;
 
     private List<Trip> TripsOn(DateTime d) =>
@@ -348,12 +337,10 @@
     private LeaveRequest? OnLeave(DateTime d) =>
         leave.FirstOrDefault(l => LeaveEntitlement.CoversDay(l, d));
 
-    /// <summary>
-    /// What the month is, said rather than left to be inferred. A driver is on one shift
-    /// for most of a month, so the grid is close to one colour and the legend earns its
-    /// place only where a day departs from the pattern. Naming the pattern is what makes
-    /// that day visible.
-    /// </summary>
+    // What the month is, said rather than left to be inferred. A driver is on one shift
+    // for most of a month, so the grid is close to one colour and the legend earns its
+    // place only where a day departs from the pattern. Naming the pattern is what makes
+    // that day visible.
     private string Pattern
     {
         get
@@ -387,13 +374,11 @@
         return string.Join(" ", c);
     }
 
-    /// <summary>
-    /// The fill for one day. Leave wins outright. Two different shifts split the square
-    /// on the diagonal, which is the one case a dispatcher reaches by overriding a
-    /// consecutive-shift warning. Three or more, or the same shift twice, take a single
-    /// neutral fill and a count: a square this size cannot say more, and the panel below
-    /// can say all of it.
-    /// </summary>
+    // The fill for one day. Leave wins outright. Two different shifts split the square
+    // on the diagonal, which is the one case a dispatcher reaches by overriding a
+    // consecutive-shift warning. Three or more, or the same shift twice, take a single
+    // neutral fill and a count: a square this size cannot say more, and the panel below
+    // can say all of it.
     private string DayStyle(List<string> shifts, LeaveRequest? onLeave)
     {
         if (onLeave is not null) return $"background:{LeaveColour};color:#FFFFFF";
@@ -422,20 +407,17 @@
 
     private string RouteName(int id) => routeNames.GetValueOrDefault(id, $"Route {id}");
 
-    /// <summary>
-    /// How a trip stands, as the driver should read it.
-    /// </summary>
-    /// <remarks>
-    /// Worked out rather than read off the row. Nothing writes Missed to trip_status: the
-    /// dashboard derives it from the shift having closed on a trip that never started,
-    /// and a trip left unstarted keeps saying Not Yet Started in the column for ever. A
-    /// calendar printing the column would tell a driver a shift last month is still
-    /// waiting to depart.
-    ///
-    /// The dispatcher's readiness words are not repeated here. Pending and Assignment
-    /// Issue describe whether a bus can be sent, which is dispatch's problem and says
-    /// nothing to the driver whose day it is; both read as Scheduled.
-    /// </remarks>
+    // How a trip stands, as the driver should read it.
+    //
+    // Worked out rather than read off the row. Nothing writes Missed to trip_status: the
+    // dashboard derives it from the shift having closed on a trip that never started,
+    // and a trip left unstarted keeps saying Not Yet Started in the column for ever. A
+    // calendar printing the column would tell a driver a shift last month is still
+    // waiting to depart.
+    //
+    // The dispatcher's readiness words are not repeated here. Pending and Assignment
+    // Issue describe whether a bus can be sent, which is dispatch's problem and says
+    // nothing to the driver whose day it is; both read as Scheduled.
     private static string TripState(Trip t)
     {
         if (string.Equals(t.TripStatus, "Active", StringComparison.OrdinalIgnoreCase))
@@ -455,10 +437,8 @@
         _ => "cal-trip-st--due",
     };
 
-    /// <summary>
-    /// When a shift closes. An end at or before its start runs past midnight, so it
-    /// closes on the following day.
-    /// </summary>
+    // When a shift closes. An end at or before its start runs past midnight, so it
+    // closes on the following day.
     private static DateTime ShiftEndAt(Trip t) =>
         t.Date.Date.Add(t.ShiftEndTime)
             .AddDays(t.ShiftEndTime <= t.ShiftStartTime ? 1 : 0);
@@ -466,7 +446,7 @@
     private static string TimeRange(Trip t) =>
         $"{PhTime.Now.Date.Add(t.ShiftStartTime):h:mm tt} to {PhTime.Now.Date.Add(t.ShiftEndTime):h:mm tt}";
 
-    /// <summary>How the chosen day stands, in a word, beside its date.</summary>
+    // How the chosen day stands, in a word, beside its date.
     private string PanelTag
     {
         get

@@ -1,35 +1,29 @@
 ﻿namespace FleetWiseMobile.Services;
 
-/// <summary>
-/// Philippine time, UTC+8 with no daylight saving, used everywhere the app needs the
-/// current time.
-/// </summary>
-/// <remarks>
-/// The system operates in one time zone, so Philippine wall-clock time is both stored and
-/// displayed directly rather than converted at each boundary.
-/// </remarks>
+// Philippine time, UTC+8 with no daylight saving, used everywhere the app needs the
+// current time.
+//
+// The system operates in one time zone, so Philippine wall-clock time is both stored and
+// displayed directly rather than converted at each boundary.
 public static class PhTime
 {
     private static readonly TimeZoneInfo Tz = Resolve();
 
     public static DateTime Now => At(DateTimeOffset.UtcNow);
 
-    /// <summary>A moment, such as when a GPS fix was taken, on the Philippine clock.</summary>
+    // A moment, such as when a GPS fix was taken, on the Philippine clock.
     public static DateTime At(DateTimeOffset moment) => TimeZoneInfo.ConvertTime(moment, Tz).DateTime;
 
-    /// <summary>When a service day begins.</summary>
+    // When a service day begins.
     public static readonly TimeSpan DayStartTime = TimeSpan.FromHours(6);
 
-    /// <summary>
-    /// The service day now in progress, which runs from six in the morning to just
-    /// before six the next.
-    /// </summary>
-    /// <remarks>
-    /// The same rule as PhClock.OperationalDay on the dashboard. A shift that starts at
-    /// ten at night belongs to the day it started, so at two in the morning the day still
-    /// being worked is yesterday by the calendar, and anything asking "is this day still
-    /// live" has to agree with the board the dispatcher is looking at.
-    /// </remarks>
+    // The service day now in progress, which runs from six in the morning to just
+    // before six the next.
+    //
+    // The same rule as PhClock.OperationalDay on the dashboard. A shift that starts at
+    // ten at night belongs to the day it started, so at two in the morning the day still
+    // being worked is yesterday by the calendar, and anything asking "is this day still
+    // live" has to agree with the board the dispatcher is looking at.
     public static DateTime OperationalDay =>
         Now.TimeOfDay < DayStartTime ? Now.Date.AddDays(-1) : Now.Date;
 
@@ -45,19 +39,17 @@ public static class PhTime
         ? dt
         : DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime();
 
-    /// <summary>A column written in true UTC, as Philippine time.</summary>
-    /// <remarks>
-    /// The database clock and the edge functions stamp in UTC: inspections submitted
-    /// through the app, leave filed and answered, the audit trail.
-    /// </remarks>
+    // A column written in true UTC, as Philippine time.
+    //
+    // The database clock and the edge functions stamp in UTC: inspections submitted
+    // through the app, leave filed and answered, the audit trail.
     public static DateTime FromUtc(DateTime dt) =>
         TimeZoneInfo.ConvertTime(new DateTimeOffset(DateTime.SpecifyKind(Raw(dt), DateTimeKind.Utc)), Tz).DateTime;
 
-    /// <summary>When an inspection was submitted, or skipped, as Philippine time.</summary>
-    /// <remarks>
-    /// A skipped inspection is written by this app in Philippine time, a submitted one by
-    /// the edge function in UTC, so the row's status says which.
-    /// </remarks>
+    // When an inspection was submitted, or skipped, as Philippine time.
+    //
+    // A skipped inspection is written by this app in Philippine time, a submitted one by
+    // the edge function in UTC, so the row's status says which.
     public static DateTime Inspected(FleetWiseMobile.Models.BusChecklist checklist) =>
         string.Equals(checklist.ChecklistStatus, "Skipped", StringComparison.OrdinalIgnoreCase)
             ? Raw(checklist.SubmittedAt)

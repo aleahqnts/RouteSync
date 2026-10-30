@@ -4,14 +4,11 @@ using Postgrest.Models;
 
 namespace FleetWiseMobile.Models;
 
-/// <summary>
-/// One line of the pre-trip inspection, as configured on the dashboard.
-/// </summary>
-/// <remarks>
-/// The list is read at inspection time rather than compiled into the app, so
-/// changing the wording of an item, or whether it blocks a trip, does not need a
-/// new build pushed to every phone.
-/// </remarks>
+// One line of the pre-trip inspection, as configured on the dashboard.
+//
+// The list is read at inspection time rather than compiled into the app, so
+// changing the wording of an item, or whether it blocks a trip, does not need a
+// new build pushed to every phone.
 [Table("checklist_items")]
 public class ChecklistItem : BaseModel
 {

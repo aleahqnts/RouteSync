@@ -312,7 +312,7 @@ else
     private const int TwinkleStars = 12;
     private static readonly string[] CelebrateColours = { "#4AADA8", "#18325F", "#A7E399", "#F5A623" };
 
-    /// <summary>A stable value from 0 to 1 for piece <paramref name="i"/>, one per salt.</summary>
+    // A stable value from 0 to 1 for piece i, one per salt.
     private static double Spread(int i, int salt) => (uint)((i + 1) * 2654435761u ^ (uint)salt * 40503u) % 1000 / 1000.0;
 
     private static string Css(params FormattableString[] parts) =>
@@ -570,42 +570,39 @@ else
         string RouteName, long StartTicks, long EndTicks, long DateTicks, int TotalBoarded,
         decimal Fare, string Status, long? ActualStartTicks, long? BreakTicks = null);
 
-    /// <summary>What this trip was on before the dispatcher moved it, once they have.</summary>
-    /// <remarks>
-    /// A notice rather than a state, so it is taken down once it has had time to be read.
-    /// Left standing it becomes part of how the screen ordinarily looks, and by the end of
-    /// a shift it says nothing except that something happened hours ago.
-    ///
-    /// The record of the change is the notice sent to the driver, which keeps.
-    /// </remarks>
+    // What this trip was on before the dispatcher moved it, once they have.
+    //
+    // A notice rather than a state, so it is taken down once it has had time to be read.
+    // Left standing it becomes part of how the screen ordinarily looks, and by the end of
+    // a shift it says nothing except that something happened hours ago.
+    //
+    // The record of the change is the notice sent to the driver, which keeps.
     private string? movedFrom;
 
-    /// <summary>When the change was noticed, which is when the note starts running out.</summary>
+    // When the change was noticed, which is when the note starts running out.
     private DateTime? movedAt;
 
-    /// <summary>How long the note stands.</summary>
-    /// <remarks>
-    /// Long enough that a driver at a stop, or with their eyes on the road when it
-    /// arrived, still finds it when they next look down. Short enough that it is gone well
-    /// before the shift is.
-    /// </remarks>
+    // How long the note stands.
+    //
+    // Long enough that a driver at a stop, or with their eyes on the road when it
+    // arrived, still finds it when they next look down. Short enough that it is gone well
+    // before the shift is.
     private static readonly TimeSpan MovedNoteFor = TimeSpan.FromMinutes(5);
 
-    /// <summary>Reads back what the dispatcher owns, and the bus's counter phone, in case either has changed.</summary>
-    /// <remarks>
-    /// A trip can be moved to another route or another bus while it is running, and this
-    /// screen is the driver's instruction for the next several hours. Loaded once it was a
-    /// picture taken when the shift started: the dispatcher moved the trip, the board and
-    /// the map both showed it, and the one person who had to act on it was reading the old
-    /// route off their own phone.
-    ///
-    /// Only the assignment is taken from the answer. The count belongs to this app while
-    /// the trip is running, and copying a server total over it would undo every tap made
-    /// since the last flush.
-    ///
-    /// Checked on every poll's answer. The route or bus is read again only when one of
-    /// them has changed.
-    /// </remarks>
+    // Reads back what the dispatcher owns, and the bus's counter phone, in case either has changed.
+    //
+    // A trip can be moved to another route or another bus while it is running, and this
+    // screen is the driver's instruction for the next several hours. Loaded once it was a
+    // picture taken when the shift started: the dispatcher moved the trip, the board and
+    // the map both showed it, and the one person who had to act on it was reading the old
+    // route off their own phone.
+    //
+    // Only the assignment is taken from the answer. The count belongs to this app while
+    // the trip is running, and copying a server total over it would undo every tap made
+    // since the last flush.
+    //
+    // Checked on every poll's answer. The route or bus is read again only when one of
+    // them has changed.
     private async Task ApplyAssignmentAsync(Trip fresh, string? counterDeviceId)
     {
         if (trip is null || ending) return;
@@ -697,11 +694,9 @@ else
         cameraAlive = fresh;
     }
 
-    /// <summary>
-    /// Reads the trip, its bus's counter phone and the phone's status in one request, and
-    /// applies each: the camera's count, the camera card, a close from elsewhere, and a
-    /// reassignment.
-    /// </summary>
+    // Reads the trip, its bus's counter phone and the phone's status in one request, and
+    // applies each: the camera's count, the camera card, a close from elsewhere, and a
+    // reassignment.
     private async Task PollAsync()
     {
         if (closedTrip is not null) return;
@@ -796,12 +791,11 @@ else
         await SecureStorage.Default.SetAsync(CountKey, total.ToString());
     }
 
-    /// <summary>Raises the location prompt when the phone cannot report the bus.</summary>
-    /// <remarks>
-    /// Raised on the change rather than on every check, so a prompt the driver has put
-    /// off stays down until the snooze runs out instead of reappearing five seconds
-    /// later. Lowered as soon as location is back.
-    /// </remarks>
+    // Raises the location prompt when the phone cannot report the bus.
+    //
+    // Raised on the change rather than on every check, so a prompt the driver has put
+    // off stays down until the snooze runs out instead of reappearing five seconds
+    // later. Lowered as soon as location is back.
     private async Task CheckLocationAsync()
     {
         LocationState state;
@@ -839,10 +833,10 @@ else
         locationSnoozedUntil = DateTime.UtcNow + LocationSnooze;
     }
 
-    /// <summary>The trip as the server holds it, once it has been closed without this phone.</summary>
+    // The trip as the server holds it, once it has been closed without this phone.
     private Trip? closedTrip;
 
-    /// <summary>Whether the close came from the next shift starting on the same bus.</summary>
+    // Whether the close came from the next shift starting on the same bus.
     private bool closedByHandover;
 
     private static bool IsClosed(Trip t) =>
@@ -864,18 +858,17 @@ else
         }
     }
 
-    /// <summary>Stops counting a trip that was closed somewhere other than this phone.</summary>
-    /// <remarks>
-    /// The next shift starting on the bus closes this one, and so does the stale trip
-    /// closer. Neither can reach the phone, which otherwise goes on showing the trip as
-    /// running: the counter phone has moved to the new trip, so the manual buttons come
-    /// out, and the driver taps and ends a trip that no longer exists. The server drops
-    /// those writes, and this is the half that stops them being made.
-    ///
-    /// Tracking stops and the resume target is cleared, so the next launch does not
-    /// reopen the trip. Whether it was a handover is asked of the same function the shift
-    /// screen uses: a bus still carrying another active trip means the next shift took it.
-    /// </remarks>
+    // Stops counting a trip that was closed somewhere other than this phone.
+    //
+    // The next shift starting on the bus closes this one, and so does the stale trip
+    // closer. Neither can reach the phone, which otherwise goes on showing the trip as
+    // running: the counter phone has moved to the new trip, so the manual buttons come
+    // out, and the driver taps and ends a trip that no longer exists. The server drops
+    // those writes, and this is the half that stops them being made.
+    //
+    // Tracking stops and the resume target is cleared, so the next launch does not
+    // reopen the trip. Whether it was a handover is asked of the same function the shift
+    // screen uses: a bus still carrying another active trip means the next shift took it.
     private async Task ShowClosedAsync(Trip fresh)
     {
         if (closedTrip is not null || ending) return;

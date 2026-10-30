@@ -1,9 +1,9 @@
-// Phase 8d: remote line calibration editor. The drag loop lives entirely in JS
-// (same rationale as ptr.js: the WebView JS->.NET bridge is too slow for per-move
-// events), redrawing the SVG directly; .NET gets the normalized line only on
-// drag END via OnLineChanged. Coordinate contract (REMOTE-CONTROL-plan.md §2):
-// the snapshot IS the camera's display-space frame, and the <img> is sized to the
-// stage, so normalizing against the stage rect == normalizing against the frame.
+// Remote line calibration editor. The drag loop lives entirely in JS (the WebView
+// JS->.NET bridge is too slow for per-move events, as in ptr.js) and redraws the SVG
+// directly; .NET gets the normalized line only on drag end, through OnLineChanged.
+// Coordinate contract: the snapshot is the camera's display-space frame and the <img>
+// is sized to the stage, so normalizing against the stage rect is the same as
+// normalizing against the frame.
 window.calib = (function () {
     let ref = null, stage = null, svg = null;
     let ax = 0.5, ay = 0.05, bx = 0.5, by = 0.95, sign = 1;

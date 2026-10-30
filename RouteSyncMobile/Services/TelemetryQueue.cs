@@ -6,14 +6,11 @@ using SQLite;
 
 namespace FleetWiseMobile.Services;
 
-/// <summary>
-/// On-device buffer for GPS telemetry.
-/// </summary>
-/// <remarks>
-/// Rows are written locally first, so they survive dead zones and the app being killed.
-/// A flush loop then posts them to the database and deletes the local copy once the
-/// write succeeds.
-/// </remarks>
+// On-device buffer for GPS telemetry.
+//
+// Rows are written locally first, so they survive dead zones and the app being killed.
+// A flush loop then posts them to the database and deletes the local copy once the
+// write succeeds.
 public class TelemetryQueue
 {
     private readonly SQLiteAsyncConnection _db;
@@ -30,18 +27,17 @@ public class TelemetryQueue
 
     public Task EnqueueAsync(PendingTelemetry row) => _db.InsertAsync(row);
 
-    /// <summary>Records that a trip has ended, replacing any earlier record of the
-    /// same trip ending.</summary>
-    /// <remarks>
-    /// One row per trip. A driver who ends a trip, is offered it again because the
-    /// first end has not reached the server, and ends it a second time used to leave two
-    /// rows, applied in insertion order, so the last and least informed write won. The
-    /// second end is the less informed of the two: ending clears the local count, so the
-    /// figure it carries is whatever the server was holding rather than what was counted.
-    ///
-    /// The surviving row keeps the higher count for the same reason the database does.
-    /// Counting only rises, so a lower figure is a staler one.
-    /// </remarks>
+    // Records that a trip has ended, replacing any earlier record of the
+    // same trip ending.
+    //
+    // One row per trip. A driver who ends a trip, is offered it again because the
+    // first end has not reached the server, and ends it a second time leaves two
+    // rows, applied in insertion order, so the last and least informed write would win. The
+    // second end is the less informed of the two: ending clears the local count, so the
+    // figure it carries is whatever the server was holding rather than what was counted.
+    //
+    // The surviving row keeps the higher count for the same reason the database does.
+    // Counting only rises, so a lower figure is a staler one.
     public async Task EnqueueFinalizeAsync(PendingTripFinalize f)
     {
         var existing = await _db.Table<PendingTripFinalize>()
@@ -56,18 +52,17 @@ public class TelemetryQueue
         await _db.InsertAsync(f);
     }
 
-    /// <summary>Whether this trip has already been ended on this phone.</summary>
-    /// <remarks>
-    /// The queue is what makes an offline end a fact rather than an intention, so it is
-    /// asked before the server is believed about a trip still being active.
-    /// </remarks>
+    // Whether this trip has already been ended on this phone.
+    //
+    // The queue is what makes an offline end a fact rather than an intention, so it is
+    // asked before the server is believed about a trip still being active.
     public async Task<bool> HasFinalizeAsync(string tripId) =>
         await _db.Table<PendingTripFinalize>().Where(r => r.TripId == tripId).CountAsync() > 0;
 
     public Task<int> CountAsync() => _db.Table<PendingTelemetry>().CountAsync();
 
-    /// <summary>Pushes buffered rows in batches, stopping at the first network failure.
-    /// Anything not sent stays queued for the next flush.</summary>
+    // Pushes buffered rows in batches, stopping at the first network failure.
+    // Anything not sent stays queued for the next flush.
     public async Task FlushAsync()
     {
         if (!await _flushLock.WaitAsync(0)) return; // a flush is already running
@@ -138,23 +133,20 @@ public class TelemetryQueue
         return _http.SendAsync(req);
     }
 
-    /// <summary>
-    /// Whether the server refused readings over the readings themselves, which sending them
-    /// again can never change.
-    /// </summary>
-    /// <remarks>
-    /// Left unrecognised, one such reading holds back every reading queued after it, from
-    /// this trip and every later one, and the bus drops off the fleet map for good. It
-    /// happens when a trip is reassigned to another driver, or deleted, while this phone
-    /// still holds readings for it.
-    ///
-    /// Only the database's own verdicts on the rows count: a missing or foreign trip (row
-    /// security, 42501; foreign key, 23503) and any other integrity (23) or data (22)
-    /// error. Everything else is kept and tried again, and deliberately so for a mismatch
-    /// between this build and the database, such as a column not yet added: that refuses
-    /// every reading, and letting those go would throw a whole trip's route away over
-    /// something that is fixed on the server, after which they go through.
-    /// </remarks>
+    // Whether the server refused readings over the readings themselves, which sending them
+    // again can never change.
+    //
+    // Left unrecognised, one such reading holds back every reading queued after it, from
+    // this trip and every later one, and the bus drops off the fleet map for good. It
+    // happens when a trip is reassigned to another driver, or deleted, while this phone
+    // still holds readings for it.
+    //
+    // Only the database's own verdicts on the rows count: a missing or foreign trip (row
+    // security, 42501; foreign key, 23503) and any other integrity (23) or data (22)
+    // error. Everything else is kept and tried again, and deliberately so for a mismatch
+    // between this build and the database, such as a column not yet added: that refuses
+    // every reading, and letting those go would throw a whole trip's route away over
+    // something that is fixed on the server, after which they go through.
     private static async Task<bool> RefusedForGoodAsync(HttpResponseMessage res)
     {
         try
@@ -171,8 +163,8 @@ public class TelemetryQueue
         }
     }
 
-    /// <summary>Pushes queued trip finalizations, marking each trip completed and writing
-    /// its authoritative totals.</summary>
+    // Pushes queued trip finalizations, marking each trip completed and writing
+    // its authoritative totals.
     private async Task FlushFinalizesAsync()
     {
         var fins = await _db.Table<PendingTripFinalize>().OrderBy(f => f.Id).ToListAsync();
@@ -235,12 +227,11 @@ public class TelemetryQueue
         }
     }
 
-    /// <summary>Whether a PATCH asked to return its rows changed any.</summary>
-    /// <remarks>
-    /// A filter that matches nothing answers success with an empty list. An answer that
-    /// cannot be read counts as a change, so the bus is released as it always was rather
-    /// than left On Trip on a guess.
-    /// </remarks>
+    // Whether a PATCH asked to return its rows changed any.
+    //
+    // A filter that matches nothing answers success with an empty list. An answer that
+    // cannot be read counts as a change, so the bus is released as it ordinarily is rather
+    // than left On Trip on a guess.
     private static async Task<bool> ChangedAnyAsync(HttpResponseMessage res)
     {
         try

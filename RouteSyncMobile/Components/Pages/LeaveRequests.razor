@@ -125,8 +125,7 @@
                         }
 
                         @* The kind of leave and what can be done about it on one line. Given
-                           a line each, a request was a hundred pixels tall and four of them
-                           filled a phone. *@
+                           a line each, a request is a hundred pixels tall and four of them fill a phone. *@
                         <div class="lv-row-foot">
                             <p class="lv-meta">@r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
 
@@ -349,25 +348,21 @@
 }
 
 @code {
-    /// <summary>One thing that happened to a request.</summary>
-    /// <remarks>
-    /// Undated for the two that have not happened yet, which is what puts them last.
-    /// </remarks>
+    // One thing that happened to a request.
+    //
+    // Undated for the two that have not happened yet, which is what puts them last.
     private sealed record Moment(DateTime? At, string Action, string Dot, string Note);
 
-    /// <summary>
-    /// What happened to a request, in the order it happened.
-    /// </summary>
-    /// <remarks>
-    /// Built as a list and sorted rather than written out in the markup. Written out, the
-    /// order was the order the code happened to check things in: a leave approved at noon
-    /// and asked about that evening listed the asking above the approval, because asking
-    /// is read off the same row and was checked first. A history out of order is not a
-    /// history.
-    ///
-    /// The two waiting lines carry no time because they are about now, so they sort to
-    /// the end where they belong.
-    /// </remarks>
+    // What happened to a request, in the order it happened.
+    //
+    // Built as a list and sorted rather than written out in the markup. Written out, the
+    // order was the order the code happened to check things in: a leave approved at noon
+    // and asked about that evening listed the asking above the approval, because asking
+    // is read off the same row and was checked first. A history out of order is not a
+    // history.
+    //
+    // The two waiting lines carry no time because they are about now, so they sort to
+    // the end where they belong.
     private static List<Moment> Story(LeaveRequest h)
     {
         var done = new List<Moment>
@@ -436,13 +431,12 @@
         return done.OrderBy(e => e.At).Concat(waiting).ToList();
     }
 
-    /// <summary>The word for a status, as the driver should read it.</summary>
-    /// <remarks>
-    /// A request held while the dispatcher clears the schedule is stored as
-    /// AwaitingChange, and shown here as Pending. Nothing has been granted and nothing
-    /// has been refused; from the driver's side the request is where it was, and a word
-    /// that looks like an outcome would read as one.
-    /// </remarks>
+    // The word for a status, as the driver should read it.
+    //
+    // A request held while the dispatcher clears the schedule is stored as
+    // AwaitingChange, and shown here as Pending. Nothing has been granted and nothing
+    // has been refused; from the driver's side the request is where it was, and a word
+    // that looks like an outcome would read as one.
     private static string Shown(string status) =>
         string.Equals(status, "AwaitingChange", StringComparison.OrdinalIgnoreCase)
             ? "Pending"
@@ -461,7 +455,7 @@
     private long? openHistory;
     private DateTime? monthFilter;
 
-    /// <summary>Months folded shut, so a long history reads as a list of months.</summary>
+    // Months folded shut, so a long history reads as a list of months.
     private readonly HashSet<DateTime> collapsed = new();
 
     private void Toggle(DateTime month)
@@ -473,17 +467,17 @@
     private CancellationTokenSource? toastCts;
     private string type = LeaveEntitlement.Vacation;
     private string reason = "";
-    /// <summary>The earliest day any type of leave can still be filed for.</summary>
+    // The earliest day any type of leave can still be filed for.
     private static DateTime EarliestStart =>
         PhTime.OperationalDay.AddDays(-LeaveEntitlement.BackdatingDays);
 
     private DateTime start = PhTime.Now.Date;
     private DateTime end = PhTime.Now.Date;
 
-    /// <summary>What is wrong with the form, or null when nothing is.</summary>
+    // What is wrong with the form, or null when nothing is.
     private string? problem;
 
-    /// <summary>Which field the problem belongs to, so it can be marked.</summary>
+    // Which field the problem belongs to, so it can be marked.
     private string? problemField;
 
     private string Bad(string field) =>
@@ -504,19 +498,18 @@
         catch { requests = new(); }
     }
 
-    /// <summary>The months that hold a request, newest first.</summary>
+    // The months that hold a request, newest first.
     private List<DateTime> Months =>
         requests.Select(r => new DateTime(r.StartDate.Year, r.StartDate.Month, 1))
                 .Distinct()
                 .OrderByDescending(m => m)
                 .ToList();
 
-    /// <summary>The requests on show, in months.</summary>
-    /// <remarks>
-    /// By the month the leave falls in rather than the month it was filed. A driver
-    /// looking for last September's leave looks under September, whatever day they
-    /// happened to ask for it.
-    /// </remarks>
+    // The requests on show, in months.
+    //
+    // By the month the leave falls in rather than the month it was filed. A driver
+    // looking for last September's leave looks under September, whatever day they
+    // happened to ask for it.
     private IEnumerable<IGrouping<DateTime, LeaveRequest>> Grouped =>
         requests
             .Where(r => monthFilter is null
@@ -568,11 +561,10 @@
         }
     }
 
-    /// <summary>Re-reads the list on a pull, and when the app comes back to the front.</summary>
-    /// <remarks>
-    /// Nothing is taken away mid-sentence: a form being filled in or a request being read
-    /// keeps what is on screen, the same as the poll does.
-    /// </remarks>
+    // Re-reads the list on a pull, and when the app comes back to the front.
+    //
+    // Nothing is taken away mid-sentence: a form being filled in or a request being read
+    // keeps what is on screen, the same as the poll does.
     [JSInvokable]
     public async Task Refresh()
     {
@@ -606,14 +598,11 @@
 
     private void CloseForm() => showForm = false;
 
-    /// <summary>
-    /// Names the first thing wrong with the form, and which field it is about.
-    /// </summary>
-    /// <remarks>
-    /// Notice is not among these. Three days is what the company asks for and a request
-    /// filed later still goes through, so the only refusals here are a form that cannot
-    /// be read and an allowance that has run out.
-    /// </remarks>
+    // Names the first thing wrong with the form, and which field it is about.
+    //
+    // Notice is not among these. Three days is what the company asks for and a request
+    // filed later still goes through, so the only refusals here are a form that cannot
+    // be read and an allowance that has run out.
     private bool Validate()
     {
         problem = null;
@@ -675,7 +664,7 @@
         return true;
     }
 
-    /// <summary>Clears a complaint once the field it was about has been changed.</summary>
+    // Clears a complaint once the field it was about has been changed.
     private void Revalidate()
     {
         if (problem is not null) Validate();
@@ -719,33 +708,27 @@
         }
     }
 
-    /// <summary>
-    /// Whether granted leave can still be handed back.
-    /// </summary>
-    /// <remarks>
-    /// Approved, not already asked about, and starting no earlier than the day now being
-    /// worked. Today counts: a driver who called in sick this morning and then felt able
-    /// to drive is the ordinary case, and the day is not spent until it ends.
-    ///
-    /// A leave that started before today is not offered. Part of it has been taken, and
-    /// giving the whole thing back would erase days the driver actually had off. Handing
-    /// part of a leave back is the dispatcher's, through Revoke.
-    ///
-    /// The database refuses the same cases rather than trusting this.
-    /// </remarks>
-    /// <summary>
-    /// What to say about a driver's asking for granted leave back, or null when there is
-    /// nothing to say.
-    /// </summary>
-    /// <remarks>
-    /// The asking stays on the row after it is answered, so that the request keeps its own
-    /// history. Read on its own it says a question is open long after it was settled, and
-    /// the answer is what decides which of the two this is.
-    ///
-    /// An accepted asking cancels the leave, and the status badge carries that. Only a
-    /// refusal needs saying, because the leave goes back to looking exactly as it did
-    /// before the driver asked, and Ask to cancel is gone with nothing to explain it.
-    /// </remarks>
+    // Whether granted leave can still be handed back.
+    //
+    // Approved, not already asked about, and starting no earlier than the day now being
+    // worked. Today counts: a driver who called in sick this morning and then felt able
+    // to drive is the ordinary case, and the day is not spent until it ends.
+    //
+    // A leave that started before today is not offered. Part of it has been taken, and
+    // giving the whole thing back would erase days the driver actually had off. Handing
+    // part of a leave back is the dispatcher's, through Revoke.
+    //
+    // The database refuses the same cases rather than trusting this.
+    // What to say about a driver's asking for granted leave back, or null when there is
+    // nothing to say.
+    //
+    // The asking stays on the row after it is answered, so that the request keeps its own
+    // history. Read on its own it says a question is open long after it was settled, and
+    // the answer is what decides which of the two this is.
+    //
+    // An accepted asking cancels the leave, and the status badge carries that. Only a
+    // refusal needs saying, because the leave goes back to looking exactly as it did
+    // before the driver asked, and Ask to cancel is gone with nothing to explain it.
     private static string? WithdrawChip(LeaveRequest r)
     {
         if (r.WithdrawRequestedAt is null) return null;
@@ -816,18 +799,14 @@
         }
         catch (Exception ex)
         {
-            // Said here, on the page the button is on. It used to go to the message under
-            // the filing form, which is not on screen when a request is being cancelled,
-            // so a refusal reached the driver as nothing happening at all.
+            // Said here, on the page the button is on. The message under the filing form is not on screen while a request is being cancelled, so a refusal shown there would reach the driver as nothing happening at all.
             await Say(DriverDataService.Explain(ex, "Couldn't cancel the request. Try again."), bad: true);
             System.Diagnostics.Debug.WriteLine($"[Leave.Cancel] {ex}");
         }
     }
 
-    /// <summary>
-    /// The chosen dates written out, so the order of the digits in the field above never
-    /// matters.
-    /// </summary>
+    // The chosen dates written out, so the order of the digits in the field above never
+    // matters.
     private string Said
     {
         get
@@ -840,13 +819,10 @@
         }
     }
 
-    /// <summary>
-    /// Says something briefly at the top of the page, and takes it away again.
-    /// </summary>
-    /// <remarks>
-    /// The previous one is cancelled first, or two in quick succession leave the first
-    /// timer to clear a message it did not write.
-    /// </remarks>
+    // Says something briefly at the top of the page, and takes it away again.
+    //
+    // The previous one is cancelled first, or two in quick succession leave the first
+    // timer to clear a message it did not write.
     private async Task Say(string message, bool bad = false)
     {
         toastCts?.Cancel();

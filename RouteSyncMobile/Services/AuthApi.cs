@@ -6,28 +6,22 @@ using FleetWiseMobile.Models;
 
 namespace FleetWiseMobile.Services;
 
-/// <summary>
-/// Client for the sign-in, password change and password reset edge functions.
-/// </summary>
-/// <remarks>
-/// These are the only paths a password travels, always over TLS, and it is verified and
-/// hashed server-side.
-///
-/// Results are three-way rather than a boolean so a caller can tell an unreachable
-/// function apart from a definitive rejection, and never treats the two the same way.
-/// </remarks>
+// Client for the sign-in, password change and password reset edge functions.
+//
+// These are the only paths a password travels, always over TLS, and it is verified and
+// hashed server-side.
+//
+// Results are three-way rather than a boolean so a caller can tell an unreachable
+// function apart from a definitive rejection, and never treats the two the same way.
 public class AuthApi
 {
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(12) };
 
-    /// <summary>
-    /// Ok, a definite refusal, or neither.
-    /// </summary>
-    /// <remarks>
-    /// Refused and Unreachable are kept apart so a caller never treats a server that
-    /// answered as one that could not be found. Failed splits off a server that answered
-    /// with a fault of its own, which is neither the caller's doing nor the network's.
-    /// </remarks>
+    // Ok, a definite refusal, or neither.
+    //
+    // Refused and Unreachable are kept apart so a caller never treats a server that
+    // answered as one that could not be found. Failed splits off a server that answered
+    // with a fault of its own, which is neither the caller's doing nor the network's.
     public enum Outcome { Ok, Denied, Unreachable, Failed }
 
     public record LoginResult(Outcome Outcome, string? Token, UserModel? User, string? Message);
@@ -87,15 +81,12 @@ public class AuthApi
         }
     }
 
-    /// <summary>
-    /// Asks for a reset code to be mailed to the address on the account.
-    /// </summary>
-    /// <remarks>
-    /// A success here means the request was accepted, not that an account exists.
-    /// The function deliberately answers the same way for an address it has never
-    /// seen, so the app must not report anything more specific than "check your
-    /// mail" either.
-    /// </remarks>
+    // Asks for a reset code to be mailed to the address on the account.
+    //
+    // A success here means the request was accepted, not that an account exists.
+    // The function deliberately answers the same way for an address it has never
+    // seen, so the app must not report anything more specific than "check your
+    // mail" either.
     public async Task<CallResult> RequestPasswordResetAsync(string email)
     {
         try
@@ -115,9 +106,7 @@ public class AuthApi
         }
     }
 
-    /// <summary>
-    /// Exchanges a mailed code for a short-lived token that authorises one password change.
-    /// </summary>
+    // Exchanges a mailed code for a short-lived token that authorises one password change.
     public async Task<ResetTokenResult> VerifyResetCodeAsync(string email, string otp)
     {
         try
@@ -147,13 +136,10 @@ public class AuthApi
         }
     }
 
-    /// <summary>
-    /// Sets the new password using the token from <see cref="VerifyResetCodeAsync"/>.
-    /// </summary>
-    /// <remarks>
-    /// No session comes back. The driver signs in with the new password, which keeps
-    /// the reset path from being a second way to obtain a driver token.
-    /// </remarks>
+    // Sets the new password using the token from VerifyResetCodeAsync.
+    //
+    // No session comes back. The driver signs in with the new password, which keeps
+    // the reset path from being a second way to obtain a driver token.
     public async Task<CallResult> CompletePasswordResetAsync(string resetToken, string newPassword)
     {
         try
@@ -177,30 +163,23 @@ public class AuthApi
     public record InspectionResult(Outcome Outcome, string? Status, bool Blocked,
         List<string> Failed, List<string> Critical, string? Message);
 
-    /// <summary>
-    /// A photograph already in storage, named for the item it documents.
-    /// </summary>
-    /// <remarks>
-    /// The object is uploaded when it is taken, so what travels with the inspection is its
-    /// name rather than its bytes. The server confirms the object is there before
-    /// recording it, since a name the phone believed in is not evidence that anything
-    /// arrived.
-    /// </remarks>
-    /// <remarks>
-    /// TakenAt is null for a photograph attached before the app was interrupted and
-    /// resumed, since the draft holds the reference and not the moment. The server records
-    /// arrival time in its place.
-    /// </remarks>
+    // A photograph already in storage, named for the item it documents.
+    //
+    // The object is uploaded when it is taken, so what travels with the inspection is its
+    // name rather than its bytes. The server confirms the object is there before
+    // recording it, since a name the phone believed in is not evidence that anything
+    // arrived.
+    //
+    // TakenAt is null for a photograph attached before the app was interrupted and
+    // resumed, since the draft holds the reference and not the moment. The server records
+    // arrival time in its place.
     public record PhotoRef(int ItemId, string ObjectKey, DateTimeOffset? TakenAt);
 
-    /// <summary>
-    /// Sends a completed inspection for recording.
-    /// </summary>
-    /// <remarks>
-    /// The server decides which faults ground the bus and grounds it, because the app
-    /// holds no write on that gate and because a build that answered the question itself
-    /// could drive away from a failed brake.
-    /// </remarks>
+    // Sends a completed inspection for recording.
+    //
+    // The server decides which faults ground the bus and grounds it, because the app
+    // holds no write on that gate and because a build that answered the question itself
+    // could drive away from a failed brake.
     public async Task<InspectionResult> SubmitInspectionAsync(
         string tripId, Dictionary<string, string> results, string? notes,
         List<PhotoRef>? photos = null)

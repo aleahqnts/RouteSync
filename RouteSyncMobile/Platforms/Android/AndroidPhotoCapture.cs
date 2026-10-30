@@ -4,20 +4,17 @@ using FleetWiseMobile.Services;
 
 namespace FleetWiseMobile.Platforms.Android;
 
-/// <summary>
-/// Takes a photograph and reduces it without ever holding the full image in memory.
-/// </summary>
-/// <remarks>
-/// A phone camera produces eight to twelve megapixels, which is several megabytes encoded
-/// and around forty-eight megabytes decoded. Decoding that and then shrinking it is the
-/// obvious approach and the wrong one here: the allocation peaks on a low-end handset at
-/// the moment the driver is standing at a fault, and a failure there loses the photograph
-/// and possibly the walk-around behind it.
-///
-/// Instead the bounds are read without decoding, a power of two sampling factor is chosen
-/// from them, and the image is decoded already reduced. Peak memory is a few megabytes
-/// whatever the camera produces.
-/// </remarks>
+// Takes a photograph and reduces it without ever holding the full image in memory.
+//
+// A phone camera produces eight to twelve megapixels, which is several megabytes encoded
+// and around forty-eight megabytes decoded. Decoding that and then shrinking it is the
+// obvious approach and the wrong one here: the allocation peaks on a low-end handset at
+// the moment the driver is standing at a fault, and a failure there loses the photograph
+// and possibly the walk-around behind it.
+//
+// Instead the bounds are read without decoding, a power of two sampling factor is chosen
+// from them, and the image is decoded already reduced. Peak memory is a few megabytes
+// whatever the camera produces.
 public class AndroidPhotoCapture : IPhotoCapture
 {
     public async Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75)
@@ -78,7 +75,7 @@ public class AndroidPhotoCapture : IPhotoCapture
         return buffer.ToArray();
     }
 
-    /// <summary>Largest power of two that leaves both sides at or above the target.</summary>
+    // Largest power of two that leaves both sides at or above the target.
     private static int SampleSizeFor(int width, int height, int maxEdge)
     {
         var sample = 1;

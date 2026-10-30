@@ -51,19 +51,17 @@
 }
 
 @code {
-    /// <summary>What is wrong. <see cref="LocationState.Ready"/> hides the prompt.</summary>
+    // What is wrong. LocationState.Ready hides the prompt.
     [Parameter] public LocationState State { get; set; } = LocationState.Ready;
 
-    /// <summary>
-    /// True before the shift has started, when the prompt stands in the way of starting
-    /// it. False during a trip, when it can only warn: the bus is already on the road.
-    /// </summary>
+    // True before the shift has started, when the prompt stands in the way of starting
+    // it. False during a trip, when it can only warn: the bus is already on the road.
     [Parameter] public bool Starting { get; set; }
 
-    /// <summary>Raised when location comes back without the driver touching the prompt.</summary>
+    // Raised when location comes back without the driver touching the prompt.
     [Parameter] public EventCallback OnResolved { get; set; }
 
-    /// <summary>Raised when the driver closes it.</summary>
+    // Raised when the driver closes it.
     [Parameter] public EventCallback OnDismiss { get; set; }
 
     private System.Threading.Timer? recheck;

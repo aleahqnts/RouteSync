@@ -244,7 +244,7 @@ else
     private string busLabel = "";
     private Trip? trip;
 
-    /// <summary>Whether this trip may stand on an inspection the bus already has.</summary>
+    // Whether this trip may stand on an inspection the bus already has.
     private bool canSkip;
     private bool showSkipConfirm;
 
@@ -300,21 +300,20 @@ else
         finally { loading = false; }
     }
 
-    /// <summary>Decides whether the inspection can be skipped for this trip.</summary>
-    /// <remarks>
-    /// The rule is one inspection per bus per service day, so the first shift of a bus in
-    /// a day inspects it and the shifts after that may stand on what it found. The
-    /// service day is what a night shift and the small hours after it share, and the next
-    /// morning is a new day that asks for a fresh inspection.
-    ///
-    /// A grounded bus is never skippable. Being out of service, and the failed inspection
-    /// that usually puts a bus there, are a separate gate on driving it at all, and an
-    /// offer to skip past the paperwork must not look like a way around them.
-    ///
-    /// The offer is withheld when the question cannot be answered. Asking for an
-    /// inspection that has already been done costs a driver some minutes, while skipping
-    /// one on a guess costs a bus nobody has looked at.
-    /// </remarks>
+    // Decides whether the inspection can be skipped for this trip.
+    //
+    // The rule is one inspection per bus per service day, so the first shift of a bus in
+    // a day inspects it and the shifts after that may stand on what it found. The
+    // service day is what a night shift and the small hours after it share, and the next
+    // morning is a new day that asks for a fresh inspection.
+    //
+    // A grounded bus is never skippable. Being out of service, and the failed inspection
+    // that usually puts a bus there, are a separate gate on driving it at all, and an
+    // offer to skip past the paperwork must not look like a way around them.
+    //
+    // The offer is withheld when the question cannot be answered. Asking for an
+    // inspection that has already been done costs a driver some minutes, while skipping
+    // one on a guess costs a bus nobody has looked at.
     private async Task LoadSkipOfferAsync(Vehicle? vehicle)
     {
         if (trip is null || vehicle?.OutOfService == true) return;
@@ -334,15 +333,12 @@ else
         }
     }
 
-    /// <summary>
-    /// Builds the form from the configured items.
-    /// </summary>
-    /// <remarks>
-    /// There is deliberately no built-in fallback list. Which items are critical is
-    /// the whole point of this screen, and inspecting against a stale copy of the
-    /// rules could pass a bus that the current rules would have grounded. A driver
-    /// who cannot reach the server is asked to retry instead.
-    /// </remarks>
+    // Builds the form from the configured items.
+    //
+    // There is deliberately no built-in fallback list. Which items are critical is
+    // the whole point of this screen, and inspecting against a stale copy of the
+    // rules could pass a bus that the current rules would have grounded. A driver
+    // who cannot reach the server is asked to retry instead.
     private async Task LoadItemsAsync()
     {
         try
@@ -388,14 +384,11 @@ else
         SaveDraft();
     }
 
-    /// <summary>
-    /// Opens the camera for a failed item and holds the result for confirmation.
-    /// </summary>
-    /// <remarks>
-    /// Nothing is sent yet. The driver sees what they took and decides, because a
-    /// photograph of a thumb over the lens is worse than none and they are still standing
-    /// where they can take another.
-    /// </remarks>
+    // Opens the camera for a failed item and holds the result for confirmation.
+    //
+    // Nothing is sent yet. The driver sees what they took and decides, because a
+    // photograph of a thumb over the lens is worse than none and they are still standing
+    // where they can take another.
     private async Task TakePhoto(CItem item)
     {
         if (cameraBusy) return;
@@ -413,13 +406,12 @@ else
         finally { cameraBusy = false; }
     }
 
-    /// <summary>Sends the held photograph and attaches it to its item.</summary>
-    /// <remarks>
-    /// The upload happens here rather than at submit, while the driver is still standing
-    /// at the fault and can take another. A failure is shown on the row: the inspection
-    /// carries on without the photograph, because a reference to an object that is not
-    /// there is worse than no reference.
-    /// </remarks>
+    // Sends the held photograph and attaches it to its item.
+    //
+    // The upload happens here rather than at submit, while the driver is still standing
+    // at the fault and can take another. A failure is shown on the row: the inspection
+    // carries on without the photograph, because a reference to an object that is not
+    // there is worse than no reference.
     private async Task ConfirmPhoto()
     {
         if (pendingShot is null || pendingItem is null) return;
@@ -454,7 +446,7 @@ else
         finally { cameraBusy = false; }
     }
 
-    /// <summary>Takes back a photograph, removing the stored object with it.</summary>
+    // Takes back a photograph, removing the stored object with it.
     private async Task DropPhotoAsync(CItem item)
     {
         uploadFailed.Remove(item.ItemId);
@@ -473,7 +465,7 @@ else
         pendingItem = null;
     }
 
-    /// <summary>Writes the walk-around down so an interruption cannot erase it.</summary>
+    // Writes the walk-around down so an interruption cannot erase it.
     private void SaveDraft()
     {
         var statuses = sections
@@ -484,18 +476,15 @@ else
         Draft.Save(TripId, currentSection, statuses, photos);
     }
 
-    /// <summary>
-    /// Puts back a walk-around the operating system interrupted.
-    /// </summary>
-    /// <remarks>
-    /// Statuses are matched by the configured item rather than by its wording, so an item
-    /// reworded while the driver was in the camera still finds its answer. An item that
-    /// has since been removed from the inspection is simply not found, which is the right
-    /// outcome: it is no longer part of what is being asked.
-    ///
-    /// Thumbnails do not come back. The reference does, so the photograph is still
-    /// attached and will still be submitted; the row says so without showing it.
-    /// </remarks>
+    // Puts back a walk-around the operating system interrupted.
+    //
+    // Statuses are matched by the configured item rather than by its wording, so an item
+    // reworded while the driver was in the camera still finds its answer. An item that
+    // has since been removed from the inspection is simply not found, which is the right
+    // outcome: it is no longer part of what is being asked.
+    //
+    // Thumbnails do not come back. The reference does, so the photograph is still
+    // attached and will still be submitted; the row says so without showing it.
     private void RestoreDraft()
     {
         var saved = Draft.Load(TripId);
@@ -635,12 +624,11 @@ else
         }
     }
 
-    /// <summary>Records the skip and hands the driver back to their shift.</summary>
-    /// <remarks>
-    /// No confirmation screen of its own. There is nothing to report back from an
-    /// inspection that was not carried out, and what the driver came here to do is start
-    /// the shift waiting on the home screen.
-    /// </remarks>
+    // Records the skip and hands the driver back to their shift.
+    //
+    // No confirmation screen of its own. There is nothing to report back from an
+    // inspection that was not carried out, and what the driver came here to do is start
+    // the shift waiting on the home screen.
     private async Task Skip()
     {
         busy = true;

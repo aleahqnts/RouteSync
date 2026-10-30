@@ -3,10 +3,8 @@ using Microsoft.Maui.Storage;
 
 namespace FleetWiseMobile.Services;
 
-/// <summary>
-/// Holds the signed-in driver for the session, and persists a small token, the user
-/// identifier and JWT, in secure storage so the driver stays signed in across launches.
-/// </summary>
+// Holds the signed-in driver for the session, and persists a small token, the user
+// identifier and JWT, in secure storage so the driver stays signed in across launches.
 public class SessionService
 {
     private const string UidKey = "fw_uid";
@@ -43,7 +41,7 @@ public class SessionService
             SecureStorage.Default.Remove(JwtKey);
     }
 
-    /// <summary>Restores the session from secure storage at launch.</summary>
+    // Restores the session from secure storage at launch.
     public async Task<bool> RestoreAsync()
     {
         if (IsLoggedIn) return true;

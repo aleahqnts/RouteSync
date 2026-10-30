@@ -2,16 +2,13 @@ using System.Globalization;
 
 namespace FleetWiseMobile.Services
 {
-    /// <summary>Counts written short enough to sit in a card whatever they grow to.</summary>
+    // Counts written short enough to sit in a card whatever they grow to.
     public static class Figures
     {
-        /// <summary>
-        /// A count in at most four characters and a suffix: 950, 1.6k, 16k, 160k, 1.2M.
-        /// </summary>
-        /// <remarks>
-        /// One decimal only while it still says something, below ten of the unit, and never a
-        /// trailing ".0". Rounded down, so a card never claims a figure not yet reached.
-        /// </remarks>
+        // A count in at most four characters and a suffix: 950, 1.6k, 16k, 160k, 1.2M.
+        //
+        // One decimal only while it still says something, below ten of the unit, and never a
+        // trailing ".0". Rounded down, so a card never claims a figure not yet reached.
         public static string Compact(long n)
         {
             if (n < 0) return "-" + Compact(-n);

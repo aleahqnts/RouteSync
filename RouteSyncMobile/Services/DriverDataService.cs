@@ -6,23 +6,20 @@ using static Postgrest.Constants;
 
 namespace FleetWiseMobile.Services;
 
-/// <summary>
-/// Every database read and write the driver app performs.
-/// </summary>
-/// <remarks>
-/// Uses the same tables and status strings as the web dashboard's dispatch controller, so
-/// the two surfaces agree on what a trip looks like.
-/// </remarks>
+// Every database read and write the driver app performs.
+//
+// Uses the same tables and status strings as the web dashboard's dispatch controller, so
+// the two surfaces agree on what a trip looks like.
 public class DriverDataService
 {
     private readonly Supabase.Client _supabase;
 
     public DriverDataService(Supabase.Client supabase) => _supabase = supabase;
 
-    /// <summary>The most rows the server returns for one request.</summary>
+    // The most rows the server returns for one request.
     private const int PageRows = 1000;
 
-    /// <summary>How long a route, and the routes a driver has run, are reused before being read again.</summary>
+    // How long a route, and the routes a driver has run, are reused before being read again.
     private static readonly TimeSpan HeldFor = TimeSpan.FromMinutes(10);
 
     // Routes change rarely, and the home page asks for the assigned one on every refresh.
@@ -44,19 +41,20 @@ public class DriverDataService
     // keeps them from being dropped again; null until then.
     private DateTime? _messagesFloor;
 
-    /// <summary>How many days of messages a session starts with.</summary>
-    /// <remarks>Never shown to the driver: older ones are a tap away.</remarks>
+    // How many days of messages a session starts with.
+    //
+    // Never shown to the driver: older ones are a tap away.
     private const int MessageDays = 30;
 
-    /// <summary>How many older messages one "Show older messages" brings.</summary>
+    // How many older messages one "Show older messages" brings.
     public const int OlderMessagePage = 30;
 
-    /// <summary>The columns the trip list and the driver's figures read.</summary>
+    // The columns the trip list and the driver's figures read.
     private const string TripListColumns =
         "trip_id,date,shift_type,shift_start_time,shift_end_time,route_id,vehicle_id,driver_id," +
         "trip_status,estimated_revenue,total_boarded";
 
-    /// <summary>How many finished trips the trip list shows, newest first.</summary>
+    // How many finished trips the trip list shows, newest first.
     public const int RecentTripCount = 100;
 
     // Twenty seconds, not the hundred a HttpClient starts with. A phone that has drifted
@@ -68,11 +66,10 @@ public class DriverDataService
         AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
     }) { Timeout = TimeSpan.FromSeconds(20) };
 
-    /// <summary>Sends a PATCH straight to the REST endpoint.</summary>
-    /// <remarks>
-    /// The postgrest client's expression-based Update does not work on Android, and its
-    /// full-model Upsert round-trips the whole row, which corrupts the `date` column.
-    /// </remarks>
+    // Sends a PATCH straight to the REST endpoint.
+    //
+    // The postgrest client's expression-based Update does not work on Android, and its
+    // full-model Upsert round-trips the whole row, which corrupts the `date` column.
     private static async Task PatchAsync(string pathWithFilter, object body)
     {
         var req = new HttpRequestMessage(HttpMethod.Patch, $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/{pathWithFilter}");
@@ -83,16 +80,13 @@ public class DriverDataService
         await ThrowIfRefusedAsync(res);
     }
 
-    /// <summary>
-    /// Sends a PATCH and reads back the rows it actually changed.
-    /// </summary>
-    /// <remarks>
-    /// A PATCH whose filter matches nothing answers 204 and succeeds. That is the right
-    /// answer to "make these rows look like this" and the wrong one to "cancel this
-    /// request", which has not happened. Asking for the rows back is what tells the two
-    /// apart, so a write that quietly changed nothing can be reported rather than passed
-    /// off as done.
-    /// </remarks>
+    // Sends a PATCH and reads back the rows it actually changed.
+    //
+    // A PATCH whose filter matches nothing answers 204 and succeeds. That is the right
+    // answer to "make these rows look like this" and the wrong one to "cancel this
+    // request", which has not happened. Asking for the rows back is what tells the two
+    // apart, so a write that quietly changed nothing can be reported rather than passed
+    // off as done.
     private static async Task<int> PatchCountingAsync(string pathWithFilter, object body)
     {
         var req = new HttpRequestMessage(HttpMethod.Patch, $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/{pathWithFilter}");
@@ -115,8 +109,8 @@ public class DriverDataService
         catch { return 0; }
     }
 
-    /// <summary>Sends an insert straight to the REST endpoint, for the same reason as
-    /// <see cref="PatchAsync"/>.</summary>
+    // Sends an insert straight to the REST endpoint, for the same reason as
+    // PatchAsync.
     private static async Task PostAsync(string path, object body)
     {
         var req = new HttpRequestMessage(HttpMethod.Post, $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/{path}");
@@ -127,20 +121,19 @@ public class DriverDataService
         await ThrowIfRefusedAsync(res);
     }
 
-    /// <summary>Where a refusal carries its postgrest code, on the exception's Data.</summary>
+    // Where a refusal carries its postgrest code, on the exception's Data.
     public const string RefusalCode = "postgrest_code";
 
-    /// <summary>The code a start is refused with while the bus is still on another shift's trip.</summary>
+    // The code a start is refused with while the bus is still on another shift's trip.
     public const string BusStillOnTrip = "RS409";
 
-    /// <summary>A failure as a sentence a driver can act on.</summary>
-    /// <remarks>
-    /// A refusal the server answered carries its own reason, written to be read, and is
-    /// shown as it is; this service raises its own refusals the same way. A request that
-    /// never got an answer is a connection problem whatever the exception says, and anything
-    /// else is a fault in the app, whose wording means nothing to a driver and goes to the log.
-    /// </remarks>
-    /// <param name="fallback">What to say when the failure is neither of the first two.</param>
+    // A failure as a sentence a driver can act on.
+    //
+    // A refusal the server answered carries its own reason, written to be read, and is
+    // shown as it is; this service raises its own refusals the same way. A request that
+    // never got an answer is a connection problem whatever the exception says, and anything
+    // else is a fault in the app, whose wording means nothing to a driver and goes to the log.
+    // fallback: What to say when the failure is neither of the first two.
     public static string Explain(Exception ex, string fallback) => ex switch
     {
         HttpRequestException { StatusCode: not null } => ex.Message,
@@ -149,13 +142,12 @@ public class DriverDataService
         _ => fallback,
     };
 
-    /// <summary>Fails with what the server said, rather than with a status code.</summary>
-    /// <remarks>
-    /// EnsureSuccessStatusCode throws away the body, which is where postgrest puts the
-    /// reason: a column that does not exist, a check constraint, a row the key may not
-    /// write. Without it every refusal reaches the driver as the same sentence about
-    /// their connection, and sends them looking in the wrong place.
-    /// </remarks>
+    // Fails with what the server said, rather than with a status code.
+    //
+    // EnsureSuccessStatusCode throws away the body, which is where postgrest puts the
+    // reason: a column that does not exist, a check constraint, a row the key may not
+    // write. Without it every refusal reaches the driver as the same sentence about
+    // their connection, and sends them looking in the wrong place.
     private static async Task ThrowIfRefusedAsync(HttpResponseMessage res)
     {
         if (res.IsSuccessStatusCode) return;
@@ -187,11 +179,10 @@ public class DriverDataService
         throw ex;
     }
 
-    /// <summary>Reads the first row from the REST endpoint, or null when there is none.</summary>
-    /// <remarks>
-    /// `device_config` and `device_status` are plain data transfer objects rather than
-    /// postgrest models, so they do not need a model base class.
-    /// </remarks>
+    // Reads the first row from the REST endpoint, or null when there is none.
+    //
+    // `device_config` and `device_status` are plain data transfer objects rather than
+    // postgrest models, so they do not need a model base class.
     private static async Task<T?> GetJsonAsync<T>(string pathWithQuery)
     {
         var req = new HttpRequestMessage(HttpMethod.Get, $"{FleetWiseMobile.SupabaseConfig.Url}/rest/v1/{pathWithQuery}");
@@ -213,13 +204,12 @@ public class DriverDataService
     public Task<DeviceStatusDto?> GetDeviceStatusAsync(string deviceId)
         => GetJsonAsync<DeviceStatusDto>($"device_status?device_id=eq.{Uri.EscapeDataString(deviceId)}");
 
-    /// <summary>What the running trip screen checks, as one answer.</summary>
-    /// <param name="Trip">
-    /// The trip's status, route, bus, break, count, heartbeat, revenue and end time. The
-    /// other columns are left at their defaults. Null when the trip cannot be read.
-    /// </param>
-    /// <param name="CounterDeviceId">The counter phone paired to the trip's bus, if any.</param>
-    /// <param name="Device">That phone's status, readable only while the trip is running.</param>
+    // What the running trip screen checks, as one answer.
+    // Trip:
+    // The trip's status, route, bus, break, count, heartbeat, revenue and end time. The
+    // other columns are left at their defaults. Null when the trip cannot be read.
+    // CounterDeviceId: The counter phone paired to the trip's bus, if any.
+    // Device: That phone's status, readable only while the trip is running.
     public sealed record TripPoll(Trip? Trip, string? CounterDeviceId, DeviceStatusDto? Device);
 
     // The trip is read with the settings the postgrest client uses for a table read, so its
@@ -227,15 +217,11 @@ public class DriverDataService
     private static readonly Newtonsoft.Json.JsonSerializerSettings RowSettings =
         Postgrest.Client.SerializerSettings(new Postgrest.ClientOptions());
 
-    /// <summary>
-    /// The trip, its bus's counter phone and that phone's status, in one request.
-    /// </summary>
-    /// <remarks>
-    /// The running trip screen asks every five seconds for each bus on the road, so the
-    /// three reads it needs are answered together by trip_active_poll, and only with the
-    /// columns it reads. The function runs under the driver's row policies, the same as
-    /// the separate reads did.
-    /// </remarks>
+    // The trip, its bus's counter phone and that phone's status, in one request.
+    //
+    // The running trip screen asks every five seconds for each bus on the road, so the
+    // three reads it needs are answered together by trip_active_poll, and only with the
+    // columns it reads. The function runs under the driver's row policies, the same as separate reads would apply.
     public async Task<TripPoll> PollTripAsync(string tripId)
     {
         var req = new HttpRequestMessage(HttpMethod.Post,
@@ -266,18 +252,15 @@ public class DriverDataService
     public Task PatchDeviceConfigAsync(string deviceId, object body)
         => PatchAsync($"device_config?device_id=eq.{Uri.EscapeDataString(deviceId)}", body);
 
-    /// <summary>
-    /// Downloads the camera's most recent wake snapshot, or null when there is none.
-    /// </summary>
-    /// <remarks>
-    /// An authenticated storage read. Row-level security serves only the object belonging
-    /// to the active trip's camera, so null covers a purged image, one not captured yet,
-    /// and a denied request alike.
-    ///
-    /// The timestamp query parameter is required, not decorative. The object is
-    /// overwritten in place on every wake and storage caches by URL, so without a unique
-    /// query string a refresh returns the previous photo.
-    /// </remarks>
+    // Downloads the camera's most recent wake snapshot, or null when there is none.
+    //
+    // An authenticated storage read. Row-level security serves only the object belonging
+    // to the active trip's camera, so null covers a purged image, one not captured yet,
+    // and a denied request alike.
+    //
+    // The timestamp query parameter is required, not decorative. The object is
+    // overwritten in place on every wake and storage caches by URL, so without a unique
+    // query string a refresh returns the previous photo.
     public async Task<byte[]?> DownloadSnapshotAsync(string deviceId)
     {
         var req = new HttpRequestMessage(HttpMethod.Get,
@@ -301,7 +284,7 @@ public class DriverDataService
     {
         // Reads through the postgrest client are reliable, but writes go through the REST
         // endpoint like every other write in this service. Its Insert and Upsert fail
-        // silently on MAUI, which left new drivers unable to set themselves available.
+        // silently on MAUI, which leaves new drivers unable to set themselves available.
         var existing = await _supabase.From<DriverAvailability>()
             .Filter("user_id", Operator.Equals, userId.ToString())
             .Get();
@@ -318,7 +301,7 @@ public class DriverDataService
         }
     }
 
-    /// <summary>The driver's current assignment: any trip today that is not yet completed.</summary>
+    // The driver's current assignment: any trip today that is not yet completed.
     public async Task<Trip?> GetTodayAssignmentAsync(int userId)
     {
         // Yesterday is included so an overnight shift, for example 10pm to 6am, is still
@@ -340,17 +323,16 @@ public class DriverDataService
             .FirstOrDefault();
     }
 
-    /// <summary>Wall-clock end of a shift. An end at or before the start means the shift
-    /// runs overnight, so it rolls to the next day.</summary>
+    // Wall-clock end of a shift. An end at or before the start means the shift
+    // runs overnight, so it rolls to the next day.
     private static DateTime ShiftEnd(Trip t)
         => t.Date.Date + t.ShiftEndTime + (t.ShiftEndTime <= t.ShiftStartTime ? TimeSpan.FromDays(1) : TimeSpan.Zero);
 
-    /// <summary>The nearest trip after today that is not completed, shown as a preview on
-    /// the home screen.</summary>
-    /// <remarks>
-    /// The server picks the one trip. Home asks every few seconds, and a published roster
-    /// gives a driver a month of trips ahead.
-    /// </remarks>
+    // The nearest trip after today that is not completed, shown as a preview on
+    // the home screen.
+    //
+    // The server picks the one trip. Home asks every few seconds, and a published roster
+    // gives a driver a month of trips ahead.
     public async Task<Trip?> GetUpcomingAssignmentAsync(int userId)
     {
         var today = PhTime.Now.Date.ToString("yyyy-MM-dd");
@@ -365,10 +347,8 @@ public class DriverDataService
         return r.Models.FirstOrDefault();
     }
 
-    /// <summary>
-    /// A route's name and ends. Its map line and stops are not read: the app shows
-    /// neither, and they are most of the row.
-    /// </summary>
+    // A route's name and ends. Its map line and stops are not read: the app shows
+    // neither, and they are most of the row.
     public async Task<BusRoute?> GetRouteAsync(int routeId)
     {
         lock (_routes)
@@ -393,16 +373,15 @@ public class DriverDataService
         return r.Models.FirstOrDefault();
     }
 
-    /// <summary>The most recent checklist submitted for a trip, or null if there is none.</summary>
-    /// <summary>The most recent inspection for a trip, optionally narrowed to one bus.</summary>
-    /// <remarks>
-    /// A trip can carry more than one inspection, because a bus reassigned after the
-    /// first one has not been looked at. Passing the vehicle asks the question that
-    /// matters before a shift starts, which is whether the bus about to be driven has
-    /// been inspected, not whether the trip has an inspection somewhere in its history.
-    /// Omitting it returns the trip's latest whatever bus it describes, which is what a
-    /// log of what happened wants.
-    /// </remarks>
+    // The most recent checklist submitted for a trip, or null if there is none.
+    // The most recent inspection for a trip, optionally narrowed to one bus.
+    //
+    // A trip can carry more than one inspection, because a bus reassigned after the
+    // first one has not been looked at. Passing the vehicle asks the question that
+    // matters before a shift starts, which is whether the bus about to be driven has
+    // been inspected, not whether the trip has an inspection somewhere in its history.
+    // Omitting it returns the trip's latest whatever bus it describes, which is what a
+    // log of what happened wants.
     public async Task<BusChecklist?> GetChecklistAsync(string tripId, string? vehicleId = null)
     {
         var q = _supabase.From<BusChecklist>()
@@ -414,11 +393,10 @@ public class DriverDataService
         return r.Models.OrderByDescending(c => c.SubmittedAt).FirstOrDefault();
     }
 
-    /// <summary>
-    /// Whether the bus about to be driven has been inspected for a trip: the latest
-    /// inspection's status alone, without the answers to each item.
-    /// </summary>
-    /// <remarks>For the home screen, which asks every few seconds and shows only the status.</remarks>
+    // Whether the bus about to be driven has been inspected for a trip: the latest
+    // inspection's status alone, without the answers to each item.
+    //
+    // For the home screen, which asks every few seconds and shows only the status.
     public async Task<BusChecklist?> GetChecklistStatusAsync(string tripId, string? vehicleId)
     {
         var q = _supabase.From<BusChecklist>()
@@ -430,38 +408,36 @@ public class DriverDataService
         return r.Models.FirstOrDefault();
     }
 
-    /// <summary>What the bus is doing before a shift on it can be started.</summary>
-    /// <remarks>
-    /// Whether the bus still carries an open trip, when that trip was rostered to end, and
-    /// whether it has been inspected in this operational day. All three are facts about
-    /// somebody else's work, which a driver key cannot read: trips are scoped to their own
-    /// driver and inspections to the trips they belong to.
-    ///
-    /// Asked of a function rather than of the tables, so neither policy has to be widened
-    /// to serve a screen that needs a yes or a no. The function answers only for a trip
-    /// this driver is on, and names nobody.
-    ///
-    /// Null when the answer cannot be had. Both features it feeds then stay hidden, which
-    /// holds the driver to the ordinary start window and the full inspection.
-    /// </remarks>
+    // What the bus is doing before a shift on it can be started.
+    //
+    // Whether the bus still carries an open trip, when that trip was rostered to end, and
+    // whether it has been inspected in this operational day. All three are facts about
+    // somebody else's work, which a driver key cannot read: trips are scoped to their own
+    // driver and inspections to the trips they belong to.
+    //
+    // Asked of a function rather than of the tables, so neither policy has to be widened
+    // to serve a screen that needs a yes or a no. The function answers only for a trip
+    // this driver is on, and names nobody.
+    //
+    // Null when the answer cannot be had. Both features it feeds then stay hidden, which
+    // holds the driver to the ordinary start window and the full inspection.
     public Task<ShiftStartContext?> GetShiftStartContextAsync(string tripId)
         => RpcReadAsync<ShiftStartContext>("shift_start_context", new { p_trip_id = tripId });
 
-    /// <summary>Records that a trip stood on the inspection its bus already cleared today.</summary>
-    /// <remarks>
-    /// A row rather than nothing at all, because every trip has to carry an inspection of
-    /// its own for the dashboard to read and for the shift to be startable. The status is
-    /// what says nobody walked around the bus a second time, and there are no item
-    /// results because none were taken.
-    ///
-    /// Written straight to the table rather than through the inspection function, whose
-    /// work is judging item results and grounding a bus on a critical fault. A skip
-    /// judges nothing, so there is nothing for it to decide.
-    /// </remarks>
+    // Records that a trip stood on the inspection its bus already cleared today.
+    //
+    // A row rather than nothing at all, because every trip has to carry an inspection of
+    // its own for the dashboard to read and for the shift to be startable. The status is
+    // what says nobody walked around the bus a second time, and there are no item
+    // results because none were taken.
+    //
+    // Written straight to the table rather than through the inspection function, whose
+    // work is judging item results and grounding a bus on a critical fault. A skip
+    // judges nothing, so there is nothing for it to decide.
     public async Task SkipChecklistAsync(string tripId, string vehicleId, int driverId)
     {
         // The five sections are required columns, and a skip has nothing to put in them.
-        // Left out, the database refused every skip on the missing values. An empty
+        // Left out, the database refuses every skip on the missing values. An empty
         // section is the truth of an inspection that was not carried out, and it reads
         // back as a section with no items everywhere a checklist is shown.
         var none = new Dictionary<string, string>();
@@ -480,7 +456,7 @@ public class DriverDataService
         });
     }
 
-    /// <summary>The driver's most recent finished trip, chosen by the server.</summary>
+    // The driver's most recent finished trip, chosen by the server.
     public async Task<Trip?> GetLastCompletedTripAsync(int userId)
     {
         var r = await _supabase.From<Trip>()
@@ -501,8 +477,9 @@ public class DriverDataService
         return r.Models.FirstOrDefault();
     }
 
-    /// <summary>The driver's latest finished trips, newest first, at most <see cref="RecentTripCount"/>.</summary>
-    /// <remarks>More than a driver can run in a month, so the month's figures above the list are whole.</remarks>
+    // The driver's latest finished trips, newest first, at most RecentTripCount.
+    //
+    // More than a driver can run in a month, so the month's figures above the list are whole.
     public async Task<List<Trip>> GetRecentTripsAsync(int userId)
     {
         var r = await _supabase.From<Trip>()
@@ -520,23 +497,23 @@ public class DriverDataService
     // The last list read, so the Trips tab opens on it at once and refreshes behind it.
     private (int UserId, List<Trip> Trips)? _recentTrips;
 
-    /// <summary>The recent trips last read for <paramref name="userId"/>, or null before the first read.</summary>
+    // The recent trips last read for userId, or null before the first read.
     public List<Trip>? PeekRecentTrips(int userId) =>
         _recentTrips is { } c && c.UserId == userId ? c.Trips.ToList() : null;
 
-    /// <summary>The messages already held for <paramref name="userId"/>, or null before the first read.</summary>
-    /// <remarks>The message watch reads them from sign-in on, so the tab rarely waits.</remarks>
+    // The messages already held for userId, or null before the first read.
+    //
+    // The message watch reads them from sign-in on, so the tab rarely waits.
     public List<MessageModel>? PeekMessages(int userId)
     {
         lock (_messagesGate)
             return _messagesUser == userId && _messages.Count > 0 ? _messages.ToList() : null;
     }
 
-    /// <summary>
-    /// Every finished trip of the driver, with only the day and the passengers carried,
-    /// for the totals on the profile.
-    /// </summary>
-    /// <remarks>Read a page at a time, so a long record is counted whole rather than cut at the server's row limit.</remarks>
+    // Every finished trip of the driver, with only the day and the passengers carried,
+    // for the totals on the profile.
+    //
+    // Read a page at a time, so a long record is counted whole rather than cut at the server's row limit.
     public async Task<List<Trip>> GetCompletedTripTotalsAsync(int userId)
     {
         var all = new List<Trip>();
@@ -554,22 +531,18 @@ public class DriverDataService
         }
     }
 
-    /// <summary>
-    /// Messages this driver should see, newest first: broadcasts, messages for any route
-    /// they run, and messages addressed to them directly.
-    /// </summary>
-    /// <remarks>
-    /// A session starts with the last <see cref="MessageDays"/> days; older ones come from
-    /// <see cref="GetOlderMessagesAsync"/>. Which messages a driver may read is decided by
-    /// the database as it answers, from the trips they have run, so a message to a route
-    /// the driver was put on a moment ago is returned straight away.
-    ///
-    /// Asked for every few seconds, so after the first read only messages newer than the
-    /// newest one held are read, which on most checks is none. The whole list is read again
-    /// only when <paramref name="full"/> asks for it, as a pull to refresh does. Reading it
-    /// again on a timer only to let the oldest fall off cost the most data of any check the
-    /// app made, so the oldest are dropped here instead.
-    /// </remarks>
+    // Messages this driver should see, newest first: broadcasts, messages for any route
+    // they run, and messages addressed to them directly.
+    //
+    // A session starts with the last MessageDays days; older ones come from
+    // GetOlderMessagesAsync. Which messages a driver may read is decided by
+    // the database as it answers, from the trips they have run, so a message to a route
+    // the driver was put on a moment ago is returned straight away.
+    //
+    // Asked for every few seconds, so after the first read only messages newer than the
+    // newest one held are read, which on most checks is none. The whole list is read again
+    // only when full asks for it, as a pull to refresh does. Reading it
+    // again on a timer only to let the oldest fall off would cost the most data of any check the app makes, so the oldest are dropped here instead.
     public async Task<List<MessageModel>> GetMessagesAsync(int userId, bool full = false)
     {
         var cutoff = PhTime.Now.AddDays(-MessageDays);
@@ -618,15 +591,12 @@ public class DriverDataService
         }
     }
 
-    /// <summary>
-    /// The next <see cref="OlderMessagePage"/> messages before the oldest one held, added to
-    /// the list, and whether there is anything older still.
-    /// </summary>
-    /// <remarks>
-    /// Paged by count rather than by days, so a quiet month costs one small read and a busy
-    /// one never more than a page. Messages from before the account was made are not
-    /// fetched, the same as for the first read.
-    /// </remarks>
+    // The next OlderMessagePage messages before the oldest one held, added to
+    // the list, and whether there is anything older still.
+    //
+    // Paged by count rather than by days, so a quiet month costs one small read and a busy
+    // one never more than a page. Messages from before the account was made are not
+    // fetched, the same as for the first read.
     public async Task<(List<MessageModel> Messages, bool More)> GetOlderMessagesAsync(int userId)
     {
         long? oldestHeld;
@@ -683,7 +653,7 @@ public class DriverDataService
             .ToList();
     }
 
-    /// <summary>When the account was made, read once per driver.</summary>
+    // When the account was made, read once per driver.
     private async Task<DateTime> AccountCreatedAsync(int userId)
     {
         if (_accountStart is { } held && held.UserId == userId)
@@ -697,14 +667,14 @@ public class DriverDataService
 
         // Stored as Philippine wall-clock, so the eight hours postgrest adds on the way
         // back are taken off. Left on, every message in an account's first eight hours
-        // fell before the clamp and was never shown.
+        // falls before the clamp and is never shown.
         var createdAt = PhTime.Raw(user.CreatedAt);
         _accountStart = new AccountStart(userId, createdAt);
         return createdAt;
     }
 
-    /// <summary>Read state, which is meaningful only for messages addressed to a single
-    /// driver.</summary>
+    // Read state, which is meaningful only for messages addressed to a single
+    // driver.
     public async Task MarkMessageReadAsync(long id)
     {
         await PatchAsync($"messages?message_id=eq.{id}", new { is_read = true });
@@ -751,7 +721,7 @@ public class DriverDataService
     // password_hash. The app never touches it.
 
 
-    /// <summary>The inspection items to show, in the order the dashboard set.</summary>
+    // The inspection items to show, in the order the dashboard set.
     public async Task<List<ChecklistItem>> GetChecklistItemsAsync()
     {
         var r = await _supabase.From<ChecklistItem>()
@@ -794,17 +764,16 @@ public class DriverDataService
             await UpdateVehicleStatusAsync(t.VehicleId, "On Trip");
     }
 
-    /// <summary>Pushes the running count.</summary>
-    /// <remarks>
-    /// The count is a claim rather than a value. While a camera is counting, a trigger
-    /// keeps the higher of this and what is stored, so a stale write from this app
-    /// cannot replace a count the counter phone made in a dead zone. While no camera is
-    /// counting the driver owns the figure and this sets it, which is what makes the
-    /// manual minus button work.
-    ///
-    /// Only an active trip takes it. A trip closed without this phone, by the next shift
-    /// starting on the bus, is left with the count it closed on.
-    /// </remarks>
+    // Pushes the running count.
+    //
+    // The count is a claim rather than a value. While a camera is counting, a trigger
+    // keeps the higher of this and what is stored, so a stale write from this app
+    // cannot replace a count the counter phone made in a dead zone. While no camera is
+    // counting the driver owns the figure and this sets it, which is what makes the
+    // manual minus button work.
+    //
+    // Only an active trip takes it. A trip closed without this phone, by the next shift
+    // starting on the bus, is left with the count it closed on.
     public async Task UpdateTripProgressAsync(string tripId, int totalBoarded, decimal revenue)
     {
         await PatchAsync($"trips?trip_id=eq.{Uri.EscapeDataString(tripId)}&trip_status=eq.Active",
@@ -828,13 +797,12 @@ public class DriverDataService
             await UpdateVehicleStatusAsync(t.VehicleId, "Ready to Deploy");
     }
 
-    // --- Leave -------------------------------------------------------------
+    // Leave requests
 
-    /// <summary>Everything this driver has ever filed, newest first.</summary>
-    /// <remarks>
-    /// The whole history rather than a window, because the balance is worked out from it
-    /// and a year's requests is a handful of rows.
-    /// </remarks>
+    // Everything this driver has ever filed, newest first.
+    //
+    // The whole history rather than a window, because the balance is worked out from it
+    // and a year's requests is a handful of rows.
     public async Task<List<LeaveRequest>> GetLeaveRequestsAsync(int userId)
     {
         var r = await _supabase.From<LeaveRequest>()
@@ -844,15 +812,14 @@ public class DriverDataService
         return r.Models;
     }
 
-    /// <summary>Files a request, which starts out waiting on a decision.</summary>
-    /// <remarks>
-    /// Three days' notice is asked for and never required, so nothing here refuses a
-    /// request for being late. filed_at is left to the database default so the time of
-    /// filing is the server's, not a phone's clock that may be wrong.
-    ///
-    /// Sent as a plain insert for the same reason the rest of this class does: the
-    /// postgrest client's model round-trip corrupts date columns on Android.
-    /// </remarks>
+    // Files a request, which starts out waiting on a decision.
+    //
+    // Three days' notice is asked for and never required, so nothing here refuses a
+    // request for being late. filed_at is left to the database default so the time of
+    // filing is the server's, not a phone's clock that may be wrong.
+    //
+    // Sent as a plain insert for the same reason the rest of this class does: the
+    // postgrest client's model round-trip corrupts date columns on Android.
     public async Task FileLeaveAsync(
         int userId, string leaveType, DateTime startDate, DateTime endDate, string? reason)
     {
@@ -867,13 +834,12 @@ public class DriverDataService
         });
     }
 
-    /// <summary>Withdraws a request that has not been decided yet.</summary>
-    /// <remarks>
-    /// Filtered on status as well as id, so a request decided while the phone was showing
-    /// the old list is not withdrawn out from under the decision. The row is left in place
-    /// rather than deleted: what was asked for is part of the record even when it is taken
-    /// back, and the days it was holding are freed by the status alone.
-    /// </remarks>
+    // Withdraws a request that has not been decided yet.
+    //
+    // Filtered on status as well as id, so a request decided while the phone was showing
+    // the old list is not withdrawn out from under the decision. The row is left in place
+    // rather than deleted: what was asked for is part of the record even when it is taken
+    // back, and the days it was holding are freed by the status alone.
     public async Task CancelLeaveAsync(long requestId)
     {
         // decided_at is stamped here too. Withdrawing settles the request as surely as a
@@ -899,15 +865,14 @@ public class DriverDataService
                 null, System.Net.HttpStatusCode.Conflict);
     }
 
-    /// <summary>Calls a database function as the signed-in driver.</summary>
-    /// <remarks>
-    /// For the writes a row policy cannot express. A policy checks the row before the
-    /// change and the row after it, and cannot tie the two together, so "may mark this
-    /// only if it was already approved" is not a rule it can state. Written as a policy
-    /// wide enough to allow the mark, it would also allow a driver to set their own
-    /// pending request to approved. The function decides what changes instead, and the
-    /// driver is granted nothing beyond the right to call it.
-    /// </remarks>
+    // Calls a database function as the signed-in driver.
+    //
+    // For the writes a row policy cannot express. A policy checks the row before the
+    // change and the row after it, and cannot tie the two together, so "may mark this
+    // only if it was already approved" is not a rule it can state. Written as a policy
+    // wide enough to allow the mark, it would also allow a driver to set their own
+    // pending request to approved. The function decides what changes instead, and the
+    // driver is granted nothing beyond the right to call it.
     private static async Task RpcAsync(string function, object args)
     {
         var req = new HttpRequestMessage(HttpMethod.Post,
@@ -920,13 +885,12 @@ public class DriverDataService
         await ThrowIfRefusedAsync(res);
     }
 
-    /// <summary>Calls a function that answers with rows, and takes the first.</summary>
-    /// <remarks>
-    /// A function that returns a table answers as an array, the same shape a table read
-    /// does, and an empty array is the answer when the caller may not be told. Null here
-    /// therefore means no answer rather than a failure, and every caller treats it that
-    /// way.
-    /// </remarks>
+    // Calls a function that answers with rows, and takes the first.
+    //
+    // A function that returns a table answers as an array, the same shape a table read
+    // does, and an empty array is the answer when the caller may not be told. Null here
+    // therefore means no answer rather than a failure, and every caller treats it that
+    // way.
     private static async Task<T?> RpcReadAsync<T>(string function, object args)
     {
         var req = new HttpRequestMessage(HttpMethod.Post,
@@ -943,17 +907,14 @@ public class DriverDataService
         return list is { Count: > 0 } ? list[0] : default;
     }
 
-    /// <summary>
-    /// Asks the dispatcher to cancel leave that has already been granted.
-    /// </summary>
-    /// <remarks>
-    /// An ask, not an act. Handing the days back does not put the driver on a shift: the
-    /// week was planned around their absence and only the dispatcher can put them back on
-    /// it. A driver who withdrew their own leave would read a rest day on the calendar,
-    /// stated with confidence, on days they expected to drive.
-    ///
-    /// The queue carries the asking, because it is the only thing a dispatcher watches.
-    /// </remarks>
+    // Asks the dispatcher to cancel leave that has already been granted.
+    //
+    // An ask, not an act. Handing the days back does not put the driver on a shift: the
+    // week was planned around their absence and only the dispatcher can put them back on
+    // it. A driver who withdrew their own leave would read a rest day on the calendar,
+    // stated with confidence, on days they expected to drive.
+    //
+    // The queue carries the asking, because it is the only thing a dispatcher watches.
     public async Task RequestLeaveWithdrawalAsync(long requestId, string reason)
     {
         await RpcAsync("request_leave_withdrawal", new
@@ -963,12 +924,11 @@ public class DriverDataService
         });
     }
 
-    /// <summary>Every trip assigned to a driver between two days, whatever its status.</summary>
-    /// <remarks>
-    /// The calendar draws a month at a time, so it asks for a month at a time rather than
-    /// a request per day. Completed and Active trips are included: a driver looking back
-    /// over the month wants the days they worked as much as the days they are booked for.
-    /// </remarks>
+    // Every trip assigned to a driver between two days, whatever its status.
+    //
+    // The calendar draws a month at a time, so it asks for a month at a time rather than
+    // a request per day. Completed and Active trips are included: a driver looking back
+    // over the month wants the days they worked as much as the days they are booked for.
     public async Task<List<Trip>> GetTripsBetweenAsync(int userId, DateTime from, DateTime to)
     {
         var r = await _supabase.From<Trip>()
@@ -980,12 +940,11 @@ public class DriverDataService
         return r.Models;
     }
 
-    /// <summary>Approved leave overlapping a span of days.</summary>
-    /// <remarks>
-    /// Overlapping, not contained: a leave that starts in August and ends in September
-    /// covers days in both, and asking for requests that begin inside the month would
-    /// miss it.
-    /// </remarks>
+    // Approved leave overlapping a span of days.
+    //
+    // Overlapping, not contained: a leave that starts in August and ends in September
+    // covers days in both, and asking for requests that begin inside the month would
+    // miss it.
     public async Task<List<LeaveRequest>> GetApprovedLeaveBetweenAsync(int userId, DateTime from, DateTime to)
     {
         var r = await _supabase.From<LeaveRequest>()
@@ -997,16 +956,15 @@ public class DriverDataService
         return r.Models;
     }
 
-    /// <summary>The weeks marked as built within a span, by Monday, and whether only a roster publish marked each.</summary>
-    /// <remarks>
-    /// What separates a rest day from a day nobody has scheduled yet. Keyed by week start
-    /// rather than by day, because the planner saves a week at a time and every day in a
-    /// saved week is answered.
-    ///
-    /// A week only a roster publish has marked answers just the days of a published month
-    /// in it. The publish wrote those days, and not the days of that week that fall in the
-    /// month next door.
-    /// </remarks>
+    // The weeks marked as built within a span, by Monday, and whether only a roster publish marked each.
+    //
+    // What separates a rest day from a day nobody has scheduled yet. Keyed by week start
+    // rather than by day, because the planner saves a week at a time and every day in a
+    // saved week is answered.
+    //
+    // A week only a roster publish has marked answers just the days of a published month
+    // in it. The publish wrote those days, and not the days of that week that fall in the
+    // month next door.
     public async Task<Dictionary<DateTime, bool>> GetScheduledWeeksAsync(DateTime from, DateTime to)
     {
         var r = await _supabase.From<ScheduleWeek>()
@@ -1016,11 +974,10 @@ public class DriverDataService
         return r.Models.GroupBy(w => w.WeekStart.Date).ToDictionary(g => g.Key, g => g.All(w => w.RosterOnly));
     }
 
-    /// <summary>The first days of the months with a published roster, within a span.</summary>
-    /// <remarks>
-    /// Empty when the roster tables do not exist yet, so the calendar falls back to the
-    /// planner's weeks alone rather than failing.
-    /// </remarks>
+    // The first days of the months with a published roster, within a span.
+    //
+    // Empty when the roster tables do not exist yet, so the calendar falls back to the
+    // planner's weeks alone rather than failing.
     public async Task<HashSet<DateTime>> GetPublishedMonthsAsync(DateTime from, DateTime to)
     {
         try
@@ -1038,11 +995,10 @@ public class DriverDataService
         }
     }
 
-    /// <summary>The driver's own roster places in the published months of a span.</summary>
-    /// <remarks>
-    /// At most one a month. Empty for a driver with no place on the roster, for months not
-    /// yet published, and when the roster tables do not exist yet.
-    /// </remarks>
+    // The driver's own roster places in the published months of a span.
+    //
+    // At most one a month. Empty for a driver with no place on the roster, for months not
+    // yet published, and when the roster tables do not exist yet.
     public async Task<List<RosterSlot>> GetRosterSlotsAsync(int userId, DateTime from, DateTime to)
     {
         try
@@ -1062,11 +1018,10 @@ public class DriverDataService
 
     private static DateTime FirstOfMonth(DateTime d) => new(d.Year, d.Month, 1);
 
-    /// <summary>Approved leave covering a given day, or null when there is none.</summary>
-    /// <remarks>
-    /// Asked of the server rather than filtered from the full list, because the home page
-    /// wants one answer about one day and not a driver's whole year of requests.
-    /// </remarks>
+    // Approved leave covering a given day, or null when there is none.
+    //
+    // Asked of the server rather than filtered from the full list, because the home page
+    // wants one answer about one day and not a driver's whole year of requests.
     public async Task<LeaveRequest?> GetApprovedLeaveOnAsync(int userId, DateTime day)
     {
         var iso = day.ToString("yyyy-MM-dd");

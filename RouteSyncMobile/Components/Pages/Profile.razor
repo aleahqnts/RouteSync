@@ -285,9 +285,7 @@ else
     {
         if (!Session.IsLoggedIn) { Nav.NavigateTo("/"); return; }
 
-        // In a finally, because the flag is what the page is waiting on. A read that
-        // throws used to leave it raised for good, and the skeleton stayed until the tab
-        // was left and come back to, which built a new page and tried again.
+        // In a finally, because the flag is what the page is waiting on. A read that throws would otherwise leave it raised for good, and the skeleton would stay until the tab was left and returned to, which builds a new page and tries again.
         try { await LoadUser(); }
         finally { loading = false; }
     }

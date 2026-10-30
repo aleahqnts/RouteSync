@@ -6,10 +6,8 @@ using FleetWiseMobile.Services;
 
 namespace FleetWiseMobile.Platforms.Android;
 
-/// <summary>
-/// System-tray notification for new messages, on its own channel so it can be managed
-/// separately from the trip-tracking service's notification.
-/// </summary>
+// System-tray notification for new messages, on its own channel so it can be managed
+// separately from the trip-tracking service's notification.
 public class AndroidLocalNotifier : ILocalNotifier
 {
     private const string ChannelId = "routesync_messages";

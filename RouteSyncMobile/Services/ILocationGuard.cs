@@ -1,45 +1,42 @@
 namespace FleetWiseMobile.Services;
 
-/// <summary>Whether this phone can currently report where the bus is.</summary>
+// Whether this phone can currently report where the bus is.
 public enum LocationState
 {
-    /// <summary>Location services are on and the app may use them.</summary>
+    // Location services are on and the app may use them.
     Ready,
 
-    /// <summary>The phone's location switch is off.</summary>
+    // The phone's location switch is off.
     ServicesOff,
 
-    /// <summary>The switch may be on, but the app has not been allowed to use it.</summary>
+    // The switch may be on, but the app has not been allowed to use it.
     PermissionDenied
 }
 
-/// <summary>
-/// Checks that the phone is able to report its position, and opens the setting that
-/// fixes it when it cannot.
-/// </summary>
-/// <remarks>
-/// Granting the app location permission is not the same as location being on. A driver
-/// can grant the permission and then turn location off from quick settings, and the
-/// tracking service then gets no fix at all. It writes no telemetry, so the fleet map
-/// shows the bus as having no active trip, and nothing on the phone said anything was
-/// wrong. This is what makes that visible.
-/// </remarks>
+// Checks that the phone is able to report its position, and opens the setting that
+// fixes it when it cannot.
+//
+// Granting the app location permission is not the same as location being on. A driver
+// can grant the permission and then turn location off from quick settings, and the
+// tracking service then gets no fix at all. It writes no telemetry, so the fleet map
+// shows the bus as having no active trip, and nothing on the phone said anything was
+// wrong. This is what makes that visible.
 public interface ILocationGuard
 {
-    /// <summary>Permission and the location switch together.</summary>
+    // Permission and the location switch together.
     Task<LocationState> CheckAsync();
 
-    /// <summary>The location switch alone. Cheap enough to call on every tick.</summary>
+    // The location switch alone. Cheap enough to call on every tick.
     bool ServicesEnabled();
 
-    /// <summary>Opens the system screen with the location switch on it.</summary>
+    // Opens the system screen with the location switch on it.
     void OpenLocationSettings();
 
-    /// <summary>Opens this app's own settings page, where a denied permission is granted.</summary>
+    // Opens this app's own settings page, where a denied permission is granted.
     void OpenAppSettings();
 }
 
-/// <summary>Always ready, so the app still builds and runs on Windows.</summary>
+// Always ready, so the app still builds and runs on Windows.
 public class NoopLocationGuard : ILocationGuard
 {
     public Task<LocationState> CheckAsync() => Task.FromResult(LocationState.Ready);

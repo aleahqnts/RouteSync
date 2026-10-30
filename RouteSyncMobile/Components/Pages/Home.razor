@@ -209,7 +209,7 @@ else
 
         @* The rest of the month, from the screen already showing one day of it. A driver
            looking at today's assignment is the one asking whether they are on next
-           Thursday, and the answer was nowhere in the app. *@
+           Thursday, and the app gave no answer. *@
         <div class="info-card info-card--action">
             <div>
                 <p class="s-title">My Schedule</p>
@@ -232,7 +232,7 @@ else
         else
         {
             @* The switch says what is true now: on is available. A question beside a switch
-               left drivers reading "on" as "yes, I am unable". *@
+               leaves drivers reading "on" as "yes, I am unable". *@
             <div class="prompt-card @(IsAvailable ? "" : "warn-bg")">
                 <div>
                     <p class="s-title">@(IsAvailable ? "Available to drive" : "Not available to drive")</p>
@@ -323,18 +323,17 @@ else
     private Trip? lastTrip;
     private LeaveRequest? leaveToday;
 
-    /// <summary>The driver's place on this month's published roster, when they have one.</summary>
+    // The driver's place on this month's published roster, when they have one.
 
-    /// <summary>What the assigned bus is doing, beyond what this driver may read directly.</summary>
-    /// <remarks>
-    /// A shift handed over on the road rather than in the yard tightens the start window
-    /// and turns starting into a takeover, so it is read on every load rather than only
-    /// when the driver reaches for the button.
-    ///
-    /// Null when the answer could not be had. Everything it feeds then behaves as though
-    /// the bus were free, which is the stricter reading: the ordinary start window applies
-    /// and no takeover is offered.
-    /// </remarks>
+    // What the assigned bus is doing, beyond what this driver may read directly.
+    //
+    // A shift handed over on the road rather than in the yard tightens the start window
+    // and turns starting into a takeover, so it is read on every load rather than only
+    // when the driver reaches for the button.
+    //
+    // Null when the answer could not be had. Everything it feeds then behaves as though
+    // the bus were free, which is the stricter reading: the ordinary start window applies
+    // and no takeover is offered.
     private ShiftStartContext? shiftContext;
     private bool showTakeoverModal;
 
@@ -348,7 +347,7 @@ else
 
     private bool IsAvailable => availability == "Available";
 
-    /// <summary>The leave being taken, and the days it covers.</summary>
+    // The leave being taken, and the days it covers.
     private string LeaveLabel
     {
         get
@@ -363,13 +362,13 @@ else
         }
     }
 
-    /// <summary>What the driver is told once they have reported it, on the shift itself.</summary>
+    // What the driver is told once they have reported it, on the shift itself.
     private string ReliefMessage =>
         assignment?.TripStatus == "Active"
             ? "You reported that you cannot drive. Stay with the bus until your dispatcher confirms who is taking over."
             : "You reported that you cannot drive. Your dispatcher will reassign this shift.";
 
-    /// <summary>What reporting it will do, said before they confirm.</summary>
+    // What reporting it will do, said before they confirm.
     private string ReportSub =>
         assignment is null
             ? "Dispatch will be told, and you will not be assigned until you are ready."
@@ -384,22 +383,19 @@ else
     private bool checklistBlocked =>
         string.Equals(checklist?.ChecklistStatus, "Failed", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Whether the bus about to be driven has been signed off.</summary>
-    /// <remarks>
-    /// Having an inspection is not the same as having passed one. A critical fault
-    /// records Failed and grounds the bus, and the grounding used to be the only thing
-    /// standing in the way, so a shift whose bus was swapped for a healthy one became
-    /// startable on the strength of an inspection that had failed on a different bus.
-    ///
-    /// Pending is not a pass either. Defects that are not critical are, which is the
-    /// same call the inspection itself makes when it decides whether to ground.
-    ///
-    /// A skip clears the gate for the same reason a pass does. An inspection covers the
-    /// bus for the service day, and skipping is only offered once that bus has cleared
-    /// one in the day being worked, so the bus behind a skip has been looked at. A
-    /// failure is the opposite case: it grounds the bus, and what the trip is waiting for
-    /// is a reassignment rather than another tap.
-    /// </remarks>
+    // Whether the bus about to be driven has been signed off.
+    //
+    // Having an inspection is not the same as having passed one. A critical fault
+    // records Failed and grounds the bus, and grounding alone is not enough: a shift whose bus was swapped for a healthy one would otherwise become startable on the strength of an inspection that failed on a different bus.
+    //
+    // Pending is not a pass either. Defects that are not critical are, which is the
+    // same call the inspection itself makes when it decides whether to ground.
+    //
+    // A skip clears the gate for the same reason a pass does. An inspection covers the
+    // bus for the service day, and skipping is only offered once that bus has cleared
+    // one in the day being worked, so the bus behind a skip has been looked at. A
+    // failure is the opposite case: it grounds the bus, and what the trip is waiting for
+    // is a reassignment rather than another tap.
     private bool ChecklistCleared =>
         checklist is not null
         && (string.Equals(checklist.ChecklistStatus, "Passed", StringComparison.OrdinalIgnoreCase)
@@ -422,13 +418,12 @@ else
         }
     }
 
-    /// <summary>What Bao says on the card under the greeting, for each state of the day.</summary>
-    /// <remarks>
-    /// Each state has two English wordings and two in casual Taglish, so he does not
-    /// repeat himself and sounds like a coworker rather than a system. When something is
-    /// wrong he says plainly what happens next and his face shows concern (see
-    /// <see cref="BaoFace"/>). The bus is a thing, never a person: "ang Bus", not "si Bus".
-    /// </remarks>
+    // What Bao says on the card under the greeting, for each state of the day.
+    //
+    // Each state has two English wordings and two in casual Taglish, so he does not
+    // repeat himself and sounds like a coworker rather than a system. When something is
+    // wrong he says plainly what happens next and his face shows concern (see
+    // BaoFace). The bus is a thing, never a person: "ang Bus", not "si Bus".
     private string BaoLine
     {
         get
@@ -519,19 +514,17 @@ else
         }
     }
 
-    /// <summary>
-    /// The greeting and one of a state's wordings. The pick follows the service day (from
-    /// 6:00 AM) and the driver, so a line holds through the day's refreshes and drivers
-    /// on the same day do not all read the same one.
-    /// </summary>
+    // The greeting and one of a state's wordings. The pick follows the service day (from
+    // 6:00 AM) and the driver, so a line holds through the day's refreshes and drivers
+    // on the same day do not all read the same one.
     private string Say(params string[] lines) => $"{Greeting}. {lines[DaySeed % lines.Length]}";
 
-    /// <summary>Changes with the service day (from 6:00 AM) and differs between drivers.</summary>
+    // Changes with the service day (from 6:00 AM) and differs between drivers.
     private int DaySeed => PhTime.Now.AddHours(-6).DayOfYear + (Session.CurrentUser?.UserId ?? 0);
 
-    /// <summary>Bao's face on the Home card: cheeky or chill on a day off (alternating by
-    /// day), concerned when the driver cannot drive or the bus is out of service, relaxed
-    /// otherwise.</summary>
+    // Bao's face on the Home card: cheeky or chill on a day off (alternating by
+    // day), concerned when the driver cannot drive or the bus is out of service, relaxed
+    // otherwise.
     private string? BaoFace =>
         leaveToday is not null ? (DaySeed % 2 == 0 ? "cheeky" : "chill")
         : !IsAvailable || (VehicleGrounded && assignment?.TripStatus != "Active") ? "worried"
@@ -548,12 +541,11 @@ else
         }
     }
 
-    /// <summary>Whether this phone has already ended the shift it is showing.</summary>
-    /// <remarks>
-    /// True between a trip being ended out of contact and the queued record reaching the
-    /// server. The server reads the trip as active for the whole of that window, and
-    /// believing it offers the driver a shift they have already finished.
-    /// </remarks>
+    // Whether this phone has already ended the shift it is showing.
+    //
+    // True between a trip being ended out of contact and the queued record reaching the
+    // server. The server reads the trip as active for the whole of that window, and
+    // believing it offers the driver a shift they have already finished.
     private bool endPending;
 
     // The inspection opens first and stays the widest of the three. It is a walk around
@@ -574,7 +566,7 @@ else
         ? DateTime.MinValue
         : assignment.Date.Date + assignment.ShiftStartTime;
 
-    /// <summary>When the assigned shift is rostered to end, on the next day for an overnight shift.</summary>
+    // When the assigned shift is rostered to end, on the next day for an overnight shift.
     private DateTime ShiftEnd => assignment is null
         ? DateTime.MinValue
         : assignment.Date.Date + assignment.ShiftEndTime
@@ -598,22 +590,20 @@ else
 
     private bool ChecklistOpen => assignment is not null && PhTime.Now >= ChecklistOpensAt;
 
-    /// <summary>Whether the shift can be started now.</summary>
-    /// <remarks>
-    /// The clock and the inspection together. The start window exists to put a checked
-    /// bus on the road at the right time, and an open window on a bus nobody has looked
-    /// at starts nothing.
-    /// </remarks>
+    // Whether the shift can be started now.
+    //
+    // The clock and the inspection together. The start window exists to put a checked
+    // bus on the road at the right time, and an open window on a bus nobody has looked
+    // at starts nothing.
     private bool CanStart => assignment is not null && ChecklistCleared && PhTime.Now >= StartOpensAt;
 
-    /// <summary>The bus as the driver knows it, once the vehicle row has loaded.</summary>
+    // The bus as the driver knows it, once the vehicle row has loaded.
     private string BusLabel => vehicle?.VehicleId ?? assignment?.VehicleId ?? "";
 
-    /// <summary>When the trip still running on the bus is rostered to end.</summary>
-    /// <remarks>
-    /// Already a Philippine wall-clock reading, and already carries the extra day an
-    /// overnight shift ends on, so it is formatted rather than reassembled here.
-    /// </remarks>
+    // When the trip still running on the bus is rostered to end.
+    //
+    // Already a Philippine wall-clock reading, and already carries the extra day an
+    // overnight shift ends on, so it is formatted rather than reassembled here.
     private string OpenTripEndLabel => shiftContext?.OpenTripEndsAt is DateTime ends
         ? ends.ToString("h:mm tt")
         : "";
@@ -630,7 +620,7 @@ else
         }
     }
 
-    /// <summary>Why a bus that has been inspected still cannot be taken out.</summary>
+    // Why a bus that has been inspected still cannot be taken out.
     private string StartLockLabel
     {
         get
@@ -811,8 +801,7 @@ else
         {
             // A reason every time, shift or no shift. Sickness, an emergency and a fault
             // with the bus are what this is for, and a dispatcher cannot act on the report
-            // without knowing which of them it is. Reporting one used to be silent when
-            // nobody was rostered, which is the case where the reason is the whole message.
+            // without knowing which of them it is. With nobody rostered there is nothing else to say what happened, so the reason is the whole message.
             reasonChoice = null;
             reasonNote = "";
             showUnavailModal = true;
@@ -855,11 +844,10 @@ else
 
     private void StartChecklist() => Nav.NavigateTo($"/checklist/{assignment!.TripId}");
 
-    /// <summary>Takes the driver to the shift they are about to start.</summary>
-    /// <remarks>
-    /// A bus still carrying an open trip is a handover, and the driver is told which trip
-    /// it is and what starting will do to it before they go any further.
-    /// </remarks>
+    // Takes the driver to the shift they are about to start.
+    //
+    // A bus still carrying an open trip is a handover, and the driver is told which trip
+    // it is and what starting will do to it before they go any further.
     private void StartTrip()
     {
         if (HasOpenTrip)
@@ -888,12 +876,11 @@ else
             await JS.InvokeVoidAsync("ptr.set", _ptrRef);
         }
     }
-    /// <summary>Re-reads the page on a pull, and when the app comes back to the front.</summary>
-    /// <remarks>
-    /// Silent, so the card on screen stays put. The pull draws its own indicator, and
-    /// coming back to the app draws none: either way, raising the skeleton blanks a page
-    /// the driver is already reading.
-    /// </remarks>
+    // Re-reads the page on a pull, and when the app comes back to the front.
+    //
+    // Silent, so the card on screen stays put. The pull draws its own indicator, and
+    // coming back to the app draws none: either way, raising the skeleton blanks a page
+    // the driver is already reading.
     [JSInvokable] public async Task Refresh() { await Load(silent: true); StateHasChanged(); }
 
     public void Dispose()

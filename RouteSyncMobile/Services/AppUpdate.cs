@@ -1,21 +1,20 @@
 namespace FleetWiseMobile.Services;
 
-/// <summary>A newer driver app that a GitHub Release carries as an APK.</summary>
+// A newer driver app that a GitHub Release carries as an APK.
 public record UpdateOffer(Version Version, string ApkUrl);
 
-/// <summary>Finds out whether a newer driver app has been published, and downloads it.</summary>
-/// <remarks>
-/// The dashboard answers the check from the GitHub Releases it keeps in memory, so phones
-/// sharing a network never run into GitHub's per-address request limit. The APK itself is
-/// downloaded from GitHub.
-/// </remarks>
+// Finds out whether a newer driver app has been published, and downloads it.
+//
+// The dashboard answers the check from the GitHub Releases it keeps in memory, so phones
+// sharing a network never run into GitHub's per-address request limit. The APK itself is
+// downloaded from GitHub.
 public static class AppUpdate
 {
     private const string FeedUrl = "https://dashboard.routesync.website/app/driver-update";
 
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(15) };
 
-    /// <summary>The offer when the published driver app is newer than <paramref name="installed"/>, else null.</summary>
+    // The offer when the published driver app is newer than installed, else null.
     public static async Task<UpdateOffer?> CheckAsync(Version installed)
     {
         try
@@ -32,7 +31,7 @@ public static class AppUpdate
         }
     }
 
-    /// <summary>The offer in the dashboard's answer when it is above <paramref name="installed"/>.</summary>
+    // The offer in the dashboard's answer when it is above installed.
     public static UpdateOffer? Parse(string feedJson, Version installed)
     {
         using var doc = System.Text.Json.JsonDocument.Parse(feedJson);
@@ -41,12 +40,11 @@ public static class AppUpdate
         return new UpdateOffer(version, root.GetProperty("apkUrl").GetString()!);
     }
 
-    /// <summary>Saves the APK to <paramref name="path"/>, reporting 0 to 1 as it goes.</summary>
-    /// <remarks>
-    /// Written beside it under a .part name and renamed only once complete, so a file at
-    /// <paramref name="path"/> is always a whole download that can be installed again
-    /// without fetching it a second time.
-    /// </remarks>
+    // Saves the APK to path, reporting 0 to 1 as it goes.
+    //
+    // Written beside it under a .part name and renamed only once complete, so a file at
+    // path is always a whole download that can be installed again
+    // without fetching it a second time.
     public static async Task DownloadAsync(string url, string path, IProgress<double> progress)
     {
         var part = path + ".part";
@@ -77,19 +75,17 @@ public static class AppUpdate
     }
 }
 
-/// <summary>Hands a downloaded APK to the phone's installer.</summary>
+// Hands a downloaded APK to the phone's installer.
 public interface IApkInstaller
 {
-    /// <summary>
-    /// False when the driver has not yet allowed this app to install apps. The phone's
-    /// own settings page for that has been opened, and the driver taps Update again after.
-    /// </summary>
+    // False when the driver has not yet allowed this app to install apps. The phone's
+    // own settings page for that has been opened, and the driver taps Update again after.
     bool EnsureAllowed();
 
     void Install(string apkPath);
 }
 
-/// <summary>For the Windows build, which has nothing to install.</summary>
+// For the Windows build, which has nothing to install.
 public class NoopApkInstaller : IApkInstaller
 {
     public bool EnsureAllowed() => false;

@@ -3,34 +3,30 @@ using Microsoft.Maui.Storage;
 
 namespace FleetWiseMobile.Services;
 
-/// <summary>
-/// Background poller for driver messages, running on its own timer for the whole
-/// signed-in session regardless of which page is shown.
-/// </summary>
-/// <remarks>
-/// Drives three things: the unread badge through <see cref="Changed"/> and
-/// <see cref="Unread"/>, the in-app popup through <see cref="NewMessage"/>, and an
-/// operating system notification for each newly arrived message.
-///
-/// Every message can be read or unread. A message addressed to this driver carries its
-/// read mark in the database. A broadcast or route message goes to many drivers and has
-/// no mark of its own there, so this phone keeps one for it.
-/// </remarks>
+// Background poller for driver messages, running on its own timer for the whole
+// signed-in session regardless of which page is shown.
+//
+// Drives three things: the unread badge through Changed and
+// Unread, the in-app popup through NewMessage, and an
+// operating system notification for each newly arrived message.
+//
+// Every message can be read or unread. A message addressed to this driver carries its
+// read mark in the database. A broadcast or route message goes to many drivers and has
+// no mark of its own there, so this phone keeps one for it.
 public class MessageWatch
 {
     private readonly DriverDataService _data;
     private readonly ILocalNotifier _notifier;
 
-    /// <summary>How often messages are checked.</summary>
-    /// <remarks>
-    /// Runs for the whole session, in the background too, since it raises the system
-    /// notification, so it is the app's most frequent request. A message waits at most this
-    /// long for its badge and notification. The notifications tab reads on its own while it
-    /// is open, and pull to refresh checks at once.
-    /// </remarks>
+    // How often messages are checked.
+    //
+    // Runs for the whole session, in the background too, since it raises the system
+    // notification, so it is the app's most frequent request. A message waits at most this
+    // long for its badge and notification. The notifications tab reads on its own while it
+    // is open, and pull to refresh checks at once.
     private const int PollMs = 15000;
 
-    /// <summary>The most broadcast and route read marks kept, newest messages first.</summary>
+    // The most broadcast and route read marks kept, newest messages first.
     private const int ReadMarksKept = 500;
 
     private System.Threading.Timer? _timer;
@@ -80,8 +76,8 @@ public class MessageWatch
         Unread = 0;
     }
 
-    /// <summary>Polls once on demand, such as a pull to refresh, so the badge updates
-    /// without waiting for the timer.</summary>
+    // Polls once on demand, such as a pull to refresh, so the badge updates
+    // without waiting for the timer.
     public Task RefreshNow() => Poll();
 
     private async Task Poll()
@@ -122,21 +118,20 @@ public class MessageWatch
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Watch.Poll] {ex}"); }
     }
 
-    /// <summary>Whether the driver has yet to read <paramref name="m"/>.</summary>
+    // Whether the driver has yet to read m.
     public bool IsUnread(MessageModel m)
     {
         if ((m.TargetAudience ?? "").ToLowerInvariant() == "driver") return !m.IsRead;
         return PhTime.Raw(m.CreatedAt) > _readSince && !_readMarks.Contains(m.MessageId);
     }
 
-    /// <summary>Marks a message read, in the database for a direct one and here for the rest.</summary>
+    // Marks a message read, in the database for a direct one and here for the rest.
     public Task MarkReadAsync(MessageModel m) => MarkReadAsync(new[] { m });
 
-    /// <summary>Marks every one of <paramref name="messages"/> read.</summary>
-    /// <remarks>
-    /// The local marks are taken first, so the badge drops at once. A direct message whose
-    /// mark cannot be sent stays unread, and the badge says so after the next check.
-    /// </remarks>
+    // Marks every one of messages read.
+    //
+    // The local marks are taken first, so the badge drops at once. A direct message whose
+    // mark cannot be sent stays unread, and the badge says so after the next check.
     public async Task MarkReadAsync(IEnumerable<MessageModel> messages)
     {
         var unread = messages.Where(IsUnread).ToList();
@@ -162,7 +157,7 @@ public class MessageWatch
         Recompute();
     }
 
-    /// <summary>Refreshes the badge immediately after a message is marked read.</summary>
+    // Refreshes the badge immediately after a message is marked read.
     public void Recompute()
     {
         Unread = _msgs.Count(IsUnread);

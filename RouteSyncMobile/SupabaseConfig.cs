@@ -1,12 +1,9 @@
 namespace FleetWiseMobile;
 
-/// <summary>
-/// Supabase connection settings.
-/// </summary>
-/// <remarks>
-/// The key here is the publishable one, which is intended to ship inside client apps. The
-/// service key must never be placed here: it bypasses row-level security entirely.
-/// </remarks>
+// Supabase connection settings.
+//
+// The key here is the publishable one, which is intended to ship inside client apps. The
+// service key must never be placed here: it bypasses row-level security entirely.
 public static class SupabaseConfig
 {
     public const string Url = "https://ggrhmjiamyqhihtyfnui.supabase.co";

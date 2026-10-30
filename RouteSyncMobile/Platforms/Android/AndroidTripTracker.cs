@@ -3,7 +3,7 @@ using FleetWiseMobile.Services;
 
 namespace FleetWiseMobile.Platforms.Android;
 
-/// <summary>Starts and stops the location tracking foreground service.</summary>
+// Starts and stops the location tracking foreground service.
 public class AndroidTripTracker : ITripTracker
 {
     public void Start(string tripId)

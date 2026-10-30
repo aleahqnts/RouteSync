@@ -112,7 +112,7 @@
 
     private static string UpdatesFolder => Path.Combine(FileSystem.CacheDirectory, "updates");
 
-    /// <summary>Deletes every kept APK and unfinished download except <paramref name="keep"/>.</summary>
+    // Deletes every kept APK and unfinished download except keep.
     private static void ClearDownloads(string? keep)
     {
         if (!Directory.Exists(UpdatesFolder)) return;

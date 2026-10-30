@@ -4,12 +4,11 @@ using FleetWiseMobile.Services;
 
 namespace FleetWiseMobile.Platforms.Android;
 
-/// <summary>Installs a downloaded APK through the phone's own package installer.</summary>
-/// <remarks>
-/// Android always asks the driver to confirm an update that did not come from the Play
-/// Store. The file is shared through MAUI's FileProvider, which already covers the cache
-/// folder the download is saved in.
-/// </remarks>
+// Installs a downloaded APK through the phone's own package installer.
+//
+// Android always asks the driver to confirm an update that did not come from the Play
+// Store. The file is shared through MAUI's FileProvider, which already covers the cache
+// folder the download is saved in.
 public class AndroidApkInstaller : IApkInstaller
 {
     public bool EnsureAllowed()

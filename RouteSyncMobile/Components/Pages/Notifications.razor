@@ -215,13 +215,10 @@ else
         finally { loadingOlder = false; }
     }
 
-    /// <summary>
-    /// Compact age for a message heading: minutes, then hours, then a clock time.
-    /// </summary>
-    /// <param name="withDate">
-    /// Whether an older message also gives its date. The tab's group heading carries the
-    /// date, so its rows leave it out; a popup stands alone and needs it.
-    /// </param>
+    // Compact age for a message heading: minutes, then hours, then a clock time.
+    // withDate:
+    // Whether an older message also gives its date. The tab's group heading carries the
+    // date, so its rows leave it out; a popup stands alone and needs it.
     public static string When(MessageModel n, bool withDate = false)
     {
         var t = PhTime.Raw(n.CreatedAt);

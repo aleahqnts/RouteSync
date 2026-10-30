@@ -12,20 +12,17 @@ using Microsoft.Maui.Storage;
 
 namespace FleetWiseMobile.Platforms.Android;
 
-/// <summary>
-/// Foreground service that keeps the GPS on for the whole trip and buffers telemetry rows.
-/// </summary>
-/// <remarks>
-/// <para>The GPS reports about once a second. Which of those fixes become rows is decided
-/// by <see cref="TelemetrySendRule"/>: every five seconds while moving, every thirty while
-/// standing, and at once on pulling away or a passenger count change. Each row carries the
-/// time its fix was taken, not the time it was written.</para>
-///
-/// <para>Listening continuously, rather than asking for a fresh fix every few seconds,
-/// keeps the GPS warm, so each fix is current, and it takes fixes from the GPS alone. A
-/// one-off request takes whichever source answers first, which is often a cell tower or
-/// wifi fix tens of metres off.</para>
-/// </remarks>
+// Foreground service that keeps the GPS on for the whole trip and buffers telemetry rows.
+//
+// The GPS reports about once a second. Which of those fixes become rows is decided
+// by TelemetrySendRule: every five seconds while moving, every thirty while
+// standing, and at once on pulling away or a passenger count change. Each row carries the
+// time its fix was taken, not the time it was written.
+//
+// Listening continuously, rather than asking for a fresh fix every few seconds,
+// keeps the GPS warm, so each fix is current, and it takes fixes from the GPS alone. A
+// one-off request takes whichever source answers first, which is often a cell tower or
+// wifi fix tens of metres off.
 [Service(ForegroundServiceType = ForegroundService.TypeLocation, Exported = false)]
 public class LocationTrackingService : Service
 {

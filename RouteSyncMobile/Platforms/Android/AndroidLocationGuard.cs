@@ -5,7 +5,7 @@ using FleetWiseMobile.Services;
 
 namespace FleetWiseMobile.Platforms.Android;
 
-/// <summary>Reads the location switch and the app's permission from the platform.</summary>
+// Reads the location switch and the app's permission from the platform.
 public class AndroidLocationGuard : ILocationGuard
 {
     public async Task<LocationState> CheckAsync()
