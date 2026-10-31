@@ -1434,7 +1434,6 @@
         transition: color 160ms ease-out;
     }
 
-    .rq-month-sum { font-size: .78rem; font-weight: 500; color: var(--rq-muted); }
 
     @media (prefers-reduced-motion: reduce) {
         .rq-month-chev,

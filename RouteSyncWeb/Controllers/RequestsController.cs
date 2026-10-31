@@ -190,7 +190,6 @@ namespace FleetWise.Controllers
             {
                 Month = g.Key,
                 Open = g.Key >= thisMonth,
-                Days = g.Sum(LeaveEntitlement.Days),
                 Rows = g.Select(Row).ToList(),
             }).ToList();
 

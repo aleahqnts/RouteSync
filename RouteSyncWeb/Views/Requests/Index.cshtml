@@ -378,7 +378,6 @@
                                     aria-expanded="@(m.Open ? "true" : "false")">
                                 <span class="rq-month-chev" aria-hidden="true"><i class="ti ti-chevron-right"></i></span>
                                 <span class="rq-month-name">@m.Month.ToString("MMMM yyyy")</span>
-                                <span class="rq-month-sum">@Plural(m.Rows.Count, "request", "requests") &middot; @Plural(m.Days, "day", "days")</span>
                             </button>
                         </th>
                     </tr>

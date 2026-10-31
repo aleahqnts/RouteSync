@@ -32,8 +32,6 @@
 
         // Drawn open: the current month and any later one. Older months start folded.
         public bool Open { get; set; }
-
-        public int Days { get; set; }
         public List<LeaveRowViewModel> Rows { get; set; } = new();
     }
 
