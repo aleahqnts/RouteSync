@@ -3,12 +3,37 @@
     // The leave queue as the Requests page draws it.
     public class LeaveQueueViewModel
     {
-        // Which status is being shown. "All" shows every one.
-        public string Status { get; set; } = "Pending";
+        // Which settled status the history shows. "All" shows every one.
+        public string Status { get; set; } = "All";
 
-        // Waiting on a decision, counted whatever is being shown.
-        public int PendingCount { get; set; }
+        // Requests waiting on an answer, the soonest leave first: those not yet decided,
+        // and granted leave the driver has asked to hand back.
+        public List<LeaveRowViewModel> Queue { get; set; } = new();
 
+        // Settled requests in the chosen status, by the month their leave starts.
+        public List<LeaveMonthViewModel> Months { get; set; } = new();
+
+        // The Who's out board: the Monday it starts on, the service day, the drivers off
+        // that week and how many are off each day.
+        public DateTime WeekStart { get; set; }
+        public DateTime Today { get; set; }
+        public List<WeekRow> Week { get; set; } = new();
+        public int[] OutPerDay { get; set; } = new int[7];
+
+        // Every request on the page once, for the history and revoke dialogs.
+        public IEnumerable<LeaveRowViewModel> AllRows =>
+            Queue.Concat(Months.SelectMany(m => m.Rows)).DistinctBy(r => r.RequestId);
+    }
+
+    // One month of the history.
+    public class LeaveMonthViewModel
+    {
+        public DateTime Month { get; set; }
+
+        // Drawn open: the current month and any later one. Older months start folded.
+        public bool Open { get; set; }
+
+        public int Days { get; set; }
         public List<LeaveRowViewModel> Rows { get; set; } = new();
     }
 
@@ -23,6 +48,10 @@
         // The dates covered as one phrase, for the places that name a request in a
         // sentence: the decision dialog, the history panel, the audit trail.
         public string Span { get; set; } = "";
+
+        // The same without the year, for the queue, where every request is this year's
+        // or next week's.
+        public string ShortSpan { get; set; } = "";
 
         // First day off, in a column of its own.
         //
@@ -88,6 +117,13 @@
         public string? WithdrawAskedWhen { get; set; }
 
         public string? DecisionNote { get; set; }
+
+        // How soon the leave starts, for the queue chip; see LeaveBoard.Urgency.
+        public string Urgency { get; set; } = "";
+        public bool Urgent { get; set; }
+
+        // Shifts the driver is still booked for inside a waiting request.
+        public int ShiftsToCover { get; set; }
 
         // What happened to this request, oldest first.
         public List<LeaveEventViewModel> History { get; set; } = new();

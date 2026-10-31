@@ -3,22 +3,25 @@
     ViewData["Title"] = "Requests";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    var tabs = new[] { "Pending", "Approved", "Rejected", "Cancelled", "Revoked", "All" };
+    const int QueueCap = 5;
+    const int BoardCap = 6;
 
-    // Drivers with something in the list being shown, so the filter offers names that
-    // will actually match rather than the whole roster.
-    var driversShown = Model.Rows
+    var history = Model.Months.SelectMany(m => m.Rows).ToList();
+
+    // Drivers with something in the history, so the filter offers names that will
+    // actually match rather than the whole roster.
+    var driversShown = history
         .GroupBy(r => r.DriverId)
         .Select(g => new { Id = g.Key, Name = g.First().DriverName })
         .OrderBy(d => d.Name)
         .ToList();
 
-    string TypeClass(string t) => t?.ToLowerInvariant() switch
+    string TypeKey(string t) => t?.ToLowerInvariant() switch
     {
-        "vacation" => "rq-badge--vacation",
-        "sick" => "rq-badge--sick",
-        "emergency" => "rq-badge--emergency",
-        _ => "rq-badge--default"
+        "vacation" => "vacation",
+        "sick" => "sick",
+        "emergency" => "emergency",
+        _ => "default"
     };
 
     string StatusClass(string s) => s?.ToLowerInvariant() switch
@@ -26,99 +29,286 @@
         "approved" => "rq-badge--approved",
         "rejected" => "rq-badge--rejected",
         "cancelled" => "rq-badge--cancelled",
-        "awaitingchange" => "rq-badge--held",
+        "revoked" => "rq-badge--rejected",
         _ => "rq-badge--pending"
     };
 
-    // The stored word is one token because the column is checked against a list. What is
-    // read here says what the approval is waiting on, short enough to sit on one line.
-    string StatusLabel(string s) =>
-        string.Equals(s, "AwaitingChange", StringComparison.OrdinalIgnoreCase)
-            ? "Needs cover"
-            : s;
+    string Plural(int n, string one, string many) => n == 1 ? $"1 {one}" : $"{n} {many}";
+
+    var weekEnd = Model.WeekStart.AddDays(6);
+    var weekLabel = Model.WeekStart.Month == weekEnd.Month
+        ? $"{Model.WeekStart:MMM d} to {weekEnd:%d}"
+        : $"{Model.WeekStart:MMM d} to {weekEnd:MMM d}";
+
+    // Whether a day on the board continues the bar on the day beside it.
+    bool Same(WeekCell? a, WeekCell? b) =>
+        a is not null && b is not null && a.Approved == b.Approved && a.Type == b.Type;
 }
 
-@* Everything that says what is being looked at, held while the list moves. *@
-<div class="rq-sticky-head" data-sticky-head>
+<div class="rq-titlerow">
+    <h2 class="rq-title">Requests</h2>
 
-    @* The heading, and on its right the state of the queue. The heading had a line of
-       its own with nothing else on it, while the controls below wrapped onto a second
-       line for want of the room. *@
-    <div class="rq-titlerow">
+    @* A queue somebody else is adding to. The page is replaced in place, so a search
+       being typed and a filter already chosen both survive it. *@
+    <div class="rq-toolbar-end">
+        <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 5 seconds"></span>
+        <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
+                data-on="click:rqRefreshNow" title="Load newly filed requests without losing your filters">
+            <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+            </svg></span> Refresh
+        </button>
+    </div>
+</div>
 
-        <h2 class="rq-title">Requests</h2>
+@* The page could only speak from inside the decision dialog, so anything that went
+   wrong on a row had nowhere to be said. *@
+<div id="rqToast" class="rq-toast" role="status" hidden></div>
 
-        @* A queue somebody else is adding to. The list is replaced in place, so a search
-           being typed and a filter already chosen both survive it. *@
-        <div class="rq-toolbar-end">
-            <span id="rqPendingWrap">
-                @if (Model.PendingCount > 0)
-                {
-                    <span class="rq-waiting">@Model.PendingCount Pending</span>
-                }
-            </span>
-            <span class="rq-updated" id="rqUpdated" title="Checks for newly filed requests every 5 seconds"></span>
-            <button type="button" class="rq-btn rq-btn--outline rq-btn--icon rq-refresh"
-                    data-on="click:rqRefreshNow" title="Load newly filed requests without losing your filters">
-                <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true">
-                    <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
-                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
-                </svg></span> Refresh
-            </button>
+<div class="rq-top">
+
+    @* What is waiting on an answer, the soonest leave first. *@
+    <section class="rq-card rq-queue" aria-labelledby="rqQueueTitle">
+        <div class="rq-card-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" />
+                <path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+                <polyline points="9 13 11 15 15 11" />
+            </svg>
+            <h3 class="rq-card-title" id="rqQueueTitle">Needs a decision</h3>
+            <span class="rq-num" id="rqQueueCount">@(Model.Queue.Count > 0 ? Model.Queue.Count : "")</span>
         </div>
 
-    </div>
+        <div id="rqQueue">
+            @if (Model.Queue.Count == 0)
+            {
+                <div class="rq-none">
+                    <span class="rq-none-ico" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>
+                    <p class="rq-none-t">All caught up</p>
+                    <p class="rq-none-s">No requests are waiting on a decision.</p>
+                </div>
+            }
+            else
+            {
+                <ul class="rq-qlist">
+                    @for (var i = 0; i < Model.Queue.Count; i++)
+                    {
+                        var r = Model.Queue[i];
+                        var held = string.Equals(r.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase);
+                        var open = held || string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase);
 
-    @* One row, the way the other boards lay their controls out: what is being looked at
-       on the left, what narrows it on the right. *@
-    <div class="rq-toolbar">
+                        <li class="rq-q @(r.Urgent ? "rq-q--urgent" : "") @(i >= QueueCap ? "rq-more" : "")"
+                            data-request="@r.RequestId"
+                            data-who="@r.DriverName"
+                            data-span="@r.Span"
+                            data-shifts="@r.ShiftsToCover">
+                            @* Three short columns, two lines each at most: who, what and
+                               when, and how soon. The only pill on the row is how soon. *@
+                            <div class="rq-q-who">
+                                <span class="rq-driver">@r.DriverName</span>
+                                <span class="rq-who-meta">ID @r.DriverId@(r.IsStaff ? " · Staff" : "")@if (r.IsOwn)
+                                    {<span class="rq-own" title="Another administrator decides this one"> &middot; Your request</span>}</span>
+                            </div>
+                            <div class="rq-q-leave">
+                                <span class="rq-type rq-type--@TypeKey(r.LeaveType)">@r.LeaveType</span>
+                                <span class="rq-q-dates">@r.ShortSpan &middot; @Plural(r.Days, "day", "days")</span>
+                            </div>
+                            <div class="rq-q-when">
+                                <span class="rq-chip @(r.Urgent ? "rq-chip--urgent" : "")">@r.Urgency</span>
+                                @if (r.WithdrawAsked)
+                                {
+                                    <span class="rq-check rq-check--asked rq-asked-note"
+                                          title="@($"Asked {r.WithdrawAskedWhen}: {r.WithdrawReason}")">Cancellation asked</span>
+                                }
+                                else if (r.ShiftsToCover > 0)
+                                {
+                                    <span class="rq-check rq-check--cover">@Plural(r.ShiftsToCover, "shift", "shifts") to cover</span>
+                                }
+                            </div>
 
-        @* The pills, and on a phone the reload beside them. A wrapper that lays nothing
-           out on a desk, where the pills are a toolbar item on their own and the reload
-           belongs with the rest of the controls at the far end of the row. *@
-        <div class="rq-tabrow">
+                            <div class="rq-actions">
+                                @* The reader's own request offers no decision: the server
+                                   refuses those too. It is marked beside the ID instead. *@
+                                @if (!r.IsOwn && open)
+                                {
+                                    @if (held)
+                                    {
+                                        <button type="button" class="rq-btn rq-btn--outline"
+                                                data-request-id="@r.RequestId" data-on="click:rqRelease"
+                                                title="Put this back in the queue without deciding it">Back to queue</button>
+                                    }
+                                    <button type="button" class="rq-btn rq-btn--reject"
+                                            data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
+                                    <button type="button" class="rq-btn rq-btn--approve"
+                                            data-request-id="@r.RequestId" data-on="click:rqApprove">Approve</button>
+                                }
+                                else if (!r.IsOwn && r.WithdrawAsked)
+                                {
+                                    <button type="button" class="rq-btn rq-btn--outline"
+                                            data-request-id="@r.RequestId" data-on="click:rqKeepLeave">Keep leave</button>
+                                    <button type="button" class="rq-btn rq-btn--reject"
+                                            data-request-id="@r.RequestId" data-on="click:rqCancelLeave">Cancel leave</button>
+                                }
+                                <button type="button" class="rq-btn rq-btn--history"
+                                        data-request-id="@r.RequestId" data-on="click:rqHistory"
+                                        title="History" aria-label="History">
+                                    <svg class="rq-history-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><polyline points="3 3 3 8 8 8" /><polyline points="12 7 12 12 15 14" />
+                                        </svg>
+                                    <span class="rq-history-text">History</span>
+                                </button>
+                            </div>
+                        </li>
+                    }
+                </ul>
 
-            <div class="rq-tabs" role="group" aria-label="Filter by status">
-                @foreach (var tab in tabs)
+                @if (Model.Queue.Count > QueueCap)
                 {
-                    var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
-                    <a class="rq-tab @(on ? "rq-tab--on" : "")"
-                       href="@Url.Action("Index", new { status = tab })"
-                       aria-current="@(on ? "page" : null)">@tab</a>
+                    <button type="button" class="rq-showmore" data-on="click:rqMore" aria-expanded="false">
+                        <span class="rq-showmore-n">Show @(Model.Queue.Count - QueueCap) more</span>
+                        <span class="rq-showmore-less">Show fewer</span>
+                    </button>
                 }
-            </div>
+            }
+        </div>
+    </section>
 
-            @* Drawn only on a phone. The desktop reload is the one in the row's far end,
-               which carries a word beside the mark and the time of the last check. *@
-            <button type="button" class="rq-btn rq-btn--outline rq-refresh rq-refresh--pills"
-                    data-on="click:rqRefreshNow" title="Load newly filed requests"
-                    aria-label="Refresh">
-                <span class="rq-refresh-ico"><svg class="rs-ico-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true">
-                    <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
-                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
-                </svg></span>
-            </button>
+    @* Who is off in the week shown, waiting or granted. Only drivers with leave in it. *@
+    <section class="rq-card rq-board" aria-labelledby="rqBoardTitle">
+        <div class="rq-card-header">
+            <i class="ti ti-calendar-week" aria-hidden="true"></i>
+            <h3 class="rq-card-title" id="rqBoardTitle">Drivers on leave</h3>
 
+            <nav class="rq-weeknav" aria-label="Week">
+                <a class="rq-weeknav-btn" href="@Url.Action("Index", new { status = Model.Status, week = Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd") })"
+                   aria-label="Previous week" title="Previous week"><i class="ti ti-chevron-left" aria-hidden="true"></i></a>
+                <span class="rq-weeknav-label">@weekLabel</span>
+                <a class="rq-weeknav-btn" href="@Url.Action("Index", new { status = Model.Status, week = Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd") })"
+                   aria-label="Next week" title="Next week"><i class="ti ti-chevron-right" aria-hidden="true"></i></a>
+            </nav>
+        </div>
+
+        <div id="rqBoard">
+            @if (Model.Week.Count == 0)
+            {
+                <div class="rq-none">
+                    <span class="rq-none-ico" aria-hidden="true"><i class="ti ti-calendar-week"></i></span>
+                    <p class="rq-none-t">Full crew this week</p>
+                    <p class="rq-none-s">No approved or pending leave from @weekLabel.</p>
+                </div>
+            }
+            else
+            {
+                <div class="rq-week-wrap">
+                    <table class="rq-week">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="rq-week-name"><span class="visually-hidden">Driver</span></th>
+                                @for (var d = 0; d < 7; d++)
+                                {
+                                    var day = Model.WeekStart.AddDays(d);
+                                    <th scope="col" class="@(day == Model.Today ? "rq-today" : "")">
+                                        <span class="rq-week-dow">@day.ToString("ddd")</span>
+                                        <span class="rq-week-date">@day.ToString("%d")</span>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.Week.Count; i++)
+                            {
+                                var w = Model.Week[i];
+                                <tr class="@(i >= BoardCap ? "rq-more" : "")">
+                                    <th scope="row" class="rq-week-name">@w.Name</th>
+                                    @for (var d = 0; d < 7; d++)
+                                    {
+                                        var c = w.Days[d];
+                                        var today = Model.WeekStart.AddDays(d) == Model.Today;
+                                        <td class="@(today ? "rq-today" : "")">
+                                            @if (c is not null)
+                                            {
+                                                var label = c.Type + " leave" + (c.Approved ? "" : ", pending");
+                                                <span class="rq-bar rq-bar--@TypeKey(c.Type) @(c.Approved ? "" : "rq-bar--pending") @(d == 0 || !Same(w.Days[d - 1], c) ? "rq-bar--l" : "") @(d == 6 || !Same(w.Days[d + 1], c) ? "rq-bar--r" : "")"
+                                                      title="@label"><span class="visually-hidden">@label</span></span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th scope="row" class="rq-week-name">Out per day</th>
+                                @for (var d = 0; d < 7; d++)
+                                {
+                                    <td class="@(Model.WeekStart.AddDays(d) == Model.Today ? "rq-today" : "")">@(Model.OutPerDay[d] > 0 ? Model.OutPerDay[d] : "")</td>
+                                }
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                @if (Model.Week.Count > BoardCap)
+                {
+                    <button type="button" class="rq-showmore" data-on="click:rqMore" aria-expanded="false">
+                        <span class="rq-showmore-n">Show @Plural(Model.Week.Count - BoardCap, "more driver", "more drivers")</span>
+                        <span class="rq-showmore-less">Show fewer</span>
+                    </button>
+                }
+
+                <div class="rq-legend">
+                    @foreach (var t in LeaveEntitlement.Types)
+                    {
+                        <span class="rq-type rq-type--@TypeKey(t)">@t</span>
+                    }
+                    <span class="rq-legend-item rq-legend-pending"><span class="rq-swatch"></span>Pending</span>
+                </div>
+            }
+        </div>
+    </section>
+
+</div>
+
+@* Settled requests, by the month their leave falls in. *@
+<section class="rq-card rq-history" aria-labelledby="rqHistoryCardTitle">
+    <div class="rq-card-header rq-history-head">
+        <div class="rq-history-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><polyline points="3 3 3 8 8 8" /><polyline points="12 7 12 12 15 14" />
+            </svg>
+            <h3 class="rq-card-title" id="rqHistoryCardTitle">History</h3>
+            <span class="rq-count" id="rqCount"></span>
+        </div>
+
+        <div class="rq-tabs" role="group" aria-label="Filter by status">
+            @foreach (var tab in FleetWise.Controllers.RequestsController.HistoryTabs)
+            {
+                var on = string.Equals(Model.Status, tab, StringComparison.OrdinalIgnoreCase);
+                <a class="rq-tab @(on ? "rq-tab--on" : "")"
+                   href="@Url.Action("Index", new { status = tab, week = Model.WeekStart.ToString("yyyy-MM-dd") })"
+                   aria-current="@(on ? "page" : null)">@tab</a>
+            }
         </div>
 
         @* Narrowing within the status already chosen. Applied to the rows on the page
-           rather than by asking the server again, so the list answers on each keystroke
-           and a half-typed name never costs a round trip.
+           rather than by asking the server again, so the list answers on each keystroke.
 
            The labels are for the phone, where these fold into a sheet that names each
-           field down the left. On a desk the placeholder and the resting value of a
-           select say the same thing in less room. *@
+           field down the left. *@
         <div class="rq-filters rs-filters" id="rqFilters" data-filter-stay>
             <div class="rq-filter">
                 <label for="rqSearch">Search</label>
                 <span class="rq-search-wrap">
                     <span class="rq-search-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                             stroke="#9AA5B4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                             <circle cx="11" cy="11" r="8" />
                             <line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
@@ -154,80 +344,59 @@
                 <button type="button" class="rq-btn rq-btn--outline" id="rqClear">Clear</button>
             </div>
         </div>
-
-
-    </div>
-
-</div>
-
-@* The page could only speak from inside the decision dialog, so anything that went
-   wrong on a row had nowhere to be said. *@
-<div id="rqToast" class="rq-toast" role="status" hidden></div>
-
-<div class="rq-card">
-    <div class="rq-card-header" data-sticky-card>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" />
-            <path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
-            <polyline points="9 13 11 15 15 11" />
-        </svg>
-        <span>Leave requests</span>
-        <span class="rq-count" id="rqCount"></span>
-
-        @* Shown only on a phone, where the title row above is not drawn: the app bar
-           already says which page this is. The count of what is waiting still has to be
-           somewhere, so it moves onto the card heading, which is the page heading in
-           effect. *@
-        <span class="rq-inline-pending" id="rqPendingInline">
-            @if (Model.PendingCount > 0)
-            {
-                <span class="rq-waiting">@Model.PendingCount Pending</span>
-            }
-        </span>
     </div>
 
     <div class="rq-table-wrap rs-list-wrap">
-        <table class="rq-table rs-cards rs-list" data-sort>
+        <table class="rq-table rs-cards rs-list" id="rqHistoryTable" data-sort>
             <thead>
                 <tr>
+                    <th>Filed</th>
                     <th>Filed by</th>
                     <th>Type</th>
                     <th>Start</th>
                     <th>End</th>
-                    <th>Days</th>
+                    <th class="rq-c-days">Days</th>
                     <th>Reason</th>
-                    <th>Filed</th>
                     <th>Balance after</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
             </thead>
-            <tbody id="rqRows">
-                @if (Model.Rows.Count == 0)
-                {
-                    <tr>
-                        <td colspan="10" class="rq-empty">
-                            @(string.Equals(Model.Status, "Pending", StringComparison.OrdinalIgnoreCase)
-                                ? "Nothing waiting on a decision."
-                                : "No requests to show.")
-                        </td>
+            @if (Model.Months.Count == 0)
+            {
+                <tbody>
+                    <tr><td colspan="10" class="rq-empty">No requests to show.</td></tr>
+                </tbody>
+            }
+            @foreach (var m in Model.Months)
+            {
+                var key = m.Month.ToString("yyyy-MM");
+                <tbody class="rq-month @(m.Open ? "" : "rq-month--closed")" data-month="@key">
+                    <tr class="rq-month-head">
+                        <th colspan="10">
+                            <button type="button" class="rq-month-btn" data-on="click:rqMonth"
+                                    aria-expanded="@(m.Open ? "true" : "false")">
+                                <span class="rq-month-chev" aria-hidden="true"><i class="ti ti-chevron-right"></i></span>
+                                <span class="rq-month-name">@m.Month.ToString("MMMM yyyy")</span>
+                                <span class="rq-month-sum">@Plural(m.Rows.Count, "request", "requests") &middot; @Plural(m.Days, "day", "days")</span>
+                            </button>
+                        </th>
                     </tr>
-                }
-                else
-                {
-                    foreach (var r in Model.Rows)
+                    @foreach (var r in m.Rows)
                     {
-                        var pending = string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase);
-                        var held = string.Equals(r.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase);
-
                         <tr data-request="@r.RequestId"
                             data-driver="@r.DriverId"
                             data-type="@r.LeaveType"
+                            data-who="@r.DriverName"
+                            data-span="@r.Span"
                             data-find="@($"{r.DriverName} {r.DriverId} {r.LeaveType} {r.Status} {r.Reason}".ToLowerInvariant())">
 
-                            @* Drivers and staff both file leave. The name leads; the ID and
-                               the kind of account follow on one quiet line. *@
+                            @* The day over the time, so the column is as wide as a date. *@
+                            <td data-label="Filed" data-sort-value="@r.Filed">
+                                <span class="rq-filed">@r.FiledDay</span>
+                                <span class="rq-filed-time">@r.FiledTime</span>
+                            </td>
+
                             <td data-label="Filed by" class="rq-c-who">
                                 <span class="rq-driver">@r.DriverName</span>
                                 <span class="rq-who-meta">@r.DriverId &middot; @(r.IsStaff ? "Staff" : "Driver")@if (r.IsOwn)
@@ -235,7 +404,7 @@
                             </td>
 
                             <td data-label="Type">
-                                <span class="rq-badge @TypeClass(r.LeaveType)">@r.LeaveType</span>
+                                <span class="rq-type rq-type--@TypeKey(r.LeaveType)">@r.LeaveType</span>
                                 @* Both dates as one phrase, for the phone. The columns
                                    either side of this one are not drawn there. *@
                                 <span class="rq-span">@r.Span</span>
@@ -243,7 +412,7 @@
 
                             <td data-label="Start"><span class="rq-date">@r.Start</span></td>
                             <td data-label="End"><span class="rq-date">@r.End</span></td>
-                            <td data-label="Days"><span class="rq-days-n">@r.Days</span></td>
+                            <td data-label="Days" class="rq-c-days"><span class="rq-days-n">@r.Days</span></td>
 
                             <td data-label="Reason">
                                 @if (string.IsNullOrWhiteSpace(r.Reason))
@@ -252,48 +421,34 @@
                                 }
                                 else
                                 {
-                                    <span class="rq-reason">@r.Reason</span>
+                                    <span class="rq-reason" title="@r.Reason">@r.Reason</span>
                                 }
                             </td>
 
-                            @* The day over the time, so the column is as wide as a date. *@
-                            <td data-label="Filed" data-sort-value="@r.Filed">
-                                <span class="rq-filed">@r.FiledDay</span>
-                                <span class="rq-filed-time">@r.FiledTime</span>
-                            </td>
-
-                            @* What the allowance stands at once this request is counted.
-                               Days on other requests still undecided are marked beside it,
-                               because approving this one without noticing them is how an
-                               allowance is overdrawn. *@
-                            <td data-label="Balance after" class="rq-c-balance">
+                            <td data-label="Balance after" class="rq-c-balance" data-sort-value="@r.BalanceAfter">
                                 <span class="rq-balance"
                                       title="@r.LeaveType.ToLowerInvariant() days left after this request">@r.BalanceAfter of @r.EntitlementOfType</span>
-                                @if (r.OtherPendingDays > 0)
-                                {
-                                    <span class="rq-balance-pending"
-                                          title="Days of the same leave on other requests still awaiting a decision">+@r.OtherPendingDays awaiting</span>
-                                }
                             </td>
 
                             @* A decision that came with a note carries it here, on the word
-                               it explains, rather than as a second line under the buttons. *@
+                               it explains. *@
                             <td data-label="Status">
-                                <span class="rq-badge @StatusClass(r.Status)"
-                                      title="@(held ? "Approval begun. The driver is still on the schedule for some of these days." : pending ? null : r.DecisionNote)">@StatusLabel(r.Status)</span>
-                                @* Approved leave with days pulled out of it still reads as
-                                   approved, because most of it is. This says the rest. *@
-                                @if (r.RevokedCount > 0)
-                                {
-                                    <span class="rq-revoked"
-                                          title="Days of this leave taken back by dispatch">@r.RevokedCount revoked</span>
-                                }
-                                @* Granted leave the driver has asked to give back. Still
-                                   approved, because it is, until this is answered. *@
+                                @* One badge. Leave still granted but asked about, or with
+                                   days taken back, says so in place of Approved; the details
+                                   are in the tooltip and the row's history. *@
                                 @if (r.WithdrawAsked)
                                 {
-                                    <span class="rq-asked"
-                                          title="@($"Asked {r.WithdrawAskedWhen}: {r.WithdrawReason}")">Cancellation asked</span>
+                                    <span class="rq-badge rq-badge--held"
+                                          title="@($"Asked {r.WithdrawAskedWhen}: {r.WithdrawReason}")">Cancel asked</span>
+                                }
+                                else if (r.RevokedCount > 0)
+                                {
+                                    <span class="rq-badge rq-badge--partial"
+                                          title="@Plural(r.RevokedCount, "day", "days") of this leave taken back by dispatch">Partly revoked</span>
+                                }
+                                else
+                                {
+                                    <span class="rq-badge @StatusClass(r.Status)" title="@r.DecisionNote">@r.Status</span>
                                 }
                             </td>
 
@@ -301,46 +456,11 @@
                                names cells after their headings leaves it unnamed. *@
                             <td data-label="Actions" class="rq-c-actions">
                                 <div class="rq-actions">
-                                    @* The reader's own request offers no decision: the server
-                                       refuses those too. It is marked beside the ID instead. *@
-                                    @if (!r.IsOwn && pending)
+                                    @if (!r.IsOwn && !r.WithdrawAsked && r.RevokableDays.Count > 0)
                                     {
-                                        <button type="button" class="rq-btn rq-btn--approve"
-                                                data-request-id="@r.RequestId" data-on="click:rqApprove">Approve</button>
-                                        <button type="button" class="rq-btn rq-btn--reject"
-                                                data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
-                                    }
-                                    else if (!r.IsOwn && held)
-                                    {
-                                        @* The approval was begun. This runs the check again
-                                           against the schedule as it now stands. *@
-                                        <button type="button" class="rq-btn rq-btn--approve"
-                                                data-request-id="@r.RequestId" data-on="click:rqApprove">Continue approval</button>
-                                        <button type="button" class="rq-btn rq-btn--reject"
-                                                data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
-                                        <button type="button" class="rq-btn rq-btn--outline"
-                                                data-request-id="@r.RequestId" data-on="click:rqRelease"
-                                                title="Put this back in the queue without deciding it">Back to queue</button>
-                                    }
-                                    @* Only where there is something left to take back.
-                                       Leave already in the past offers nothing. *@
-                                    @* Answering the driver comes before taking days off
-                                       them: both end in the leave changing, and only one of
-                                       them was asked for. *@
-                                    @if (!r.IsOwn && r.WithdrawAsked)
-                                    {
-                                        <button type="button" class="rq-btn rq-btn--approve"
-                                                data-request-id="@r.RequestId" data-on="click:rqCancelLeave">Cancel the leave</button>
-                                        <button type="button" class="rq-btn rq-btn--outline"
-                                                data-request-id="@r.RequestId" data-on="click:rqKeepLeave">Keep the leave</button>
-                                    }
-                                    else if (!r.IsOwn && r.RevokableDays.Count > 0)
-                                    {
-                                        <button type="button" class="rq-btn rq-btn--reject"
+                                        <button type="button" class="rq-btn rq-btn--reject-outline"
                                                 data-request-id="@r.RequestId" data-on="click:rqRevoke">Revoke</button>
                                     }
-                                    @* A clock on a desk, where the row has the width for nothing more;
-                                       the word on a phone, where it has a line of its own. *@
                                     <button type="button" class="rq-btn rq-btn--history"
                                             data-request-id="@r.RequestId" data-on="click:rqHistory"
                                             title="History" aria-label="History">
@@ -354,17 +474,17 @@
                             </td>
                         </tr>
                     }
-                }
+                </tbody>
+            }
 
-                @* Shown when the filters match none of the rows on the page, which is a
-                   different thing from the queue being empty. *@
-                <tr id="rqNoMatch" hidden>
-                    <td colspan="10" class="rq-empty">No request matches these filters.</td>
-                </tr>
+            @* Shown when the filters match none of the rows on the page, which is a
+               different thing from the history being empty. *@
+            <tbody id="rqNoMatch" hidden>
+                <tr><td colspan="10" class="rq-empty">No request matches these filters.</td></tr>
             </tbody>
         </table>
     </div>
-</div>
+</section>
 
 @* What happened to each request, written out with the row it belongs to and shown when
    asked for. Rendered here rather than fetched, because it is already on the page. *@
@@ -445,7 +565,7 @@
 </div>
 
 <div id="rqTemplates" hidden>
-    @foreach (var r in Model.Rows)
+    @foreach (var r in Model.AllRows)
     {
         @if (r.RevokableDays.Count > 0)
         {
@@ -554,7 +674,19 @@
         rqAskClose:     function () { rqAskClose(); },
         rqRevokeClose:  function () { rqRevokeClose(); },
         rqHistoryClose: function () { rqHistoryClose(); },
-        rqCancel:       function () { rqCancel(); }
+        rqCancel:       function () { rqCancel(); },
+        // Rows past the first few, shown or folded away again. The state is kept on the
+        // card, outside what a refresh replaces.
+        rqMore:         function () {
+            const card = this.closest('.rq-card');
+            const open = card.classList.toggle('rq-expanded');
+            card.querySelectorAll('.rq-showmore').forEach(function (b) { b.setAttribute('aria-expanded', open); });
+        },
+        rqMonth:        function () {
+            const month = this.closest('.rq-month');
+            const closed = month.classList.toggle('rq-month--closed');
+            this.setAttribute('aria-expanded', !closed);
+        }
     });
 
     (function () {
@@ -567,7 +699,7 @@
         const err = document.getElementById('rqDecideError');
         const go = document.getElementById('rqDecideGo');
 
-        const rows = document.getElementById('rqRows');
+        const rows = document.getElementById('rqHistoryTable');
         const search = document.getElementById('rqSearch');
         const typeSel = document.getElementById('rqType');
         const driverSel = document.getElementById('rqDriver');
@@ -594,12 +726,19 @@
                 if (ok) shown++;
             });
 
+            // While anything narrows the list every month is opened, so a match is never
+            // hidden inside a folded one, and a month with no match drops out.
+            const narrowed = !!(q || type || driver);
+            rows.classList.toggle('rq-hist--narrowed', narrowed);
+            rows.querySelectorAll('.rq-month').forEach(function (m) {
+                m.hidden = narrowed && !m.querySelector('tr[data-request]:not([hidden])');
+            });
+
             const noMatch = document.getElementById('rqNoMatch');
             if (noMatch) noMatch.hidden = !(total > 0 && shown === 0);
 
-            countEl.textContent = total === 0 ? ''
-                : shown === total ? total + (total === 1 ? ' request' : ' requests')
-                : shown + ' of ' + total;
+            // Said only while the list is narrowed, as how much of it is showing.
+            countEl.textContent = total === 0 || shown === total ? '' : shown + ' of ' + total;
         }
 
         // The list of drivers comes from the rows, so it is rebuilt whenever they are.
@@ -684,10 +823,23 @@
                 const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } });
                 const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
 
-                ['rqRows', 'rqTemplates', 'rqPendingWrap', 'rqPendingInline'].forEach(function (id) {
+                // Months the reader opened or folded stay that way.
+                const folded = new Map();
+                rows.querySelectorAll('.rq-month').forEach(function (m) {
+                    folded.set(m.dataset.month, m.classList.contains('rq-month--closed'));
+                });
+
+                ['rqQueue', 'rqQueueCount', 'rqBoard', 'rqHistoryTable', 'rqTemplates'].forEach(function (id) {
                     const fresh = doc.getElementById(id);
                     const cur = document.getElementById(id);
                     if (fresh && cur) cur.innerHTML = fresh.innerHTML;
+                });
+
+                rows.querySelectorAll('.rq-month').forEach(function (m) {
+                    if (!folded.has(m.dataset.month)) return;
+                    const closed = folded.get(m.dataset.month);
+                    m.classList.toggle('rq-month--closed', closed);
+                    m.querySelector('.rq-month-btn').setAttribute('aria-expanded', !closed);
                 });
 
                 rqFillDrivers();
@@ -757,26 +909,40 @@
 
         // ---- Deciding ----------------------------------------------------------------
 
-        window.rqDecide = function (id, decision) {
+        // An approval the queue already knows is blocked opens straight onto the covers,
+        // titled for what has to happen first. Whether anything is still in the way is
+        // decided again on the server when it is sent, so a count gone stale either way
+        // only changes which dialog opens.
+        window.rqDecide = async function (id, decision) {
             const row = document.querySelector('[data-request="' + id + '"]');
-            const who = row ? row.querySelector('.rq-driver').textContent : 'this person';
-            const span = row
-                ? row.querySelector('[data-label="Start"]').textContent.trim()
-                    + ' to ' + row.querySelector('[data-label="End"]').textContent.trim()
-                : '';
+            const who = row ? row.dataset.who : 'this person';
+            const span = row ? row.dataset.span : '';
+            const shifts = row ? Number(row.dataset.shifts || 0) : 0;
 
             pending = { id, decision };
             title.textContent = decision === 'Approved' ? 'Approve leave' : 'Reject leave';
             desc.textContent = span ? who + ' · ' + span : who;
             note.value = '';
             err.style.display = 'none';
-            document.getElementById('rqBlocking').style.display = 'none';
+            blockingBox.style.display = 'none';
             rqResetCovers();
             go.textContent = decision === 'Approved' ? 'Approve' : 'Reject';
             go.classList.toggle('rq-btn--reject', decision === 'Rejected');
+            go.classList.toggle('rq-btn--approve', decision === 'Approved');
             // Reopening is a fresh attempt. Left disabled by a previous one, the dialog
             // opens with a button that cannot be pressed and nothing saying why.
             go.disabled = false;
+
+            if (decision === 'Approved' && shifts > 0 && blockingBox.dataset.covers) {
+                rqShowBlocking(who + ' is still assigned to '
+                    + (shifts === 1 ? 'a shift' : shifts + ' shifts')
+                    + ' during this leave. Pick a cover driver, then approve.', [], true);
+                if (await rqShowCovers(id) && pending && pending.id === id) {
+                    title.textContent = shifts === 1 ? 'Cover this shift first' : 'Cover these shifts first';
+                }
+                if (!pending || pending.id !== id) return;
+            }
+
             modal.style.display = 'flex';
             note.focus();
         };
@@ -1008,8 +1174,9 @@
             // promise an approval.
             go.textContent = ready === 0
                 ? 'Approve'
-                : (ready === 1 ? 'Cover 1 shift' : 'Cover ' + ready + ' shifts')
-                    + (ready === coverRows.length ? ' and approve' : '');
+                : ready === coverRows.length
+                    ? 'Cover and approve'
+                    : (ready === 1 ? 'Cover 1 shift' : 'Cover ' + ready + ' shifts');
         }
 
         // What a row says: who covers the shift and why, or why nobody does. With its list
@@ -1400,12 +1567,9 @@
 
         window.rqWithdrawal = function (id, accept) {
             const row = document.querySelector('[data-request="' + id + '"]');
-            const who = row ? row.querySelector('.rq-driver').textContent : 'this person';
-            const chip = row ? row.querySelector('.rq-asked') : null;
-            const span = row
-                ? ' · ' + row.querySelector('[data-label="Start"]').textContent.trim()
-                    + ' to ' + row.querySelector('[data-label="End"]').textContent.trim()
-                : '';
+            const who = row ? row.dataset.who : 'this person';
+            const chip = row ? row.querySelector('.rq-asked, .rq-asked-note') : null;
+            const span = row ? ' · ' + row.dataset.span : '';
 
             answering = { id, accept };
 

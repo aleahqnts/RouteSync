@@ -108,10 +108,19 @@ namespace FleetWise.Controllers
             return Convert.ToHexString(hash);
         }
 
-        public async Task<IActionResult> Index(string? status)
+        // The statuses the history can be narrowed to. Waiting requests live in the queue.
+        public static readonly string[] HistoryTabs = { "All", "Approved", "Rejected", "Cancelled", "Revoked" };
+
+        // status: Which settled requests the history lists.
+        // week: Any day of the week the Who's out board shows, as yyyy-MM-dd.
+        public async Task<IActionResult> Index(string? status, string? week)
         {
-            // Pending first by default, because the queue is what this page is opened for.
-            var wanted = string.IsNullOrWhiteSpace(status) ? "Pending" : status.Trim();
+            var wanted = HistoryTabs.FirstOrDefault(t =>
+                string.Equals(t, status?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "All";
+            var today = PhClock.OperationalDay;
+            var monday = LeaveBoard.MondayOf(
+                DateTime.TryParseExact(week, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var w)
+                    ? w : today);
 
             var requestsTask = _supabase.From<LeaveRequest>().Get();
             // Everyone, not only drivers: the history names whoever decided a request, and
@@ -132,38 +141,72 @@ namespace FleetWise.Controllers
                 .ToHashSet();
             var me = SenderId();
 
-            // An approval part way through still belongs in the queue. It is work
-            // somebody has started and not finished, and the one place it must not be
-            // filed under is Approved, which it is not.
-            // An approval part way through still belongs in the queue, and so does granted
-            // leave the driver has asked to hand back: both are work somebody has to answer.
-            // The one place either must not be filed is Approved, which the first is not and
-            // the second only still is because nobody has decided yet.
-            var shown = string.Equals(wanted, "All", StringComparison.OrdinalIgnoreCase)
-                ? all
-                : string.Equals(wanted, "Pending", StringComparison.OrdinalIgnoreCase)
-                    ? all.Where(r => LeaveEntitlement.IsOpen(r.Status) || IsAskOutstanding(r)).ToList()
-                    : all.Where(r => string.Equals(r.Status, wanted, StringComparison.OrdinalIgnoreCase)).ToList();
+            LeaveRowViewModel Row(LeaveRequest r)
+            {
+                var row = ToRow(r, names, all);
+                row.IsStaff = staff.Contains(r.UserId);
+                row.IsOwn = me == r.UserId;
+                return row;
+            }
 
-            var vm = new LeaveQueueViewModel
+            // An approval part way through is work somebody has started and not finished,
+            // and granted leave the driver has asked to hand back is a question waiting on
+            // an answer. Both are answered from the queue.
+            var waiting = all
+                .Where(r => LeaveEntitlement.IsOpen(r.Status) || IsAskOutstanding(r))
+                .OrderBy(r => r.StartDate).ThenBy(r => r.FiledAt)
+                .ToList();
+
+            // One read of the trips behind every undecided request, so the queue can say
+            // which approvals will ask for a cover before one is pressed.
+            var open = waiting.Where(r => LeaveEntitlement.IsOpen(r.Status)).ToList();
+            var trips = open.Count == 0
+                ? new List<Trip>()
+                : (await _supabase.From<Trip>()
+                    .Filter("driver_id", Constants.Operator.In,
+                        open.Select(r => (object)r.UserId.ToString()).Distinct().ToList())
+                    .Filter("date", Constants.Operator.GreaterThanOrEqual, open.Min(r => r.StartDate).ToString("yyyy-MM-dd"))
+                    .Filter("date", Constants.Operator.LessThanOrEqual, open.Max(r => r.EndDate).ToString("yyyy-MM-dd"))
+                    .Get()).Models;
+            var now = PhClock.Now;
+
+            var queue = waiting.Select(r =>
+            {
+                var row = Row(r);
+                (row.Urgency, row.Urgent) = LeaveBoard.Urgency(r.StartDate, today);
+                if (LeaveEntitlement.IsOpen(r.Status))
+                    row.ShiftsToCover = LeaveBoard.Blocking(r, trips, now).Count;
+                return row;
+            }).ToList();
+
+            // Settled requests. Filing order inside each month, newest first.
+            var settled = all
+                .Where(r => !LeaveEntitlement.IsOpen(r.Status))
+                .Where(r => wanted == "All" || string.Equals(r.Status, wanted, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.FiledAt);
+
+            var thisMonth = new DateTime(today.Year, today.Month, 1);
+            var months = LeaveBoard.ByMonth(settled, r => r.StartDate).Select(g => new LeaveMonthViewModel
+            {
+                Month = g.Key,
+                Open = g.Key >= thisMonth,
+                Days = g.Sum(LeaveEntitlement.Days),
+                Rows = g.Select(Row).ToList(),
+            }).ToList();
+
+            var board = LeaveBoard.Week(all, monday,
+                id => names.TryGetValue(id, out var n) ? n : $"Driver {id}");
+
+            return View(new LeaveQueueViewModel
             {
                 Status = wanted,
-                PendingCount = all.Count(r => LeaveEntitlement.IsOpen(r.Status) || IsAskOutstanding(r)),
-                Rows = shown
-                    // A queue is worked oldest first; history reads newest first. Filing
-                    // order serves both better than the dates being asked for.
-                    .OrderByDescending(r => r.FiledAt)
-                    .Select(r =>
-                    {
-                        var row = ToRow(r, names, all);
-                        row.IsStaff = staff.Contains(r.UserId);
-                        row.IsOwn = me == r.UserId;
-                        return row;
-                    })
-                    .ToList(),
-            };
-
-            return View(vm);
+                Queue = queue,
+                Months = months,
+                WeekStart = monday,
+                Today = today,
+                Week = board,
+                OutPerDay = LeaveBoard.OutPerDay(board),
+            });
         }
 
         [HttpPost]
@@ -772,17 +815,8 @@ namespace FleetWise.Controllers
         // This is what lets leave be filed for a day already past. The shift on it has
         // finished, so it asks nothing of the schedule and blocks nothing. A shift the
         // driver actually drove is refused earlier, by LeaveEntitlement.DrivenProblem.
-        private async Task<List<Trip>> BlockingTripRowsAsync(LeaveRequest r)
-        {
-            var now = PhClock.Now;
-
-            return (await TripsInLeaveAsync(r))
-                .Where(t => !TripStatus.Locked(t, now))
-                // A day already handed back is not leave, so a shift on it blocks nothing.
-                .Where(t => !LeaveEntitlement.IsRevokedOn(r, t.Date))
-                .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
-                .ToList();
-        }
+        private async Task<List<Trip>> BlockingTripRowsAsync(LeaveRequest r) =>
+            LeaveBoard.Blocking(r, await TripsInLeaveAsync(r), PhClock.Now);
 
         // Every trip booked to the driver inside the leave's dates, whatever its state.
         private async Task<List<Trip>> TripsInLeaveAsync(LeaveRequest r) =>
@@ -911,6 +945,9 @@ namespace FleetWise.Controllers
                 DriverName = names.TryGetValue(r.UserId, out var n) ? n : $"Driver {r.UserId}",
                 LeaveType = r.LeaveType,
                 Span = Span(r),
+                ShortSpan = r.StartDate.Date == r.EndDate.Date
+                    ? r.StartDate.ToString("MMM d")
+                    : $"{r.StartDate:MMM d} to {r.EndDate:MMM d}",
                 Start = r.StartDate.ToString("MMM d, yyyy"),
                 End = r.EndDate.ToString("MMM d, yyyy"),
                 Days = LeaveEntitlement.Days(r),

@@ -12,9 +12,7 @@
 
     /* --- Page head ------------------------------------------------------- */
 
-    /* The heading, and the state of the queue on the far side of it. The heading had a
-       line to itself with nothing else on it while the controls below wrapped onto a
-       second line, which spent two lines on what fits in one. */
+    /* The heading, with the reload and when it last looked on the far side of it. */
     .rq-titlerow {
         display: flex;
         align-items: center;
@@ -33,23 +31,9 @@
         margin: 0;
     }
 
-    /* The pills sit in the toolbar exactly as they did before they were wrapped. */
-    .rq-tabrow { display: contents; }
-
-    /* Both dates as one phrase. The board has a column for each date and one for the
+    /* Both dates as one phrase. The history has a column for each date and one for the
        count between them, so on a desk the phrase would only repeat them. */
     .rq-span { display: none; }
-
-    /* The reload for a phone. The desktop one lives at the far end of the toolbar. */
-    .rq-refresh--pills { display: none; }
-
-    .rq-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        flex-wrap: wrap;
-        margin-bottom: 18px;
-    }
 
     .rq-toolbar-end {
         display: flex;
@@ -59,21 +43,6 @@
     }
 
     .rq-updated { font-size: .78rem; color: var(--rq-muted); }
-
-    /* The count of what is waiting, which is what the page is opened for. */
-    .rq-waiting {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 14px;
-        border-radius: 30px;
-        background: light-dark(#FEF9E7, #4E4831);
-        color: light-dark(#876E08, #D9BB5C);
-        border: 1px solid light-dark(#F5E6B8, #685D3C);
-        font-size: .8rem;
-        font-weight: 700;
-        font-family: 'Segoe UI', sans-serif;
-        white-space: nowrap;
-    }
 
     /* The reload control is the same teal as the one on every other board, and it turns
        while it is working rather than taking the page down and building it again. */
@@ -88,9 +57,6 @@
 
     .rq-refresh-ico svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-    /* Keyed to the reload itself rather than to the icon-button shape it happens to
-       take on a desk. The one on a phone is shaped as a square of its own and was
-       turning nothing, which left a press with no answer at all. */
     .rq-refresh.spinning .rq-refresh-ico { animation: rqSpin .7s linear infinite; }
 
     @keyframes rqSpin { to { transform: rotate(360deg); } }
@@ -101,10 +67,6 @@
     }
 
     .rq-btn--icon.rq-refresh:hover { background: light-dark(#EAF7F5, #354D4A); }
-
-    /* The count that belongs to the card heading rather than the title row, and the
-       reload that belongs to the app bar. Only a phone has a use for either. */
-    .rq-inline-pending { display: none; }
 
     /* --- Filters --------------------------------------------------------- */
 
@@ -144,6 +106,7 @@
         transform: translateY(-50%);
         display: flex;
         align-items: center;
+        color: var(--rq-muted);
     }
 
     /* Written against both classes so it outranks the shared field padding below,
@@ -226,7 +189,18 @@
         border-bottom: 1px solid var(--rq-border);
     }
 
-    .rq-card-header svg { color: var(--rq-teal); flex-shrink: 0; }
+    .rq-card-header svg,
+    .rq-card-header .ti { color: var(--rq-teal); flex-shrink: 0; font-size: 18px; }
+
+    .rq-card-title {
+        margin: 0;
+        font-size: inherit;
+        font-weight: inherit;
+        font-family: inherit;
+        color: inherit;
+        text-transform: none;
+        letter-spacing: normal;
+    }
 
     /* How much of the list the filters are letting through. Sits with the heading rather
        than above the table, where it would be read as a column. */
@@ -301,6 +275,8 @@
 
     .rq-days-n { font-weight: 600; }
 
+    .rq-table .rq-c-days { text-align: center; }
+
     .rq-balance { font-weight: 700; white-space: nowrap; }
 
     /* Other requests of the same type still undecided. Marked, because approving this one
@@ -319,10 +295,14 @@
 
     /* What the driver said, in a column of its own. Wrapped rather than truncated: a
        reason cut in half is a reason nobody can act on. */
+    /* One line, cut short with an ellipsis; the whole reason is in its tooltip. */
     .rq-reason {
         display: block;
         color: var(--rq-text);
-        max-width: 28ch;
+        max-width: 22ch;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .rq-blank { color: var(--rq-muted); }
@@ -339,9 +319,9 @@
         white-space: nowrap;
     }
 
-    .rq-badge--vacation  { background: light-dark(#E8F6F5, #354D4C); color: light-dark(#227A75, #6AD2CB); }
-    .rq-badge--sick      { background: light-dark(#E3F2FD, #384A58); color: light-dark(#2B6CB0, #8DC2FE); }
-    .rq-badge--emergency { background: light-dark(#FDECEC, #574142); color: light-dark(#D41C1C, #FFA098); }
+    .rq-badge--vacation  { background: light-dark(#E6F6F4, #2F4644); color: var(--rq-vacation); }
+    .rq-badge--sick      { background: light-dark(#F1ECFD, #413A56); color: var(--rq-sick); }
+    .rq-badge--emergency { background: light-dark(#FDEFE7, #53402F); color: var(--rq-emergency); }
     .rq-badge--default   { background: light-dark(#E4E7EC, #313131); color: light-dark(#4B5563, #D8DCE1); }
 
     .rq-badge--pending   { background: light-dark(#FEF9E7, #4E4831); color: light-dark(#876E08, #D9BB5C); }
@@ -352,6 +332,9 @@
     /* An approval begun and not finished. Neither the amber of a request nobody has
        looked at nor the green of one that has been granted, because it is neither. */
     .rq-badge--held { background: light-dark(#EAF0FB, #3F4858); color: light-dark(#3A5BA0, #9CBEFF); }
+
+    /* Granted, with some of its days taken back. */
+    .rq-badge--partial { background: light-dark(#FDECEC, #574142); color: light-dark(#B42318, #FFA098); }
 
     /* Something the driver wrote, shown as theirs. */
     .rq-quote {
@@ -784,20 +767,29 @@
        other button until hovered, the two of them were a pair of grey rectangles, and
        which one was which had to be read rather than seen. */
     .rq-btn--approve {
-        background: #27AE60;
-        border-color: #27AE60;
+        background: #1E7B45;
+        border-color: #1E7B45;
         color: #fff;
     }
 
-    .rq-btn--approve:hover { background: #219653; border-color: #219653; }
+    .rq-btn--approve:hover { background: #18663A; border-color: #18663A; }
 
     .rq-btn--reject {
-        background: #E53E3E;
-        border-color: #E53E3E;
+        background: #C53030;
+        border-color: #C53030;
         color: #fff;
     }
 
-    .rq-btn--reject:hover { background: #C53030; border-color: #C53030; }
+    .rq-btn--reject:hover { background: #A72828; border-color: #A72828; }
+
+    /* Revoke on a settled request: a red word on the card rather than a red block, so
+       a list of history does not read as a list of alarms. */
+    .rq-btn--reject-outline {
+        border-color: light-dark(#F3C4C4, #6B4A4A);
+        color: light-dark(#B42318, #FFA098);
+    }
+
+    .rq-btn--reject-outline:hover { background: light-dark(#FDECEC, #574142); }
 
     .rq-btn--primary {
         background: var(--rq-teal);
@@ -806,8 +798,13 @@
     }
 
     .rq-btn--reject.rq-btn--primary {
-        background: #E53E3E;
-        border-color: #E53E3E;
+        background: #C53030;
+        border-color: #C53030;
+    }
+
+    .rq-btn--approve.rq-btn--primary {
+        background: #1E7B45;
+        border-color: #1E7B45;
     }
 
     /* A third action beside Approve and Reject, and the only one on a settled request.
@@ -982,28 +979,486 @@
     }
 
 /* ===========================================================================
+   Layout: the queue and the week side by side, the history under them.
+   =========================================================================== */
+
+    :root {
+        --rq-urgent: light-dark(#B42318, #FFA098);
+        --rq-urgent-bg: light-dark(#FEE4E2, #574142);
+        --rq-urgent-edge: light-dark(#D92D20, #F97066);
+        --rq-amber: light-dark(#876E08, #D9BB5C);
+        --rq-today: light-dark(#EAF7F5, #354D4A);
+    }
+
+    .rq-top {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+        align-items: stretch;
+        gap: 18px;
+        margin-bottom: 18px;
+    }
+
+    .rq-top > .rq-card { min-width: 0; }
+
+    /* How many are waiting, beside the heading. */
+    .rq-num {
+        min-width: 22px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: light-dark(#FEF9E7, #4E4831);
+        color: var(--rq-amber);
+        font-size: .75rem;
+        font-weight: 700;
+        text-align: center;
+    }
+
+        .rq-num:empty { display: none; }
+
+    /* Rows past the first few, until asked for. */
+    .rq-card:not(.rq-expanded) .rq-more { display: none; }
+
+    .rq-showmore {
+        display: block;
+        margin: 10px auto 0;
+        padding: 6px 14px;
+        border: none;
+        border-radius: 8px;
+        background: none;
+        color: light-dark(#2E7D72, #82CFC2);
+        font-size: .8rem;
+        font-weight: 600;
+        font-family: 'Segoe UI', sans-serif;
+        cursor: pointer;
+    }
+
+        .rq-showmore:hover { background: light-dark(#EAF7F5, #354D4A); }
+
+    .rq-card:not(.rq-expanded) .rq-showmore-less,
+    .rq-expanded .rq-showmore-n { display: none; }
+
+/* --- Needs a decision -------------------------------------------------- */
+
+    /* The columns belong to the list, and every row borrows them, so a column lines up
+       from one request to the next whatever is in it. */
+    .rq-qlist {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) auto auto;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* One request in aligned columns: who, what and when, how soon, then the answer. */
+    .rq-q {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+        align-items: center;
+        gap: 6px 16px;
+        padding: 11px 12px;
+        border-left: 3px solid transparent;
+        border-bottom: 1px solid var(--rq-border);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .rq-q:last-child { border-bottom: none; }
+
+    /* Starting within two days, or already past. */
+    .rq-q--urgent { border-left-color: var(--rq-urgent-edge); }
+
+    .rq-q-who,
+    .rq-q-leave,
+    .rq-q-when {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .rq-q .rq-driver {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: .88rem;
+    }
+
+    .rq-q .rq-who-meta { margin: 0; }
+
+    .rq-q-dates {
+        font-size: .78rem;
+        color: var(--rq-muted);
+        white-space: nowrap;
+    }
+
+    /* How soon the leave starts. */
+    .rq-chip {
+        padding: 1px 9px;
+        border-radius: 999px;
+        background: light-dark(#EEF1F4, #444444);
+        color: light-dark(#4B5563, #D8DCE1);
+        font-size: .72rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .rq-chip--urgent { background: var(--rq-urgent-bg); color: var(--rq-urgent); }
+
+    /* What else stands in the way, said in words under the chip. */
+    .rq-check {
+        font-size: .74rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .rq-check--cover { color: var(--rq-amber); }
+
+    .rq-check--asked { color: light-dark(#3A5BA0, #9CBEFF); cursor: help; }
+
+    .rq-q .rq-actions {
+        flex-wrap: nowrap;
+        width: auto;
+        align-items: center;
+    }
+
+/* --- Kind of leave ------------------------------------------------------ */
+
+    /* Three hues far apart, the same in the badges, the dots and the week bars. */
+    :root {
+        --rq-vacation: light-dark(#0F766E, #2DD4BF);
+        --rq-sick: light-dark(#6D28D9, #B39DFA);
+        --rq-emergency: light-dark(#C2410C, #FB923C);
+        --rq-other: light-dark(#4B5563, #D8DCE1);
+    }
+
+    /* The kind of leave as a coloured dot and a word, quieter than a pill. */
+    .rq-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--rq-text);
+        white-space: nowrap;
+    }
+
+        .rq-type::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--rq-dot, var(--rq-other));
+            flex-shrink: 0;
+        }
+
+    .rq-type--vacation  { --rq-dot: var(--rq-vacation); }
+    .rq-type--sick      { --rq-dot: var(--rq-sick); }
+    .rq-type--emergency { --rq-dot: var(--rq-emergency); }
+
+/* --- Nothing to show ---------------------------------------------------- */
+
+    .rq-none {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 180px;
+        height: 100%;
+        padding: 24px 16px;
+        text-align: center;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .rq-none-ico {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 6px;
+        border-radius: 50%;
+        background: light-dark(#EAF7F5, #354D4A);
+        color: light-dark(#2E7D72, #82CFC2);
+        font-size: 22px;
+    }
+
+    .rq-none-t {
+        margin: 0;
+        font-size: .95rem;
+        font-weight: 700;
+        color: var(--rq-text);
+    }
+
+    .rq-none-s {
+        margin: 0;
+        font-size: .8rem;
+        color: var(--rq-muted);
+    }
+
+    /* The card body fills the card, so the empty state sits in its middle. */
+    .rq-top > .rq-card { display: flex; flex-direction: column; }
+
+    #rqQueue,
+    #rqBoard { flex: 1 1 auto; }
+
+/* --- Drivers on leave ------------------------------------------------- */
+
+
+    .rq-weeknav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+    }
+
+    .rq-weeknav-label {
+        min-width: 92px;
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--rq-text);
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .rq-weeknav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border: 1.5px solid var(--rq-border);
+        border-radius: 8px;
+        color: var(--rq-text);
+        text-decoration: none;
+    }
+
+        .rq-weeknav-btn:hover { border-color: var(--rq-teal); color: var(--rq-text); }
+
+        .rq-card-header .rq-weeknav-btn .ti { color: inherit; font-size: 16px; }
+
+    /* Positioned so the screen-reader text inside the bars scrolls with them instead of
+       widening the page. */
+    .rq-week-wrap { position: relative; overflow-x: auto; }
+
+    .rq-week {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: .8rem;
+    }
+
+        .rq-week th,
+        .rq-week td {
+            padding: 0;
+            height: 30px;
+            text-align: center;
+            color: var(--rq-text);
+        }
+
+        .rq-week thead th {
+            height: auto;
+            padding: 2px 0 8px;
+            font-weight: 600;
+            color: var(--rq-muted);
+        }
+
+    .rq-week-dow,
+    .rq-week-date { display: block; line-height: 1.25; }
+
+    .rq-week-dow { font-size: .7rem; text-transform: uppercase; letter-spacing: .03em; }
+
+    .rq-week-date { font-size: .85rem; color: var(--rq-text); }
+
+    .rq-week .rq-week-name {
+        width: 34%;
+        padding-right: 10px;
+        overflow: hidden;
+        text-align: left;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+        color: var(--rq-text);
+        background: var(--rq-white);
+    }
+
+    .rq-week .rq-today { background: var(--rq-today); }
+
+        .rq-week thead .rq-today { border-radius: 8px 8px 0 0; }
+
+        .rq-week thead .rq-today .rq-week-dow,
+        .rq-week thead .rq-today .rq-week-date { color: light-dark(#1F5F57, #A8E0D6); font-weight: 700; }
+
+    .rq-week tbody tr + tr th,
+    .rq-week tbody tr + tr td { border-top: 1px solid light-dark(#F1F4F7, #444444); }
+
+    /* Days off, joined into one bar across the days they run. */
+    .rq-bar {
+        display: block;
+        height: 12px;
+        margin: 0 -1px;
+        background: var(--rq-bar);
+        border: 1.5px solid var(--rq-bar);
+        transition: filter 120ms ease-out, transform 120ms ease-out;
+    }
+
+    .rq-week tbody tr:hover .rq-bar { filter: brightness(1.12); transform: scaleY(1.15); }
+
+    .rq-week tbody tr { transition: background 120ms ease-out; }
+
+    .rq-week tbody tr:hover th { color: var(--rq-teal); }
+
+    @media (prefers-reduced-motion: reduce) {
+        .rq-bar,
+        .rq-week tbody tr { transition: none; }
+    }
+
+    .rq-bar--l { margin-left: 3px; border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+    .rq-bar--r { margin-right: 3px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+
+    .rq-bar--vacation  { --rq-bar: var(--rq-vacation);  --rq-bar-bg: light-dark(#E6F6F4, #2F4644); }
+    .rq-bar--sick      { --rq-bar: var(--rq-sick);      --rq-bar-bg: light-dark(#F1ECFD, #413A56); }
+    .rq-bar--emergency { --rq-bar: var(--rq-emergency); --rq-bar-bg: light-dark(#FDEFE7, #53402F); }
+    .rq-bar--default   { --rq-bar: var(--rq-other);     --rq-bar-bg: light-dark(#E4E7EC, #313131); }
+
+    /* Waiting on a decision: the outline of the bar it would become. */
+    .rq-bar--pending {
+        background: var(--rq-bar-bg);
+        border-style: dashed;
+    }
+
+    .rq-week tfoot th,
+    .rq-week tfoot td {
+        border-top: 1.5px solid var(--rq-border);
+        font-weight: 700;
+    }
+
+    .rq-week tfoot .rq-week-name { font-size: .75rem; color: var(--rq-muted); }
+
+    /* One line: the three kinds as the queue marks them, and the one key the bars
+       need beyond colour. */
+    .rq-legend {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 14px;
+        margin-top: 12px;
+        font-size: .74rem;
+        color: var(--rq-muted);
+    }
+
+        .rq-legend .rq-type { font-size: .74rem; font-weight: 500; color: var(--rq-muted); }
+
+    .rq-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+
+    .rq-legend-pending { margin-left: auto; }
+
+    .rq-swatch {
+        display: inline-block;
+        width: 16px;
+        height: 8px;
+        border-radius: 4px;
+        border: 1.5px dashed var(--rq-muted);
+    }
+
+/* --- History ------------------------------------------------------------ */
+
+    .rq-history-head {
+        flex-wrap: wrap;
+        row-gap: 12px;
+    }
+
+    .rq-history-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-right: auto;
+    }
+
+        .rq-history-title .rq-count { margin-left: 4px; }
+
+    .rq-history-head .rq-tabs .rq-tab { padding: 5px 13px; font-size: .78rem; }
+
+    /* A month: the heading row opens and folds it. */
+    /* Drawn as a divider in the table rather than a band across it: the month's name
+       sits where the first column starts, with its totals beside it. */
+    .rq-month-head th {
+        padding: 0;
+        border-bottom: 1px solid var(--rq-border);
+    }
+
+    .rq-month-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 18px 10px 8px;
+        border: none;
+        background: none;
+        color: var(--rq-text);
+        font-family: 'Segoe UI', sans-serif;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .rq-table tbody.rq-month:first-of-type .rq-month-btn { padding-top: 10px; }
+
+    /* The caret in a small square of its own, turning as the month opens. */
+    .rq-month-chev {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: light-dark(#EEF1F4, #444444);
+        color: var(--rq-muted);
+        font-size: 14px;
+        transition: transform 160ms ease-out, background 160ms ease-out, color 160ms ease-out;
+        transform: rotate(90deg);
+    }
+
+    .rq-month--closed .rq-month-chev { transform: none; }
+
+    .rq-month-btn:hover .rq-month-chev {
+        background: light-dark(#DDF1EE, #354D4A);
+        color: light-dark(#2E7D72, #82CFC2);
+    }
+
+    .rq-month-btn:hover .rq-month-name { color: light-dark(#2E7D72, #82CFC2); }
+
+    .rq-month-name {
+        font-size: .9rem;
+        font-weight: 700;
+        transition: color 160ms ease-out;
+    }
+
+    .rq-month-sum { font-size: .78rem; font-weight: 500; color: var(--rq-muted); }
+
+    @media (prefers-reduced-motion: reduce) {
+        .rq-month-chev,
+        .rq-month-name { transition: none; }
+    }
+
+    /* While the list is narrowed every month is open. */
+    .rq-table:not(.rq-hist--narrowed) .rq-month--closed tr[data-request] { display: none; }
+
+    .rq-history .rq-actions { width: auto; flex-wrap: nowrap; }
+
+/* A screen too narrow for the two side by side: one column, and the history table
+   scrolls inside its card. */
+@media (max-width: 1280px) {
+    .rq-top { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ===========================================================================
    Phone.
 
    The head and the card heading are held by the shared rules; what is left here
    is the ground each sits on. Rows become cards that name their own values, so
    the column headings go.
    =========================================================================== */
-
-@media (min-width: 600px) {
-
-    .rq-sticky-head {
-        background: var(--rs-page);
-        padding-bottom: 18px;
-    }
-
-        .rq-sticky-head .rq-tabs {
-            margin-bottom: 0;
-        }
-
-    .rq-card-header {
-        background: var(--rq-white);
-    }
-}
 
 /* Wide enough for the board, not wide enough for the table.
 
@@ -1014,7 +1469,7 @@
    and the toolbar all travel with it and the board is read through a moving window.
    The table scrolls inside its own card instead, and gives up sticky headings for the
    width where the alternative is a page that will not sit still. */
-@media (min-width: 600px) and (max-width: 1199px) {
+@media (min-width: 600px) and (max-width: 1366px) {
 
     .rq-table-wrap.rs-list-wrap {
         overflow-x: auto;
@@ -1032,22 +1487,19 @@
 @media (max-width: 599px) {
 
     /* The heading is in the app bar, so a second one on the page said the same word
-       twice. The stamp and the reload go with it: the reload is beside the status pills
-       here, and what would be left of the row is a screen width of nothing. */
-    .rq-titlerow,
-    .rq-title,
-    .rq-toolbar-end { display: none; }
-
-    /* The row lays nothing out here. The status pills keep their place in the page and
-       the fields below them are lifted into a sheet of their own, which is where they
-       were before the row existed. */
-    .rq-toolbar { display: contents; }
+       twice. The reload goes with it: the page checks for changes every few seconds,
+       and a line holding only a button is a screen width of nothing. */
+    .rq-titlerow { display: none; }
 
     .rq-filters.rs-filters .rq-filter label { display: block; }
 
-    /* Every row already draws a card of its own below, so the box around them is
-       dropped rather than nesting one inside another. */
-    .rq-card {
+    .rq-top { gap: 12px; margin-bottom: 12px; }
+
+    .rq-card { padding: 14px; }
+
+    /* The history's rows already draw a card each, so the box around them is dropped
+       rather than nesting one inside another. */
+    .rq-card.rq-history {
         padding: 0;
         border: none;
         border-radius: 0;
@@ -1055,7 +1507,6 @@
         box-shadow: none;
     }
 
-    /* The heading of the page, in effect, so it is sized as one. */
     .rq-card-header {
         gap: 8px;
         padding-bottom: 10px;
@@ -1065,42 +1516,45 @@
 
     .rq-count { font-size: .72rem; }
 
-    .rq-inline-pending { display: inline-flex; }
+    /* A waiting request: who and how soon on top, what and when under it, then the
+       answer across the card. */
+    .rq-qlist { display: block; }
 
-    .rq-waiting { padding: 4px 10px; font-size: .72rem; }
-
-    /* The pills and the reload share a line. The reload is wanted next to the thing it
-       reloads, and the app bar it used to sit in is read as belonging to the whole
-       dashboard rather than to this board. */
-    .rq-tabrow {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
+    .rq-q {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "who   when"
+            "leave leave"
+            "act   act";
+        padding: 10px 10px 12px;
     }
 
-    /* The same square every other board ends its line with: 44 across, the teal border
-       and mark, the corner the buttons on this page use. Held out of the scroll so it
-       stays reachable however many statuses there are. */
-    .rq-refresh--pills {
-        display: inline-flex;
-        flex: 0 0 44px;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        padding: 0;
-        border: 1px solid light-dark(#CDE9E4, #4B635F);
-        border-radius: 10px;
-        background: var(--rq-white);
-        color: light-dark(#2E7D72, #82CFC2);
+    .rq-q-who { grid-area: who; }
+    .rq-q-when { grid-area: when; align-items: flex-end; }
+    .rq-q-leave { grid-area: leave; flex-direction: row; align-items: center; gap: 10px; }
+    .rq-q .rq-actions { grid-area: act; }
+
+    .rq-q .rq-actions { flex-wrap: wrap; }
+
+    /* The week scrolls sideways under a name column that stays put. */
+    .rq-week { width: 520px; }
+
+    .rq-week .rq-week-name {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        width: 120px;
     }
 
-        .rq-refresh--pills:active { background: light-dark(#EAF7F5, #354D4A); }
+    .rq-weeknav-label { min-width: 0; }
 
-        .rq-refresh--pills .rq-refresh-ico { display: flex; align-items: center; }
+    /* The week picker drops under the heading when the two do not fit on one line. */
+    .rq-board .rq-card-header { flex-wrap: wrap; }
 
-        .rq-refresh--pills .rq-refresh-ico svg { width: 18px; height: 18px; }
+    .rq-card-title,
+    .rq-count { white-space: nowrap; }
+
+    .rq-q .rq-actions .rq-btn--history { flex: 0 0 auto; }
 
     /* The shared sheet gives each field a row of its own, label on the left and the
        control on the right. This page had asked for a column, which survived into the
@@ -1169,6 +1623,7 @@
             "driver  status"
             "type    type"
             "reason  reason"
+            "filed   filed"
             "balance balance"
             "actions actions";
         align-items: center;
@@ -1201,10 +1656,27 @@
             display: none;
         }
 
-        /* When a request was filed is a line on its history, which every card can open.
-           On the card itself it is the least useful thing there: it says nothing about
-           whether to grant the leave, and on a settled request nothing at all. */
-        .rq-table.rs-cards td[data-label="Filed"] { display: none; }
+        /* When it was filed, as the small print. */
+        .rq-table.rs-cards td[data-label="Filed"] {
+            grid-area: filed;
+            justify-content: flex-start;
+            gap: 6px;
+            font-size: .74rem;
+        }
+
+            .rq-table.rs-cards td[data-label="Filed"] .rq-filed-time { font-size: .74rem; }
+
+    /* A month heading reads as a heading between the cards, not as a card. */
+    .rq-table.rs-cards tr.rq-month-head {
+        margin: 4px 0 10px;
+        padding: 0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+        .rq-table.rs-cards tr.rq-month-head th { display: block; width: 100%; }
+
+        .rq-month-btn { flex-wrap: wrap; row-gap: 2px; min-height: 44px; }
 
         /* Only the small print is named. Everything above it says what it is by the
            way it is written: a name, a badge, a date, a sentence. */
@@ -1256,7 +1728,7 @@
             font-size: .82rem;
         }
 
-            .rq-table.rs-cards td[data-label="Reason"] .rq-reason { max-width: none; }
+            .rq-table.rs-cards td[data-label="Reason"] .rq-reason { max-width: none; white-space: normal; }
 
         /* A request with nothing said about it leaves the line out rather than printing
            one to say so. */
@@ -1290,6 +1762,7 @@
                 "driver  status"
                 "type    type"
                 "reason  reason"
+                "filed   filed"
                 "balance actions";
         }
 
