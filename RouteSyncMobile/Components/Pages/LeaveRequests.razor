@@ -99,6 +99,9 @@
                     @foreach (var r in group)
                     {
                     <div class="lv-row">
+                        @* When it was filed leads, because it is what a driver looks for first
+                           reading back through their requests. *@
+                        <p class="lv-filed">Filed @PhTime.FromUtc(r.FiledAt).ToString("MMM d, yyyy h:mm tt")</p>
                         <div class="lv-row-top">
                             <span class="lv-span">@Span(r)</span>
 

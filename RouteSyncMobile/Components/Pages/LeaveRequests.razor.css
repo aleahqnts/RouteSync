@@ -250,6 +250,13 @@
     white-space: nowrap;
 }
 
+.lv-filed {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #5f6b7d;
+}
+
 .lv-meta {
     margin: 2px 0 0;
     font-size: 11.5px;
