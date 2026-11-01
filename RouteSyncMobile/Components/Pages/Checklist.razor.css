@@ -211,6 +211,14 @@
     box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
 }
 
+/* Rings the rows Pass Remaining just filled, then fades. */
+.mark.check.fresh { animation: just-passed 1.2s ease-out; }
+
+@keyframes just-passed {
+    0%, 40% { outline: 3px solid #86efac; outline-offset: 2px; }
+    100% { outline: 3px solid transparent; outline-offset: 2px; }
+}
+
 .mark.cross {
     border: 1.5px solid #f3c7c7;
     color: #d0494b;
@@ -348,6 +356,9 @@
 }
 
 .btn-skip:disabled { opacity: 0.6; }
+
+/* Sits above Next rather than below it. */
+.btn-pass-rest { margin: 0 0 10px; }
 
 /* Skip confirm modal. Component styles reach only the markup their own component
    wrote, so the shared modal shape is repeated here as it is on the other pages

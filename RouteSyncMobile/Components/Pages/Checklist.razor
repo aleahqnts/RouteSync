@@ -124,7 +124,7 @@ else
                             }
                         </span>
                         <div class="marks">
-                            <button class="mark check @(item.Status == "Pass" ? "on" : "")" @onclick="@(() => SetStatus(idx, "Pass"))"
+                            <button class="mark check @(item.Status == "Pass" ? "on" : "") @(justPassed.Contains(item.ItemId) ? "fresh" : "")" @onclick="@(() => SetStatus(idx, "Pass"))"
                                     aria-label="@($"Pass: {item.Label}")" aria-pressed="@(item.Status == "Pass" ? "true" : "false")">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12.5l4 4 10-11" /></svg>
                             </button>
@@ -176,6 +176,15 @@ else
         @if (!string.IsNullOrEmpty(message))
         {
             <p class="cl-msg">@message</p>
+        }
+
+        @* Offered once the faults are marked, for the items that are fine. It fills only
+           the blanks, so a failed item is never overwritten. *@
+        @if (BlankCount > 0)
+        {
+            <button class="btn-skip btn-pass-rest" @onclick="PassRemaining" disabled="@busy">
+                Pass Remaining (@BlankCount)
+            </button>
         }
 
         <button class="btn-teal" @onclick="Next" disabled="@busy">
@@ -275,6 +284,11 @@ else
 
     private Section CurrentSection => sections[currentSection];
     private bool IsLast => currentSection == sections.Count - 1;
+    private int BlankCount => CurrentSection.Items.Count(i => i.Status is null);
+
+    // Items the last Pass Remaining filled in, ringed briefly so the driver sees which
+    // rows it changed.
+    private readonly HashSet<int> justPassed = new();
 
     private List<Section> sections = new();
 
@@ -374,6 +388,7 @@ else
         var item = CurrentSection.Items[idx];
         item.Status = status;
         message = null;
+        justPassed.Clear();
 
         // An item marked Pass again has nothing to document, so the photograph taken for
         // it is removed at the moment the driver changes their mind. That is the only
@@ -381,6 +396,20 @@ else
         // an object behind for the sweep.
         if (status == "Pass") await DropPhotoAsync(item);
 
+        SaveDraft();
+    }
+
+    // Marks every unanswered item in the section as Pass. A blank item has no photograph,
+    // so there is nothing to drop.
+    private void PassRemaining()
+    {
+        justPassed.Clear();
+        foreach (var item in CurrentSection.Items.Where(i => i.Status is null))
+        {
+            item.Status = "Pass";
+            justPassed.Add(item.ItemId);
+        }
+        message = null;
         SaveDraft();
     }
 
@@ -503,6 +532,7 @@ else
 
     private void Back()
     {
+        justPassed.Clear();
         if (currentSection > 0) { currentSection--; SaveDraft(); }
         else Nav.NavigateTo("/home");
     }
@@ -548,6 +578,7 @@ else
         {
             currentSection++;
             message = null;
+            justPassed.Clear();
             SaveDraft();
             return;
         }
