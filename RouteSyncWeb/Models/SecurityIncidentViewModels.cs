@@ -24,6 +24,9 @@ public sealed class SecurityIncidentsViewModel
 
     // What a scan on request found, shown once after it runs.
     public string? ScanMessage { get; set; }
+
+    // The rule the list is narrowed to, or null for every rule.
+    public SecurityRule? Rule { get; set; }
 }
 
 public sealed class SecurityIncidentDetailViewModel

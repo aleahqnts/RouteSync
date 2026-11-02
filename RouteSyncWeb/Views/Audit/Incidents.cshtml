@@ -56,6 +56,31 @@
 
 <partial name="_AuditTabs" model="@("Incidents")" />
 
+<form method="get" class="au-filters">
+    <div class="au-filter">
+        <label for="siRule">Type</label>
+        <select id="siRule" name="rule" class="au-input">
+            <option value="">All types</option>
+            @foreach (var r in SecurityRules.All)
+            {
+                <option value="@r.Code" selected="@(Model.Rule?.Code == r.Code)">@r.Title</option>
+            }
+        </select>
+    </div>
+    <div class="au-filter-actions">
+        <button type="submit" class="au-btn au-btn--primary">Apply</button>
+        @if (Model.Rule is not null)
+        {
+            <a href="@Url.Action("Incidents", "Audit")" class="au-btn au-btn--outline">Clear</a>
+        }
+    </div>
+</form>
+
+@if (Model.Rule is { } shown)
+{
+    <p class="si-checks">Looks for: @shown.Checks</p>
+}
+
 @if (!string.IsNullOrEmpty(Model.ScanMessage))
 {
     <p class="si-flash" role="status">@Model.ScanMessage</p>
@@ -69,7 +94,7 @@
             <path d="M12 8v4" />
             <path d="M12 16h.01" />
         </svg>
-        <span>Incidents</span>
+        <span>Security incidents</span>
         @if (Model.Rows is not null && Model.NeedsReview > 0)
         {
             <span class="au-count">@Model.NeedsReview need@(Model.NeedsReview == 1 ? "s" : "") review</span>
@@ -101,7 +126,8 @@
                 {
                     <tr>
                         <td colspan="5" class="au-empty">
-                            Nothing unusual found. The audit log is checked every two minutes.
+                            @(Model.Rule is null ? "Nothing unusual found." : "None of this type found.")
+                            The audit log is checked every two minutes.
                         </td>
                     </tr>
                 }
@@ -144,6 +170,17 @@
         </table>
     </div>
 </div>
+
+<details class="si-rules">
+    <summary>What is checked</summary>
+    <dl>
+        @foreach (var r in SecurityRules.All)
+        {
+            <dt>@r.Title <span class="si-sev @Severity(r.Severity).Css">@Severity(r.Severity).Label</span></dt>
+            <dd>@r.Checks</dd>
+        }
+    </dl>
+</details>
 
 @* The entries behind one incident, fetched when it is opened rather than sent with the
    list: most incidents are never opened, and the list is read far more often. *@

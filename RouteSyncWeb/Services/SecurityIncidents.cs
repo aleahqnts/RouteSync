@@ -134,10 +134,12 @@ public sealed class SecurityIncidents
             });
 
     // What needs review first, then everything else, newest activity first.
-    public async Task<List<SecurityIncident>?> ListAsync(int limit)
+    // rule: A rule's code, already checked against the rules, to list that rule's only.
+    public async Task<List<SecurityIncident>?> ListAsync(int limit, string? rule = null)
     {
+        var only = rule is null ? "" : $"&rule=eq.{rule}";
         var rows = await GetAsync(
-            $"security_incidents?select=*&order=needs_review.desc,last_seen_at.desc&limit={limit}");
+            $"security_incidents?select=*{only}&order=needs_review.desc,last_seen_at.desc&limit={limit}");
         return rows?.Select(Map).ToList();
     }
 

@@ -42,16 +42,19 @@ namespace FleetWise.Controllers
         // Unusual activity, one row per burst.
         //
         // Detection only. Nothing on this page, and nothing behind it, blocks anybody.
+        // rule: One rule's incidents only. Anything that is not a rule's code shows them all.
         [HttpGet]
-        public async Task<IActionResult> Incidents()
+        public async Task<IActionResult> Incidents(string? rule)
         {
-            var incidents = await _incidents.ListAsync(IncidentListSize);
+            var only = rule is null ? null : SecurityRules.ByCode(rule);
+            var incidents = await _incidents.ListAsync(IncidentListSize, only?.Code);
 
             return View(new SecurityIncidentsViewModel
             {
                 Rows = incidents is null ? null : await RowsForAsync(incidents),
                 ScannedThrough = SecurityDetector.ScannedThrough,
                 ScanMessage = TempData["ScanMessage"] as string,
+                Rule = only,
             });
         }
 

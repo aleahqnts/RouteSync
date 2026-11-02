@@ -22,6 +22,7 @@ public readonly record struct Episode(DateTimeOffset Start, DateTimeOffset End);
 
 // One kind of unusual activity, and how much of it makes an incident.
 // Code: Stored on every incident the rule raises. Never renamed.
+// Checks: What the rule looks for, in plain words, for the page that lists the rules.
 // Actions: What an incident from this rule gathers when opened.
 // Counted: What counts toward a threshold.
 // Thresholds: Crossing any one of them raises an incident.
@@ -31,6 +32,7 @@ public readonly record struct Episode(DateTimeOffset Start, DateTimeOffset End);
 public sealed record SecurityRule(
     string Code,
     string Title,
+    string Checks,
     string Severity,
     string KeyColumn,
     IReadOnlyList<string> Actions,
@@ -78,6 +80,7 @@ public static class SecurityRules
         // their failures at five.
         new("failed_signins_address",
             "Many failed sign-ins from one address",
+            "10 or more failed or blocked sign-ins from one network address within 15 minutes.",
             "medium", "ip",
             new[] { "login_failed", "login_throttled" },
             new[] { "login_failed", "login_throttled" },
@@ -87,6 +90,7 @@ public static class SecurityRules
         // pacing their attempts to stay under it.
         new("failed_signins_account",
             "Many failed sign-ins against one account",
+            "8 failed sign-ins against one account within an hour, or 20 within a day, slow enough to stay under the lockout.",
             "medium", "target_id",
             new[] { "login_failed" },
             new[] { "login_failed" },
@@ -101,6 +105,7 @@ public static class SecurityRules
         // and another driver's success can arrive from the same place.
         new("signin_after_failures",
             "Signed in after failed attempts",
+            "A successful sign-in to an account after 3 or more failed attempts on it within the hour before. Someone may have guessed the password.",
             "high", "target_id",
             new[] { "login_failed", "login" },
             new[] { "login_failed" },
@@ -111,6 +116,7 @@ public static class SecurityRules
         // ten minutes is somebody working through addresses.
         new("pages_refused",
             "Repeatedly refused pages",
+            "One signed-in person refused 10 or more pages within 10 minutes, as if trying addresses they have no access to.",
             "medium", "actor_id",
             new[] { "access_denied" },
             new[] { "access_denied" },
@@ -121,6 +127,7 @@ public static class SecurityRules
         // on every loop, and which is worth knowing about for its own sake.
         new("counter_refused",
             "Counter phone refused repeatedly",
+            "5 or more refused counter phone connections from one network address within 15 minutes. Also catches a counter phone set up with the wrong passcode.",
             "medium", "ip",
             new[] { "token_refused" },
             new[] { "token_refused" },
@@ -128,6 +135,7 @@ public static class SecurityRules
 
         new("reset_codes_failing",
             "Password reset codes failing",
+            "5 or more wrong password reset codes entered for one account within an hour.",
             "low", "target_id",
             new[] { "password_reset_failed" },
             new[] { "password_reset_failed" },

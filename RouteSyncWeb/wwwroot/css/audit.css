@@ -810,6 +810,15 @@
     .au-tab-count--urgent { background: light-dark(#FDECEC, #574142); color: light-dark(#C0392B, #FFA192); }
 
     .si-scan { display: inline; margin: 0; }
+    /* The selected type's description, and the list of every type. */
+    .si-checks { margin: -8px 0 14px; font-size: 0.84rem; color: var(--au-muted); }
+
+    .si-rules { margin-top: 16px; font-size: 0.84rem; color: var(--au-text); }
+    .si-rules summary { cursor: pointer; font-weight: 600; color: var(--au-muted); }
+    .si-rules dl { margin: 10px 0 0; }
+    .si-rules dt { font-weight: 600; margin-top: 10px; }
+    .si-rules dt .si-sev { margin-left: 6px; }
+    .si-rules dd { margin: 2px 0 0; color: var(--au-muted); }
 
     .si-flash {
         margin: 0 0 12px;
