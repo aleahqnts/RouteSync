@@ -454,6 +454,12 @@
         cursor: pointer;
     }
 
+    /* Held at the top, the bar is square: rounded corners would leave the rows
+       scrolling beneath it showing through. */
+    .dp-route-header--stuck {
+        border-radius: 0;
+    }
+
     .dp-route-card .rp-table-wrap {
         border-radius: 0 0 calc(var(--rp-radius) - 1px) calc(var(--rp-radius) - 1px);
     }

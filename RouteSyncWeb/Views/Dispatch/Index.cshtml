@@ -1100,6 +1100,25 @@
         }
         requestAnimationFrame(measureHead);
 
+        // A route bar held at the top is marked, so it can drop its rounded corners
+        // while rows scroll beneath it. A card that has scrolled above its own bar is
+        // what being held looks like. At rest the bar sits a border's width below the
+        // card's top, hence the allowance.
+        var stuckQueued = false;
+        function markStuck() {
+            stuckQueued = false;
+            document.querySelectorAll('.dp-route-header').forEach(function (h) {
+                var card = h.closest('.dp-route-card');
+                var held = !!card && card.getBoundingClientRect().top < h.getBoundingClientRect().top - 2;
+                h.classList.toggle('dp-route-header--stuck', held);
+            });
+        }
+        window.addEventListener('scroll', function () {
+            if (stuckQueued) return;
+            stuckQueued = true;
+            requestAnimationFrame(markStuck);
+        }, { passive: true });
+
         statusSel.addEventListener('change', mark);
 
         // A whole route folds away, so a dispatcher working one route can put the
