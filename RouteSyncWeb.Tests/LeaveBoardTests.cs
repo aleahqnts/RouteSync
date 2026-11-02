@@ -29,22 +29,31 @@ public class LeaveBoardTests
         Assert.Equal((label, urgent), LeaveBoard.Urgency(new DateTime(2026, 10, startDay), Today));
     }
 
+    // A Sunday starts its own week; a Saturday ends the week that began six days before.
+    [Theory]
+    [InlineData(2026, 11, 1, 2026, 11, 1)]
+    [InlineData(2026, 8, 1, 2026, 7, 26)]
+    public void The_week_starts_on_Sunday(int y, int m, int d, int sy, int sm, int sd)
+    {
+        Assert.Equal(new DateTime(sy, sm, sd), LeaveBoard.SundayOf(new DateTime(y, m, d)));
+    }
+
     [Fact]
     public void The_week_lists_only_drivers_off_and_draws_approved_over_pending()
     {
-        var monday = LeaveBoard.MondayOf(Today);
-        Assert.Equal(new DateTime(2026, 10, 12), monday);
+        var sunday = LeaveBoard.SundayOf(Today);
+        Assert.Equal(new DateTime(2026, 10, 11), sunday);
 
         var rows = LeaveBoard.Week(new[]
         {
-            Leave(1, "Pending", 15, 16, "Sick"),
-            Leave(1, "Approved", 16, 18),
-            Leave(2, "Approved", 12, 14, revoked: "2026-10-13"),
-            Leave(3, "Rejected", 12, 18),
-            Leave(4, "Cancelled", 12, 18),
-            Leave(5, "Revoked", 12, 18),
-            Leave(6, "AwaitingChange", 20, 22),   // the next week
-        }, monday, id => $"Driver {id}");
+            Leave(1, "Pending", 14, 15, "Sick"),
+            Leave(1, "Approved", 15, 17),
+            Leave(2, "Approved", 11, 13, revoked: "2026-10-12"),
+            Leave(3, "Rejected", 11, 17),
+            Leave(4, "Cancelled", 11, 17),
+            Leave(5, "Revoked", 11, 17),
+            Leave(6, "AwaitingChange", 18, 20),   // the next week
+        }, sunday, id => $"Driver {id}");
 
         Assert.Equal(new[] { 2, 1 }, rows.Select(r => r.DriverId));
 
@@ -54,9 +63,9 @@ public class LeaveBoardTests
         Assert.NotNull(two[2]);
 
         var one = rows[1].Days;
-        Assert.False(one[3]!.Approved);            // Thursday, still waiting
+        Assert.False(one[3]!.Approved);            // Wednesday, still waiting
         Assert.Equal("Sick", one[3]!.Type);
-        Assert.True(one[4]!.Approved);             // Friday, granted wins
+        Assert.True(one[4]!.Approved);             // Thursday, granted wins
         Assert.Equal("Vacation", one[4]!.Type);
         Assert.NotNull(one[6]);
         Assert.Null(one[0]);

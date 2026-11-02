@@ -40,17 +40,18 @@ public static class LeaveBoard
             .OrderBy(t => t.Date).ThenBy(t => t.ShiftStartTime)
             .ToList();
 
-    // The Monday of the week a day sits in.
-    public static DateTime MondayOf(DateTime day) =>
-        day.Date.AddDays(-(((int)day.DayOfWeek + 6) % 7));
+    // The Sunday of the week a day sits in. The board runs Sunday to Saturday, like a wall
+    // calendar.
+    public static DateTime SundayOf(DateTime day) =>
+        day.Date.AddDays(-(int)day.DayOfWeek);
 
-    // Who is off in the week starting on monday, one row per driver with any leave in it.
+    // Who is off in the week starting on sunday, one row per driver with any leave in it.
     //
     // Approved leave and leave still waiting are drawn; anything refused, withdrawn or
     // revoked is not, and nor is a single day handed back. Where a driver has both on one
     // day, the approved one is shown. Rows are ordered by the first day off, then by name.
     public static List<WeekRow> Week(
-        IEnumerable<LeaveRequest> requests, DateTime monday, Func<int, string> name)
+        IEnumerable<LeaveRequest> requests, DateTime sunday, Func<int, string> name)
     {
         var rows = new Dictionary<int, WeekRow>();
 
@@ -61,7 +62,7 @@ public static class LeaveBoard
 
             for (var i = 0; i < 7; i++)
             {
-                var day = monday.Date.AddDays(i);
+                var day = sunday.Date.AddDays(i);
                 if (day < r.StartDate.Date || day > r.EndDate.Date) continue;
                 if (LeaveEntitlement.IsRevokedOn(r, day)) continue;
 
@@ -99,7 +100,7 @@ public sealed class WeekRow
     public int DriverId { get; set; }
     public string Name { get; set; } = "";
 
-    // Monday to Sunday; null is a day not off.
+    // Sunday to Saturday; null is a day not off.
     public WeekCell?[] Days { get; } = new WeekCell?[7];
 }
 

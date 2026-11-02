@@ -37,7 +37,7 @@
         </div>
 
         <div class="cal-grid" role="grid">
-            @foreach (var d in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
+            @foreach (var d in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
             {
                 <span class="cal-dow">@d</span>
             }
@@ -288,7 +288,8 @@
 
     private static DateTime MondayOf(DateTime d) => d.Date.AddDays(-(((int)d.DayOfWeek + 6) % 7));
 
-    private int LeadingBlanks => ((int)new DateTime(month.Year, month.Month, 1).DayOfWeek + 6) % 7;
+    // The grid runs Sunday to Saturday, so a month starting on a Sunday has no blanks.
+    private int LeadingBlanks => (int)new DateTime(month.Year, month.Month, 1).DayOfWeek;
 
     // Whether a day has been planned, so that no trip on it means no work.
     //

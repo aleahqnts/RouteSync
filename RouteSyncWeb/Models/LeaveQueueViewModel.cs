@@ -13,7 +13,7 @@
         // Settled requests in the chosen status, by the month their leave starts.
         public List<LeaveMonthViewModel> Months { get; set; } = new();
 
-        // The Who's out board: the Monday it starts on, the service day, the drivers off
+        // The Who's out board: the Sunday it starts on, the service day, the drivers off
         // that week and how many are off each day.
         public DateTime WeekStart { get; set; }
         public DateTime Today { get; set; }

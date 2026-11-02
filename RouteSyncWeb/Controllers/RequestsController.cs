@@ -118,7 +118,7 @@ namespace FleetWise.Controllers
             var wanted = HistoryTabs.FirstOrDefault(t =>
                 string.Equals(t, status?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "All";
             var today = PhClock.OperationalDay;
-            var monday = LeaveBoard.MondayOf(
+            var sunday = LeaveBoard.SundayOf(
                 DateTime.TryParseExact(week, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var w)
                     ? w : today);
 
@@ -193,7 +193,7 @@ namespace FleetWise.Controllers
                 Rows = g.Select(Row).ToList(),
             }).ToList();
 
-            var board = LeaveBoard.Week(all, monday,
+            var board = LeaveBoard.Week(all, sunday,
                 id => names.TryGetValue(id, out var n) ? n : $"Driver {id}");
 
             return View(new LeaveQueueViewModel
@@ -201,7 +201,7 @@ namespace FleetWise.Controllers
                 Status = wanted,
                 Queue = queue,
                 Months = months,
-                WeekStart = monday,
+                WeekStart = sunday,
                 Today = today,
                 Week = board,
                 OutPerDay = LeaveBoard.OutPerDay(board),
