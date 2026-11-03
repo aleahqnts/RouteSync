@@ -1,11 +1,3 @@
-.cl-loading {
-    min-height: 80vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #5f6b7d;
-}
-
 /* One screen tall, so the item list scrolls on its own and Next stays in reach however
    many failed items have opened their photo rows. */
 .cl {

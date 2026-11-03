@@ -11,7 +11,13 @@
 
 @if (loading)
 {
-    <div class="ta-loading">Loading…</div>
+    <div class="page-skeleton">
+        <div class="sk sk-line w50" style="height:24px; margin-bottom:10px"></div>
+        <div class="sk sk-line w70" style="margin-bottom:20px"></div>
+        <div class="sk sk-card" style="height:96px"></div>
+        <div class="sk sk-card tall" style="height:200px"></div>
+        <div class="sk sk-card" style="height:52px"></div>
+    </div>
 }
 else if (trip is null)
 {

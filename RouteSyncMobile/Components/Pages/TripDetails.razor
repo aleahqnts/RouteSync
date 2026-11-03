@@ -8,7 +8,12 @@
 
 @if (loading)
 {
-    <div class="td-loading">Loading…</div>
+    <div class="page-skeleton">
+        <div class="sk sk-line w50" style="height:24px; margin:0 auto 10px"></div>
+        <div class="sk sk-line w30" style="margin:0 auto 24px"></div>
+        <div class="sk sk-card tall" style="height:300px"></div>
+        <div class="sk sk-card" style="height:52px"></div>
+    </div>
 }
 else if (trip is null)
 {

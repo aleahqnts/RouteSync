@@ -11,7 +11,17 @@
 
 @if (loading)
 {
-    <div class="cl-loading">Loading…</div>
+    <div class="page-skeleton">
+        <div class="sk sk-line w50" style="height:24px; margin:0 auto 10px"></div>
+        <div class="sk sk-line w30" style="margin:0 auto 24px"></div>
+        <div class="sk sk-card" style="height:36px; border-radius:18px"></div>
+        <div class="sk sk-line w50" style="height:20px; margin:22px 0 16px"></div>
+        <div class="sk sk-card" style="height:56px"></div>
+        <div class="sk sk-card" style="height:56px"></div>
+        <div class="sk sk-card" style="height:56px"></div>
+        <div class="sk sk-card" style="height:56px"></div>
+        <div class="sk sk-card" style="height:56px"></div>
+    </div>
 }
 else if (loadFailed)
 {

@@ -187,7 +187,7 @@
 <div class="modal fade" id="siModal" tabindex="-1" aria-labelledby="siModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content" id="siModalContent">
-            <div class="modal-body si-loading">Loading...</div>
+            <div class="modal-body" aria-busy="true" aria-label="Loading"><span class="rs-sk" style="width:40%"></span><span class="rs-sk"></span><span class="rs-sk" style="width:85%"></span><span class="rs-sk" style="width:60%"></span></div>
         </div>
     </div>
 </div>
@@ -204,7 +204,7 @@
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
         async function open(id) {
-            content.innerHTML = '<div class="modal-body si-loading">Loading...</div>';
+            content.innerHTML = '<div class="modal-body" aria-busy="true" aria-label="Loading"><span class="rs-sk" style="width:40%"></span><span class="rs-sk"></span><span class="rs-sk" style="width:85%"></span><span class="rs-sk" style="width:60%"></span></div>';
             modal.show();
             try {
                 var res = await fetch('@Url.Action("Incident", "Audit")?id=' + encodeURIComponent(id),

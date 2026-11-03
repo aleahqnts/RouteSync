@@ -1,11 +1,3 @@
-.td-loading {
-    min-height: 80vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #5f6b7d;
-}
-
 .td { padding: 52px 22px calc(28px + env(safe-area-inset-bottom)); }
 
 .td-header {
