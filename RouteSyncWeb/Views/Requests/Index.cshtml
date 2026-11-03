@@ -905,6 +905,10 @@
         });
 
         rqStamp();
+        // The baseline is taken now, while it still matches what was rendered. Taken on
+        // the first tick instead, a change made while a dialog was open would become the
+        // baseline and never be shown.
+        rqCheck();
 
         // ---- Deciding ----------------------------------------------------------------
 
@@ -1567,6 +1571,9 @@
                 err.textContent = e.message || 'That could not be saved. Try again.';
                 err.style.display = 'block';
                 go.disabled = false;
+                // Usually a request that moved on while the dialog was open, such as one the
+                // driver cancelled, so the queue behind is brought up to date.
+                rqRefresh(false);
             }
         }
 
@@ -1744,6 +1751,9 @@
                 err.textContent = e.message || 'That could not be saved. Try again.';
                 err.style.display = 'block';
                 go.disabled = false;
+                // Usually a request that moved on while the dialog was open, such as one the
+                // driver cancelled, so the queue behind is brought up to date.
+                rqRefresh(false);
             }
         });
     })();
