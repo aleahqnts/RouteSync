@@ -649,6 +649,11 @@
         color: var(--rp-muted);
     }
 
+    /* A narrow column breaks between the two times, never inside one. */
+    .dp-shift-time > span {
+        white-space: nowrap;
+    }
+
     .dp-empty-cell {
         text-align: center;
         padding: 28px 22px;

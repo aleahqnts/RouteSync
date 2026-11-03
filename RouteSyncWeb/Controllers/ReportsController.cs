@@ -1289,7 +1289,7 @@ namespace FleetWise.Controllers
 
         // The operational-day banner, naming both ends of the service window.
         private static string OpDayLabel(DateTime anchor) =>
-            $"{anchor:MMMM d, yyyy}  •  6:00 AM – {anchor.AddDays(1):MMMM d}, 5:59 AM";
+            $"{anchor:MMMM d, yyyy}  •  6:00 AM – {anchor.AddDays(1):MMMM d}, 6:00 AM";
 
         // Report grouping model.
         private class ReportGroup

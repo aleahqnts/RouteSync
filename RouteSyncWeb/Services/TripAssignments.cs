@@ -321,14 +321,14 @@ namespace FleetWise.Services
         }
 
         // Formats a trip's shift window against its own date. An end at or before the
-        // start means an overnight shift, whose end rolls to the next morning and is
-        // marked so it cannot be read as ending the morning it began.
+        // start means an overnight shift, whose end rolls to the next morning. No marker
+        // is added: a PM start with an AM end already reads as the next day.
         public static (string Start, string End) ShiftWindow(Trip t)
         {
             bool overnight = t.ShiftEndTime <= t.ShiftStartTime;
             var s = t.Date.Date.Add(t.ShiftStartTime);
             var e = t.Date.Date.Add(t.ShiftEndTime).AddDays(overnight ? 1 : 0);
-            return (s.ToString("h:mm tt"), overnight ? $"{e:h:mm tt} (+1)" : e.ToString("h:mm tt"));
+            return (s.ToString("h:mm tt"), e.ToString("h:mm tt"));
         }
 
         // The shift that immediately follows this one on the same day.

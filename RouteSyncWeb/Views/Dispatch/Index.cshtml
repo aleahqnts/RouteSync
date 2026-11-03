@@ -22,10 +22,10 @@
         @* The badge is the way to any other day. A field laid over it opens the
            calendar wherever it is pressed, so the date already on screen is what is
            pressed to change it and nothing new is added to the row. *@
-        <span class="dp-date-badge" title="One operational day runs 6:00 AM to 5:59 AM the next morning. Press to go to another day.">
+        <span class="dp-date-badge" title="One operational day runs 6:00 AM to 6:00 AM the next morning. Press to go to another day.">
             <i class="ti ti-calendar-event"></i>
             <span class="dp-cycle-main">@Model.ScheduleDate.ToString("ddd, MMM d")</span>
-            <span class="dp-cycle-range">6:00 AM → @Model.ScheduleDate.AddDays(1).ToString("MMM d") 5:59 AM</span>
+            <span class="dp-cycle-range">6:00 AM to 6:00 AM</span>
             <input type="date" class="dp-date-pick" id="dpDatePick"
                    value="@(Model.ScheduleDate.ToString("yyyy-MM-dd"))"
                    aria-label="Go to another day" />
@@ -308,13 +308,13 @@
                                     @(trip.LateBy is null ? "" : "data-late")
                                     data-shift-id="@shiftId"
                                     data-shift-type="@shift.ShiftType"
-                                    data-shift-label="@shift.ShiftType @(shift.ShiftStartTime) to @(shift.ShiftEndTime)@(shift.IsOvernight ? " +1" : "")">
+                                    data-shift-label="@shift.ShiftType @(shift.ShiftStartTime) to @(shift.ShiftEndTime)">
                                     @if (i == 0)
                                     {
                                         <td class="dp-shift-cell" data-shift-type="@shift.ShiftType"
                                             rowspan="@shiftTrips.Count">
                                             @shift.ShiftType<br />
-                                            <span class="dp-shift-time">(@shift.ShiftStartTime – @shift.ShiftEndTime@(shift.IsOvernight ? " +1" : ""))</span>
+                                            <span class="dp-shift-time"><span>(@shift.ShiftStartTime –</span> <span>@shift.ShiftEndTime)</span></span>
                                             @if (shift.IsOvernight)
                                             {
                                                 <span class="dp-overnight-tag" title="Ends the next morning">overnight</span>
