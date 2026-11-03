@@ -39,9 +39,9 @@ namespace FleetWise.Services
 
     public sealed record PlannedInsert(
         DateTime Date, string Shift, int RouteId, string VehicleId, int DriverId,
-        TimeSpan Start, TimeSpan End, TimeSpan BreakStart, bool IsCover);
+        TimeSpan Start, TimeSpan End, bool IsCover);
 
-    public sealed record PlannedUpdate(string TripId, DateTime Date, string Shift, string VehicleId, int DriverId, TimeSpan BreakStart, bool IsCover);
+    public sealed record PlannedUpdate(string TripId, DateTime Date, string Shift, string VehicleId, int DriverId, bool IsCover);
 
     public sealed record PlannedGap(DateTime Date, string VehicleId, int RouteId, string Shift, string Reason);
 
@@ -196,13 +196,6 @@ namespace FleetWise.Services
             var touched = new HashSet<string>();
             var skips = w.Skips.Select(s => (s.Date.Date, s.VehicleId.ToUpperInvariant(), s.Shift.ToUpperInvariant())).ToHashSet();
 
-            // Break slots by the bus's place among its route's buses on that shift, from the
-            // roster rather than the day's trips, so a skipped bus does not move everyone else's.
-            var breakIndex = seats.Where(s => s.Kind == RosterRules.Crew)
-                .GroupBy(s => (s.RouteId, Shift: s.Shift.ToUpperInvariant()))
-                .SelectMany(g => g.OrderBy(s => s.VehicleId, StringComparer.Ordinal).Select((s, i) => (s, i)))
-                .ToDictionary(x => (x.s.VehicleId!.ToUpperInvariant(), x.s.Shift.ToUpperInvariant()), x => x.i);
-
             string? Unavailable(int driverId, DateTime day, string shift, int restWeekday)
             {
                 if (!driverById.TryGetValue(driverId, out var d) || !Ci.Equals(d.AccountStatus, "Activated"))
@@ -292,8 +285,6 @@ namespace FleetWise.Services
                         }
 
                         var window = TripStatus.Windows[shift];
-                        var slots = BreakSlots.For(window.Start);
-                        var breakStart = slots[breakIndex.GetValueOrDefault((busId.ToUpperInvariant(), shift.ToUpperInvariant())) % slots.Count];
 
                         book.Add(chosen.Value, day, shift, missed: false);
 
@@ -303,11 +294,11 @@ namespace FleetWise.Services
                         if (trip is null)
                         {
                             plan.Inserts.Add(new PlannedInsert(day, shift, seat.RouteId, busId, chosen.Value,
-                                window.Start, window.End, breakStart, isCover));
+                                window.Start, window.End, isCover));
                         }
-                        else if (trip.DriverId != chosen.Value || trip.BreakStart != breakStart)
+                        else if (trip.DriverId != chosen.Value)
                         {
-                            plan.Updates.Add(new PlannedUpdate(trip.TripId, day, shift, busId, chosen.Value, breakStart, isCover));
+                            plan.Updates.Add(new PlannedUpdate(trip.TripId, day, shift, busId, chosen.Value, isCover));
                         }
                         else
                         {

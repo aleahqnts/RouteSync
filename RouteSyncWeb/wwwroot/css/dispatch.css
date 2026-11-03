@@ -1163,32 +1163,6 @@
         font-weight: 500;
     }
 
-    /* The break takes a row of its own: a slot label and how many buses share it do not
-       fit a column sized for a route name. */
-    .tdm-info-item--break { grid-column: 1 / -1; }
-
-    /* The picker sits where the value would, sized to read as one. */
-    .tdm-break-select {
-        width: 100%;
-        max-width: 320px;
-        padding: 5px 8px;
-        border: 1.5px solid light-dark(#E8ECF0, #4E4E4E);
-        border-radius: 8px;
-        background: light-dark(#fff, #393939);
-        color: light-dark(#2D3748, #DEE1E7);
-        font-family: inherit;
-        font-size: 0.85rem;
-    }
-
-        .tdm-break-select:focus { outline: none; border-color: #4AADA8; }
-
-    .tdm-break-note {
-        font-size: 0.75rem;
-        color: light-dark(#2D7F56, #7FD3A3);
-    }
-
-        .tdm-break-note--bad { color: light-dark(#E53E3E, #FFA098); }
-
     /* Dots */
     .tdm-dot {
         display: inline-block;

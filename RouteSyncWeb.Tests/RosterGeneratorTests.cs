@@ -147,20 +147,6 @@ public class RosterGeneratorTests
     }
 
     [Fact]
-    public void Breaks_are_staggered_by_the_buses_place_on_the_shift()
-    {
-        var w = new World();
-        var seats = new List<RosterSeat>();
-        for (var i = 1; i <= 4; i++)
-            seats.Add(CrewSeat(w.Driver("D" + i), w.Bus($"B0{i}"), "Morning", 7));
-
-        var plan = RosterGenerator.Plan(WorldFor(w, seats));
-
-        var firstDay = plan.Inserts.Where(i => i.Date == October).OrderBy(i => i.VehicleId).Select(i => i.BreakStart.Hours);
-        Assert.Equal(new[] { 9, 10, 11, 9 }, firstDay);
-    }
-
-    [Fact]
     public void Skips_stay_empty_and_retired_buses_become_gaps()
     {
         var w = new World();
@@ -209,9 +195,7 @@ public class RosterGeneratorTests
         var crew = w.Driver("Crew"); var old = w.Driver("Old");
 
         var wrongDriver = w.Trip(new DateTime(2026, 10, 5), "Morning", old, bus);
-        wrongDriver.BreakStart = TimeSpan.FromHours(9);
         var matching = w.Trip(new DateTime(2026, 10, 6), "Morning", crew, bus);
-        matching.BreakStart = TimeSpan.FromHours(9);
         var notRun = w.Trip(new DateTime(2026, 10, 6), "Evening", old, bus);
         var marks = new[] { wrongDriver, matching, notRun }
             .ToDictionary(t => t.TripId, _ => new TripRosterMark(October, HandEdited: false));

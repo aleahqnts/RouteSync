@@ -94,9 +94,6 @@
     background: #1f8a46;
 }
 
-.status.on-break { color: #b7791f; }
-.status.on-break .dot { background: #d69e2e; }
-
 .date {
     text-align: left;
     color: #1b2a56;
@@ -234,12 +231,6 @@
     margin-top: 8px;
     color: #5f6b7d;
     font-size: 12px;
-}
-
-.prog-break {
-    color: #b7791f;
-    font-weight: 600;
-    text-align: center;
 }
 
 .btn-end {

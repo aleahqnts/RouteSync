@@ -314,11 +314,6 @@
         return day === phDateFmt.format(new Date()) ? time : day + ', ' + time;
     }
 
-    // A bus on its driver's break is still on its trip: it keeps reporting, keeps its
-    // color and still counts as out. Only what it is called changes.
-    function statusText(bus) {
-        return bus.onBreakUntil ? 'On Break until ' + bus.onBreakUntil : bus.status;
-    }
 
     // The time to the next stop as a rough figure, never a clock time: it is an estimate
     // from how fast buses usually cover that stretch. Counted from the reading it was
@@ -453,7 +448,7 @@
         document.getElementById('fmPanelRoute').textContent = String(bus.routeId).padStart(2, '0');
         document.getElementById('fmPanelShift').textContent = bus.shift;
         document.getElementById('fmPanelShift').hidden = !live;
-        document.getElementById('fmPanelStatus').textContent = statusText(bus);
+        document.getElementById('fmPanelStatus').textContent = bus.status;
         document.getElementById('fmPanelStatusDot').style.background = statusColor(bus.status);
         document.getElementById('fmPanelLive').hidden = !live;
         document.getElementById('fmPanelDay').hidden = live;
@@ -731,7 +726,7 @@
                 (bus.atStop && !isStale(bus)
                     ? '<div class="fm-tooltip__stop">At ' + escapeHtml(bus.atStop) + '</div>'
                     : '') +
-                '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + escapeHtml(statusText(bus)) + '</div>' +
+                '<div class="fm-tooltip__status" style="color:' + sc + '"><span class="fm-tooltip__dot" style="background:' + sc + '"></span>' + escapeHtml(bus.status) + '</div>' +
                 '<div class="fm-tooltip__passengers"><span>Total Passengers</span><strong>' + escapeHtml(bus.passengers) + '</strong></div>' +
                 (isStale(bus)
                     ? '<div class="fm-tooltip__stale">Last heard from ' + escapeHtml(relativeTime(bus.timestamp)) + '</div>'
@@ -839,11 +834,12 @@
                 setConnectionLost(false);
 
                 // Parked (non-Active) buses: group by terminal, then lay each terminal's
-                // buses out in a stable grid (sorted by id so slots don't reshuffle).
+                // buses out in a stable grid (sorted by id so slots don't reshuffle). A bus
+                // between trips has no terminal and stays where its last trip left it.
                 var parkedGroups = {};
                 buses.forEach(function (b) {
-                    if (b.status === 'On Trip') return;
-                    var key = b.terminalName || (b.lat + ',' + b.lng);
+                    if (b.status === 'On Trip' || !b.terminalName) return;
+                    var key = b.terminalName;
                     if (!parkedGroups[key]) parkedGroups[key] = { name: b.terminalName, lat: b.lat, lng: b.lng, list: [] };
                     parkedGroups[key].list.push(b);
                 });

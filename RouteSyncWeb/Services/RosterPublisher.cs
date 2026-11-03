@@ -530,13 +530,11 @@ namespace FleetWise.Services
                 ["driver_id"] = i.DriverId,
                 ["shift_start_time"] = i.Start.ToString(@"hh\:mm"),
                 ["shift_end_time"] = i.End.ToString(@"hh\:mm"),
-                ["break_start"] = i.BreakStart.ToString(@"hh\:mm"),
             }).ToList(),
             ["updates"] = plan.Updates.Select(u => new Dictionary<string, object?>
             {
                 ["trip_id"] = u.TripId,
                 ["driver_id"] = u.DriverId,
-                ["break_start"] = u.BreakStart.ToString(@"hh\:mm"),
             }).ToList(),
             ["deletes"] = plan.Deletes.ToList(),
             ["gaps"] = plan.Gaps.Select(g => new Dictionary<string, object?>
@@ -577,7 +575,7 @@ namespace FleetWise.Services
             lines.Add(written == 0
                 ? (done ? $"Published {month:MMMM}. No new trips to write." : "No new trips to write.")
                 : (done ? $"Published {month:MMMM}. Wrote {Trips(written)} {span}." : $"Writes {Trips(written)} {span}."));
-            if (changed > 0) lines.Add(done ? $"Changed the driver or break on {Trips(changed)}." : $"Changes the driver or break on {Trips(changed)}.");
+            if (changed > 0) lines.Add(done ? $"Changed the driver on {Trips(changed)}." : $"Changes the driver on {Trips(changed)}.");
             if (removed > 0) lines.Add(done ? $"Removed {Trips(removed)} the roster no longer runs or cannot fill." : $"Removes {Trips(removed)} the roster no longer runs or cannot fill.");
             if (plan.Unchanged > 0) lines.Add($"{Trips(plan.Unchanged)} already match the roster.");
 
@@ -621,19 +619,12 @@ namespace FleetWise.Services
 
         // One message to each driver on a newly published roster, saying what their month is.
         //
-        // Written to be understood at a glance: the bus, the shift and its hours, the rest day
-        // and the break for a crew driver; the route, the usual shift and the rest day for a
+        // Written to be understood at a glance: the bus, the shift and its hours, and the rest day
+        // for a crew driver; the route, the usual shift and the rest day for a
         // floater, whose days are in their calendar.
         private async Task TellEveryDriverAsync(
             DateTime month, IReadOnlyList<RosterSeat> seats, IReadOnlyDictionary<int, string> routes, int sender)
         {
-            // The same order the publish staggers breaks by: every bus the route runs on the
-            // shift, whether or not anybody is rostered on it.
-            var breakIndex = seats.Where(s => s.Kind == RosterRules.Crew)
-                .GroupBy(s => (s.RouteId, Shift: s.Shift.ToUpperInvariant()))
-                .SelectMany(g => g.OrderBy(s => s.VehicleId, StringComparer.Ordinal).Select((s, i) => (s, i)))
-                .ToDictionary(x => (Bus: x.s.VehicleId!.ToUpperInvariant(), Shift: x.s.Shift.ToUpperInvariant()), x => x.i);
-
             var messages = seats.Where(s => s.DriverId is not null).Select(s =>
             {
                 var rest = RosterRules.DayName(s.RestWeekday ?? 0);
@@ -641,11 +632,9 @@ namespace FleetWise.Services
 
                 if (s.Kind == RosterRules.Crew && TripStatus.Windows.TryGetValue(s.Shift, out var window))
                 {
-                    var slots = BreakSlots.For(window.Start);
-                    var breakStart = slots[breakIndex.GetValueOrDefault((s.VehicleId!.ToUpperInvariant(), s.Shift.ToUpperInvariant())) % slots.Count];
                     body = $"You are assigned to Bus {s.VehicleId} on the {s.Shift} shift, "
-                         + $"{Clock(window.Start)} to {Clock(window.End)}. Your rest day is {rest} and your break is "
-                         + $"from {BreakSlots.Label(breakStart)}. You can view each day in your schedule calendar.";
+                         + $"{Clock(window.Start)} to {Clock(window.End)}. Your rest day is {rest}. "
+                         + "You can view each day in your schedule calendar.";
                 }
                 else
                 {
@@ -721,7 +710,7 @@ namespace FleetWise.Services
             return string.Join(", ", written.Take(written.Count - 1)) + $" and {written[^1]}";
         }
 
-        private static string Clock(TimeSpan t) => BreakSlots.Clock(t);
+        private static string Clock(TimeSpan t) => DateTime.Today.Add(t).ToString("h:mm tt", En);
 
         // ---- Small things ----------------------------------------------------------------------------------
 

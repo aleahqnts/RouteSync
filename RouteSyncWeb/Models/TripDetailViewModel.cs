@@ -12,16 +12,6 @@ namespace FleetWise.ViewModels
         public string ShiftEndTime { get; set; }
         public string RouteName { get; set; }
 
-        // Break: the slot as "HH:mm", null on a trip written before breaks existed.
-        public string BreakStart { get; set; }
-        public string BreakLabel { get; set; }
-        public bool OnBreak { get; set; }
-
-        // Whether the break can still be moved: not once the trip is finished or its
-        // shift is over.
-        public bool BreakEditable { get; set; }
-        public List<BreakOptionViewModel> BreakOptions { get; set; } = new();
-
         // Vehicle Details
         public string VehicleId { get; set; }
         public string VehicleType { get; set; }
@@ -75,16 +65,6 @@ namespace FleetWise.ViewModels
     {
         public long PhotoId { get; set; }
         public string TakenAt { get; set; }
-    }
-
-    // One break slot a trip could take.
-    public class BreakOptionViewModel
-    {
-        public string Value { get; set; }
-        public string Label { get; set; }
-
-        // Other buses on the same route, shift and day already breaking then.
-        public int Others { get; set; }
     }
 
     public class TripChecklistViewModel

@@ -206,7 +206,7 @@ public class DriverDataService
 
     // What the running trip screen checks, as one answer.
     // Trip:
-    // The trip's status, route, bus, break, count, heartbeat, revenue and end time. The
+    // The trip's status, route, bus, count, heartbeat, revenue and end time. The
     // other columns are left at their defaults. Null when the trip cannot be read.
     // CounterDeviceId: The counter phone paired to the trip's bus, if any.
     // Device: That phone's status, readable only while the trip is running.

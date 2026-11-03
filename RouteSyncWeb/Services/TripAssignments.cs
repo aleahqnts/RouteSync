@@ -179,8 +179,7 @@ namespace FleetWise.Services
         //
         // A shift that has finished cannot be booked into, and that is not overridable:
         // confirming it would not put the shift back. A scheduling conflict can be confirmed
-        // past. The break takes the least-used slot among the route's buses already on that
-        // shift that day.
+        // past.
         //
         // The trip carries no roster month, so a re-publish of the roster treats it as made
         // by hand and builds around it.
@@ -200,19 +199,12 @@ namespace FleetWise.Services
                 if (conflict != null) return new(ReassignOutcome.Conflict, conflict);
             }
 
-            var alongside = (await _supabase.From<Trip>()
-                .Filter("date", Operator.Equals, day.ToString("yyyy-MM-dd"))
-                .Filter("route_id", Operator.Equals, t.RouteId.ToString())
-                .Filter("shift_type", Operator.Equals, t.Shift)
-                .Get()).Models;
-
             var inserted = (await _supabase.From<Trip>().Insert(new Trip
             {
                 Date = day,
                 ShiftType = t.Shift,
                 ShiftStartTime = t.Start,
                 ShiftEndTime = t.End,
-                BreakStart = BreakSlots.LeastUsed(t.Start, alongside.Select(x => x.BreakStart)),
                 RouteId = t.RouteId,
                 VehicleId = t.VehicleId,
                 DriverId = t.DriverId,

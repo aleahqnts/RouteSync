@@ -122,6 +122,9 @@ namespace FleetWise.Controllers
             return liveResponse.Content ?? "";
         }
 
+        // Where a bus was last drawn on a trip, kept for RecentTelemetryMinutes after.
+        private static string LastSeenKey(string vehicleId) => $"fleetmap:lastseen:{vehicleId}";
+
         // A UTC instant as the map's scripts read it: the UTC digits with no zone marked,
         // to which they add the "Z" themselves.
         private static DateTime ForMap(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
@@ -440,16 +443,16 @@ namespace FleetWise.Controllers
                     Passengers = passengers,
                     Capacity = capacity,
                     EstimatedRevenue = _fareCalculator.Estimate(passengers, fareRate),
-                    Timestamp = readingAt,
-                    OnBreakUntil = BreakSlots.IsOnBreak(trip, PhClock.Now) && BreakSlots.WindowOf(trip) is { } breakWindow
-                        ? BreakSlots.Clock(breakWindow.End.TimeOfDay)
-                        : null
+                    Timestamp = readingAt
                 };
             }
 
             positions.AddRange(movingByVehicle.Values);
-            foreach (var id in movingByVehicle.Keys)
+            foreach (var (id, bus) in movingByVehicle)
+            {
                 movingVehicleIds.Add(id);
+                _cache.Set(LastSeenKey(id), new GeoPoint(bus.Lat, bus.Lng), TimeSpan.FromMinutes(RecentTelemetryMinutes));
+            }
 
             // Each route's terminal comes from its own stops, so a route added later parks
             // its buses at its own terminal without a change here. A bus with no route, or
@@ -465,6 +468,10 @@ namespace FleetWise.Controllers
                 ?? DefaultTerminal;
 
             // Parked buses: every vehicle not on a trip, shown stationary at its terminal.
+            // A bus that was on a trip moments ago stays where that trip last showed it.
+            // Drivers change over at a stop on the route, not at the terminal, so between
+            // one driver ending their trip and the next starting theirs the bus is still
+            // standing at that stop.
             foreach (var vehicle in vehicles)
             {
                 // A retired bus is out of the fleet. The registry leaves it out of its
@@ -485,6 +492,7 @@ namespace FleetWise.Controllers
 
                 routesById.TryGetValue(vehicle.RouteId ?? -1, out var route);
                 var terminal = TerminalFor(vehicle.RouteId);
+                GeoPoint? lastSeen = _cache.TryGetValue(LastSeenKey(vehicle.VehicleId), out GeoPoint seen) ? seen : null;
 
                 positions.Add(new BusPositionDto
                 {
@@ -496,11 +504,11 @@ namespace FleetWise.Controllers
                     Shift = "—",
                     DriverName = "Unassigned",
                     Status = vehicleStatus,
-                    TerminalName = terminal.Name,
-                    Lat = terminal.Lat,
-                    Lng = terminal.Lng,
-                    RawLat = terminal.Lat,
-                    RawLng = terminal.Lng,
+                    TerminalName = lastSeen is null ? terminal.Name : null,
+                    Lat = lastSeen?.Lat ?? terminal.Lat,
+                    Lng = lastSeen?.Lng ?? terminal.Lng,
+                    RawLat = lastSeen?.Lat ?? terminal.Lat,
+                    RawLng = lastSeen?.Lng ?? terminal.Lng,
                     Heading = 0,
                     Speed = 0,
                     Passengers = 0,

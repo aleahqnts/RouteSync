@@ -31,7 +31,8 @@ public class BusPositionDto
     [JsonPropertyName("status")]
     public string Status { get; set; }
 
-    // Set only for parked buses: the terminal they are shown at.
+    // Set only for parked buses at their terminal. Null for one still standing where its
+    // last trip ended, which is drawn on its own rather than in the terminal's grid.
     [JsonPropertyName("terminalName")]
     public string TerminalName { get; set; }
 
@@ -137,9 +138,4 @@ public class BusPositionDto
 
     [JsonPropertyName("timestamp")]
     public DateTime Timestamp { get; set; }
-
-    // When the driver's break ends, as "10:00 AM", while the clock is inside it. Null
-    // otherwise. The status stays On Trip: the bus is still on its trip and reporting.
-    [JsonPropertyName("onBreakUntil")]
-    public string OnBreakUntil { get; set; }
 }
