@@ -136,37 +136,6 @@
     color: #5f6b7d;
 }
 
-/* The months that hold something, scrolled rather than wrapped: a year of them would
-   otherwise stack four rows deep above the list they filter. */
-.lv-months {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-}
-
-    .lv-months::-webkit-scrollbar { display: none; }
-
-.lv-month {
-    flex: 0 0 auto;
-    padding: 6px 12px;
-    border: 1px solid #e2e6ec;
-    border-radius: 999px;
-    background: #fff;
-    color: #5a6678;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-    .lv-month.on {
-        border-color: #2e9e8f;
-        background: #2e9e8f;
-        color: #fff;
-    }
-
 .lv-list {
     border: 1px solid #e6e8ee;
     border-radius: 14px;
@@ -215,16 +184,6 @@
 
     .lv-group:not(:first-child) { border-top: 1px solid #eef0f4; }
 
-.lv-group-n {
-    margin-left: auto;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: #e7ecf1;
-    color: #6b7787;
-    font-size: 10px;
-    letter-spacing: 0;
-}
-
 /* Tighter. Every request was a card's worth of height for two lines of text and a
    button, so four of them filled a phone. */
 .lv-row { padding: 10px 14px; }
@@ -248,13 +207,6 @@
     font-weight: 700;
     color: #1b2a56;
     white-space: nowrap;
-}
-
-.lv-filed {
-    margin: 0 0 4px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #5f6b7d;
 }
 
 .lv-meta {
