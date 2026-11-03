@@ -120,6 +120,13 @@ namespace FleetWise.ViewModels
         // Only labels the record. The pick's rank is always worked out on the server.
         [RegularExpression(@"^(board|reassign)?$", ErrorMessage = "That is not a screen.")]
         public string? Source { get; set; }
+
+        // The driver and bus the trip had when the page showed it. The save is refused when
+        // the trip has been changed since.
+        public int? WasDriverId { get; set; }
+
+        [RegularExpression(@"^([A-Za-z0-9-]{1,20})?$", ErrorMessage = "That is not a vehicle ID.")]
+        public string? WasVehicleId { get; set; }
     }
 
     // Posted when a trip is removed. Clearing both the bus and the driver in the reassign

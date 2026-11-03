@@ -5,8 +5,11 @@ namespace FleetWise.Services
 {
     // A change to a trip's bus, driver or route. A null side is left as it is.
     // Override: The dispatcher was shown a scheduling conflict and chose to save anyway.
+    // WasDriverId, WasVehicleId: What the page showed the trip with. When given, the change
+    // is refused if the trip does not match them.
     public sealed record ReassignChange(
-        string TripId, int? DriverId, string? VehicleId, int? RouteId, bool Override);
+        string TripId, int? DriverId, string? VehicleId, int? RouteId, bool Override,
+        int? WasDriverId = null, string? WasVehicleId = null);
 
     public enum ReassignOutcome
     {
@@ -42,12 +45,14 @@ namespace FleetWise.Services
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
         private readonly SchedulingData _scheduling;
+        private readonly EditLocks _locks;
 
-        public TripAssignments(Supabase.Client supabase, AuditLog audit, SchedulingData scheduling)
+        public TripAssignments(Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, EditLocks locks)
         {
             _supabase = supabase;
             _audit = audit;
             _scheduling = scheduling;
+            _locks = locks;
         }
 
         // Moves a trip to another bus, driver or route.
@@ -91,6 +96,18 @@ namespace FleetWise.Services
 
             if (TripStatus.Missed(trip, PhClock.Now))
                 return new(ReassignOutcome.Refused, "That shift ended without the trip starting, so it can no longer be reassigned.");
+
+            // Every path that moves a trip comes through here, so a hold taken in the reassign
+            // modal turns away the board's Assign and the leave queue's cover as well.
+            if (_locks.HeldByOther($"trip:{trip.TripId}", senderId, PhClock.Now) is { } hold)
+                return new(ReassignOutcome.Refused, EditLocks.Busy(hold));
+
+            // Checked on the row as read, not in the write, so two saves in the same instant
+            // can both pass. The hold above leaves that open only to the board's Assign,
+            // which takes no hold.
+            if (change.WasDriverId is not null
+                && (trip.DriverId != change.WasDriverId || (trip.VehicleId ?? "") != (change.WasVehicleId ?? "")))
+                return new(ReassignOutcome.Refused, "This trip was changed while you had it open. Close it and open it again to see it as it is now.");
 
             // Captured before the update, because a reassignment is only meaningful
             // alongside what it moved away from.

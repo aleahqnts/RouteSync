@@ -131,6 +131,38 @@
             document.getElementById('euEmail').value = btn.dataset.email;
             document.getElementById('euRoleId').value = btn.dataset.roleId;
             document.getElementById('euAccountStatus').value = btn.dataset.accountStatus;
+
+            // Held while open. When someone else has the account, it shows as usual but
+            // read-only, with who has it in the footer. Saving is off until the hold is
+            // answered. A hold that cannot be reached leaves it editable, since the save
+            // checks the hold again.
+            const opening = ++euOpening;
+            euReadOnly(null);
+            document.getElementById('euSave').disabled = true;
+            rsEditLock('user:' + btn.dataset.userId, euReadOnly).then(function (lock) {
+                if (opening !== euOpening) return lock.release();
+                euLock = lock;
+                euReadOnly(lock.holder);
+            }, function () { if (opening === euOpening) euReadOnly(null); });
+        });
+
+        // Counted per opening, because the hold can answer after the modal has closed, or
+        // after it closed and opened on another account.
+        let euLock = null, euOpening = 0;
+
+        function euReadOnly(holder) {
+            const modal = document.getElementById('editUserModal');
+            const line = document.getElementById('euLockLine');
+            modal.querySelector('.modal-content').classList.toggle('rs-locked', !!holder);
+            modal.querySelector('.modal-body').inert = !!holder;
+            document.getElementById('euSave').disabled = !!holder;
+            if (holder) rsLockLine(line, holder);
+            else line.hidden = true;
+        }
+
+        document.getElementById('editUserModal').addEventListener('hidden.bs.modal', function () {
+            euOpening++;
+            if (euLock) { euLock.release(); euLock = null; }
         });
 
         // Manage roles, switching the right-hand pane to the selected role.

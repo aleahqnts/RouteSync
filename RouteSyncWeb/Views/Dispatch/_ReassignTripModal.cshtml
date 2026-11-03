@@ -101,6 +101,8 @@
         <div class="rtm-footer">
             @* Taking a trip off the schedule, asked for here since a list has no blank to clear. *@
             <button type="button" class="rtm-btn-remove" id="rtm-remove-btn" data-on="click:rtmAskRemove">Remove trip</button>
+            @* Shown in place of Remove trip while someone else has the trip open. *@
+            <span class="rs-lock-line" id="rtm-lock-line" role="status" hidden></span>
             <button class="rtm-btn-cancel" data-on="click:rtmClose">Cancel</button>
             <button class="rtm-btn-save" id="rtm-save-btn" data-on="click:rtmSubmit">
                 <span id="rtm-save-label">Save changes</span>
@@ -174,6 +176,7 @@
     (function () {
         let _rtmOptions  = null;   // full options from server
         let _rtmTripId   = null;   // trip being reassigned
+        let _rtmLock     = null;   // this page's edit hold on the trip
 
         // DOM refs.
         const overlay     = document.getElementById('reassignModal');
@@ -227,6 +230,19 @@
             });
         });
 
+        // Read-only while holder, someone else or this page's own lapsed hold, has the
+        // trip: nothing in the body takes input, and the footer says who has it.
+        const removeBtn = document.getElementById('rtm-remove-btn');
+        const lockLine  = document.getElementById('rtm-lock-line');
+        function rtmReadOnly(holder) {
+            overlay.querySelector('.rtm-dialog').classList.toggle('rs-locked', !!holder);
+            bodyEl.inert = !!holder;
+            removeBtn.hidden = !!holder;
+            saveBtn.disabled = !!holder;
+            if (holder) rsLockLine(lockLine, holder);
+            else lockLine.hidden = true;
+        }
+
         // Open.
         window.openReassignModal = async function (tripId) {
             _rtmTripId  = tripId;
@@ -234,6 +250,7 @@
             _rtmOpener  = document.activeElement;
 
             // Reset UI
+            rtmReadOnly(null);
             loadingEl.innerHTML     = loadingHtml;
             loadingEl.style.display = 'flex';
             bodyEl.style.display    = 'none';
@@ -242,6 +259,15 @@
             document.body.style.overflow = 'hidden';
 
             try {
+                // Held before anything loads. When someone else has the trip, it still
+                // loads as usual, read-only, with who has it in the footer.
+                if (_rtmLock) _rtmLock.release();
+                const lock = await rsEditLock('trip:' + tripId, rtmReadOnly);
+                // Closed, or opened on another trip, while the hold was being taken.
+                if (overlay.style.display === 'none' || _rtmTripId !== tripId) { lock.release(); return; }
+                _rtmLock = lock;
+                rtmReadOnly(lock.holder);
+
                 const res  = await fetch(`/Dispatch/GetReassignOptions?tripId=${encodeURIComponent(tripId)}`);
                 // The server says why it refused, and that is what the dispatcher needs to
                 // read. A plain failure is kept for when there is no reason to give.
@@ -288,7 +314,8 @@
                 // Focus lands where the decision is: the open list on the problem side, or
                 // the first Change when nothing is wrong.
                 const open = [sides.vehicle, sides.driver].find(s => !s.host.hidden);
-                if (open && open.list) open.list.focus();
+                if (bodyEl.inert) overlay.querySelector('.rtm-footer .rtm-btn-cancel').focus();
+                else if (open && open.list) open.list.focus();
                 else sides.vehicle.change.focus();
 
             } catch (e) {
@@ -301,6 +328,8 @@
 
         // Close.
         window.closeReassignModal = function () {
+            if (_rtmLock) { _rtmLock.release(); _rtmLock = null; }
+            _rtmTripId = null;
             overlay.style.display = 'none';
             document.body.style.overflow = '';
             if (_rtmOpener && document.contains(_rtmOpener)) _rtmOpener.focus();
@@ -442,7 +471,7 @@
         let _rtmPending = null;
 
         window.submitReassign = async function (force) {
-            if (!_rtmOptions) return;
+            if (!_rtmOptions || bodyEl.inert) return;
 
             // What each list has chosen, falling back to the current assignment.
             const vehicleId = (sides.vehicle.list && sides.vehicle.list.value()) || _rtmOptions.tripInfo.currentVehicleId;
@@ -456,7 +485,9 @@
                 driverId,
                 routeId,
                 override: !!force,
-                source: 'reassign'
+                source: 'reassign',
+                wasDriverId: _rtmOptions.tripInfo.currentDriverId,
+                wasVehicleId: _rtmOptions.tripInfo.currentVehicleId || null
             };
 
             saveBtn.disabled = true;
@@ -486,7 +517,7 @@
             } catch {
                 dpShowMsg(['Failed to reassign trip. Please try again.']);
             } finally {
-                saveBtn.disabled = false;
+                saveBtn.disabled = bodyEl.inert;
                 document.getElementById('rtm-save-label').style.display  = 'inline';
                 document.getElementById('rtm-save-spinner').style.display = 'none';
             }
@@ -542,7 +573,7 @@
             } catch {
                 dpShowMsg(['Failed to remove trip. Please try again.']);
             } finally {
-                saveBtn.disabled = false;
+                saveBtn.disabled = bodyEl.inert;
                 document.getElementById('rtm-save-label').style.display  = 'inline';
                 document.getElementById('rtm-save-spinner').style.display = 'none';
             }

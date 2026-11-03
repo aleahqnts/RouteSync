@@ -1,4 +1,4 @@
-@model FleetWise.ViewModels.TripRow
+﻿@model FleetWise.ViewModels.TripRow
 @* A trip's best-match driver and bus, or why there is none. Shown in the Issues queue. *@
 @{ var trip = Model; }
     @* The rules' best match, one confirm away from assigned, with why
@@ -23,6 +23,8 @@
                         data-name="@trip.SuggestedDriver.Name"
                         data-reason="@trip.SuggestedDriverReason"
                         data-note="@trip.SuggestedDriver.Warning"
+                        data-was-driver="@trip.DriverId"
+                        data-was-vehicle="@trip.VehicleId"
                         data-on="click:dpApplySuggestion">Assign</button>
                 @if (!busBlock)
                 {
@@ -64,6 +66,8 @@
                         data-plate="@trip.SuggestedVehicle.PlateNumber"
                         data-reason="@trip.SuggestedVehicleReason"
                         data-note="@trip.SuggestedVehicle.Warning"
+                        data-was-driver="@trip.DriverId"
+                        data-was-vehicle="@trip.VehicleId"
                         data-on="click:dpApplySuggestion">Assign</button>
                 <button type="button" class="dp-suggest-more"
                         aria-label="Other options for @trip.TripId"

@@ -13,11 +13,13 @@ namespace FleetWise.Controllers
     {
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
+        private readonly EditLocks _locks;
 
-        public UsersController(Supabase.Client supabase, AuditLog audit)
+        public UsersController(Supabase.Client supabase, AuditLog audit, EditLocks locks)
         {
             _supabase = supabase;
             _audit = audit;
+            _locks = locks;
         }
 
         public async Task<IActionResult> Index(string? role, string? search)
@@ -99,6 +101,13 @@ namespace FleetWise.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(EditUserViewModel model)
         {
+            int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var me);
+            if (_locks.HeldByOther($"user:{model.UserId}", me, PhClock.Now) is { } hold)
+            {
+                TempData["Error"] = EditLocks.Busy(hold);
+                return RedirectToAction(nameof(Index));
+            }
+
             if (ModelState.IsValid)
             {
                 var existing = await _supabase.From<UserModel>()

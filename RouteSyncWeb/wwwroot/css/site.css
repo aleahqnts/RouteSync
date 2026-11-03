@@ -1532,3 +1532,77 @@ th.rs-sortable:focus-visible {
     box-shadow: none;
 }
 
+/* An editor someone else has open: its content and disabled actions greyed, and its
+   footer an amber band carrying the lock line. Whatever it has made inert is what greys. */
+.rs-locked [inert],
+.rs-locked button:disabled {
+    opacity: .5;
+    filter: grayscale(1);
+}
+
+/* An inert element is passed over when the pointer is hit-tested, so the cursor over the
+   greyed content is the container's. The header and footer stay ordinary. */
+.rs-locked {
+    cursor: not-allowed;
+}
+
+    .rs-locked .rtm-header,
+    .rs-locked .modal-header,
+    .rs-locked .rtm-footer,
+    .rs-locked .modal-footer {
+        cursor: auto;
+    }
+
+.rs-locked .rtm-footer,
+.rs-locked .modal-footer {
+    background: light-dark(#FFF8E1, #50472A);
+    border-top-color: light-dark(#F0D88A, #675D3C);
+}
+
+    .rs-locked .rs-lock-line,
+    .rs-locked .rs-lock-line strong {
+        color: light-dark(#9C6306, #F59E0B);
+    }
+
+/* Who has an editor open, in place of its left-hand action while it is read-only. */
+.rs-lock-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: auto;
+    min-width: 0;
+    font-size: 0.85rem;
+    color: light-dark(#5F6B7A, #BCC0C4);
+}
+
+    .rs-lock-line[hidden] {
+        display: none;
+    }
+
+    .rs-lock-line .ti {
+        font-size: 1rem;
+    }
+
+    .rs-lock-line strong {
+        font-weight: 600;
+        color: light-dark(#2D3748, #DEE1E7);
+    }
+
+    .rs-lock-line strong {
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .rs-lock-line span {
+        flex-shrink: 0;
+        margin-left: -4px;
+        white-space: nowrap;
+    }
+
+    /* The footer's buttons keep to one line beside it. */
+    .rs-lock-line ~ * {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }

@@ -63,3 +63,66 @@ window.rsPickFace = function (sel) {
     var opt = sel.selectedOptions[0];
     face.textContent = (sel.value && opt && opt.dataset.face) ? opt.dataset.face : '';
 };
+
+// Holds a record open for editing, so a second person opening it sees it read-only.
+// Resolves to { holder, release }. holder is null once the hold is taken; otherwise it is
+// { by, since } for whoever has it, or { lapsed: true } when the caller's own hold ended
+// for being idle. The hold is renewed every 10 seconds while open, counting only clicks
+// and typing as activity, and let go by release() or when the page goes away. onLost is
+// called with the holder when the hold ends while still open.
+window.rsEditLock = function (key, onLost) {
+    var active = true, timer = null, done = false;
+    function mark() { active = true; }
+    function send() {
+        var body = new URLSearchParams({ key: key, active: active });
+        active = false;
+        return fetch('/Locks/Hold', { method: 'POST', body: body }).then(function (r) {
+            if (r.ok) return null;
+            return r.json().catch(function () { return { by: 'someone else', since: '' }; });
+        });
+    }
+    function release() {
+        if (done) return;
+        done = true;
+        clearInterval(timer);
+        document.removeEventListener('pointerdown', mark, true);
+        document.removeEventListener('keydown', mark, true);
+        window.removeEventListener('pagehide', release);
+        navigator.sendBeacon('/Locks/Release', new URLSearchParams({ key: key }));
+    }
+    return send().then(function (holder) {
+        if (holder) return { holder: holder, release: function () {} };
+        document.addEventListener('pointerdown', mark, true);
+        document.addEventListener('keydown', mark, true);
+        window.addEventListener('pagehide', release);
+        // A failed renewal is left alone: the hold lapses on the server and the next
+        // renewal takes it again, or reports who took it meanwhile.
+        timer = setInterval(function () {
+            send().then(function (h) { if (h && !done) { release(); if (onLost) onLost(h); } }, function () {});
+        }, 10000);
+        return { holder: null, release: release };
+    });
+};
+
+// The one line a read-only editor shows about its holder, written into el: a lock icon,
+// the holder's name and the time they opened it. The name gives way first when space is
+// short, so the time always shows; the full sentence is the tooltip and the label.
+window.rsLockLine = function (el, holder) {
+    var icon = document.createElement('i');
+    icon.className = 'ti ti-lock';
+    icon.setAttribute('aria-hidden', 'true');
+    var name = document.createElement('strong');
+    var time = document.createElement('span');
+    if (holder.lapsed) {
+        name.textContent = 'Idle 30 min';
+        time.textContent = '· reopen to edit';
+        el.title = 'Your lock ended after 30 minutes with no activity. Reopen to edit.';
+    } else {
+        name.textContent = holder.by;
+        time.textContent = holder.since ? '· since ' + holder.since : '';
+        el.title = 'Locked by ' + holder.by + (holder.since ? ' since ' + holder.since : '');
+    }
+    el.setAttribute('aria-label', el.title);
+    el.replaceChildren(icon, name, time);
+    el.hidden = false;
+};

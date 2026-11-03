@@ -18,6 +18,7 @@ namespace FleetWise.Controllers
         private readonly SchedulingData _scheduling;
         private readonly TripAssignments _assignments;
         private readonly IMemoryCache _cache;
+        private readonly EditLocks _locks;
 
         // How long a board's fingerprint is shared between everyone watching that day.
         //
@@ -33,13 +34,14 @@ namespace FleetWise.Controllers
 
         public DispatchController(
             Supabase.Client supabase, AuditLog audit, SchedulingData scheduling, TripAssignments assignments,
-            IMemoryCache cache)
+            IMemoryCache cache, EditLocks locks)
         {
             _supabase = supabase;
             _audit = audit;
             _scheduling = scheduling;
             _assignments = assignments;
             _cache = cache;
+            _locks = locks;
         }
 
         // A short summary of everything the board would show differently.
@@ -1032,7 +1034,8 @@ namespace FleetWise.Controllers
             int.TryParse(senderIdClaim, out var senderId);
 
             var result = await _assignments.ReassignAsync(
-                new ReassignChange(req.TripId, req.DriverId, req.VehicleId, req.RouteId, req.Override),
+                new ReassignChange(req.TripId, req.DriverId, req.VehicleId, req.RouteId, req.Override,
+                                   req.WasDriverId, req.WasVehicleId),
                 senderId,
                 screen: PickScreen.IsKnown(req.Source) ? req.Source : null);
 
@@ -1064,6 +1067,10 @@ namespace FleetWise.Controllers
 
             if (trip.TripStatus == "Active" || trip.TripStatus == "Completed")
                 return BadRequest("This trip has already started or completed and can't be removed.");
+
+            int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var me);
+            if (_locks.HeldByOther($"trip:{trip.TripId}", me, PhClock.Now) is { } hold)
+                return BadRequest(EditLocks.Busy(hold));
 
             await _supabase.From<Trip>()
                 .Filter("trip_id", Operator.Equals, req.TripId)

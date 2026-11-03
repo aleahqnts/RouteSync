@@ -133,6 +133,9 @@ builder.Services.AddScoped<SecurityDetector>();
 // Each running trip's place on its route line, kept between the fleet map's position reads.
 builder.Services.AddSingleton<RouteSnapTracker>();
 
+// Who has a trip or an account open for editing.
+builder.Services.AddSingleton<EditLocks>();
+
 builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<LiveAccount>();
 builder.Services.AddScoped<NavCounts>();

@@ -526,7 +526,9 @@
             tripId: d.tripId,
             driverId: d.driverId ? parseInt(d.driverId, 10) : null,
             vehicleId: d.vehicleId || null,
-            source: 'board'
+            source: 'board',
+            wasDriverId: parseInt(d.wasDriver, 10),
+            wasVehicleId: d.wasVehicle || null
         };
         dpApplyOpener = btn;
 
