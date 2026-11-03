@@ -31,12 +31,13 @@
     @* Chrome and Edge start building a navigation page in the background once the pointer
        rests on its link (or a finger touches it), so the click lands on a finished page.
        Navigation links only: every one is a plain GET page, and signing out is a POST form,
-       which is never prerendered. Other browsers ignore this block. *@
+       which is never prerendered. A link elsewhere opts in with rs-prerender, including one
+       added after load. Other browsers ignore this block. *@
     <script type="speculationrules" nonce="@CspNonce.Value">
     {
         "prerender": [{
             "where": { "and": [
-                { "selector_matches": ".fw-sidebar__link, .fw-bar__link, .fw-sheet__link, .fw-sidebar__logo-link" },
+                { "selector_matches": ".fw-sidebar__link, .fw-bar__link, .fw-sheet__link, .fw-sidebar__logo-link, .rs-prerender" },
                 { "not": { "selector_matches": "[aria-current=page]" } }
             ] },
             "eagerness": "moderate"

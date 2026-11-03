@@ -932,18 +932,21 @@
             // opens with a button that cannot be pressed and nothing saying why.
             go.disabled = false;
 
+            modal.style.display = 'flex';
+            note.focus();
+
+            // The dialog opens at once and the covers fill in behind placeholders, since
+            // ranking them can take a few seconds.
             if (decision === 'Approved' && shifts > 0 && blockingBox.dataset.covers) {
+                title.textContent = shifts === 1 ? 'Cover this shift first' : 'Cover these shifts first';
                 rqShowBlocking(who + ' is still assigned to '
                     + (shifts === 1 ? 'a shift' : shifts + ' shifts')
                     + ' during this leave. Pick a cover driver, then approve.', [], true);
-                if (await rqShowCovers(id) && pending && pending.id === id) {
-                    title.textContent = shifts === 1 ? 'Cover this shift first' : 'Cover these shifts first';
+                const asked = pending;
+                if (!await rqShowCovers(id) && pending === asked) {
+                    title.textContent = 'Approve leave';
                 }
-                if (!pending || pending.id !== id) return;
             }
-
-            modal.style.display = 'flex';
-            note.focus();
         };
 
         const histModal = document.getElementById('rqHistoryModal');
@@ -1074,6 +1077,7 @@
                 const label = s.date + ', ' + s.shift + ' shift';
                 if (planner) {
                     const a = document.createElement('a');
+                    a.className = 'rs-prerender';
                     a.href = planner + '?start=' + encodeURIComponent(s.week);
                     a.textContent = label;
                     li.appendChild(a);
@@ -1212,7 +1216,7 @@
                 }
             } else {
                 row.who.appendChild(rqCost(s.shortfall || 'No driver can take this shift without a cost.'));
-                const planner = rqEl('a', 'rq-cover-planner', 'Cover it in the planner');
+                const planner = rqEl('a', 'rq-cover-planner rs-prerender', 'Cover it in the planner');
                 planner.href = '/Schedule?start=' + encodeURIComponent(s.week);
                 row.who.appendChild(planner);
             }
@@ -1399,7 +1403,7 @@
             const head = rqEl('div', 'rq-cover-head');
             const when = rqEl('span', 'rq-cover-when', rqShiftLabel(s));
             when.id = 'rqCoverWhen-' + s.tripId;
-            const where = rqEl('a', 'rq-cover-where', s.window + ', ' + s.route + ', ' + s.vehicleId);
+            const where = rqEl('a', 'rq-cover-where rs-prerender', s.window + ', ' + s.route + ', ' + s.vehicleId);
             where.href = '/Schedule?start=' + encodeURIComponent(s.week);
             head.append(when, where);
 
@@ -1442,17 +1446,28 @@
             rqResetCovers();
             if (!blockingBox.dataset.covers) return false;
 
-            let shifts;
+            const seq = coverSeq;
+            coversEl.innerHTML = '<div aria-busy="true" aria-label="Loading covers">'
+                + '<span class="rs-sk" style="height:44px"></span>'.repeat(2) + '</div>';
+            coversEl.hidden = false;
+            blockingBox.style.display = 'block';
+
+            let shifts = [];
             try {
                 const res = await fetch('/Requests/CoverOptions?requestId=' + encodeURIComponent(id),
                                         { headers: { 'X-Requested-With': 'fetch' } });
-                if (!res.ok || res.redirected) return false;
-                shifts = (await res.json()).shifts || [];
-            } catch (e) {
+                if (res.ok && !res.redirected) shifts = (await res.json()).shifts || [];
+            } catch (e) { }
+
+            // Closed or reopened on another request while this was being fetched.
+            if (seq !== coverSeq) return false;
+
+            coversEl.replaceChildren();
+            if (!shifts.length) {
+                coversEl.hidden = true;
+                blockingBox.style.display = 'none';
                 return false;
             }
-
-            if (!shifts.length) return false;
 
             coverRows = shifts.map(function (s) {
                 s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
