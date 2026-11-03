@@ -136,12 +136,6 @@
                                    refuses those too. It is marked beside the ID instead. *@
                                 @if (!r.IsOwn && open)
                                 {
-                                    @if (held)
-                                    {
-                                        <button type="button" class="rq-btn rq-btn--outline"
-                                                data-request-id="@r.RequestId" data-on="click:rqRelease"
-                                                title="Put this back in the queue without deciding it">Back to queue</button>
-                                    }
                                     <button type="button" class="rq-btn rq-btn--reject"
                                             data-request-id="@r.RequestId" data-on="click:rqReject">Reject</button>
                                     <button type="button" class="rq-btn rq-btn--approve"
@@ -665,7 +659,6 @@
         rqRefreshNow:   function () { rqRefresh(true); },
         rqApprove:      function () { rqDecide(Number(this.dataset.requestId), 'Approved'); },
         rqReject:       function () { rqDecide(Number(this.dataset.requestId), 'Rejected'); },
-        rqRelease:      function () { rqRelease(Number(this.dataset.requestId)); },
         rqCancelLeave:  function () { rqWithdrawal(Number(this.dataset.requestId), true); },
         rqKeepLeave:    function () { rqWithdrawal(Number(this.dataset.requestId), false); },
         rqRevoke:       function () { rqRevoke(Number(this.dataset.requestId)); },
@@ -1528,6 +1521,17 @@
                     const said = await res.json();
                     const covered = said.covered || 0;
 
+                    // A shift the dispatcher chose to leave for now is why it is held, which is
+                    // what they asked for. The dialog closes on it rather than offering the same
+                    // covers again with the choice forgotten.
+                    if (!(said.failures || []).length && coverRows.some(function (r) { return r.choice === 0; })) {
+                        rqCancel();
+                        await rqRefresh(true);
+                        rqToast((covered ? covered + (covered === 1 ? ' shift covered. ' : ' shifts covered. ') : '')
+                            + 'Held until the rest is covered.');
+                        return;
+                    }
+
                     rqShowBlocking((covered ? covered + (covered === 1 ? ' shift was covered. ' : ' shifts were covered. ') : '')
                         + said.message, said.blocking || [], true);
                     if (!await rqShowCovers(id)) {
@@ -1667,26 +1671,6 @@
                 askGo.disabled = false;
             }
         });
-
-        // Gives up on an approval without deciding the request, so it goes back to the
-        // queue instead of sitting held with nobody looking at it.
-        window.rqRelease = async function (id) {
-            try {
-                const res = await fetch('/Requests/ReleaseHold', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken':
-                            document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: new URLSearchParams({ requestId: id })
-                });
-                if (!res.ok) throw new Error();
-                await rqRefresh(true);
-            } catch (e) {
-                rqToast('That could not be put back. Try again.', true);
-            }
-        };
 
         go.addEventListener('click', async function () {
             if (!pending) return;

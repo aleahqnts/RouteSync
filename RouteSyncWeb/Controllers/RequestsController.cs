@@ -836,38 +836,6 @@ namespace FleetWise.Controllers
         private static string MondayOf(DateTime day) =>
             day.AddDays(-(((int)day.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");
 
-        // Puts a held approval back in the queue.
-        //
-        // An approval begun and abandoned would otherwise sit in AwaitingChange for ever,
-        // with the driver reading Pending and nobody looking at it. This is the way out
-        // that does not require deciding it.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ReleaseHold(long requestId)
-        {
-            var found = (await _supabase.From<LeaveRequest>()
-                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
-                .Get()).Models.FirstOrDefault();
-
-            if (found is null) return NotFound();
-            if (IsOwn(found)) return BadRequest(OwnRequest);
-
-            if (!string.Equals(found.Status, "AwaitingChange", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("This request is not waiting on a schedule change.");
-
-            await _supabase.From<LeaveRequest>()
-                .Filter("request_id", Constants.Operator.Equals, requestId.ToString())
-                .Set(x => x.Status, "Pending")
-                .Update();
-
-            await _audit.WriteAsync("leave_approval_released",
-                $"put the approval of {found.LeaveType.ToLowerInvariant()} leave for driver "
-                    + $"{found.UserId} covering {Span(found)} back in the queue",
-                "requests", requestId.ToString());
-
-            return Ok();
-        }
-
         // A notice, and whatever the dispatcher wrote, kept apart.
         //
         // Run together into one paragraph there was no telling where the system stopped

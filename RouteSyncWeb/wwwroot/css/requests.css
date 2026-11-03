@@ -526,8 +526,9 @@
         }
     }
 
-    /* A cover for each shift in the way, one row each, divided by a hairline. The dialog
-       scrolls as a whole rather than this list inside it. */
+    /* A cover for each shift in the way, one block each, divided by a band so where one
+       shift's choices end and the next begin is plain. The dialog scrolls as a whole
+       rather than this list inside it. */
     .rq-covers {
         border-top: 1px solid light-dark(#E8ECF0, #4E4E4E);
         border-bottom: 1px solid light-dark(#E8ECF0, #4E4E4E);
@@ -535,9 +536,9 @@
 
         .rq-covers[hidden] { display: none; }
 
-    .rq-cover { padding: 10px 2px; }
+    .rq-cover { padding: 12px 2px 14px; }
 
-        .rq-cover + .rq-cover { border-top: 1px solid light-dark(#E8ECF0, #4E4E4E); }
+        .rq-cover + .rq-cover { border-top: 8px solid light-dark(#F1F4F7, #303030); }
 
     .rq-cover-head {
         display: flex;
@@ -681,8 +682,10 @@
 
         .rq-cover-line--picked .rq-cover-change:hover { background: light-dark(#E3F4F1, #354D49); }
 
+    /* Under the list on the right, apart from the drivers it is an alternative to. */
     .rq-cover-leave {
-        margin-top: 4px;
+        display: block;
+        margin: 4px 0 0 auto;
         color: light-dark(#5F6F85, #BBBEC3);
     }
 
@@ -718,9 +721,9 @@
 
     /* --- Buttons --------------------------------------------------------- */
 
-    /* At most two tidy rows, right-aligned: Approve and Reject together, and on a held
-       request Back to queue and History under them. Left free to wrap, the cell shrank
-       to its widest button and stacked every one of them. */
+    /* At most two tidy rows, right-aligned: Approve and Reject together, and History
+       under them when it does not fit. Left free to wrap, the cell shrank to its widest
+       button and stacked every one of them. */
     .rq-actions {
         display: flex;
         flex-wrap: wrap;
@@ -928,7 +931,8 @@
         border-radius: 14px;
         width: 100%;
         max-width: 440px;
-        padding: 22px;
+        --rq-box-pad: 22px;
+        padding: 22px 22px var(--rq-box-pad);
         box-shadow: 0 14px 44px light-dark(rgba(0,0,0,.28), rgba(0, 0, 0, .432));
         font-family: 'Segoe UI', sans-serif;
     }
@@ -971,11 +975,18 @@
 
     .rq-box-note:focus { outline: none; border-color: var(--rq-teal); }
 
+    /* Pinned to the bottom of a dialog long enough to scroll, so the buttons stay in
+       reach. It reaches out over the dialog's padding to cover what scrolls under it. */
     .rq-box-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
-        margin-top: 16px;
+        position: sticky;
+        bottom: calc(-1 * var(--rq-box-pad));
+        margin: 16px -22px calc(-1 * var(--rq-box-pad));
+        padding: 12px 22px var(--rq-box-pad);
+        background: light-dark(#fff, #393939);
+        border-radius: 0 0 14px 14px;
     }
 
 /* ===========================================================================
@@ -1836,8 +1847,10 @@
         max-height: 92vh;
         max-height: 92dvh;
         overflow-y: auto;
-        padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+        --rq-box-pad: calc(22px + env(safe-area-inset-bottom, 0px));
     }
+
+    .rq-box-actions { border-radius: 0; }
 }
 
 /* A phone. The buttons on each cover row are targets a thumb can hit. */
