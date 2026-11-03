@@ -1443,9 +1443,16 @@
             rqResetCovers();
             if (!blockingBox.dataset.covers) return false;
 
+            // Laid out as the covers from the start, with placeholders where they will be,
+            // so the dialog does not change shape when they arrive.
             const seq = coverSeq;
+            blockingTitle.textContent = 'Choose who covers each shift';
+            blockingNote.textContent = 'Each chosen driver is told. Skip one and this stays held.';
+            document.getElementById('rqBlockingList').hidden = true;
+            blockingBox.classList.add('rq-blocking--covers');
+            decideBox.classList.add('rq-box--wide');
             coversEl.innerHTML = '<div aria-busy="true" aria-label="Loading covers">'
-                + '<span class="rs-sk" style="height:44px"></span>'.repeat(2) + '</div>';
+                + '<span class="rs-sk" style="height:64px"></span>'.repeat(2) + '</div>';
             coversEl.hidden = false;
             blockingBox.style.display = 'block';
 
@@ -1459,12 +1466,12 @@
             // Closed or reopened on another request while this was being fetched.
             if (seq !== coverSeq) return false;
 
-            coversEl.replaceChildren();
             if (!shifts.length) {
-                coversEl.hidden = true;
+                rqResetCovers();
                 blockingBox.style.display = 'none';
                 return false;
             }
+            coversEl.replaceChildren();
 
             coverRows = shifts.map(function (s) {
                 s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
@@ -1475,13 +1482,6 @@
                 rqRenderCover(row);
             });
 
-            blockingTitle.textContent = 'Choose who covers each shift';
-            blockingNote.textContent = 'Each chosen driver is told. Skip one and this stays held.';
-            document.getElementById('rqBlockingList').hidden = true;
-            blockingBox.classList.add('rq-blocking--covers');
-            decideBox.classList.add('rq-box--wide');
-            coversEl.hidden = false;
-            blockingBox.style.display = 'block';
             coversShown = true;
             rqCoverButton();
             return true;
