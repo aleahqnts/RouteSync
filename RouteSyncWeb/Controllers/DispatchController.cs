@@ -52,8 +52,14 @@ namespace FleetWise.Controllers
         //
         // Trips carry the assignments and their progress. Vehicles carry grounding, which
         // turns an assignment into a problem without the trip itself changing. Driver
-        // availability does the same from the other side. Anything that moves one of
-        // those moves this fingerprint.
+        // availability does the same from the other side. Inspections ready a bus, and an
+        // open fault flags one, without either touching the trip. Anything that moves one
+        // of those moves this fingerprint.
+        //
+        // The clock moves it too. A trip turns late ten minutes after its start and missed
+        // when its window closes, with nothing written anywhere, so each trip's place on
+        // that timeline is part of the fingerprint. The minutes a late trip has been late
+        // for are not: the page counts those up itself between rebuilds.
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Pulse(string date)
@@ -68,7 +74,7 @@ namespace FleetWise.Controllers
         private async Task<string> ReadPulseAsync(DateTime selected)
         {
             var tripsTask = _supabase.From<Trip>()
-                .Select("trip_id,trip_status,driver_id,vehicle_id,route_id,total_boarded")
+                .Select("trip_id,trip_status,driver_id,vehicle_id,route_id,total_boarded,date,shift_start_time,shift_end_time")
                 .Filter("date", Operator.Equals, selected.ToString("yyyy-MM-dd"))
                 .Get();
             var vehiclesTask = _supabase.From<Vehicle>()
@@ -78,19 +84,41 @@ namespace FleetWise.Controllers
                 .Select("user_id,availability_status")
                 .Get();
 
-            await Task.WhenAll(tripsTask, vehiclesTask, availabilityTask);
+            var faultsTask = _supabase.From<MaintenanceLog>()
+                .Select("log_id,vehicle_id")
+                .Filter<object>("resolved_at", Operator.Is, null)
+                .Get();
+
+            await Task.WhenAll(tripsTask, vehiclesTask, availabilityTask, faultsTask);
+
+            var tripIds = tripsTask.Result.Models.Select(t => (object)t.TripId).ToList();
+            var checklists = tripIds.Count == 0
+                ? new List<BusChecklist>()
+                : (await _supabase.From<BusChecklist>()
+                    .Select("checklist_id,trip_id,vehicle_id,checklist_status")
+                    .Filter("trip_id", Operator.In, tripIds)
+                    .Get()).Models;
+
+            var now = PhClock.Now;
 
             // Ordered before it is joined, because PostgREST makes no promise about the
             // order rows come back in and an unordered fingerprint would change on its own.
             var parts = tripsTask.Result.Models
                 .OrderBy(t => t.TripId, StringComparer.Ordinal)
-                .Select(t => $"{t.TripId}|{t.TripStatus}|{t.DriverId}|{t.VehicleId}|{t.RouteId}|{t.TotalBoarded}")
+                .Select(t => $"{t.TripId}|{t.TripStatus}|{t.DriverId}|{t.VehicleId}|{t.RouteId}|{t.TotalBoarded}"
+                           + $"|{TripStatus.LateBy(t, now) is not null}|{TripStatus.Closed(t, now)}")
                 .Concat(vehiclesTask.Result.Models
                     .OrderBy(v => v.VehicleId, StringComparer.Ordinal)
                     .Select(v => $"{v.VehicleId}|{v.VehicleStatus}|{v.OutOfService}"))
                 .Concat(availabilityTask.Result.Models
                     .OrderBy(a => a.UserId)
-                    .Select(a => $"{a.UserId}|{a.AvailabilityStatus}"));
+                    .Select(a => $"{a.UserId}|{a.AvailabilityStatus}"))
+                .Concat(checklists
+                    .OrderBy(c => c.ChecklistId)
+                    .Select(c => $"c{c.ChecklistId}|{c.TripId}|{c.VehicleId}|{c.ChecklistStatus}"))
+                .Concat(faultsTask.Result.Models
+                    .OrderBy(l => l.LogId)
+                    .Select(l => $"f{l.LogId}|{l.VehicleId}"));
 
             using var sha = System.Security.Cryptography.SHA256.Create();
             var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));

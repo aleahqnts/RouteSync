@@ -294,6 +294,8 @@
                                 // Said on top of the status rather than in place of it. Why a
                                 // trip has not gone is what gets it moving; how long it has
                                 // not gone for is how hard to push.
+                                var statusLabel = badgeLabel;
+                                int? lateMin = trip.LateBy is { } lb ? (int)lb.TotalMinutes : null;
                                 if (trip.LateLabel is not null)
                                 {
                                     badgeClass += " dp-badge--late";
@@ -363,12 +365,14 @@
                                         @if (!string.IsNullOrEmpty(trip.AssignmentIssueReason))
                                         {
                                             <span class="dp-badge @badgeClass dp-badge--hint" data-tip="@trip.AssignmentIssueReason"
+                                                  data-late-min="@lateMin" data-status-label="@(lateMin is null ? null : statusLabel)"
                                                   tabindex="0" role="button"
                                                   aria-label="@badgeLabel. Tap for the reason.">@badgeLabel</span>
                                         }
                                         else
                                         {
-                                            <span class="dp-badge @badgeClass">@badgeLabel</span>
+                                            <span class="dp-badge @badgeClass"
+                                                  data-late-min="@lateMin" data-status-label="@(lateMin is null ? null : statusLabel)">@badgeLabel</span>
                                         }
 
                                     </td>
@@ -764,6 +768,7 @@
                 const cur = document.getElementById(id);
                 if (fresh && cur) cur.innerHTML = fresh.innerHTML;
             });
+            dpBuiltAt = Date.now();
 
             shut.forEach(function (routeId) {
                 const card = document.querySelector('.dp-route-card[data-route-id="' + routeId + '"]');
@@ -833,6 +838,26 @@
         if (s && s.value) return;
         dpCheck();
     }, 5000);
+
+    // How long a late trip has been late, counted on from the minutes the board was
+    // built with. Kept here rather than in the fingerprint, which would otherwise rebuild
+    // the whole board every minute that any trip is late. A rebuild starts the count
+    // again from fresh figures.
+    let dpBuiltAt = Date.now();
+    function dpLateLabel(min) {
+        if (min < 60) return min + 'm late';
+        const h = Math.floor(min / 60), m = min % 60;
+        return m === 0 ? h + 'h late' : h + 'h ' + m + 'm late';
+    }
+    function dpTickLate() {
+        const add = Math.floor((Date.now() - dpBuiltAt) / 60000);
+        document.querySelectorAll('.dp-badge[data-late-min]').forEach(b => {
+            const label = b.dataset.statusLabel + ' · ' + dpLateLabel(Number(b.dataset.lateMin) + add);
+            if (b.textContent !== label) b.textContent = label;
+            if (b.hasAttribute('aria-label')) b.setAttribute('aria-label', label + '. Tap for the reason.');
+        });
+    }
+    setInterval(dpTickLate, 15000);
 
     // Coming back to the tab asks straight away rather than waiting out the interval.
     document.addEventListener('visibilitychange', function () {
