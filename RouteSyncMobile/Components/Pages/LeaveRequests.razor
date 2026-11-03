@@ -112,7 +112,7 @@
                            four of them fill a phone. The year is the month heading's, and the
                            time is in History. *@
                         <div class="lv-row-foot">
-                            <p class="lv-meta">Filed @PhTime.FromUtc(r.FiledAt).ToString("MMM d") · @r.LeaveType · @LeaveEntitlement.Days(r) @(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
+                            <p class="lv-meta">Filed&nbsp;@PhTime.FromUtc(r.FiledAt).ToString("MMM d") · @r.LeaveType · @LeaveEntitlement.Days(r)&nbsp;@(LeaveEntitlement.Days(r) == 1 ? "day" : "days")</p>
 
                             <div class="lv-row-actions">
                             <button class="lv-hist-btn" @onclick="@(() => openHistory = r.RequestId)">History</button>
