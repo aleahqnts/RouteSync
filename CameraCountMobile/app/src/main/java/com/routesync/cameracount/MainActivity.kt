@@ -355,12 +355,6 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { com.routesync.cameracount.data.Prefs(context) }
 
-    // A bound phone whose line was never calibrated counts against the default
-    // mid-screen line, which produces meaningless totals. The prompt repeats until the
-    // installer has calibrated once. Followed live, so a calibration pushed from the
-    // dashboard clears it without leaving the screen. Starts hidden, so it never
-    // flashes up on a calibrated phone while the store is read.
-    val lineCalibrated by prefs.lineCalibrated.collectAsState(initial = true)
     var deviceId by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         deviceId = prefs.deviceId()
@@ -368,22 +362,6 @@ private fun WaitingCard(vm: CounterViewModel, s: CounterViewModel.UiState.Waitin
 
     Header(vm, s.vehicleId, onCamera)
     Spacer(Modifier.height(20.dp))
-    if (!lineCalibrated) {
-        Row(
-            Modifier.widthIn(max = 380.dp).fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(RsColor.Mint1)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Counting line not calibrated", fontWeight = FontWeight.Bold, color = RsColor.Navy, fontSize = 14.sp)
-                Text("Counts may be wrong until the line is placed on the doorway.", color = RsColor.Muted, fontSize = 12.sp)
-            }
-            TextButton(onClick = onCamera) { Text("Calibrate", color = RsColor.Teal, fontWeight = FontWeight.Bold) }
-        }
-        Spacer(Modifier.height(12.dp))
-    }
     RsCard {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             StatusDot(active = false)
