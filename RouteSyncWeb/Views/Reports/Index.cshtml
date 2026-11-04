@@ -514,8 +514,7 @@
         </div>
         <div class="tr-modal-body">
             <div id="statModalLoading" class="tr-modal-loading">
-                <div class="tr-spinner"></div>
-                <span>Loading…</span>
+                <div aria-busy="true" aria-label="Loading" style="width:100%"><span class="rs-sk" style="width:40%"></span><span class="rs-sk"></span><span class="rs-sk" style="width:85%"></span><span class="rs-sk" style="height:48px"></span><span class="rs-sk" style="height:48px"></span></div>
             </div>
             <div id="statModalContent" style="display:none;">
                 <div class="tr-section tr-section--last">
@@ -542,8 +541,7 @@
         <div id="tripModalBody" class="tr-modal-body">
             @* Loading state *@
             <div id="tripModalLoading" class="tr-modal-loading">
-                <div class="tr-spinner"></div>
-                <span>Loading trip details...</span>
+                <div aria-busy="true" aria-label="Loading" style="width:100%"><span class="rs-sk" style="width:40%"></span><span class="rs-sk"></span><span class="rs-sk" style="width:85%"></span><span class="rs-sk" style="height:48px"></span><span class="rs-sk" style="height:48px"></span></div>
             </div>
 
             @* Content (hidden until loaded) *@

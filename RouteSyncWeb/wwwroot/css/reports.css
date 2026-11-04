@@ -1040,7 +1040,7 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    padding: 48px 24px;
+    padding: 20px 24px;
     font-size: 0.88rem;
     color: var(--rp-muted);
     font-family: 'Segoe UI', sans-serif;

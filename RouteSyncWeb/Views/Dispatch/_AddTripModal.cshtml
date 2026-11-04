@@ -26,6 +26,7 @@
                             <option value="Evening">Evening Shift</option>
                         </select>
                     </div>
+                    <span class="rs-err" data-err-for="atm-shift-type"></span>
                 </div>
                 <div class="atm-field">
                     @* Each shift has fixed hours, so they are shown, not picked. *@
@@ -40,6 +41,7 @@
                             <option value="">Loading routes…</option>
                         </select>
                     </div>
+                    <span class="rs-err" data-err-for="atm-route"></span>
                 </div>
             </div>
 
@@ -51,6 +53,7 @@
                             <option value="">Select shift first…</option>
                         </select>
                     </div>
+                    <span class="rs-err" data-err-for="atm-vehicle-id"></span>
                     <span class="atm-hint" id="atm-vehicle-hint"></span>
                 </div>
                 <div class="atm-field">
@@ -60,6 +63,7 @@
                             <option value="">Select shift first…</option>
                         </select>
                     </div>
+                    <span class="rs-err" data-err-for="atm-driver"></span>
                     <span class="atm-hint" id="atm-driver-hint"></span>
                 </div>
             </div>
@@ -138,6 +142,7 @@
     function closeAddTripModal() {
         document.getElementById('addTripModal').style.display = 'none';
         document.body.style.overflow = '';
+        rsClearFieldErrors(document.getElementById('addTripModal'));
     }
 
     document.getElementById('addTripModal').addEventListener('click', function(e) {
@@ -351,8 +356,12 @@
         const vehicleId  = document.getElementById('atm-vehicle-id').value;
         const driverId   = parseInt(document.getElementById('atm-driver').value);
 
-        if (!shiftType || !hours || !routeId || !vehicleId || !driverId) {
-            dpShowMsg(['Please fill in all fields before creating the trip.'], 'Incomplete trip');
+        const missing = [['atm-shift-type', 'Select a shift.'], ['atm-route', 'Select a route.'],
+                         ['atm-vehicle-id', 'Select a bus.'], ['atm-driver', 'Select a driver.']]
+            .filter(([id]) => !document.getElementById(id).value);
+        if (missing.length) {
+            missing.forEach(([id, text]) => rsFieldError(document.getElementById(id), text));
+            document.getElementById(missing[0][0]).focus();
             return;
         }
 

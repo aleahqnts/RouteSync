@@ -48,12 +48,36 @@
         return false;
     }
 
+    // A field's message goes once something is typed in it.
+    page.addEventListener('input', function (e) {
+        var field = e.target.closest && e.target.closest('.pf-field--bad');
+        if (!field) return;
+        field.classList.remove('pf-field--bad');
+        var slot = field.querySelector('[data-err]');
+        if (slot) slot.textContent = '';
+    });
+
+    // A required field left empty, in the page's own words rather than the browser's.
+    function missing(form) {
+        var errors = null;
+        form.querySelectorAll('[required]').forEach(function (el) {
+            var slot = el.closest('.pf-field') && el.closest('.pf-field').querySelector('[data-err]');
+            if (el.value.trim() || !slot) return;
+            errors = errors || {};
+            errors[slot.getAttribute('data-err')] = el.getAttribute('data-required') || 'Fill in this field.';
+        });
+        return errors;
+    }
+
     document.querySelectorAll('[data-profile-form]').forEach(function (form) {
+        form.noValidate = true;
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            clearErrors(form);
+            var empty = missing(form);
+            if (empty) { showErrors(form, empty); return; }
             if (!confirmed(form)) return;
 
-            clearErrors(form);
             var button = form.querySelector('button[type="submit"]');
             var label = button.textContent;
             button.disabled = true;

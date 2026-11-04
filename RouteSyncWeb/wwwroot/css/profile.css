@@ -373,6 +373,11 @@
 
     .pf-err { color: light-dark(#C0392B, #FFA192); font-size: .76rem; }
     .pf-err:empty { display: none; }
+
+    /* A field's own error line always takes its place, so a message appearing does not
+       move the fields below it. */
+    .pf-field .pf-err:not(.pf-err--form) { display: block; min-height: 1.3em; line-height: 1.3; }
+    .pf-field:has(.pf-err:not(.pf-err--form)) { margin-bottom: 4px; }
     .pf-err--form { margin: 0 0 8px; }
 
     .pf-actions {

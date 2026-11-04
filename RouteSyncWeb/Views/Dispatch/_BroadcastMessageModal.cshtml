@@ -47,7 +47,7 @@
                     Message <span class="bm-required">*</span>
                 </label>
                 <textarea id="bm-body" class="bm-textarea" placeholder="Type your message here..." maxlength="1000" rows="5"></textarea>
-                <div class="bm-char-count"><span id="bm-char-used">0</span> / 1000</div>
+                <div class="bm-char-count"><span class="rs-err" data-err-for="bm-body"></span><span><span id="bm-char-used">0</span> / 1000</span></div>
             </div>
 
             @* Priority *@
@@ -78,6 +78,7 @@
 
         @* Footer *@
         <div class="bm-footer">
+            <span class="rs-err bm-send-err" id="bm-send-err" role="alert"></span>
             <button class="bm-btn-cancel" data-on="click:bmClose">Cancel</button>
             <button class="bm-btn-send" id="bm-send-btn" data-on="click:bmSubmit">
                 <span id="bm-send-label">Send Message</span>
@@ -200,6 +201,8 @@
         window.closeBroadcastModal = function () {
             overlay.style.display = 'none';
             document.body.style.overflow = '';
+            document.getElementById('bm-send-err').textContent = '';
+            rsClearFieldErrors(overlay);
         };
 
         overlay.addEventListener('click', function(e) {
@@ -235,10 +238,11 @@
             var body     = bodyInput.value.trim();
             var priority = document.getElementById('bm-priority').value;
 
+            var sendErr = document.getElementById('bm-send-err');
+            sendErr.textContent = '';
             if (!body) {
+                rsFieldError(bodyInput, 'Write a message.');
                 bodyInput.focus();
-                bodyInput.style.borderColor = '#E74C3C';
-                setTimeout(function() { bodyInput.style.borderColor = ''; }, 1800);
                 return;
             }
 
@@ -271,7 +275,7 @@
                 showToast();
 
             } catch(e) {
-                alert('Failed to send message. Please try again.');
+                sendErr.textContent = 'The message was not sent. Try again.';
             } finally {
                 sendBtn.disabled = false;
                 document.getElementById('bm-send-label').style.display  = 'inline';

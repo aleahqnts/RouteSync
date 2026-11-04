@@ -25,11 +25,7 @@
 
         @* Loading state *@
         <div id="rtm-loading" class="rtm-loading">
-            <svg class="rtm-spin" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none"
-                 stroke="#4AADA8" stroke-width="2.5" viewBox="0 0 24 24">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-            <span>Loading trip details…</span>
+            <div aria-busy="true" aria-label="Loading" style="width:100%"><span class="rs-sk" style="width:40%"></span><span class="rs-sk"></span><span class="rs-sk" style="width:85%"></span><span class="rs-sk" style="height:48px"></span><span class="rs-sk" style="height:48px"></span></div>
         </div>
 
         @* Body (hidden until loaded) *@

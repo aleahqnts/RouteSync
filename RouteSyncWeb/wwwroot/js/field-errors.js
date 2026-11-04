@@ -1,26 +1,47 @@
-// A field the server sent back with an error stays marked until something is typed or
-// picked in it, then the mark and its message go.
+// Field errors, shown under the field they are about and kept until something is typed or
+// picked in it.
+//
+// A message lives in the field's own slot: the data-valmsg-for span a form tag helper
+// writes, or a data-err-for="<field id>" span on forms built by script. Slots always take
+// their line, so a message appearing does not move the fields below it.
 //
 // Closing a dialog clears every mark in it. A dialog tagged data-reset-on-close also
 // empties its fields, back to data-reset where one is given and to the first option on a
 // select, so it opens clean next time rather than holding what was typed before.
 (function () {
+    function slot(el) {
+        return (el.name && el.form && el.form.querySelector('[data-valmsg-for="' + el.name + '"]'))
+            || (el.id && document.querySelector('[data-err-for="' + el.id + '"]'));
+    }
+
     function clear(el) {
         if (!el.classList || !el.classList.contains('input-validation-error')) return;
         el.classList.remove('input-validation-error');
         el.removeAttribute('aria-invalid');
-        var scope = el.form || document;
-        var msg = scope.querySelector('[data-valmsg-for="' + el.name + '"]');
+        var msg = slot(el);
         if (msg) {
             msg.textContent = '';
             msg.classList.replace('field-validation-error', 'field-validation-valid');
         }
     }
 
+    function mark(el, text) {
+        el.classList.add('input-validation-error');
+        el.setAttribute('aria-invalid', 'true');
+        var msg = slot(el);
+        if (msg) {
+            msg.textContent = text;
+            msg.classList.remove('field-validation-valid');
+            msg.classList.add('field-validation-error');
+        }
+    }
+
+    // For forms built by script: marks the field and puts the message in its slot.
+    window.rsFieldError = mark;
+
     // The rules the server checks, as the form carries them in its data-val attributes,
     // checked before sending so a missed field is marked where it is instead of costing a
-    // round trip and a reload. The server still checks everything, including what only it
-    // can know, such as an email already in use.
+    // round trip and a reload.
     function broken(el) {
         var v = el.value.trim(), d = el.dataset;
         if (d.valRequired !== undefined && v === '') return d.valRequired;
@@ -35,20 +56,36 @@
         return null;
     }
 
-    function mark(el, text) {
-        el.classList.add('input-validation-error');
-        el.setAttribute('aria-invalid', 'true');
-        var msg = el.form.querySelector('[data-valmsg-for="' + el.name + '"]');
-        if (msg) {
-            msg.textContent = text;
-            msg.classList.remove('field-validation-valid');
-            msg.classList.add('field-validation-error');
-        }
+    // A dialog's form that passes is sent in the background. What only the server can
+    // know, such as an email already in use, comes back as the page it would have drawn;
+    // its messages are lifted out and put under the same fields, and the dialog stays.
+    // A save comes back as a redirect, and the page is loaded fresh to show it.
+    async function send(form) {
+        var button = form.querySelector('[type="submit"]');
+        if (button) button.disabled = true;
+        try {
+            var res = await fetch(form.action, { method: 'POST', body: new FormData(form), redirect: 'manual' });
+            if (res.type === 'opaqueredirect') { location.replace(location.href); return; }
+            var doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            var back = doc.querySelector('form[action="' + form.getAttribute('action') + '"]');
+            var first = null;
+            if (back) back.querySelectorAll('.field-validation-error[data-valmsg-for]').forEach(function (m) {
+                var el = form.elements[m.getAttribute('data-valmsg-for')];
+                if (!el || !el.classList || !m.textContent.trim()) return;
+                mark(el, m.textContent.trim());
+                first = first || el;
+            });
+            if (first) { first.focus(); return; }
+        } catch (x) { /* fall through to a plain send */ }
+        finally { if (button) button.disabled = false; }
+        HTMLFormElement.prototype.submit.call(form);
     }
 
     document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form.querySelector('[data-val="true"]')) return;
         var first = null;
-        e.target.querySelectorAll('[data-val="true"]').forEach(function (el) {
+        form.querySelectorAll('[data-val="true"]').forEach(function (el) {
             if (el.disabled || el.type === 'hidden') return;
             var text = broken(el);
             if (!text) return;
@@ -59,6 +96,10 @@
             e.preventDefault();
             e.stopImmediatePropagation();
             first.focus();
+        } else if (form.closest('.modal')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            send(form);
         }
     }, true);
 
@@ -76,14 +117,20 @@
         el.setAttribute('aria-invalid', 'true');
     });
 
-    document.addEventListener('hidden.bs.modal', function (e) {
-        var modal = e.target;
+    function reset(modal, empty) {
         modal.querySelectorAll('.input-validation-error').forEach(clear);
-        if (!modal.hasAttribute('data-reset-on-close')) return;
+        if (!empty) return;
         modal.querySelectorAll('input, select, textarea').forEach(function (el) {
             if (el.readOnly || el.type === 'hidden' || el.type === 'checkbox' || el.type === 'radio') return;
             if (el.tagName === 'SELECT') el.selectedIndex = 0;
             else el.value = el.dataset.reset || '';
         });
+    }
+
+    document.addEventListener('hidden.bs.modal', function (e) {
+        reset(e.target, e.target.hasAttribute('data-reset-on-close'));
     });
+
+    // Dialogs drawn by a page's own script call this when they close.
+    window.rsClearFieldErrors = function (root) { reset(root, false); };
 })();

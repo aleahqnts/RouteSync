@@ -1646,3 +1646,38 @@ th.rs-sortable:focus-visible {
     font-style: italic;
     opacity: 1;
 }
+
+/* An error slot on a form built by script (js/field-errors.js). Always takes its line. */
+.rs-err {
+    display: block;
+    min-height: 1.25em;
+    line-height: 1.25;
+    font-size: .75rem;
+    color: light-dark(#DC1E1E, #FFA098);
+}
+
+/* What a save on Users or Vehicles came to, said once over the page and gone again
+   rather than held above the toolbar, where it pushes everything down. A failure stays
+   a little longer. */
+.us-alert,
+.vh-alert {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 2000;
+    max-width: min(520px, calc(100vw - 32px));
+    margin: 0 !important;
+    box-shadow: 0 8px 24px light-dark(rgba(13, 28, 40, .22), rgba(0, 0, 0, .35));
+    pointer-events: none;
+    animation: rs-note-out .3s ease-in 4s forwards;
+    transform: translateX(-50%);
+}
+
+.us-alert--error,
+.vh-alert--error {
+    animation-delay: 7s;
+}
+
+@keyframes rs-note-out {
+    to { opacity: 0; visibility: hidden; }
+}
