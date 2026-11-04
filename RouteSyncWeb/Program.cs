@@ -149,6 +149,12 @@ builder.Services.AddControllersWithViews(options =>
     // Anything written can change what the rail is counting, so the standing count is
     // dropped after every write and worked out again on the next reading.
     options.Filters.Add<NavCountsFreshener>();
+
+    // A box left empty or holding text where a number goes. The defaults name the field by
+    // its property, which reads as code on a form.
+    options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(_ => "Fill in this field.");
+    options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((_, _) => "Enter a number.");
+    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(_ => "Enter a number.");
 });
 
 // Tell the app how to create a Supabase connection

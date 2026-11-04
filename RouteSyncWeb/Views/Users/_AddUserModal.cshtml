@@ -1,6 +1,6 @@
 @model AddUserViewModel
 
-<div class="modal fade us-modal" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+<div class="modal fade us-modal" id="addUserModal" data-reset-on-close tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
     <div class="modal-dialog us-modal-sm">
         <div class="modal-content">
             <form asp-action="Create" asp-controller="Users" method="post">

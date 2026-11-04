@@ -408,6 +408,10 @@
         grid-template-columns: 130px 1fr;
         align-items: center;
         gap: 4px 14px;
+        margin-bottom: 6px;
+    }
+
+    .us-form-row:not(:has(.us-field-error)) {
         margin-bottom: 9px;
     }
 
@@ -429,15 +433,14 @@
         font-family: 'Segoe UI', sans-serif;
     }
 
+    /* Always takes its line, so a message appearing does not push the fields below it. */
     .us-field-error {
         grid-column: 2;
+        min-height: 1.25em;
+        line-height: 1.25;
         font-size: 0.78rem;
         color: light-dark(#DC1E1E, #FFA098);
         font-family: 'Segoe UI', sans-serif;
-    }
-
-    .us-field-error:empty {
-        display: none;
     }
 
     .us-form-input {
@@ -973,7 +976,7 @@
        screen of scrolling before the first one can be typed in. */
     .us-form-row {
         gap: 4px;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
     }
 
         .us-form-row label {

@@ -3,7 +3,7 @@
     Add vehicle modal, covering the profile only. Posts to VehiclesController.Create
     (PRG + TempData); re-opens with errors preserved on a failed POST.
 *@
-<div class="modal fade vh-modal" id="addVehicleModal" tabindex="-1" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
+<div class="modal fade vh-modal" id="addVehicleModal" data-reset-on-close tabindex="-1" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
     <div class="modal-dialog vh-modal-sm">
         <div class="modal-content">
             <form asp-action="Create" asp-controller="Vehicles" method="post">
@@ -28,7 +28,7 @@
                         </div>
                         <div class="vh-form-row">
                             <label asp-for="PlateNumber">Plate Number:<span class="fw-req" aria-hidden="true">*</span></label>
-                            <input asp-for="PlateNumber" class="vh-form-input" placeholder="9302BA" />
+                            <input asp-for="PlateNumber" class="vh-form-input" placeholder="e.g. 9302BA" />
                             <span asp-validation-for="PlateNumber" class="vh-field-error"></span>
                         </div>
                         <div class="vh-form-row">
@@ -46,7 +46,7 @@
                         </div>
                         <div class="vh-form-row">
                             <label asp-for="Capacity">Seat Capacity:<span class="fw-req" aria-hidden="true">*</span></label>
-                            <input asp-for="Capacity" class="vh-form-input" type="number" min="1" max="120" />
+                            <input asp-for="Capacity" class="vh-form-input" type="number" min="1" max="120" data-reset="50" />
                             <span asp-validation-for="Capacity" class="vh-field-error"></span>
                         </div>
                     </div>

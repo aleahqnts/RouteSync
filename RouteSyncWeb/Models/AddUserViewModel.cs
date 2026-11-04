@@ -4,19 +4,19 @@ namespace FleetWise.Models
 {
     public class AddUserViewModel
     {
-        [Required, StringLength(50)]
+        [Required(ErrorMessage = "Enter a first name."), StringLength(50, ErrorMessage = "First name can be up to 50 characters.")]
         public string FirstName { get; set; } = string.Empty;
 
-        [StringLength(50)]
+        [StringLength(50, ErrorMessage = "Middle name can be up to 50 characters.")]
         public string? MiddleName { get; set; }
 
-        [Required, StringLength(50)]
+        [Required(ErrorMessage = "Enter a last name."), StringLength(50, ErrorMessage = "Last name can be up to 50 characters.")]
         public string LastName { get; set; } = string.Empty;
 
-        [Required, EmailAddress]
+        [Required(ErrorMessage = "Enter an email address."), EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string Email { get; set; } = string.Empty;
 
-        [Required, Range(1, int.MaxValue, ErrorMessage = "Please select a role.")]
+        [Required(ErrorMessage = "Select a role."), Range(1, int.MaxValue, ErrorMessage = "Select a role.")]
         public int RoleId { get; set; }
     }
 }

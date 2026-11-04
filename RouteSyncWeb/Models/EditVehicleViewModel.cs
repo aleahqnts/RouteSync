@@ -13,17 +13,17 @@ namespace FleetWise.Models
         [Display(Name = "Vehicle ID")]
         public string VehicleId { get; set; } = string.Empty;
 
-        [Required, StringLength(20)]
+        [Required(ErrorMessage = "Enter a plate number."), StringLength(20, ErrorMessage = "Plate number can be up to 20 characters.")]
         [Display(Name = "Plate Number")]
         public string PlateNumber { get; set; } = string.Empty;
 
-        [Required, Range(1, int.MaxValue, ErrorMessage = "Please select a route.")]
+        [Required(ErrorMessage = "Select a route."), Range(1, int.MaxValue, ErrorMessage = "Select a route.")]
         [Display(Name = "Route")]
         public int RouteId { get; set; }
 
         // Seats decide which buses can stand in for which, the same rule as when the bus
         // was added.
-        [Required, Range(1, 120, ErrorMessage = "Enter a seat capacity between 1 and 120.")]
+        [Required(ErrorMessage = "Enter a seat capacity between 1 and 120."), Range(1, 120, ErrorMessage = "Enter a seat capacity between 1 and 120.")]
         [Display(Name = "Seat Capacity")]
         public int Capacity { get; set; }
 

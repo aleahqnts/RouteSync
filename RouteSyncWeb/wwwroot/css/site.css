@@ -1625,3 +1625,24 @@ th.rs-sortable:focus-visible {
 @media (prefers-reduced-motion: reduce) {
     .rs-sk { animation: none; }
 }
+
+
+/* A field marked with an error, until something is typed in it (js/field-errors.js). */
+.input-validation-error,
+.input-validation-error:focus {
+    border-color: light-dark(#DC1E1E, #FF7B72) !important;
+    background-color: light-dark(#FFF5F5, #3A2A2A) !important;
+}
+
+.field-validation-error {
+    font-weight: 500;
+}
+
+
+/* Example text in a form field reads as a hint, a shade off what was typed. */
+.us-form-input::placeholder,
+.vh-form-input::placeholder {
+    color: light-dark(#A3ABB7, #7D7D7D);
+    font-style: italic;
+    opacity: 1;
+}

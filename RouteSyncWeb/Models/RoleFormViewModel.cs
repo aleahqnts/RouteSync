@@ -7,7 +7,7 @@ namespace FleetWise.Models
         // null = Add Role (CreateRole), non-null = Edit Role (UpdateRole)
         public int? RoleId { get; set; }
 
-        [Required, StringLength(50)]
+        [Required(ErrorMessage = "Enter a role name."), StringLength(50, ErrorMessage = "Role name can be up to 50 characters.")]
         public string RoleName { get; set; } = string.Empty;
 
         // Legacy column. The permission switches decide what a role may do; this is

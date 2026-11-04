@@ -125,11 +125,18 @@ body {
         color: #717171;
     }
 
+/* Always takes its line, so a message appearing does not push the fields below it. */
 .field-error {
     color: #D82C1B;
     font-size: 12px;
-    margin-bottom: 8px;
+    line-height: 16px;
+    min-height: 16px;
+    margin-bottom: 6px;
     display: block;
+}
+
+.input-group:has(+ .field-error) {
+    margin-bottom: 3px;
 }
 
 .error-message {
@@ -450,3 +457,15 @@ body {
 }
 
 .caps-warn:empty { display: none; }
+
+
+/* A field marked with an error, until something is typed in it (js/field-errors.js). */
+.input-group:has(.input-validation-error) {
+    border-color: #D82C1B;
+    background: #FFF5F5;
+}
+
+.field-validation-error {
+    font-weight: 500;
+}
+
