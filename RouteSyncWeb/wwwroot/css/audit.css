@@ -445,12 +445,9 @@
 }
 
 /* ===========================================================================
-   The head of the page, held while the entries move.
-
-   Three layers: the title and the filters, then the card's heading and its count,
-   then the column names. The shared rules pin them and sticky-head.js measures
-   what each stops at. What is left here is the ground each sits on and the gaps
-   that now belong to the blocks rather than to what follows them.
+   The head of the page. The card's heading and its count, then the column names,
+   are held while the entries move; the shared rules pin them and sticky-head.js
+   measures what each stops at. The title and the filters scroll away.
    =========================================================================== */
 
 @media (min-width: 600px) {
