@@ -476,6 +476,29 @@ COMMENT ON FUNCTION "public"."nav_badge_inputs"("p_today" "date", "p_this_month"
 
 
 
+CREATE OR REPLACE FUNCTION "public"."nav_badge_inputs_since"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text" DEFAULT 'all'::"text", "p_known" "text" DEFAULT NULL::"text") RETURNS json
+    LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_inputs json := nav_badge_inputs(p_today, p_this_month, p_next_month, p_open_statuses, p_sections);
+  v_hash   text := md5(v_inputs::text);
+begin
+  if v_hash = p_known then
+    return json_build_object('hash', v_hash, 'inputs', null);
+  end if;
+  return json_build_object('hash', v_hash, 'inputs', v_inputs);
+end
+$$;
+
+
+ALTER FUNCTION "public"."nav_badge_inputs_since"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text", "p_known" "text") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."nav_badge_inputs_since"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text", "p_known" "text") IS 'nav_badge_inputs with a fingerprint. Returns {hash, inputs}; inputs is null when p_known already equals hash, so a caller holding those rows is not sent them again.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."publish_roster_month"("p_month" "date", "p_base_version" integer, "p_plan" "jsonb", "p_published_by" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
@@ -3304,6 +3327,11 @@ GRANT ALL ON FUNCTION "public"."jwt_uid"() TO "app_camera";
 
 REVOKE ALL ON FUNCTION "public"."nav_badge_inputs"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."nav_badge_inputs"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."nav_badge_inputs_since"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text", "p_known" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."nav_badge_inputs_since"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text", "p_known" "text") TO "service_role";
 
 
 
