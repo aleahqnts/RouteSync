@@ -128,6 +128,14 @@ namespace FleetWise.Services
         // Set once the database is found to have no nav_badge_inputs that takes p_sections.
         private static volatile bool _sectionsUnsupported;
 
+        // Set once the database is found to have no nav_badge_inputs_since.
+        private static volatile bool _sinceUnsupported;
+
+        // The rows last read for one part of the badge inputs, and their fingerprint.
+        private sealed record Known(string? Hash, ReadBundle Rows);
+
+        private const string KnownKey = "nav_badge_known_";
+
         // How close a shift has to be before a request against it is urgent.
         //
         // Longer than the two hours a driver is asked to give, because two hours is the
@@ -329,6 +337,33 @@ namespace FleetWise.Services
             return (all, all);
         }
 
+        // One part of the badge inputs, sent by the database only when it changed.
+        //
+        // The rows last read for the part are held with their fingerprint, without expiry.
+        // The database works the rows out on every asking and compares; when they match
+        // what is held it answers with the fingerprint alone, and the held rows are counted
+        // again against the current time. Late trips and urgent windows move with the clock,
+        // not the rows, so they still move here. What the database sends is then a few
+        // dozen bytes on most askings rather than every row.
+        private async Task<ReadBundle> ReadSinceAsync(string sections, Dictionary<string, object?> args)
+        {
+            var key = KnownKey + sections;
+            _cache.TryGetValue<Known>(key, out var known);
+            args["p_known"] = known?.Hash;
+
+            var response = await _supabase.Rpc("nav_badge_inputs_since", args);
+            using var doc = System.Text.Json.JsonDocument.Parse(response.Content ?? "{}");
+            var hash = doc.RootElement.GetProperty("hash").GetString();
+            var inputs = doc.RootElement.GetProperty("inputs");
+
+            if (inputs.ValueKind == System.Text.Json.JsonValueKind.Null && known is not null && known.Hash == hash)
+                return known.Rows;
+
+            var rows = ReadBundle.Parse(inputs.GetRawText());
+            _cache.Set(key, new Known(hash, rows));
+            return rows;
+        }
+
         private async Task<ReadBundle> ReadSectionsAsync(DateTime today, string? sections)
         {
             var args = new Dictionary<string, object?>
@@ -340,6 +375,20 @@ namespace FleetWise.Services
             };
             if (sections is not null)
                 args["p_sections"] = sections;
+
+            if (sections is not null && !_sinceUnsupported)
+            {
+                try
+                {
+                    return await ReadSinceAsync(sections, args);
+                }
+                catch (Postgrest.Exceptions.PostgrestException ex)
+                    when (RosterPublisher.DatabaseCode(ex.Content) is "PGRST202")
+                {
+                    // Read in full every time, as before, until the dashboard restarts.
+                    _sinceUnsupported = true;
+                }
+            }
 
             var response = await _supabase.Rpc("nav_badge_inputs", args);
             return ReadBundle.Parse(response.Content);

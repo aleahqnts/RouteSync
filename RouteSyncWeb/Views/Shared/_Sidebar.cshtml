@@ -465,6 +465,7 @@
             });
             if (!res.ok) return;
             var data = await res.json();
+            if (data.dispatch) heard(data.dispatch.count);
 
             // Looked up again each time rather than kept from when this script ran: a page's
             // own counts sit further down the document than the rail and did not exist yet.
@@ -487,17 +488,69 @@
             });
         }
 
+        // A short wooden chime when the Dispatch count goes up: a trip that cannot run as
+        // assigned, or one that should have left and has not. Nothing else chimes; leave
+        // and the rest can wait for somebody to look.
+        //
+        // The count last heard is shared between tabs, so with several open only the first
+        // to see a rise plays it. Browsers allow sound only once the page has been clicked
+        // or typed in, so the player is opened on the first of those and stays silent
+        // until then.
+        var audio = null;
+        function unlock() {
+            if (!audio && window.AudioContext) audio = new AudioContext();
+            if (audio && audio.state === 'suspended') audio.resume();
+        }
+        ['pointerdown', 'keydown'].forEach(function (t) {
+            document.addEventListener(t, unlock, { passive: true });
+        });
+
+        var dispatchMark = document.querySelector('[data-badge="dispatch"]');
+        var lastHeard = dispatchMark ? Number(dispatchMark.textContent) || 0 : 0;
+        function heard(count) {
+            var before = lastHeard;
+            try {
+                var shared = localStorage.getItem('rs-dispatch-heard');
+                if (shared !== null) before = Number(shared);
+                localStorage.setItem('rs-dispatch-heard', String(count));
+            } catch (e) { /* storage blocked: this tab keeps its own */ }
+            lastHeard = count;
+            if (count > before) chime();
+        }
+
+        // E4 then A4 on a triangle wave with a quick decay, which reads as wood rather
+        // than a beep.
+        function chime() {
+            if (!audio || audio.state !== 'running') return;
+            var t = audio.currentTime;
+            [[329.63, 0], [440, 0.13]].forEach(function (n) {
+                var osc = audio.createOscillator();
+                var gain = audio.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = n[0];
+                gain.gain.setValueAtTime(0, t + n[1]);
+                gain.gain.linearRampToValueAtTime(0.06, t + n[1] + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + 0.25);
+                osc.connect(gain).connect(audio.destination);
+                osc.start(t + n[1]);
+                osc.stop(t + n[1] + 0.3);
+            });
+        }
+
         function refresh() { read().catch(function () { /* the numbers on screen stand */ }); }
 
         // What is left for the poll to catch is a change made somewhere this page cannot
         // see: a driver filing a sick call from their own app, or another dispatcher on
         // another board. Asking more often costs the database nothing extra, since the
-        // count itself is held for longer than the gap between two askings.
+        // count itself is held for longer than the gap between two askings, and the
+        // database sends the rows behind it only when one of them changed.
         //
-        // Not while the tab is in the background: a rail nobody is looking at does not
-        // need counting, and a phone left on a desk would poll all day.
+        // A tab in the background is still asked, every thirty seconds, so the chime can
+        // reach a dispatcher working in another tab or another program.
+        var lastAsked = 0;
         setInterval(function () {
-            if (document.hidden) return;
+            if (document.hidden && Date.now() - lastAsked < 30000) return;
+            lastAsked = Date.now();
             refresh();
         }, 5000);
 
