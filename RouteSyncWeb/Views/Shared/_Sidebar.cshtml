@@ -123,6 +123,21 @@
     // the phone bar below, which draw the same destinations.
     var badges = await NavCounts.ReadAsync();
 
+    // The alert sound switch is shown to a role sent at least one tab that sounds.
+    var hearsAlerts = new[] { "routes", "requests", "vehicles", "audit" }
+        .Any(p => User.HasClaim("perm", p));
+
+    // Both states are drawn and the stylesheet shows the one html[data-alert-sound] names,
+    // so the switch never shows the wrong state while the script is still to run.
+    var bellIcons = new HtmlString(
+        "<svg class=\"fw-alert__on\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">" +
+        "<path d=\"M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6\" /><path d=\"M9 17v1a3 3 0 0 0 6 0v-1\" /></svg>" +
+        "<svg class=\"fw-alert__off\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">" +
+        "<path d=\"M9.346 5.353c.21 -.129 .428 -.246 .654 -.353a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3m-1 3h-13a4 4 0 0 0 2 -3v-3a6.996 6.996 0 0 1 1.273 -3.707\" /><path d=\"M9 17v1a3 3 0 0 0 6 0v-1\" /><path d=\"M3 3l18 18\" /></svg>");
+    var alertText = new HtmlString(
+        "<span class=\"fw-alert__on\">Alert sound</span>" +
+        "<span class=\"fw-alert__off\">Sound off</span>");
+
     FleetWise.Services.NavBadge BadgeFor(string controller) => controller switch
     {
         "Dispatch" => badges.Dispatch,
@@ -193,6 +208,20 @@
             }
         </ul>
     </nav>
+
+    @* The alert sound, on or off for this browser. See the alert sound in the script
+       below. Only for a role sent something that sounds, and a row of its own with the
+       whole row to press, since it is reached for in a hurry. *@
+    @if (hearsAlerts)
+    {
+        <div class="fw-sidebar__item">
+            <button type="button" class="fw-sidebar__link fw-alert" data-alert-toggle
+                    aria-pressed="false" aria-label="Mute alert sound" title="Alert sound">
+                <span class="fw-sidebar__icon" aria-hidden="true">@bellIcons</span>
+                <span class="fw-sidebar__label">@alertText</span>
+            </button>
+        </div>
+    }
 
     @* Light or dark, for this browser. See wwwroot/js/theme.js. *@
     <div class="fw-sidebar__theme">
@@ -354,6 +383,18 @@
         }
     </ul>
 
+    @* The alert sound, the same switch as on the rail. *@
+    @if (hearsAlerts)
+    {
+        <div class="fw-sheet__list">
+            <button type="button" class="fw-sheet__link fw-alert" data-alert-toggle
+                    aria-pressed="false" aria-label="Mute alert sound" tabindex="-1">
+                <span class="fw-sheet__icon" aria-hidden="true">@bellIcons</span>
+                @alertText
+            </button>
+        </div>
+    }
+
     @* Light or dark, the same switch as on the rail. *@
     <div class="fw-sheet__theme">
         <span class="fw-sheet__theme-label">Appearance</span>
@@ -465,7 +506,7 @@
             });
             if (!res.ok) return;
             var data = await res.json();
-            if (data.dispatch) heard(data.dispatch.keys || '');
+            heard(data);
 
             // Looked up again each time rather than kept from when this script ran: a page's
             // own counts sit further down the document than the rail and did not exist yet.
@@ -488,16 +529,46 @@
             });
         }
 
-        // A short wooden chime when anything new lands on Dispatch: a trip that cannot run
-        // as assigned, or one that should have left and has not. Judged by the reasons
-        // behind the count rather than the count, which stays put when a trip already on
-        // the board gains another reason. Nothing else chimes; leave and the rest can wait
-        // for somebody to look.
+        // The alert sound.
+        //
+        // Each tab names the items on it that call for a sound (NavBadge.Keys), and a name
+        // not heard before is something new, whatever the count does. Two sounds: the
+        // chime for a trip at risk (anything new on Dispatch, a leave request against a
+        // shift a few hours off, a bus going out with defects) and a lower two-pulse tone
+        // for a high-severity security incident, which only the roles that read the audit
+        // trail are sent. One poll plays each sound at most once however much it brings,
+        // and an item clearing plays nothing.
         //
         // What was last heard is shared between tabs, so with several open only the first
-        // to see something new plays it. Browsers allow sound only once the page has been clicked
-        // or typed in, so the player is opened on the first of those and stays silent
-        // until then.
+        // to see something new plays it. Browsers allow sound only once the page has been
+        // clicked or typed in, so the player is opened on the first of those. What lands
+        // before then is marked on the tab without being heard, which is also why signing
+        // in does not sound for everything already waiting.
+        var SOURCES = { dispatch: 'ops', requests: 'ops', vehicles: 'ops', audit: 'security' };
+
+        // E4 then A4 on a triangle wave with a quick decay, which reads as wood rather
+        // than a beep.
+        var OPS = { type: 'triangle', peak: 0.06, decay: 0.25, notes: [[329.63, 0], [440, 0.13]] };
+
+        // A3 twice on a sine, lower and plainer than the chime so it is never taken for one.
+        var SECURITY = { type: 'sine', peak: 0.09, decay: 0.14, notes: [[220, 0], [220, 0.2]] };
+
+        // Held in this browser's storage and shared by its tabs; kept in the tab alone
+        // where storage is blocked.
+        var memory = {};
+        function load(name) {
+            try {
+                var v = localStorage.getItem(name);
+                if (v !== null) return v;
+            } catch (e) { /* storage blocked */ }
+            return name in memory ? memory[name] : null;
+        }
+        function save(name, value) {
+            memory[name] = value;
+            try { localStorage.setItem(name, value); } catch (e) { /* storage blocked */ }
+        }
+        function split(s) { return s ? s.split(' ').filter(Boolean) : []; }
+
         var audio = null;
         function unlock() {
             if (!audio && window.AudioContext) audio = new AudioContext();
@@ -507,44 +578,136 @@
             document.addEventListener(t, unlock, { passive: true });
         });
 
-        var dispatchMark = document.querySelector('[data-badge="dispatch"]');
-        var lastHeard = dispatchMark ? dispatchMark.dataset.keys || '' : '';
-        function heard(keys) {
-            var before = lastHeard;
-            try {
-                var shared = localStorage.getItem('rs-dispatch-keys');
-                if (shared !== null) before = shared;
-                localStorage.setItem('rs-dispatch-keys', keys);
-            } catch (e) { /* storage blocked: this tab keeps its own */ }
-            lastHeard = keys;
-            if (isNewIn(keys, before)) chime();
-        }
-
-        // Whether anything in now was not in before. A trip that clears is not news;
-        // a trip gaining a second reason, with the count unchanged, is.
-        function isNewIn(now, before) {
-            var seen = new Set(before.split(' '));
-            return now.split(' ').some(function (k) { return k && !seen.has(k); });
-        }
-
-        // E4 then A4 on a triangle wave with a quick decay, which reads as wood rather
-        // than a beep.
-        function chime() {
-            if (!audio || audio.state !== 'running') return;
+        function sound(s) {
+            if (muted() || !audio || audio.state !== 'running') return;
             var t = audio.currentTime;
-            [[329.63, 0], [440, 0.13]].forEach(function (n) {
+            s.notes.forEach(function (n) {
                 var osc = audio.createOscillator();
                 var gain = audio.createGain();
-                osc.type = 'triangle';
+                osc.type = s.type;
                 osc.frequency.value = n[0];
                 gain.gain.setValueAtTime(0, t + n[1]);
-                gain.gain.linearRampToValueAtTime(0.06, t + n[1] + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + 0.25);
+                gain.gain.linearRampToValueAtTime(s.peak, t + n[1] + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + s.decay);
                 osc.connect(gain).connect(audio.destination);
                 osc.start(t + n[1]);
-                osc.stop(t + n[1] + 0.3);
+                osc.stop(t + n[1] + s.decay + 0.05);
             });
         }
+
+        // The page this is, by the controller in its address. An item counts as looked at
+        // once its own page is open and in front, and not before: a Dispatch tab left
+        // behind another program has not been read.
+        var here = location.pathname.split('/')[1].toLowerCase();
+        function lookedAt() {
+            if (SOURCES[here] && !document.hidden) save('rs-unseen-' + here, '');
+        }
+
+        // A browser that has never heard a tab starts from what the page was drawn with,
+        // so the first poll does not take everything already waiting as new.
+        Object.keys(SOURCES).forEach(function (src) {
+            var drawn = document.querySelector('.fw-sidebar [data-badge="' + src + '"]');
+            if (drawn && load('rs-heard-' + src) === null) save('rs-heard-' + src, drawn.dataset.keys || '');
+        });
+
+        function heard(data) {
+            var play = {};
+            Object.keys(SOURCES).forEach(function (src) {
+                if (!data[src]) return;
+                var now = split(data[src].keys);
+                var before = load('rs-heard-' + src);
+                var known = new Set(split(before));
+                var fresh = before === null ? [] : now.filter(function (k) { return !known.has(k); });
+                save('rs-heard-' + src, now.join(' '));
+                if (fresh.length) play[SOURCES[src]] = true;
+
+                // Still waiting to be looked at: what was and has not cleared, and what is new.
+                var current = new Set(now);
+                var unseen = split(load('rs-unseen-' + src))
+                    .filter(function (k) { return current.has(k); })
+                    .concat(fresh);
+                save('rs-unseen-' + src, unseen.join(' '));
+            });
+            lookedAt();
+            if (play.ops) sound(OPS);
+            if (play.security) sound(SECURITY);
+            mark();
+        }
+
+        // The tab carries what has not been looked at, so it shows on the tab strip and
+        // the taskbar while another program is in front: a dot and the number of items
+        // for trips at risk, a dot alone for a security incident, and a red dot on the
+        // icon for either. It shows while the sound is muted too.
+        var plainTitle = document.title;
+        var icon = document.querySelector('link[rel="icon"]');
+        if (!icon) {
+            icon = document.createElement('link');
+            icon.rel = 'icon';
+            icon.href = '/favicon.ico';
+            document.head.appendChild(icon);
+        }
+        var plainIcon = icon.href, dottedIcon = null, wantDot = false;
+
+        function mark() {
+            var ops = 0, security = false;
+            Object.keys(SOURCES).forEach(function (src) {
+                var n = split(load('rs-unseen-' + src)).length;
+                if (SOURCES[src] === 'ops') ops += n;
+                else security = security || n > 0;
+            });
+            document.title = ops ? '● (' + ops + ') ' + plainTitle
+                : security ? '● ' + plainTitle
+                : plainTitle;
+            dot(ops > 0 || security);
+        }
+
+        // The site icon with a red dot on its corner, drawn once and kept.
+        function dot(on) {
+            wantDot = on;
+            if (!on) { icon.href = plainIcon; return; }
+            if (dottedIcon) { icon.href = dottedIcon; return; }
+            var img = new Image();
+            img.onload = function () {
+                var c = document.createElement('canvas');
+                c.width = c.height = 32;
+                var g = c.getContext('2d');
+                g.drawImage(img, 0, 0, 32, 32);
+                g.fillStyle = '#E74C3C';
+                g.beginPath();
+                g.arc(24, 8, 7, 0, Math.PI * 2);
+                g.fill();
+                dottedIcon = c.toDataURL('image/png');
+                if (wantDot) icon.href = dottedIcon;
+            };
+            img.src = plainIcon;
+        }
+
+        // The mute switch, one setting for this browser. It silences both sounds and
+        // nothing else, so a muted desk still sees on the tab that something is waiting.
+        function muted() { return load('rs-alert-muted') === '1'; }
+        function showMuted() {
+            var off = muted();
+            document.documentElement.dataset.alertSound = off ? 'off' : 'on';
+            document.querySelectorAll('[data-alert-toggle]').forEach(function (b) {
+                b.setAttribute('aria-pressed', String(off));
+            });
+        }
+        document.querySelectorAll('[data-alert-toggle]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                save('rs-alert-muted', muted() ? '0' : '1');
+                showMuted();
+            });
+        });
+
+        // Another tab muting, or opening the page an item is on, shows here at once.
+        window.addEventListener('storage', function (e) {
+            if (e.key === 'rs-alert-muted') showMuted();
+            else if (e.key && e.key.indexOf('rs-unseen-') === 0) mark();
+        });
+
+        showMuted();
+        lookedAt();
+        mark();
 
         function refresh() { read().catch(function () { /* the numbers on screen stand */ }); }
 

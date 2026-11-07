@@ -10,6 +10,7 @@
         --fw-bg:                light-dark(#FFFFFF, #393939);
         --fw-divider:           light-dark(#E8ECF0, #4E4E4E);
         --fw-bar-edge:          light-dark(#DDE3EA, #4F4F4F);
+        --fw-alert-off:         light-dark(#C0392B, #F1948A);
         --fw-transition:        220ms ease;
     }
 
@@ -220,6 +221,34 @@
     .fw-sidebar:is(:hover, .fw-sidebar--held) .fw-sidebar__label {
         opacity: 1;
         transform: translateX(0);
+    }
+
+    /* The alert sound switch, on the rail and in the phone sheet. A whole row to press,
+       at least 44px tall. Both states are in the markup and html[data-alert-sound]
+       shows one. Muted it turns red, so the sound is never off without anyone
+       noticing. */
+    .fw-alert {
+        width: 100%;
+        min-height: 44px;
+        border: 0;
+        background: none;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .fw-alert:focus-visible {
+        outline: 2px solid var(--fw-teal);
+        outline-offset: -2px;
+    }
+
+    html[data-alert-sound="off"] .fw-alert__on,
+    html:not([data-alert-sound="off"]) .fw-alert__off {
+        display: none;
+    }
+
+    html[data-alert-sound="off"] .fw-alert {
+        color: var(--fw-alert-off);
     }
 
     /* Light and dark, at the foot of the rail. The switch fills the rail's width, so it

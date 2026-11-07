@@ -17,8 +17,10 @@ namespace FleetWise.Services
     // Note: What the count is about, for a tab whose number alone does not say.
     public sealed record NavBadge(int Count, bool Urgent, string? Note = null)
     {
-        // Space-separated names of what is behind the count, for telling a new item from
-        // one already counted when the count itself stays the same.
+        // Space-separated names of the items on this tab that call for the alert sound,
+        // so the sidebar can tell a new one from one already heard whatever the count
+        // does. Not always what the count is made of: the Vehicles count is open faults
+        // and groundings, while its alert is an inspection passed with defects.
         public string? Keys { get; init; }
 
         public static readonly NavBadge None = new(0, false);
@@ -159,8 +161,18 @@ namespace FleetWise.Services
         // A security incident's severity, as nav_badge_inputs lists those needing review.
         private sealed class IncidentRow
         {
+            [JsonProperty("incident_id")]
+            public long IncidentId { get; set; }
+
             [JsonProperty("severity")]
             public string? Severity { get; set; }
+        }
+
+        // An inspection passed with defects, as nav_badge_inputs lists them for today's trips.
+        private sealed class DefectRow
+        {
+            [JsonProperty("checklist_id")]
+            public long ChecklistId { get; set; }
         }
 
         // Drops the standing count, so the next reading is worked out again.
@@ -291,14 +303,20 @@ namespace FleetWise.Services
             //
             // An asking to cancel granted leave is counted and never urgent: it hands a
             // driver back, which is a decision to be made rather than a hole to be filled.
-            bool urgent = waiting.Any(l =>
+            //
+            // The urgent requests are also named, so the alert sound plays once for each:
+            // when one is filed already inside the window, and when one left unanswered
+            // crosses into it.
+            var urgentRequests = waiting.Where(l =>
                 trips.Any(t =>
                     t.DriverId == l.UserId
                     && t.Date.Date >= l.StartDate.Date
                     && t.Date.Date <= l.EndDate.Date
                     && !LeaveEntitlement.IsRevokedOn(l, t.Date)
                     && !TripStatus.Locked(t, now)
-                    && TripStatus.StartOf(t) - now <= UrgentWithin));
+                    && TripStatus.StartOf(t) - now <= UrgentWithin))
+                .Select(l => l.RequestId.ToString())
+                .ToList();
 
             // A bus nobody can send. An open fault or a grounding is the same job either
             // way, and neither stops the day the way a trip that cannot run does.
@@ -316,10 +334,15 @@ namespace FleetWise.Services
             // the page it points at is worse than no badge.
             flagged.ExceptWith(retired);
 
+            // Inspections passed with defects on today's trips. Not part of the count, since
+            // the bus can still be driven, but named for the alert sound: a bus is going out
+            // with a known fault and whoever looks after the fleet should hear of it.
+            var defects = read.Rows<DefectRow>("defects").Select(d => d.ChecklistId.ToString());
+
             return new NavBadges(
                 new NavBadge(dispatch, dispatch > 0) { Keys = string.Join(' ', reasons) },
-                new NavBadge(openCount, urgent),
-                new NavBadge(flagged.Count, false),
+                new NavBadge(openCount, urgentRequests.Count > 0) { Keys = string.Join(' ', urgentRequests) },
+                new NavBadge(flagged.Count, false) { Keys = string.Join(' ', defects) },
                 await CountRosterAsync(today, slow.Section("roster")),
                 CountAudit(read));
         }
@@ -424,9 +447,16 @@ namespace FleetWise.Services
             if (!read.Has("incidents")) return NavBadge.None;
 
             var waiting = read.Rows<IncidentRow>("incidents");
-            var urgent = waiting.Any(r => r.Severity == "high");
+            // Only the high-severity incidents are named for the alert sound. The rest are
+            // failed attempts that never got in, which every system collects and which
+            // would teach whoever hears them to stop listening.
+            var high = waiting.Where(r => r.Severity == "high").Select(r => r.IncidentId.ToString()).ToList();
+            var urgent = high.Count > 0;
             return new NavBadge(waiting.Count, urgent,
-                urgent ? "A sign-in succeeded after failed attempts" : null);
+                urgent ? "A sign-in succeeded after failed attempts" : null)
+            {
+                Keys = string.Join(' ', high),
+            };
         }
 
         // Roster slots nobody is on for the days ahead, a month's roster waiting on a person

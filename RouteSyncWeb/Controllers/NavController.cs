@@ -30,10 +30,10 @@ namespace FleetWise.Controllers
                 mine["dispatch"] = new { count = b.Dispatch.Count, urgent = b.Dispatch.Urgent, keys = b.Dispatch.Keys };
 
             if (User.HasClaim("perm", "requests"))
-                mine["requests"] = new { count = b.Requests.Count, urgent = b.Requests.Urgent };
+                mine["requests"] = new { count = b.Requests.Count, urgent = b.Requests.Urgent, keys = b.Requests.Keys };
 
             if (User.HasClaim("perm", "vehicles"))
-                mine["vehicles"] = new { count = b.Vehicles.Count, urgent = b.Vehicles.Urgent };
+                mine["vehicles"] = new { count = b.Vehicles.Count, urgent = b.Vehicles.Urgent, keys = b.Vehicles.Keys };
 
             if (User.HasClaim("perm", "roster"))
                 mine["roster"] = new { count = b.Roster.Count, urgent = b.Roster.Urgent, note = b.Roster.Note };
@@ -41,7 +41,7 @@ namespace FleetWise.Controllers
             // Security incidents go only to those who can read the trail they come from.
             // Anyone else learns nothing, not even that a count exists.
             if (User.HasClaim("perm", "audit"))
-                mine["audit"] = new { count = b.Audit.Count, urgent = b.Audit.Urgent, note = b.Audit.Note };
+                mine["audit"] = new { count = b.Audit.Count, urgent = b.Audit.Urgent, note = b.Audit.Note, keys = b.Audit.Keys };
 
             return Json(mine);
         }
