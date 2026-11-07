@@ -17,6 +17,10 @@ namespace FleetWise.Services
     // Note: What the count is about, for a tab whose number alone does not say.
     public sealed record NavBadge(int Count, bool Urgent, string? Note = null)
     {
+        // Space-separated names of what is behind the count, for telling a new item from
+        // one already counted when the count itself stays the same.
+        public string? Keys { get; init; }
+
         public static readonly NavBadge None = new(0, false);
     }
 
@@ -251,12 +255,24 @@ namespace FleetWise.Services
             // The same two things the board draws in red: a trip that cannot run as
             // assigned, and one that should have gone and has not. Counted together
             // because both mean somebody has to be rung, and both are urgent by nature.
-            int dispatch = todayTrips.Count(t =>
-                (!TripStatus.Locked(t, now)
-                 && (grounded.Contains(t.VehicleId)
-                     || cannotDrive.Contains(t.DriverId)
-                     || offToday.Contains(t.DriverId)))
-                || TripStatus.LateBy(t, now) is not null);
+            //
+            // Each reason a trip is on the board is also named on its own, trip by trip, so
+            // the sidebar can chime for a new one even when the count does not move: a driver
+            // marking themself unavailable for a trip that is already late adds a reason to a
+            // trip that was already counted.
+            var reasons = new List<string>();
+            foreach (var t in todayTrips)
+            {
+                if (!TripStatus.Locked(t, now))
+                {
+                    if (grounded.Contains(t.VehicleId)) reasons.Add(t.TripId + ":bus");
+                    if (cannotDrive.Contains(t.DriverId)) reasons.Add(t.TripId + ":unavailable");
+                    if (offToday.Contains(t.DriverId)) reasons.Add(t.TripId + ":leave");
+                }
+                if (TripStatus.LateBy(t, now) is not null) reasons.Add(t.TripId + ":late");
+            }
+
+            int dispatch = reasons.Select(r => r[..r.LastIndexOf(':')]).Distinct().Count();
 
             var waiting = slow.Rows<LeaveRequest>("leave_open");
 
@@ -301,7 +317,7 @@ namespace FleetWise.Services
             flagged.ExceptWith(retired);
 
             return new NavBadges(
-                new NavBadge(dispatch, dispatch > 0),
+                new NavBadge(dispatch, dispatch > 0) { Keys = string.Join(' ', reasons) },
                 new NavBadge(openCount, urgent),
                 new NavBadge(flagged.Count, false),
                 await CountRosterAsync(today, slow.Section("roster")),

@@ -186,7 +186,7 @@
                         @if (key is not null)
                         {
                             <span class="fw-sidebar__badge @(badge.Urgent ? "fw-sidebar__badge--urgent" : "")"
-                                  data-badge="@key" title="@badge.Note" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
+                                  data-badge="@key" data-keys="@badge.Keys" title="@badge.Note" hidden="@(badge.Count == 0 ? "hidden" : null)">@badge.Count</span>
                         }
                     </a>
                 </li>
@@ -465,7 +465,7 @@
             });
             if (!res.ok) return;
             var data = await res.json();
-            if (data.dispatch) heard(data.dispatch.count);
+            if (data.dispatch) heard(data.dispatch.keys || '');
 
             // Looked up again each time rather than kept from when this script ran: a page's
             // own counts sit further down the document than the rail and did not exist yet.
@@ -488,12 +488,14 @@
             });
         }
 
-        // A short wooden chime when the Dispatch count goes up: a trip that cannot run as
-        // assigned, or one that should have left and has not. Nothing else chimes; leave
-        // and the rest can wait for somebody to look.
+        // A short wooden chime when anything new lands on Dispatch: a trip that cannot run
+        // as assigned, or one that should have left and has not. Judged by the reasons
+        // behind the count rather than the count, which stays put when a trip already on
+        // the board gains another reason. Nothing else chimes; leave and the rest can wait
+        // for somebody to look.
         //
-        // The count last heard is shared between tabs, so with several open only the first
-        // to see a rise plays it. Browsers allow sound only once the page has been clicked
+        // What was last heard is shared between tabs, so with several open only the first
+        // to see something new plays it. Browsers allow sound only once the page has been clicked
         // or typed in, so the player is opened on the first of those and stays silent
         // until then.
         var audio = null;
@@ -506,16 +508,23 @@
         });
 
         var dispatchMark = document.querySelector('[data-badge="dispatch"]');
-        var lastHeard = dispatchMark ? Number(dispatchMark.textContent) || 0 : 0;
-        function heard(count) {
+        var lastHeard = dispatchMark ? dispatchMark.dataset.keys || '' : '';
+        function heard(keys) {
             var before = lastHeard;
             try {
-                var shared = localStorage.getItem('rs-dispatch-heard');
-                if (shared !== null) before = Number(shared);
-                localStorage.setItem('rs-dispatch-heard', String(count));
+                var shared = localStorage.getItem('rs-dispatch-keys');
+                if (shared !== null) before = shared;
+                localStorage.setItem('rs-dispatch-keys', keys);
             } catch (e) { /* storage blocked: this tab keeps its own */ }
-            lastHeard = count;
-            if (count > before) chime();
+            lastHeard = keys;
+            if (isNewIn(keys, before)) chime();
+        }
+
+        // Whether anything in now was not in before. A trip that clears is not news;
+        // a trip gaining a second reason, with the count unchanged, is.
+        function isNewIn(now, before) {
+            var seen = new Set(before.split(' '));
+            return now.split(' ').some(function (k) { return k && !seen.has(k); });
         }
 
         // E4 then A4 on a triangle wave with a quick decay, which reads as wood rather

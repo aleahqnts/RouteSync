@@ -27,7 +27,7 @@ namespace FleetWise.Controllers
             var mine = new Dictionary<string, object>();
 
             if (User.HasClaim("perm", "routes"))
-                mine["dispatch"] = new { count = b.Dispatch.Count, urgent = b.Dispatch.Urgent };
+                mine["dispatch"] = new { count = b.Dispatch.Count, urgent = b.Dispatch.Urgent, keys = b.Dispatch.Keys };
 
             if (User.HasClaim("perm", "requests"))
                 mine["requests"] = new { count = b.Requests.Count, urgent = b.Requests.Urgent };
