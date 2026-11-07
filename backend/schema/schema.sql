@@ -430,7 +430,7 @@ begin
   if v_fast then
     begin
       v_incidents := coalesce((select json_agg(x) from (
-          select severity from security_incidents
+          select incident_id, severity from security_incidents
           where needs_review is true
           limit 1000) x), '[]');
     exception when others then
@@ -450,6 +450,11 @@ begin
     'open_logs', case when v_fast then coalesce((select json_agg(x) from (
         select log_id, vehicle_id from maintenance_logs
         where resolved_at is null) x), '[]') end,
+    'defects', case when v_fast then coalesce((select json_agg(x) from (
+        select c.checklist_id from bus_checklist c
+        join trips t on t.trip_id = c.trip_id
+        where t.date = p_today
+          and c.checklist_status = 'Passed with Defects') x), '[]') end,
     'leave_open', case when v_slow then coalesce((select json_agg(x) from (
         select request_id, user_id, status, leave_type, start_date, end_date, revoked_dates
         from leave_requests
@@ -472,7 +477,7 @@ $$;
 ALTER FUNCTION "public"."nav_badge_inputs"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."nav_badge_inputs"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text") IS 'The rows the sidebar badges are counted from, in one request. p_sections picks fast (trips, vehicles, availability, open_logs, incidents), slow (leave and roster) or all; a section left out is null. roster and incidents are also null when their tables cannot be read.';
+COMMENT ON FUNCTION "public"."nav_badge_inputs"("p_today" "date", "p_this_month" "date", "p_next_month" "date", "p_open_statuses" "text"[], "p_sections" "text") IS 'The rows the sidebar badges and alert sound are worked out from, in one request. p_sections picks fast (trips, vehicles, availability, open_logs, defects, incidents), slow (leave and roster) or all; a section left out is null. roster and incidents are also null when their tables cannot be read.';
 
 
 
