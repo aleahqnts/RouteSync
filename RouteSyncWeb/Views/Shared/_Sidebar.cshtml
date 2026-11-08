@@ -546,12 +546,16 @@
         // in does not sound for everything already waiting.
         var SOURCES = { dispatch: 'ops', requests: 'ops', vehicles: 'ops', audit: 'security' };
 
-        // E4 then A4 on a triangle wave with a quick decay, which reads as wood rather
-        // than a beep.
-        var OPS = { type: 'triangle', peak: 0.06, decay: 0.25, notes: [[329.63, 0], [440, 0.13]] };
+        // E5 then A5 on a triangle wave with a quick decay, which reads as wood rather
+        // than a beep. Pitched high and played loud enough to carry across a room through
+        // laptop and monitor speakers, which give little back below about 400 Hz, so it
+        // sits level with a chat app's message sound rather than under it. The second
+        // note starts once the first has fallen below a tenth, so the two never add up
+        // past the peak.
+        var OPS = { type: 'triangle', peak: 0.5, decay: 0.4, notes: [[659.25, 0], [880, 0.13]] };
 
-        // A3 twice on a sine, lower and plainer than the chime so it is never taken for one.
-        var SECURITY = { type: 'sine', peak: 0.09, decay: 0.14, notes: [[220, 0], [220, 0.2]] };
+        // A4 twice on a sine, lower and plainer than the chime so it is never taken for one.
+        var SECURITY = { type: 'sine', peak: 0.6, decay: 0.18, notes: [[440, 0], [440, 0.22]] };
 
         // Held in this browser's storage and shared by its tabs; kept in the tab alone
         // where storage is blocked.
