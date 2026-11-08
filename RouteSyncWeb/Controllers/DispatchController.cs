@@ -64,11 +64,24 @@ namespace FleetWise.Controllers
         // for are not: the page counts those up itself between rebuilds.
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public async Task<IActionResult> Pulse(string date)
+        public async Task<IActionResult> Pulse(string date, [FromServices] NavCounts nav)
         {
             var selected = DateTime.TryParse(date, out var d) ? d.Date : PhClock.OperationalDay;
             var pulse = await SharedRead.GetAsync(_cache, $"dispatch:pulse:{selected:yyyy-MM-dd}", PulseShared,
                 () => ReadPulseAsync(selected));
+
+            // Today's board moving is the same change the sidebar counts and chimes for, so
+            // its standing count is dropped and the page asks for it straight after. Without
+            // this the chime trails the board by up to a poll and a cached count.
+            if (selected == PhClock.OperationalDay)
+            {
+                var lastKey = "dispatch:pulse:last";
+                if (_cache.Get<string>(lastKey) != pulse)
+                {
+                    _cache.Set(lastKey, pulse);
+                    nav.InvalidateFast();
+                }
+            }
             return Json(new { pulse });
         }
 
@@ -83,7 +96,7 @@ namespace FleetWise.Controllers
                 .Select("vehicle_id,vehicle_status,out_of_service")
                 .Get();
             var availabilityTask = _supabase.From<DriverAvailability>()
-                .Select("user_id,availability_status")
+                .Select("user_id,availability_status,updated_at")
                 .Get();
 
             var faultsTask = _supabase.From<MaintenanceLog>()
@@ -114,7 +127,7 @@ namespace FleetWise.Controllers
                     .Select(v => $"{v.VehicleId}|{v.VehicleStatus}|{v.OutOfService}"))
                 .Concat(availabilityTask.Result.Models
                     .OrderBy(a => a.UserId)
-                    .Select(a => $"{a.UserId}|{a.AvailabilityStatus}"))
+                    .Select(a => $"{a.UserId}|{a.AvailabilityStatus}|{a.UpdatedAt:O}"))
                 .Concat(checklists
                     .OrderBy(c => c.ChecklistId)
                     .Select(c => $"c{c.ChecklistId}|{c.TripId}|{c.VehicleId}|{c.ChecklistStatus}"))

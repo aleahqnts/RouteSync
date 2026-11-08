@@ -715,6 +715,9 @@
 
         function refresh() { read().catch(function () { /* the numbers on screen stand */ }); }
 
+        // For a page that learns of a change first, such as the dispatch board's own check.
+        window.fwNavRefresh = refresh;
+
         // What is left for the poll to catch is a change made somewhere this page cannot
         // see: a driver filing a sick call from their own app, or another dispatcher on
         // another board. Asking more often costs the database nothing extra, since the

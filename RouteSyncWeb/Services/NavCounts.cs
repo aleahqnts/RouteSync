@@ -192,6 +192,10 @@ namespace FleetWise.Services
             _cache.Remove(ProjectedKey);
         }
 
+        // Drops only the five-second count, for a change seen elsewhere (the dispatch board's
+        // fingerprint moving) that the leave, roster and projected reads are not part of.
+        public void InvalidateFast() => _cache.Remove(Key);
+
         public async Task<NavBadges> ReadAsync()
         {
             if (_cache.TryGetValue<NavBadges>(Key, out var cached) && cached is not null)
@@ -251,11 +255,12 @@ namespace FleetWise.Services
                 .Select(v => v.VehicleId)
                 .ToHashSet();
 
+            // Keyed by when the driver last set it, so a driver who goes back to available
+            // and then unavailable again between two readings is a new report and chimes.
             var cannotDrive = read.Rows<DriverAvailability>("availability")
                 .Where(a => string.Equals(a.AvailabilityStatus, "Unavailable",
                                           StringComparison.OrdinalIgnoreCase))
-                .Select(a => a.UserId)
-                .ToHashSet();
+                .ToDictionary(a => a.UserId, a => a.UpdatedAt?.ToString("yyyyMMddHHmmss") ?? "");
 
             // Asked again of each row rather than left to the dates the query matched on,
             // because a day inside an approved span can have been handed back since.
@@ -278,7 +283,7 @@ namespace FleetWise.Services
                 if (!TripStatus.Locked(t, now))
                 {
                     if (grounded.Contains(t.VehicleId)) reasons.Add(t.TripId + ":bus");
-                    if (cannotDrive.Contains(t.DriverId)) reasons.Add(t.TripId + ":unavailable");
+                    if (cannotDrive.TryGetValue(t.DriverId, out var since)) reasons.Add(t.TripId + ":unavailable." + since);
                     if (offToday.Contains(t.DriverId)) reasons.Add(t.TripId + ":leave");
                 }
                 if (TripStatus.LateBy(t, now) is not null) reasons.Add(t.TripId + ":late");

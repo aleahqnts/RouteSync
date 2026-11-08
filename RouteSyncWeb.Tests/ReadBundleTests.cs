@@ -36,6 +36,18 @@ public class ReadBundleTests
         Assert.True(LeaveEntitlement.CoversDay(leave, new DateTime(2026, 9, 29)));
     }
 
+    // The alert sound keys an unavailable driver by this stamp, so a second report is new.
+    [Fact]
+    public void Availability_carries_when_it_was_set()
+    {
+        var read = ReadBundle.Parse("""
+            {"availability" : [{"user_id":10,"availability_status":"Unavailable","updated_at":"2026-11-08T09:15:30"}]}
+            """);
+
+        var a = Assert.Single(read.Rows<DriverAvailability>("availability"));
+        Assert.Equal(new DateTime(2026, 11, 8, 9, 15, 30), a.UpdatedAt);
+    }
+
     [Fact]
     public void A_section_is_read_as_a_bundle_of_its_own()
     {

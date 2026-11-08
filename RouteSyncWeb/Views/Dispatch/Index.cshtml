@@ -822,6 +822,8 @@
             if (pulse === dpPulse) return;
 
             dpPulse = pulse;
+            // The sidebar's chime is told at the same moment the board is.
+            if (window.fwNavRefresh) window.fwNavRefresh();
             await dpRefresh(false);
         } catch (e) {
             // Left for the next check: the board on screen is still the board as of the
@@ -853,7 +855,9 @@
     }
     function dpTickLate() {
         const add = Math.floor((Date.now() - dpBuiltAt) / 60000);
-        document.querySelectorAll('.dp-badge[data-late-min]').forEach(b => {
+        // Razor writes a null data- attribute as empty rather than leaving it out, so a
+        // badge that is not late carries data-late-min="" and is skipped here.
+        document.querySelectorAll('.dp-badge[data-late-min]:not([data-late-min=""])').forEach(b => {
             const label = b.dataset.statusLabel + ' · ' + dpLateLabel(Number(b.dataset.lateMin) + add);
             if (b.textContent !== label) b.textContent = label;
             if (b.hasAttribute('aria-label')) b.setAttribute('aria-label', label + '. Tap for the reason.');
