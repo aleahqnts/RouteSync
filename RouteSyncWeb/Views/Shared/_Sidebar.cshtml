@@ -576,11 +576,17 @@
         var audio = null;
         function unlock() {
             if (!audio && window.AudioContext) audio = new AudioContext();
-            if (audio && audio.state === 'suspended') audio.resume();
+            if (audio && audio.state === 'suspended') audio.resume().catch(function () { /* still locked */ });
         }
         ['pointerdown', 'keydown'].forEach(function (t) {
             document.addEventListener(t, unlock, { passive: true });
         });
+        // Opened at once as well: a browser lets a page reached by clicking a link on this
+        // site play without being clicked again, and every page here is reached that way.
+        unlock();
+
+        // Whether this tab can sound right now. Muted counts, since then nothing is owed.
+        function canSound() { return muted() || (audio && audio.state === 'running'); }
 
         function sound(s) {
             if (muted() || !audio || audio.state !== 'running') return;
@@ -616,21 +622,25 @@
 
         function heard(data) {
             var play = {};
+            var able = canSound();
             Object.keys(SOURCES).forEach(function (src) {
                 if (!data[src]) return;
                 var now = split(data[src].keys);
                 var before = load('rs-heard-' + src);
                 var known = new Set(split(before));
                 var fresh = before === null ? [] : now.filter(function (k) { return !known.has(k); });
-                save('rs-heard-' + src, now.join(' '));
-                if (fresh.length) play[SOURCES[src]] = true;
+
+                // A tab that cannot sound leaves what is new unheard, so another tab that can,
+                // or this one once it is clicked, still plays it rather than it passing silently.
+                save('rs-heard-' + src, (able ? now : now.filter(function (k) { return known.has(k); })).join(' '));
+                if (fresh.length && able) play[SOURCES[src]] = true;
 
                 // Still waiting to be looked at: what was and has not cleared, and what is new.
                 var current = new Set(now);
-                var unseen = split(load('rs-unseen-' + src))
+                var unseen = new Set(split(load('rs-unseen-' + src))
                     .filter(function (k) { return current.has(k); })
-                    .concat(fresh);
-                save('rs-unseen-' + src, unseen.join(' '));
+                    .concat(fresh));
+                save('rs-unseen-' + src, Array.from(unseen).join(' '));
             });
             lookedAt();
             if (play.ops) sound(OPS);
