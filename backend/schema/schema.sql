@@ -446,7 +446,7 @@ begin
     'vehicles', case when v_fast then coalesce((select json_agg(x) from (
         select vehicle_id, out_of_service, retired_at from vehicles) x), '[]') end,
     'availability', case when v_fast then coalesce((select json_agg(x) from (
-        select user_id, availability_status from driver_availability) x), '[]') end,
+        select user_id, availability_status, updated_at from driver_availability) x), '[]') end,
     'open_logs', case when v_fast then coalesce((select json_agg(x) from (
         select log_id, vehicle_id from maintenance_logs
         where resolved_at is null) x), '[]') end,
