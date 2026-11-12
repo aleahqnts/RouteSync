@@ -12,8 +12,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -94,6 +97,9 @@ private const val REBINDS_BEFORE_GIVING_UP_QUIETLY = 3
  * so the backoff would never advance past its first step. Recovery means sustained.
  */
 private const val HEALTHY_AFTER_REBIND_MS = 20_000L
+
+/** How long a press on the dark screen must be held before it wakes. */
+private const val HOLD_TO_WAKE_MS = 1_000
 
 /** Immutable per-frame box for the overlay, built on the analyzer thread. */
 private data class OverlayBox(val l: Float, val t: Float, val r: Float, val b: Float, val counted: Boolean)
@@ -314,7 +320,7 @@ private fun DetectionSurface(
         }
     }
 
-    // Screen off: the driver's own choice, held until a tap or Back. A real screen-off
+    // Screen off: the driver's own choice, held until a long press or Back. A real screen-off
     // stops the activity and CameraX unbinds with it, so instead the window backlight is
     // dropped to its minimum under an opaque black overlay while the screen stays awake
     // and counting runs at the full rate. Resting mode above uses the same backlight drop.
@@ -882,28 +888,68 @@ private fun DetectionSurface(
 
         // Dim overlay, drawn last so it covers everything. An idle stop or a long empty
         // stretch draws a near-black screen to save heat, battery and OLED wear.
-        // Detection keeps running; a person entering frame or a tap wakes it. Screen off
-        // draws it fully opaque and only a tap wakes it.
+        // Detection keeps running; a person entering frame wakes it. Screen off draws it
+        // fully opaque and ignores people in frame.
+        //
+        // Waking by hand takes a press held for [HOLD_TO_WAKE_MS], so a brush against the
+        // mounted phone does not light it. The bar under the count fills while held and
+        // drains if the finger lifts early. The pulsing dot shows counting is still live.
         if (dark) {
             val dimCount = (vm?.state?.collectAsState()?.value as? CounterViewModel.UiState.Counting)?.count
+            val hold = remember { androidx.compose.animation.core.Animatable(0f) }
+            val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+                .animateFloat(
+                    0.25f, 0.8f,
+                    androidx.compose.animation.core.infiniteRepeatable(
+                        androidx.compose.animation.core.tween(1600),
+                        androidx.compose.animation.core.RepeatMode.Reverse
+                    ),
+                    label = "pulse"
+                )
             Column(
                 Modifier.fillMaxSize().background(if (screenOff) Color.Black else Color(0xF2000000))
                     .pointerInput(Unit) {
-                        detectTapGestures {
-                            lastPersonAt = System.currentTimeMillis(); dimmed = false; screenOff = false
+                        awaitEachGesture {
+                            awaitFirstDown()
+                            val fill = scope.launch {
+                                hold.animateTo(
+                                    1f,
+                                    androidx.compose.animation.core.tween(
+                                        HOLD_TO_WAKE_MS, easing = androidx.compose.animation.core.LinearEasing
+                                    )
+                                )
+                                lastPersonAt = System.currentTimeMillis(); dimmed = false; screenOff = false
+                            }
+                            waitForUpOrCancellation()
+                            if (fill.isActive) {
+                                fill.cancel()
+                                scope.launch { hold.animateTo(0f, androidx.compose.animation.core.tween(200)) }
+                            }
                         }
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                dimCount?.let {
-                    Text("$it", color = Color(0x559AE0D4), fontSize = 44.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (screenOff) "Counting · screen off · tap to wake" else "Counting · screen resting",
-                    color = Color(0x44FFFFFF), fontSize = 12.sp
+                // The backlight is at its minimum, so the count is drawn bright enough to
+                // read at a glance.
+                Box(
+                    Modifier.size(8.dp).clip(CircleShape)
+                        .background(Color(0xFF9AE0D4).copy(alpha = pulse.value))
                 )
+                Spacer(Modifier.height(14.dp))
+                dimCount?.let {
+                    Text("$it", color = Color(0xCC9AE0D4), fontSize = 64.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier.width(72.dp).height(3.dp).clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x1FFFFFFF))
+                ) {
+                    Box(
+                        Modifier.fillMaxHeight().fillMaxWidth(hold.value)
+                            .background(Color(0xCC9AE0D4))
+                    )
+                }
             }
         }
     }
