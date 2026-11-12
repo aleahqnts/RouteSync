@@ -10,11 +10,13 @@ import com.routesync.cameracount.data.Prefs
 import com.routesync.cameracount.data.QueuedEvent
 import com.routesync.cameracount.data.SupabaseApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Bridge between the camera pipeline and the RouteSync database. Owns the trip lifecycle,
@@ -23,7 +25,8 @@ import kotlinx.coroutines.launch
  * Four loops run against the bound vehicle:
  *
  * - Poll, every 4s: look for an Active trip and lock on to it or release it.
- * - Flush, every 5s: one PATCH carrying `total_boarded` and `count_heartbeat`. Heartbeat
+ * - Flush, every 5s and on each boarding: one PATCH carrying `total_boarded` and
+ *   `count_heartbeat`. Heartbeat
  *   freshness is how RouteSync decides whether to show the driver's manual counter.
  * - Config follower, on the same 4s tick: reconcile `device_config` in both directions.
  * - Event drain, on the same 4s tick: deliver held crossings to `boarding_events`.
@@ -63,6 +66,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
 
     private var pollJob: Job? = null
     private var flushJob: Job? = null
+    // Signalled on each boarding so the count is sent at once rather than at the next
+    // 5s tick. Conflated: a burst while a write is in flight costs one more write.
+    private val flushNow = Channel<Unit>(Channel.CONFLATED)
     private var tripId: String? = null
     private var count = 0
     private var vehicleId: String = ""
@@ -302,6 +308,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
             if (direction != CrossDirection.IN) return@launch
             count++
             persistPending(t)
+            flushNow.trySend(Unit)
             // Carry the sync state forward. A boarding says nothing about whether the last
             // flush reached the server, so reporting success here would show "synced" on
             // every passenger while the bus is in a dead zone.
@@ -715,7 +722,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         flushJob?.cancel()
         flushJob = viewModelScope.launch {
             while (true) {
-                delay(5_000)
+                withTimeoutOrNull(5_000) { flushNow.receive() }
                 val t = tripId ?: break
                 if (cameraStalled()) {
                     // With the camera dead, stop heartbeating so RouteSync reveals the
