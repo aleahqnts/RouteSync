@@ -314,6 +314,30 @@ private fun DetectionSurface(
         }
     }
 
+    // Screen off: the driver's own choice, held until a tap or Back. A real screen-off
+    // stops the activity and CameraX unbinds with it, so instead the window backlight is
+    // dropped to its minimum under an opaque black overlay while the screen stays awake
+    // and counting runs at the full rate. Resting mode above uses the same backlight drop.
+    var screenOff by remember { mutableStateOf(false) }
+    BackHandler(enabled = screenOff) { screenOff = false }
+    val dark = counting && (dimmed || screenOff)
+    val window = (context as? android.app.Activity)?.window
+    DisposableEffect(dark) {
+        fun setBrightness(v: Float) {
+            window?.let { w -> w.attributes = w.attributes.also { it.screenBrightness = v } }
+        }
+        if (dark) setBrightness(android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_OFF)
+        onDispose { setBrightness(android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) }
+    }
+    // Leaving the app wakes the screen, so it is never still dark when the driver returns.
+    DisposableEffect(lifecycle) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_STOP) screenOff = false
+        }
+        lifecycle.lifecycle.addObserver(obs)
+        onDispose { lifecycle.lifecycle.removeObserver(obs) }
+    }
+
     // A dashboard phone that is not charging will stop counting when the battery runs out.
     var charging by remember { mutableStateOf(true) }
     DisposableEffect(Unit) {
@@ -775,10 +799,18 @@ private fun DetectionSurface(
         // Entry point for a mid-trip adjustment. Counting continues, but crossings are
         // ignored while the line is being dragged.
         if (counting && !editingLine) {
-            OutlinedButton(
-                onClick = { adjusting = true; lastPersonAt = System.currentTimeMillis() },
-                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(16.dp)
-            ) { Text("Adjust line", color = Color.White, fontSize = 12.sp) }
+            Column(
+                Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(16.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                OutlinedButton(
+                    onClick = { adjusting = true; lastPersonAt = System.currentTimeMillis() }
+                ) { Text("Adjust line", color = Color.White, fontSize = 12.sp) }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { screenOff = true }) {
+                    Text("Screen off", color = Color.White, fontSize = 12.sp)
+                }
+            }
         }
 
         // Not-charging warning. The counter stops when the battery does.
@@ -850,13 +882,16 @@ private fun DetectionSurface(
 
         // Dim overlay, drawn last so it covers everything. An idle stop or a long empty
         // stretch draws a near-black screen to save heat, battery and OLED wear.
-        // Detection keeps running; a person entering frame or a tap wakes it.
-        if (counting && dimmed) {
+        // Detection keeps running; a person entering frame or a tap wakes it. Screen off
+        // draws it fully opaque and only a tap wakes it.
+        if (dark) {
             val dimCount = (vm?.state?.collectAsState()?.value as? CounterViewModel.UiState.Counting)?.count
             Column(
-                Modifier.fillMaxSize().background(Color(0xF2000000))
+                Modifier.fillMaxSize().background(if (screenOff) Color.Black else Color(0xF2000000))
                     .pointerInput(Unit) {
-                        detectTapGestures { lastPersonAt = System.currentTimeMillis(); dimmed = false }
+                        detectTapGestures {
+                            lastPersonAt = System.currentTimeMillis(); dimmed = false; screenOff = false
+                        }
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -865,7 +900,10 @@ private fun DetectionSurface(
                     Text("$it", color = Color(0x559AE0D4), fontSize = 44.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("Counting · screen resting", color = Color(0x44FFFFFF), fontSize = 12.sp)
+                Text(
+                    if (screenOff) "Counting · screen off · tap to wake" else "Counting · screen resting",
+                    color = Color(0x44FFFFFF), fontSize = 12.sp
+                )
             }
         }
     }
