@@ -329,6 +329,23 @@ $$;
 ALTER FUNCTION "public"."driver_is_active"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."fare_config_history"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  insert into fare_history (effective_from, standard_fare)
+  values (((now() at time zone 'Asia/Manila') - interval '6 hours')::date, NEW.standard_fare)
+  on conflict (effective_from)
+    do update set standard_fare = excluded.standard_fare, recorded_at = now();
+  return NEW;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."fare_config_history"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb" DEFAULT '{}'::"jsonb") RETURNS json
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
@@ -1038,7 +1055,11 @@ begin
   if v_device
      or (NEW.total_boarded is distinct from OLD.total_boarded
          and NEW.estimated_revenue is not distinct from OLD.estimated_revenue) then
-    select standard_fare into v_fare from public.fare_config where id = 1;
+    select standard_fare into v_fare from public.fare_history
+     where effective_from <= NEW.date order by effective_from desc limit 1;
+    if v_fare is null then
+      select standard_fare into v_fare from public.fare_config where id = 1;
+    end if;
     NEW.estimated_revenue := round(NEW.total_boarded * coalesce(v_fare, 0), 2);
   end if;
 
@@ -1612,6 +1633,17 @@ CREATE TABLE IF NOT EXISTS "public"."fare_config" (
 
 
 ALTER TABLE "public"."fare_config" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."fare_history" (
+    "effective_from" "date" NOT NULL,
+    "standard_fare" numeric(10,2) NOT NULL,
+    "recorded_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "fare_history_fare_positive" CHECK (("standard_fare" > (0)::numeric))
+);
+
+
+ALTER TABLE "public"."fare_history" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."inspection_photos" (
@@ -2345,6 +2377,11 @@ ALTER TABLE ONLY "public"."fare_config"
 
 
 
+ALTER TABLE ONLY "public"."fare_history"
+    ADD CONSTRAINT "fare_history_pkey" PRIMARY KEY ("effective_from");
+
+
+
 ALTER TABLE ONLY "public"."leave_requests"
     ADD CONSTRAINT "leave_requests_pkey" PRIMARY KEY ("request_id");
 
@@ -2615,6 +2652,10 @@ CREATE OR REPLACE TRIGGER "trg_audit_users_pwd" AFTER UPDATE OF "password_hash" 
 
 
 CREATE OR REPLACE TRIGGER "trg_audit_users_upd" AFTER UPDATE ON "public"."users" FOR EACH ROW WHEN ((((("to_jsonb"("old".*) - 'password_hash'::"text") - 'last_login'::"text") - 'updated_at'::"text") IS DISTINCT FROM ((("to_jsonb"("new".*) - 'password_hash'::"text") - 'last_login'::"text") - 'updated_at'::"text"))) EXECUTE FUNCTION "public"."audit_row_change"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_fare_config_history" AFTER INSERT OR UPDATE OF "standard_fare" ON "public"."fare_config" FOR EACH ROW WHEN (("new"."id" = 1)) EXECUTE FUNCTION "public"."fare_config_history"();
 
 
 
@@ -2900,6 +2941,9 @@ ALTER TABLE "public"."driver_availability" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."fare_config" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."fare_history" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."inspection_photos" ENABLE ROW LEVEL SECURITY;
@@ -3309,6 +3353,11 @@ GRANT ALL ON FUNCTION "public"."driver_is_active"() TO "app_camera";
 
 
 
+REVOKE ALL ON FUNCTION "public"."fare_config_history"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."fare_config_history"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."fleetmap_live"("p_op_day" "date", "p_route_id" integer, "p_since" timestamp with time zone, "p_seen" "jsonb") TO "service_role";
 
@@ -3567,6 +3616,10 @@ GRANT UPDATE("reason") ON TABLE "public"."driver_availability" TO "app_driver";
 
 GRANT ALL ON TABLE "public"."fare_config" TO "service_role";
 GRANT SELECT ON TABLE "public"."fare_config" TO "app_driver";
+
+
+
+GRANT ALL ON TABLE "public"."fare_history" TO "service_role";
 
 
 
