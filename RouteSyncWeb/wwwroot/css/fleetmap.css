@@ -856,6 +856,21 @@
             font-variant-numeric: tabular-nums;
         }
 
+    /* A ticking figure: each new value settles in from just above. */
+    .fm-tick {
+        display: inline-block;
+        animation: fm-tick .18s ease-out;
+    }
+
+    @keyframes fm-tick {
+        from { opacity: .35; transform: translateY(-2px); }
+        to { opacity: 1; transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fm-tick { animation: none; }
+    }
+
     /* A second, quieter line under a figure, such as when an inspection was done. */
     .fm-panel__sub {
         display: block;

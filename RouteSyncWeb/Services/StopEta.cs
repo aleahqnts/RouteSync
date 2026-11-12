@@ -52,11 +52,17 @@
         // Metres within which a stop counts as on its route line.
         private const double StopRadius = 80;
 
-        // About 20 km/h, a city bus's usual pace once stops and lights are counted.
-        public const double DefaultSpeed = 20 / 3.6;
+        // About 12 km/h, a city bus's usual pace in BGC once stops and lights are counted,
+        // used until a stretch has learned speeds of its own.
+        public const double DefaultSpeed = 12 / 3.6;
 
         // Stop-to-stop speeds outside this range are a bad reading or a parked bus, not a run.
         private const double SlowestRun = 0.5, FastestRun = 25;
+
+        // Runs a median needs before it is used. Fewer is one bus's luck at the lights, not
+        // the stretch's usual pace: an hour with fewer falls back to the stretch at any hour,
+        // and a stretch with fewer to the bus's own speed or DefaultSpeed.
+        public const int FewestRuns = 3;
 
         // Readings further apart than this leave a gap a run cannot be timed across.
         private static readonly TimeSpan LongestGap = TimeSpan.FromMinutes(5);
@@ -95,8 +101,10 @@
             return places.OrderBy(p => p.Along).ToList();
         }
 
-        // Metres before a stop, along the route, where a bus counts as at it.
-        public const double ZoneBefore = 30;
+        // Metres before a stop, along the route, where a bus counts as at it. About four bus
+        // lengths: in traffic, passengers get off in the queue short of the stop. Kept well
+        // under the closest stop spacing (about 180 m) so neighbouring zones never meet.
+        public const double ZoneBefore = 50;
 
         // Metres after a stop, along the route, where a bus still counts as at it.
         public const double ZoneAfter = 20;
@@ -199,8 +207,12 @@
             var moving = recent >= RouteSnapper.MovingSpeed ? recent : null;
             // ponytail: one reading's speed stands for the traffic ahead; average the last
             // few readings if single slow fixes make the estimate swing.
-            var speed = usual is double u && moving is double m ? Math.Min(u, 2 * m) : usual ?? moving;
-            return metres / (speed ?? DefaultSpeed);
+            // With no usual speed, the bus's own is capped at DefaultSpeed: its pace between
+            // lights says nothing of the lights and stops still ahead.
+            var speed = usual is double u
+                ? moving is double m ? Math.Min(u, 2 * m) : u
+                : Math.Min(moving ?? DefaultSpeed, DefaultSpeed);
+            return metres / speed;
         }
 
         // A normal wait at a stop or a light, already inside the usual speeds.
@@ -285,8 +297,10 @@
             }
 
             return new SegmentSpeeds(
-                runs.GroupBy(r => (r.Segment, r.Hour)).ToDictionary(g => g.Key, g => Median(g.Select(r => r.Speed))),
-                runs.GroupBy(r => r.Segment).ToDictionary(g => g.Key, g => Median(g.Select(r => r.Speed))),
+                runs.GroupBy(r => (r.Segment, r.Hour)).Where(g => g.Count() >= FewestRuns)
+                    .ToDictionary(g => g.Key, g => Median(g.Select(r => r.Speed))),
+                runs.GroupBy(r => r.Segment).Where(g => g.Count() >= FewestRuns)
+                    .ToDictionary(g => g.Key, g => Median(g.Select(r => r.Speed))),
                 runs.Count);
         }
 

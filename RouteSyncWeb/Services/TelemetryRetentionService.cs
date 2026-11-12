@@ -80,7 +80,8 @@ public class TelemetryRetentionService : BackgroundService
         // with those digits as though they were UTC, and PostgREST reads a naive filter string
         // as UTC, so the cutoff is taken on the same clock. A cutoff from the UTC clock would
         // sit eight hours earlier and keep every row eight hours past the window.
-        var cutoff = PhClock.NowForDb.AddMinutes(-_retentionMinutes);
+        var cutoff = KeepFrom(PhClock.NowForDb.AddMinutes(-_retentionMinutes),
+            await TripDaysAsync(), (int)Math.Ceiling(_retentionMinutes / 1440.0));
 
         // The timestamp filter is required: PostgREST rejects an unfiltered delete, and it
         // also keeps the cut strictly to rows past the retention window. The deleted rows are
@@ -98,6 +99,30 @@ public class TelemetryRetentionService : BackgroundService
 
         if (_retentionMinutes > ThinAfter.TotalMinutes)
             await ThinAsync();
+    }
+
+    // The window counts days that had trips, not calendar days: the cutoff is moved back to
+    // the start of the oldest of the last `days` operational days that had a trip, so a
+    // fleet idle for longer than the window still keeps its last days of readings for the
+    // stop speeds to be learned from.
+    public static DateTime KeepFrom(DateTime cutoff, IEnumerable<DateTime> tripDays, int days)
+    {
+        var kept = tripDays.Select(d => d.Date).Distinct().OrderByDescending(d => d)
+            .Take(Math.Max(1, days)).ToList();
+        return kept.Count > 0 && kept[^1] < cutoff ? kept[^1] : cutoff;
+    }
+
+    // The operational dates of the most recent trips that started, newest first.
+    // ponytail: dates only, a few thousand rows at most; a distinct-dates RPC if the fleet grows.
+    private async Task<List<DateTime>> TripDaysAsync()
+    {
+        var trips = (await _supabase.From<Trip>()
+            .Select("date")
+            .Filter("trip_status", Postgrest.Constants.Operator.In, new List<object> { "Active", "Completed" })
+            .Order("date", Postgrest.Constants.Ordering.Descending)
+            .Limit(3000)
+            .Get()).Models;
+        return trips.Select(t => t.Date).ToList();
     }
 
     // Readings past the first two days are cut down to the first in each window the stop

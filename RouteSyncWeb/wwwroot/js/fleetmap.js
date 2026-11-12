@@ -287,7 +287,8 @@
     function relativeTime(ts) {
         var then = new Date(ts + 'Z').getTime();
         if (isNaN(then)) return '';
-        var secs = Math.max(0, Math.round((Date.now() - then) / 1000));
+        // Whole seconds gone, so a clock ticking every second counts 0, 1, 2 in step.
+        var secs = Math.max(0, Math.floor((Date.now() - then) / 1000));
         if (secs === 1) return '1 second ago';
         if (secs < 60) return secs + ' seconds ago';
         var mins = Math.round(secs / 60);
@@ -295,6 +296,22 @@
         if (mins < 60) return mins + ' minutes ago';
         var hrs = Math.round(mins / 60);
         return hrs === 1 ? '1 hour ago' : hrs + ' hours ago';
+    }
+
+    // The panel's age of the bus's reading. Written only when it changes; the number is
+    // its own element so each new value fades in without the words around it moving.
+    function showUpdated(bus) {
+        var el = document.getElementById('fmPanelUpdated');
+        var text = relativeTime(bus.timestamp);
+        el.title = phClock(bus.timestamp);
+        if (el.dataset.text === text) return;
+        el.dataset.text = text;
+        var m = /^(\d+)(.*)$/.exec(text);
+        if (!m) { el.textContent = text; return; }
+        var num = document.createElement('span');
+        num.className = 'fm-tick';
+        num.textContent = m[1];
+        el.replaceChildren(num, document.createTextNode(m[2]));
     }
 
     // The moment itself, on the Philippine clock to the minute, whatever zone the
@@ -347,7 +364,10 @@
         if (bus.atStop) return 'At ' + bus.atStop;
         if (!bus.nextStop) return bus.onRoute ? 'Past the last stop' : 'No estimate right now';
         if (bus.nextStopSeconds == null) return '';
-        var left = smoothLeft(bus, bus.nextStopSeconds - readingAge(bus) / 1000);
+        // A standing bus (no bearing) is not getting closer, and its phone reports only
+        // every 30 seconds, so its figure is not counted down between readings.
+        var age = bus.bearing == null ? 0 : readingAge(bus) / 1000;
+        var left = smoothLeft(bus, bus.nextStopSeconds - age);
         // The last few seconds are within the estimate's own error, so they are not counted.
         if (left <= ETA_ARRIVING_SECONDS) return 'Arriving';
         // Seconds only in the last minute; further out, whole minutes.
@@ -428,7 +448,7 @@
     // How far along the stretch the bus is, from where the map draws it this moment rather
     // than from its last reading, so the strip moves with the pin instead of stepping at
     // each reading. Inside the next stop's zone it is there; standing, it is at the start.
-    var ZONE_BEFORE_M = 30; // StopEta.ZoneBefore
+    var ZONE_BEFORE_M = 50; // StopEta.ZoneBefore
 
     function legProgress(bus) {
         if (bus.nextStopProgress == null) return null;
@@ -468,9 +488,7 @@
             // peso sign is the one character here that would not survive being read as
             // anything but UTF-8.
             document.getElementById('fmPanelRevenue').textContent = '\u20B1' + pesoFmt.format(bus.estimatedRevenue);
-            var updated = document.getElementById('fmPanelUpdated');
-            updated.textContent = relativeTime(bus.timestamp);
-            updated.title = phClock(bus.timestamp);
+            showUpdated(bus);
         } else if (dayFor !== bus.vehicleId || Date.now() - dayAt > 60000) {
             if (dayFor !== bus.vehicleId) {
                 document.getElementById('fmPanelTrips').innerHTML = '';
@@ -1172,14 +1190,16 @@
                 if (document.hidden) return;
                 fetchPositions();
             }, POLL_INTERVAL_MS);
-            // The time to the next stop counts down, and the strip follows the pin, every
-            // second between polls.
+            // The time to the next stop counts down, the reading's age counts up, and the
+            // strip follows the pin between polls. Checked four times a second so each
+            // whole second shows as it passes rather than skipping one when the timer drifts.
             setInterval(function () {
                 var m = selectedVehicleId && busMarkers[selectedVehicleId];
                 if (!m || !m._bus || !m._bus.tripId) return;
                 document.getElementById('fmPanelEta').textContent = etaText(m._bus);
+                showUpdated(m._bus);
                 if (m._bus.onRoute && !isStale(m._bus)) placeOnLeg(legProgress(m._bus), m._bus.vehicleId);
-            }, 1000);
+            }, 250);
             document.addEventListener('visibilitychange', function () {
                 if (!document.hidden) fetchPositions();
             });

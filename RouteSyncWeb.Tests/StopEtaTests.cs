@@ -64,12 +64,12 @@ public class StopEtaTests
     }
 
     [Theory]
-    [InlineData(369, -1)]
-    [InlineData(371, 1)]
+    [InlineData(349, -1)]
+    [InlineData(351, 1)]
     [InlineData(400, 1)]
     [InlineData(419, 1)]
     [InlineData(421, -1)]
-    public void A_stop_is_the_stretch_from_30_m_before_to_20_m_after_it(double along, int zone)
+    public void A_stop_is_the_stretch_from_50_m_before_to_20_m_after_it(double along, int zone)
     {
         var road = EastRoad();
         var places = StopEta.Place(road, new[] { StopAt("A", 0), StopAt("B", 400), StopAt("C", 900) });
@@ -142,6 +142,8 @@ public class StopEtaTests
         Assert.Equal(100, StopEta.Seconds(1000, 10, 6));
         Assert.Equal(100, StopEta.Seconds(1000, 10, null));
         Assert.Equal(500, StopEta.Seconds(1000, null, 2));
+        // With no usual speed, a quick dash between lights is capped at the default.
+        Assert.Equal(1000 / StopEta.DefaultSpeed, StopEta.Seconds(1000, null, 10), 6);
         // Crawling at under half the usual speed: the usual is cut to twice the crawl.
         Assert.Equal(250, StopEta.Seconds(1000, 10, 2));
         // Standing still is the delay rule's job, not a crawl.
@@ -164,6 +166,27 @@ public class StopEtaTests
         Assert.Equal(5, speeds.For(0, 8)!.Value, 6);
         Assert.Equal(5, speeds.For(0, 17)!.Value, 6);
         Assert.Null(speeds.For(2, 8));
+    }
+
+    [Fact]
+    public void A_learned_speed_needs_three_runs_and_a_thin_hour_falls_back_to_the_stretch()
+    {
+        var line = EastRoad();
+        var places = StopEta.Place(line, new[] { StopAt("A", 50), StopAt("B", 500), StopAt("C", 1000) });
+
+        IReadOnlyList<(DateTime, double)> Trip(int hour, double speed)
+        {
+            var at = new DateTime(2026, 10, 1, hour, 0, 0);
+            return Enumerable.Range(0, 21).Select(i => (at.AddSeconds(i * 50 / speed), i * 50.0)).ToList();
+        }
+
+        // Two runs are not enough for anything.
+        Assert.Null(StopEta.Learn(line, places, new[] { Trip(8, 5), Trip(8, 5) }).For(0, 8));
+
+        // Three at 8am set 8am; one at 5pm is too thin, so 5pm takes the stretch's median.
+        var speeds = StopEta.Learn(line, places, new[] { Trip(8, 4), Trip(8, 4), Trip(8, 4), Trip(17, 10) });
+        Assert.Equal(4, speeds.For(0, 8)!.Value, 6);
+        Assert.Equal(4, speeds.For(0, 17)!.Value, 6);
     }
 
     [Fact]

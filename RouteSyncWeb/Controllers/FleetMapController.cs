@@ -66,15 +66,13 @@ namespace FleetWise.Controllers
         // Older readings are thinned to these same windows, so they stay readable here.
         public const int SpeedSampleSeconds = 30;
 
-        // Days of past trips the speeds are learned from, within the telemetry kept.
-        private const int SpeedHistoryDays = 14;
-
-        // Most recent trips per route the speeds are learned from.
+        // Most recent trips per route the speeds are learned from, however long ago they
+        // ran. Retention keeps the readings of the last days that had trips rather than the
+        // last calendar days, so a route idle for weeks still has its last trips to learn from.
         private const int SpeedHistoryTrips = 60;
 
-        // How long a finished trip's thinned readings are kept for learning: the history
-        // window and a day, after which the trip is too old to be learned from anyway.
-        private static readonly TimeSpan SampleLifetime = TimeSpan.FromDays(SpeedHistoryDays + 1);
+        // How long a finished trip's thinned readings are held in memory between reads.
+        private static readonly TimeSpan SampleLifetime = TimeSpan.FromDays(15);
 
         private static string SampleKey(string tripId) => $"fleetmap:sample:{tripId}";
 
@@ -542,12 +540,12 @@ namespace FleetWise.Controllers
             if (places.Count < 2)
                 return SegmentSpeeds.None;
 
-            var since = PhClock.OperationalDay.AddDays(-SpeedHistoryDays).ToString("yyyy-MM-dd");
             var trips = (await _supabase.From<Trip>()
                     .Select("trip_id,date,actual_start_time,trip_status")
                     .Filter("route_id", Postgrest.Constants.Operator.Equals, routeId.ToString())
-                    .Filter("date", Postgrest.Constants.Operator.GreaterThanOrEqual, since)
+                    .Filter("trip_status", Postgrest.Constants.Operator.In, new List<object> { "Active", "Completed" })
                     .Order("date", Postgrest.Constants.Ordering.Descending)
+                    .Limit(SpeedHistoryTrips)
                     .Get()).Models
                 .Where(t => t.ActualStartTime is not null)
                 .Take(SpeedHistoryTrips)
