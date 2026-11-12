@@ -502,13 +502,21 @@
 
         var actions = document.getElementById('fmPanelActions');
         actions.hidden = !bus.tripId;
-        if (bus.tripId) {
-            var base = '/Dispatch?trip=' + encodeURIComponent(bus.tripId) + '&do=';
-            document.getElementById('fmActView').href = base + 'view';
-            document.getElementById('fmActReassign').href = base + 'reassign';
-            document.getElementById('fmActMessage').href = base + 'message';
-        }
+        actionBus = bus.tripId ? bus : null;
     }
+
+    // The panel's trip buttons open the Dispatch dialogs over the map, for the bus the
+    // panel was last filled for.
+    var actionBus = null;
+    document.getElementById('fmActView').addEventListener('click', function () {
+        if (actionBus) openTripModal(actionBus.tripId);
+    });
+    document.getElementById('fmActReassign').addEventListener('click', function () {
+        if (actionBus) openReassignModal(actionBus.tripId);
+    });
+    document.getElementById('fmActMessage').addEventListener('click', function () {
+        if (actionBus) openTripMessageModal(actionBus.tripId, actionBus.vehicleId, actionBus.driverName || '');
+    });
 
     var panelReturnFocus = null;
 
@@ -532,8 +540,13 @@
     }
 
     panelClose.addEventListener('click', closePanel);
+    // Escape closes a trip dialog first (dialog-stack.js), and the panel only once none is open.
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && panel.classList.contains('fm-panel--open')) closePanel();
+        if (e.key !== 'Escape' || !panel.classList.contains('fm-panel--open')) return;
+        var dialogOpen = Array.prototype.some.call(
+            document.querySelectorAll('[data-dialog-close], .dp-msg-overlay'),
+            function (el) { return getComputedStyle(el).display !== 'none'; });
+        if (!dialogOpen) closePanel();
     });
 
     function escapeHtml(v) {

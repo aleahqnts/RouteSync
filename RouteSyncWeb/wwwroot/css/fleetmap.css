@@ -1399,6 +1399,8 @@
 .fm-panel__act {
     flex: 1 1 auto;
     padding: 6px 10px;
+    font-family: inherit;
+    cursor: pointer;
     border: 1px solid light-dark(#2F7F7A, #7ACFCA);
     border-radius: 7px;
     color: light-dark(#226964, #8FD8D2);
@@ -1415,3 +1417,11 @@
     outline: 2px solid light-dark(#2F7F7A, #7ACFCA);
     outline-offset: 2px;
 }
+
+/* The Dispatch trip dialogs opened from the bus panel, above the panel and the phone
+   drawer, the photograph above its trip, and the conflict popup above both. */
+.tdm-overlay,
+.rtm-overlay,
+.bm-overlay { z-index: 1400; }
+
+.tdm-overlay.tdm-photo-overlay { z-index: 1410; }

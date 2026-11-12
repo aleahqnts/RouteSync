@@ -1,0 +1,33 @@
+@* Views/Dispatch/_MessagePopup.cshtml *@
+
+@* The popup the trip dialogs report a refusal or a schedule conflict in, on Dispatch and
+   on the Fleet Map. *@
+<div id="dp-msg-modal" class="dp-msg-overlay" style="display:none;">
+    <div class="dp-msg-box">
+        <div class="dp-msg-head">
+            <span class="dp-msg-ico">&#9888;</span>
+            <h3 id="dp-msg-title">Schedule conflict</h3>
+        </div>
+        <ul id="dp-msg-list" class="dp-msg-list"></ul>
+        <button class="dp-msg-btn" data-on="click:dpCloseMsg">Got it</button>
+    </div>
+</div>
+
+<script nonce="@CspNonce.Value">
+    rsOn({ dpCloseMsg: function () { dpCloseMsg(); } });
+
+    function dpShowMsg(messages, title) {
+        document.getElementById('dp-msg-title').textContent = title || 'Schedule conflict';
+        // These sentences are built on the server, and still rendered as text. A conflict
+        // line is data, and a list item is the wrong place to discover otherwise.
+        const ul = document.getElementById('dp-msg-list');
+        ul.replaceChildren();
+        (Array.isArray(messages) ? messages : [messages]).forEach(function (m) {
+            const li = document.createElement('li');
+            li.textContent = m;
+            ul.appendChild(li);
+        });
+        document.getElementById('dp-msg-modal').style.display = 'flex';
+    }
+    function dpCloseMsg() { document.getElementById('dp-msg-modal').style.display = 'none'; }
+</script>

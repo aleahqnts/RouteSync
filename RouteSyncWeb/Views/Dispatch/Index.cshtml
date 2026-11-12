@@ -438,17 +438,7 @@
     </div>
 </div>
 
-@* Shared message popup (Add Trip / Reassign conflicts) *@
-<div id="dp-msg-modal" class="dp-msg-overlay" style="display:none;">
-    <div class="dp-msg-box">
-        <div class="dp-msg-head">
-            <span class="dp-msg-ico">&#9888;</span>
-            <h3 id="dp-msg-title">Schedule conflict</h3>
-        </div>
-        <ul id="dp-msg-list" class="dp-msg-list"></ul>
-        <button class="dp-msg-btn" data-on="click:dpCloseMsg">Got it</button>
-    </div>
-</div>
+@await Html.PartialAsync("_MessagePopup")
 
 <script nonce="@CspNonce.Value">
     // What this page's controls run, by the names in their data-on attributes. The content
@@ -467,29 +457,17 @@
         dpReassignClick:    function () { handleReassignClick(this); },
         dpTripMessage:      function () { openTripMessageModal(this.dataset.tripId, this.dataset.vehicleId, this.dataset.driverName); },
         dpCloseApply:       function () { dpCloseApply(); },
-        dpConfirmApply:     function () { dpConfirmApply(); },
-        dpCloseMsg:         function () { dpCloseMsg(); }
+        dpConfirmApply:     function () { dpConfirmApply(); }
     });
 
     // Arriving from the needs-attention list, /Dispatch?trip=ID[,ID...] marks those rows,
-    // opening a folded route first. From the fleet map panel, &do=view, reassign or message
-    // opens that trip's own window instead; a trip that can no longer be reassigned, or is
-    // not on this board, opens its details.
+    // opening a folded route first.
     window.addEventListener('load', function () {
         var params = new URLSearchParams(location.search);
         var asked = (params.get('trip') || '').split(',').filter(Boolean);
         if (!asked.length) return;
         // Dropped from the address once acted on, so a later reload does not repeat it.
         history.replaceState(null, '', location.pathname);
-
-        var act = params.get('do');
-        if (act) {
-            var sel = { reassign: '.dp-btn-reassign', message: '.dp-btn-msg' }[act];
-            var btn = sel && document.querySelector(sel + '[data-trip-id="' + CSS.escape(asked[0]) + '"]');
-            if (btn && !btn.disabled) btn.click();
-            else openTripModal(asked[0]);
-            return;
-        }
 
         var selector = asked.map(function (id) { return '.dp-trip-row[data-trip-id="' + CSS.escape(id) + '"]'; }).join(',');
         document.querySelectorAll(selector).forEach(function (row) {
@@ -498,21 +476,6 @@
         });
         dpHighlight(selector);
     });
-
-    function dpShowMsg(messages, title) {
-        document.getElementById('dp-msg-title').textContent = title || 'Schedule conflict';
-        // These sentences are built on the server, and still rendered as text. A conflict
-        // line is data, and a list item is the wrong place to discover otherwise.
-        const ul = document.getElementById('dp-msg-list');
-        ul.replaceChildren();
-        (Array.isArray(messages) ? messages : [messages]).forEach(function (m) {
-            const li = document.createElement('li');
-            li.textContent = m;
-            ul.appendChild(li);
-        });
-        document.getElementById('dp-msg-modal').style.display = 'flex';
-    }
-    function dpCloseMsg() { document.getElementById('dp-msg-modal').style.display = 'none'; }
 
     // Assigning a best match from the board. The button carries the pick; the save goes
     // through the same reassign endpoint as the modal, so the same checks, notice and

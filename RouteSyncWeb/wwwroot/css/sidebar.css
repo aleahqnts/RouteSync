@@ -91,13 +91,21 @@
     }
 
     /* Nav list. */
+    /* Scrolls rather than clips when the window is too short for every tab, so the rows
+       below it never sit over the last tabs. No bar drawn, since one would take a quarter
+       of the closed rail; the wheel and Tab still reach every link. */
     .fw-sidebar__nav {
         flex: 1;
-        overflow: hidden;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        scrollbar-width: none;
         padding: 4px 0;
         margin-left:2px;
         margin-top:20px;
     }
+
+    .fw-sidebar__nav::-webkit-scrollbar { display: none; }
 
     .fw-sidebar__list {
         list-style: none;
@@ -915,4 +923,16 @@
         border-radius: 16px 16px 0 0;
         padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
     }
+}
+
+/* A laptop screen: tighter rail rows so every tab, the alert sound, the theme switch
+   and the profile fit without the nav having to scroll. */
+@media (max-height: 820px) {
+    .fw-sidebar__logo { padding: 12px 14px 8px; }
+    .fw-sidebar__nav { margin-top: 6px; }
+    .fw-sidebar__item { padding: 2px 10px; }
+    .fw-sidebar__link { padding: 8px 10px; }
+    .fw-sidebar .fw-alert { min-height: 40px; }
+    .fw-sidebar__theme { padding: 4px 7px 8px; }
+    .fw-sidebar__profile { padding: 12px 12px 16px; }
 }
