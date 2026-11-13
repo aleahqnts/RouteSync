@@ -23,6 +23,7 @@ object AppUpdate {
     private const val FEED_URL = "https://dashboard.routesync.website/app/sentinel-update"
 
     private val http = OkHttpClient.Builder()
+        .dns(Ipv4FirstDns)
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .build()

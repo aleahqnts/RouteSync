@@ -8,8 +8,20 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import okhttp3.Dns
+import java.net.Inet6Address
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+
+/**
+ * Tries a host's IPv4 addresses before its IPv6 ones. Some networks hand out IPv6
+ * addresses (NAT64, 64:ff9b::) that never connect, and OkHttp waits out the connect
+ * timeout on each in turn before reaching one that works: over a minute for GitHub's four.
+ * IPv6 is still tried when no IPv4 address answers.
+ */
+internal object Ipv4FirstDns : Dns {
+    override fun lookup(hostname: String) = Dns.SYSTEM.lookup(hostname).sortedBy { it is Inet6Address }
+}
 
 /**
  * PostgREST client for the shared RouteSync database, using the same publishable key the
@@ -33,6 +45,7 @@ object SupabaseApi {
     @Volatile var deviceJwt: String? = null
 
     private val http = OkHttpClient.Builder()
+        .dns(Ipv4FirstDns)
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
