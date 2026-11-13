@@ -51,12 +51,14 @@ object AppUpdate {
     }
 
     /**
-     * Saves the APK to [target], reporting 0 to 1 as it goes.
+     * Saves the APK to [target], reporting bytes received and the total size (-1 when the
+     * server sends none) each time the whole percent, or the whole megabyte when the size is
+     * unknown, moves on.
      *
      * Written under a .part name and renamed once complete, so a file at [target] is always
      * a whole download.
      */
-    suspend fun download(url: String, target: File, progress: (Float) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun download(url: String, target: File, progress: (done: Long, total: Long) -> Unit) = withContext(Dispatchers.IO) {
         val part = File(target.path + ".part")
         http.newCall(Request.Builder().url(url).header("User-Agent", "RouteSync-Sentinel").build()).execute().use { res ->
             check(res.isSuccessful) { "Download failed (${res.code})" }
@@ -66,12 +68,17 @@ object AppUpdate {
                 part.outputStream().use { out ->
                     val buffer = ByteArray(81920)
                     var done = 0L
+                    var reported = -1L
                     while (true) {
                         val read = input.read(buffer)
                         if (read < 0) break
                         out.write(buffer, 0, read)
                         done += read
-                        if (total > 0) progress(done.toFloat() / total)
+                        val step = if (total > 0) done * 100 / total else done shr 20
+                        if (step != reported) {
+                            reported = step
+                            progress(done, total)
+                        }
                     }
                 }
             }

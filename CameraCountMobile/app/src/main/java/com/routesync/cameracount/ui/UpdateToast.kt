@@ -43,7 +43,7 @@ fun UpdateToast(modifier: Modifier = Modifier) {
     var offer by remember { mutableStateOf<AppUpdate.Offer?>(null) }
     var dismissed by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
+    var progress by remember { mutableStateOf("") }
     var note by remember { mutableStateOf<String?>(null) }
 
     val dir = remember { File(context.cacheDir, "updates") }
@@ -70,7 +70,7 @@ fun UpdateToast(modifier: Modifier = Modifier) {
         }
         busy = true
         note = null
-        progress = 0f
+        progress = ""
         scope.launch {
             try {
                 // The offered version's APK is kept, so a cancelled install or a second tap opens
@@ -79,7 +79,12 @@ fun UpdateToast(modifier: Modifier = Modifier) {
                 dir.mkdirs()
                 val apk = File(dir, "RouteSync-Sentinel-${found.version}.apk")
                 dir.listFiles()?.filter { it != apk }?.forEach { it.delete() }
-                if (!apk.exists()) AppUpdate.download(found.apkUrl, apk) { progress = it }
+                // Progress arrives on the download thread; the label is set back on the main
+                // thread so the toast redraws as it changes.
+                if (!apk.exists()) AppUpdate.download(found.apkUrl, apk) { done, total ->
+                    val label = if (total > 0) "${done * 100 / total}%" else "${done shr 20} MB"
+                    scope.launch { progress = label }
+                }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileProvider", apk)
                 context.startActivity(
                     Intent(Intent.ACTION_VIEW)
@@ -109,7 +114,7 @@ fun UpdateToast(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                note ?: if (busy) "Downloading ${(progress * 100).toInt()}%" else "Sentinel ${found.version} available",
+                note ?: if (busy) "Downloading $progress".trimEnd() else "Sentinel ${found.version} available",
                 color = Color.White, fontSize = 15.sp, maxLines = 2,
                 modifier = Modifier.weight(1f, fill = false).padding(vertical = 12.dp)
             )
