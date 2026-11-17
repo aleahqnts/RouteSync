@@ -24,8 +24,16 @@ class PersonTracker {
         var vy = 0f
         var hits = 1
         var misses = 0
-        /** Set once this track has crossed inward, so a person counts exactly once. */
+        /** Set once this track's boarding is counted, so a person counts exactly once. */
         var counted = false
+        /**
+         * When this track crossed inward and became a pending boarding, or 0 when it is
+         * not pending.
+         *
+         * A pending boarding is cancelled if the person steps back over the line, which
+         * is what keeps someone who only leans in to ask from being counted.
+         */
+        var pendingSince = 0L
         /**
          * Set once this track has crossed outward, so a person records at most one exit.
          *
@@ -58,6 +66,10 @@ class PersonTracker {
     private var nextId = 1
     private val tracks = mutableListOf<Track>()
 
+    /** Tracks dropped by the most recent [update], so a pending boarding is not lost
+     *  along with its track. */
+    val dropped = ArrayList<Track>()
+
     /**
      * Clears side and origin history for every track, so both re-establish on the next
      * frame.
@@ -88,9 +100,9 @@ class PersonTracker {
         associate(unmatchedTracks, low)
 
         // Anything still unmatched ages, and is dropped once too old.
-        val dead = ArrayList<Track>()
-        for (t in unmatchedTracks) if (++t.misses > MAX_MISSES) dead.add(t)
-        tracks.removeAll(dead)
+        dropped.clear()
+        for (t in unmatchedTracks) if (++t.misses > MAX_MISSES) dropped.add(t)
+        tracks.removeAll(dropped)
 
         // Leftover high-confidence detections become new tracks. Low-confidence ones never do.
         for (d in high) tracks.add(Track(nextId++, RectF(d.box), d.score))
@@ -153,25 +165,29 @@ data class Crossing(val trackId: Int, val direction: CrossDirection)
  * The line is a segment between endpoints A and B in frame-normalized coordinates, so it
  * can sit at any angle. Real doorways are rarely perfectly vertical.
  *
- * An inward crossing is reported only when all three hold:
+ * Crossing inward does not count a boarding by itself. It makes the boarding pending,
+ * and only when all three hold:
  *
  * - The track was born on the outward side. Anyone first seen inward, whether already
- *   aboard, the driver, or a track that appeared mid-frame, can never be counted, even
- *   after wandering across the line and back.
+ *   aboard, the driver, or someone who walked into view from inside the bus and stayed,
+ *   can never be counted, even after wandering across the line and back.
  * - The track centre clears the dead band of [BAND] perpendicular distance before a side
  *   is treated as entered. A hand hovering over the line jitters inside the band and
  *   never registers.
- * - The track has not already crossed inward.
+ * - The track has not already been counted.
+ *
+ * A pending boarding is counted when the person carries on inward to the edge of the
+ * frame, stays on the inward side for [dwellMs], or is lost by the tracker while still
+ * pending (see [commitDropped]). Stepping back over the line first cancels it, so someone
+ * who climbs in to ask and then leaves is never counted.
  *
  * An outward crossing is reported on the same terms in the other direction, and is never
  * counted. It exists to be recorded, because a camera that saw thirty people leave and a
  * camera that saw nothing at all both report zero boardings, and only the exits tell them
- * apart. A track that crosses in and then back out reports both, which is how a boarding
- * that was withdrawn shows up in evidence while the reported total, which never falls,
- * does not move.
+ * apart.
  *
  * Each track reports at most one crossing in each direction, so someone loitering in the
- * doorway produces one pair rather than a stream.
+ * doorway produces at most one pair rather than a stream.
  *
  * @param inwardSign selects which side of A to B counts as boarding. Sides are stored
  *   relative to it: 1 is inward, -1 is outward.
@@ -179,11 +195,20 @@ data class Crossing(val trackId: Int, val direction: CrossDirection)
 class LineCrossCounter(
     var ax: Float = 0.5f, var ay: Float = 0.05f,
     var bx: Float = 0.5f, var by: Float = 0.95f,
-    var inwardSign: Int = 1
+    var inwardSign: Int = 1,
+    /** How long a pending boarding may stay inward without reaching the frame edge
+     *  before it is counted anyway, for someone who stops just inside the door. */
+    var dwellMs: Long = 15_000L
 ) {
     companion object {
         /** Dead-band half-width in frame-normalized units, about 2% of the frame. */
         private const val BAND = 0.02f
+        /** How close a box must come to the frame border to count as leaving through it. */
+        private const val EDGE = 0.02f
+        /** Smallest share of the inward direction a border needs to count as an inward
+         *  edge. 0.5 accepts borders within 60 degrees of straight inward, so a vertical
+         *  line has one inward edge and a steep diagonal has two. */
+        private const val EDGE_FACING = 0.5f
     }
 
     /** Perpendicular distance from the line, signed so that positive is the inward side. */
@@ -195,8 +220,35 @@ class LineCrossCounter(
         return cross / len * inwardSign
     }
 
+    /**
+     * Whether the track's box touches a frame border that faces the inward side, which is
+     * the person walking on into the bus and out of view.
+     *
+     * Borders facing along the line are ignored: a person standing on the steps can fill
+     * the frame top to bottom without having gone anywhere.
+     */
+    private fun atInwardEdge(t: PersonTracker.Track): Boolean {
+        val dx = bx - ax
+        val dy = by - ay
+        val len = kotlin.math.hypot(dx, dy).coerceAtLeast(1e-4f)
+        // Unit normal pointing inward, the gradient of inwardDist.
+        val nx = -dy / len * inwardSign
+        val ny = dx / len * inwardSign
+        val b = t.box
+        return (nx <= -EDGE_FACING && b.left <= EDGE) ||
+            (nx >= EDGE_FACING && b.right >= 1f - EDGE) ||
+            (ny <= -EDGE_FACING && b.top <= EDGE) ||
+            (ny >= EDGE_FACING && b.bottom >= 1f - EDGE)
+    }
+
+    private fun commit(t: PersonTracker.Track, out: MutableList<Crossing>) {
+        t.pendingSince = 0L
+        t.counted = true
+        out += Crossing(t.id, CrossDirection.IN)
+    }
+
     /** Returns every crossing detected in this frame, inward and outward. */
-    fun process(tracks: List<PersonTracker.Track>): List<Crossing> {
+    fun process(tracks: List<PersonTracker.Track>, nowMs: Long): List<Crossing> {
         val crossings = ArrayList<Crossing>(0)
         for (t in tracks) {
             val d = inwardDist(t.cx, t.cy)
@@ -205,28 +257,45 @@ class LineCrossCounter(
                 d < -BAND -> -1 // clearly outward
                 else -> 0       // inside the dead band: keep previous state
             }
-            if (zone == 0) continue
-            if (t.prevSide == 0) {
+            if (zone != 0 && t.prevSide == 0) {
                 t.prevSide = zone
                 t.originSide = zone
-                continue
-            }
-            if (zone != t.prevSide) {
-                // Reaching the outward side at all means the track was inward a moment
-                // ago, since a side is only left by crossing. No origin test is needed
-                // on this branch, and none would be right: the two tracks that leave are
-                // someone who was already aboard and someone who just boarded, and both
-                // of those went out.
+            } else if (zone != 0 && zone != t.prevSide) {
                 if (zone == 1 && t.originSide == -1 && !t.counted) {
-                    t.counted = true
-                    crossings += Crossing(t.id, CrossDirection.IN)
-                } else if (zone == -1 && !t.exited) {
-                    t.exited = true
-                    crossings += Crossing(t.id, CrossDirection.OUT)
+                    t.pendingSince = nowMs
+                } else if (zone == -1) {
+                    // Reaching the outward side at all means the track was inward a moment
+                    // ago, since a side is only left by crossing. No origin test is needed
+                    // on this branch, and none would be right: the two tracks that leave
+                    // are someone who was already aboard and someone who just stepped in,
+                    // and both of those went out.
+                    t.pendingSince = 0L
+                    if (!t.exited) {
+                        t.exited = true
+                        crossings += Crossing(t.id, CrossDirection.OUT)
+                    }
                 }
                 t.prevSide = zone
             }
+            // Checked every frame, dead band included, so someone who stops just inside
+            // the line is still counted once the dwell runs out.
+            if (t.pendingSince != 0L && (atInwardEdge(t) || nowMs - t.pendingSince >= dwellMs)) {
+                commit(t, crossings)
+            }
         }
+        return crossings
+    }
+
+    /**
+     * Counts the pending boardings of tracks the tracker has just dropped.
+     *
+     * A person lost while pending was last seen inside the line and had not stepped back
+     * out, which far more often means they walked on behind other passengers than that
+     * they left unseen.
+     */
+    fun commitDropped(dropped: List<PersonTracker.Track>): List<Crossing> {
+        val crossings = ArrayList<Crossing>(0)
+        for (t in dropped) if (t.pendingSince != 0L) commit(t, crossings)
         return crossings
     }
 }

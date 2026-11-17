@@ -559,8 +559,13 @@ private fun DetectionSurface(
                                         // line change re-establishes their side afterwards.
                                         val tracks = synchronized(tracker) {
                                             tracker.update(dets).also { live ->
+                                                // A dropped track's pending boarding was
+                                                // already judged against the line, so it
+                                                // is settled even while the line is held.
+                                                lineCounter.commitDropped(tracker.dropped)
+                                                    .forEach { vm!!.onCrossing(it.direction) }
                                                 if (lineLoaded && !adjusting) {
-                                                    lineCounter.process(live)
+                                                    lineCounter.process(live, android.os.SystemClock.elapsedRealtime())
                                                         .forEach { vm!!.onCrossing(it.direction) }
                                                 }
                                             }
