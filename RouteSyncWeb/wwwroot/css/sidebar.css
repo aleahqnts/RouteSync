@@ -113,7 +113,7 @@
         padding: 0;
     }
 
-    .fw-sidebar__item { padding: 3px 10px; }
+    .fw-sidebar__item { padding: 4px 10px; }
 
     /* Link. */
     .fw-sidebar__link {
@@ -121,7 +121,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 11px 10px;
+        padding: 14px 12px;
         border-radius: 10px;
         text-decoration: none;
         color: var(--fw-text-muted);
@@ -931,7 +931,7 @@
     .fw-sidebar__logo { padding: 12px 14px 8px; }
     .fw-sidebar__nav { margin-top: 6px; }
     .fw-sidebar__item { padding: 2px 10px; }
-    .fw-sidebar__link { padding: 8px 10px; }
+    .fw-sidebar__link { padding: 9px 12px; }
     .fw-sidebar .fw-alert { min-height: 40px; }
     .fw-sidebar__theme { padding: 4px 7px 8px; }
     .fw-sidebar__profile { padding: 12px 12px 16px; }
