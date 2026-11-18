@@ -251,7 +251,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseResponseCompression();
+// Not while debugging: the IDE's page-refresh tooling rewrites HTML on the way out and can
+// leave a compressed page the browser cannot decode, which shows as a blank page.
+if (!app.Environment.IsDevelopment())
+    app.UseResponseCompression();
 
 // Server-Timing shows in the browser's Network tab how long the server spent on each
 // request and how much of that was database calls. A file requested with ?v=
