@@ -717,6 +717,10 @@ public class DriverDataService
             updated_at = PhTime.Now
         });
 
+    // Points the driver's row at a photograph already uploaded, or at none.
+    public async Task SetPhotoKeyAsync(int userId, string? key)
+        => await PatchAsync($"users_app?user_id=eq.{userId}", new { photo_key = key, updated_at = PhTime.Now });
+
     // Outside the web dashboard, the change-password edge function is the only writer of
     // password_hash. The app never touches it.
 

@@ -14,12 +14,14 @@ namespace FleetWise.Controllers
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
         private readonly EditLocks _locks;
+        private readonly ProfilePhotoStore _photos;
 
-        public UsersController(Supabase.Client supabase, AuditLog audit, EditLocks locks)
+        public UsersController(Supabase.Client supabase, AuditLog audit, EditLocks locks, ProfilePhotoStore photos)
         {
             _supabase = supabase;
             _audit = audit;
             _locks = locks;
+            _photos = photos;
         }
 
         public async Task<IActionResult> Index(string? role, string? search)
@@ -166,6 +168,30 @@ namespace FleetWise.Controllers
                 "users", model.UserId);
 
             TempData["Success"] = $"User \"{model.FirstName} {model.LastName}\" was updated successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // People set their own photograph freely, so an unsuitable one is taken down here.
+        // They can add another, and the removal stays in the audit trail.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemovePhoto(int userId)
+        {
+            var user = (await _supabase.From<UserModel>()
+                .Filter("user_id", Postgrest.Constants.Operator.Equals, userId.ToString())
+                .Get()).Models.FirstOrDefault();
+            if (user is null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (await _photos.RemoveAsync(userId))
+                await _audit.WriteAsync("profile_photo_removed",
+                    $"removed the profile photo of {user.FirstName} {user.LastName}",
+                    "users", userId);
+
+            TempData["Success"] = $"Profile photo of \"{user.FirstName} {user.LastName}\" was removed.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -379,6 +405,7 @@ namespace FleetWise.Controllers
                     MiddleName = u.MiddleName,
                     LastName = u.LastName ?? "",
                     RoleId = u.RoleId,
+                    PhotoUrl = ProfilePhotoStore.Url(u.UserId, u.PhotoKey),
                 })
                 .ToList();
 

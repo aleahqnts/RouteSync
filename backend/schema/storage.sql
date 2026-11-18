@@ -7,6 +7,7 @@
 --
 --   camera-snapshots   calibration frames from the counter phone
 --   inspection-photos  photos a driver attaches to a failed checklist item
+--   profile-photos     each account's own profile photo, in a folder named for the user
 --
 -- Run after roles.sql and schema.sql. Each statement can be run again safely.
 
@@ -18,6 +19,10 @@ on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('inspection-photos', 'inspection-photos', false, 524288, '{image/jpeg}'::text[])
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('profile-photos', 'profile-photos', false, 262144, '{image/jpeg}'::text[])
 on conflict (id) do nothing;
 
 -- The platform grants the storage schema to its own roles only. Without this the app
@@ -49,6 +54,18 @@ drop policy if exists p_inspection_photo_driver_update on storage.objects;
 create policy p_inspection_photo_driver_update on storage.objects as permissive for update to app_driver
   using (((bucket_id = 'inspection-photos'::text) AND ((storage.foldername(name))[1] = (jwt_uid())::text)))
   with check (((bucket_id = 'inspection-photos'::text) AND ((storage.foldername(name))[1] = (jwt_uid())::text)));
+
+drop policy if exists p_profile_photo_driver_delete on storage.objects;
+create policy p_profile_photo_driver_delete on storage.objects as permissive for delete to app_driver
+  using (((bucket_id = 'profile-photos'::text) AND ((storage.foldername(name))[1] = (jwt_uid())::text)));
+
+drop policy if exists p_profile_photo_driver_insert on storage.objects;
+create policy p_profile_photo_driver_insert on storage.objects as permissive for insert to app_driver
+  with check (((bucket_id = 'profile-photos'::text) AND ((storage.foldername(name))[1] = (jwt_uid())::text)));
+
+drop policy if exists p_profile_photo_driver_select on storage.objects;
+create policy p_profile_photo_driver_select on storage.objects as permissive for select to app_driver
+  using (((bucket_id = 'profile-photos'::text) AND ((storage.foldername(name))[1] = (jwt_uid())::text)));
 
 drop policy if exists p_snap_camera_all on storage.objects;
 create policy p_snap_camera_all on storage.objects as permissive for all to app_camera

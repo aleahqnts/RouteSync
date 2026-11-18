@@ -139,3 +139,99 @@
         end.addEventListener('change', keepOrder);
     }
 })();
+
+// The profile photograph. The avatar opens it larger in a dialog that holds the actions.
+// Cropped to a square and reduced here, so what is sent is a few tens of kilobytes
+// whatever the camera produced, and the page reloads to show it in the rail as well.
+(function () {
+    var form = document.querySelector('.pf-photo');
+    if (!form) return;
+
+    var dialog = document.querySelector('.pf-photo-dialog');
+    document.querySelector('[data-photo-open]').addEventListener('click', function () {
+        error.textContent = '';
+        dialog.showModal();
+    });
+    document.querySelector('[data-photo-close]').addEventListener('click', function () { dialog.close(); });
+    // A click on the backdrop lands on the dialog itself, outside its form.
+    dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
+
+    var EDGE = 384;
+    var MAX_BYTES = 262144;
+    var pick = form.querySelector('.pf-photo-pick');
+    var error = document.querySelector('.pf-photo-error');
+    var buttons = document.querySelectorAll('[data-photo-remove], [data-photo-close]');
+    var change = document.querySelector('[data-photo-change]');
+    var token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    function busy(on) {
+        buttons.forEach(function (b) { b.disabled = on; });
+        pick.disabled = on;
+        change.setAttribute('aria-disabled', on ? 'true' : 'false');
+    }
+
+    function fail(message) {
+        error.textContent = message;
+        busy(false);
+    }
+
+    function toBlob(canvas, quality) {
+        return new Promise(function (resolve) { canvas.toBlob(resolve, 'image/jpeg', quality); });
+    }
+
+    async function square(file) {
+        // Decoding through an image bitmap honours the orientation the camera recorded.
+        var bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        var side = Math.min(bitmap.width, bitmap.height);
+        var edge = Math.min(EDGE, side);
+        var canvas = document.createElement('canvas');
+        canvas.width = canvas.height = edge;
+        canvas.getContext('2d').drawImage(bitmap,
+            (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, edge, edge);
+        bitmap.close();
+
+        var blob = await toBlob(canvas, 0.85);
+        if (blob && blob.size > MAX_BYTES) blob = await toBlob(canvas, 0.6);
+        return blob;
+    }
+
+    async function post(url, body) {
+        body.append('__RequestVerificationToken', token);
+        var res = await fetch(url, { method: 'POST', body: body });
+        if (res.ok) { location.reload(); return; }
+        var answer = null;
+        try { answer = await res.json(); } catch (x) { /* not JSON */ }
+        fail((answer && answer.error) || 'The photo could not be saved. Try again.');
+    }
+
+    pick.addEventListener('change', async function () {
+        var file = pick.files && pick.files[0];
+        pick.value = '';
+        if (!file) return;
+        error.textContent = '';
+        busy(true);
+        try {
+            var blob = await square(file);
+            if (!blob || blob.size > MAX_BYTES) return fail('That photo could not be used. Try another.');
+            var body = new FormData();
+            body.append('photo', blob, 'photo.jpg');
+            await post(form.getAttribute('action'), body);
+        } catch (err) {
+            fail('That photo could not be used. Try another.');
+        }
+    });
+
+    var remove = document.querySelector('[data-photo-remove]');
+    if (remove) remove.addEventListener('click', async function () {
+        // The dialog already asks for intent, so a second tap is the confirmation.
+        if (remove.dataset.armed !== '1') {
+            remove.dataset.armed = '1';
+            remove.textContent = 'Yes, remove';
+            return;
+        }
+        error.textContent = '';
+        busy(true);
+        try { await post(form.dataset.remove, new FormData()); }
+        catch (err) { fail('The photo could not be removed. Try again.'); }
+    });
+})();

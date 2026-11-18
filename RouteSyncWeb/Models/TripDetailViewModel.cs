@@ -22,6 +22,7 @@ namespace FleetWise.ViewModels
         public string DriverName { get; set; }
         public string DriverId { get; set; }
         public string DriverStatus { get; set; }
+        public string? DriverPhotoUrl { get; set; }
 
         // Trip Outcome (only meaningful once the trip is Completed)
         public bool IsCompleted { get; set; }

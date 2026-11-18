@@ -108,6 +108,21 @@
     gap: 2px 8px;
 }
 
+.rsc-face {
+    align-self: center;
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: light-dark(#E6F4F3, #2F4A49);
+    color: light-dark(#2F7F7B, #8FD3CF);
+    font-size: .65rem;
+    font-weight: 700;
+}
+
 .rsc-name {
     font-weight: 600;
     color: light-dark(#1a2a4a, #E1E4E9);

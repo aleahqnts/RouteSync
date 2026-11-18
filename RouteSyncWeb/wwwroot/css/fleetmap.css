@@ -856,6 +856,15 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .fm-panel__figs .fm-panel-driver {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .fm-panel__figs .fm-panel-driver img[hidden] { display: none; }
+
     /* A ticking figure: each new value settles in from just above. */
     .fm-tick {
         display: inline-block;

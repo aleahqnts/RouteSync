@@ -17,13 +17,15 @@ namespace FleetWiseMobile.Platforms.Android;
 // whatever the camera produces.
 public class AndroidPhotoCapture : IPhotoCapture
 {
-    public async Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75)
+    public async Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75, bool fromGallery = false)
     {
         try
         {
-            if (!MediaPicker.Default.IsCaptureSupported) return null;
+            if (!fromGallery && !MediaPicker.Default.IsCaptureSupported) return null;
 
-            var shot = await MediaPicker.Default.CapturePhotoAsync();
+            var shot = fromGallery
+                ? await MediaPicker.Default.PickPhotoAsync()
+                : await MediaPicker.Default.CapturePhotoAsync();
             if (shot is null) return null;
 
             // The stream is read twice, for the bounds and then for the pixels, and a

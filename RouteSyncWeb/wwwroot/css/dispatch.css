@@ -1141,6 +1141,9 @@
         border-bottom: 1px solid light-dark(#E8ECF0, #4E4E4E);
     }
 
+    .tdm-driver-body { display: flex; align-items: center; gap: 18px; }
+    .tdm-driver-body .tdm-info-grid { flex: 1; min-width: 0; }
+
     /* Info grid */
     .tdm-info-grid {
         display: grid;

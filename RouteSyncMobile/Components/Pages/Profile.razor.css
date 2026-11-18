@@ -84,6 +84,42 @@
     font-size: 12px;
 }
 
+.hero-photo {
+    display: block;
+    object-fit: cover;
+    padding: 0;
+}
+
+.photo-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 10px;
+}
+
+.photo-btn {
+    padding: 4px 2px;
+    border: 0;
+    background: none;
+    color: #2F7F7B;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.photo-btn:active { opacity: .6; }
+.photo-btn:disabled { opacity: .5; }
+.photo-btn.armed { color: #B42318; }
+
+.photo-msg {
+    margin: 6px 0 0;
+    color: #5f6b7d;
+    font-size: 12px;
+    text-align: center;
+}
+
+.photo-msg.err { color: #B42318; }
+
 /* ---------- Stats: the driver's real record ---------- */
 
 .stats {

@@ -21,6 +21,7 @@ namespace FleetWise.Services
             warning = c.Warning,
             sentence = SchedulingRules.PickSentence(c),
             facts = Facts(c.Facts),
+            photo = c.PhotoUrl,
         };
 
         public static object? Facts(DriverFacts? f) => f is null ? null : new

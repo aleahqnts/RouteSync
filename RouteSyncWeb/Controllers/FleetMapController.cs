@@ -280,7 +280,7 @@ namespace FleetWise.Controllers
 
             var users = await ReferenceAsync("fleetmap:users", async () =>
                 (await _supabase.From<UserModel>()
-                    .Select("user_id,first_name,last_name")
+                    .Select("user_id,first_name,last_name,photo_key")
                     .Get()).Models);
 
             var openLogs = await ReferenceAsync("fleetmap:openlogs", async () =>
@@ -414,6 +414,7 @@ namespace FleetWise.Controllers
                     RouteName = route?.RouteName ?? "—",
                     Shift = FormatShift(trip),
                     DriverName = FormatDriverName(driver),
+                    DriverPhotoUrl = driver is null ? null : ProfilePhotoStore.Url(driver.UserId, driver.PhotoKey),
                     Status = "On Trip",
                     Lat = shown.Lat,
                     Lng = shown.Lng,
@@ -794,7 +795,7 @@ namespace FleetWise.Controllers
             var routes = await RoutesAsync();
             var users = await ReferenceAsync("fleetmap:users", async () =>
                 (await _supabase.From<UserModel>()
-                    .Select("user_id,first_name,last_name")
+                    .Select("user_id,first_name,last_name,photo_key")
                     .Get()).Models);
             var routesById = routes.ToDictionary(r => r.RouteId, r => r);
             var usersById = users.ToDictionary(u => u.UserId, u => u);

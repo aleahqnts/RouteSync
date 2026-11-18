@@ -8,6 +8,9 @@ namespace FleetWise.Models
     {
         public string FullName { get; set; } = "";
         public string Initials { get; set; } = "";
+
+        // The profile photograph's URL, or null to show the initials instead.
+        public string? PhotoUrl { get; set; }
         public string FirstName { get; set; } = "";
         public string MiddleName { get; set; } = "";
         public string LastName { get; set; } = "";

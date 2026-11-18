@@ -44,11 +44,13 @@ namespace FleetWise.Controllers
 
         private readonly Supabase.Client _supabase;
         private readonly AuditLog _audit;
+        private readonly ProfilePhotoStore _photos;
 
-        public ProfileController(Supabase.Client supabase, AuditLog audit)
+        public ProfileController(Supabase.Client supabase, AuditLog audit, ProfilePhotoStore photos)
         {
             _supabase = supabase;
             _audit = audit;
+            _photos = photos;
         }
 
         private int? Me() =>
@@ -95,6 +97,7 @@ namespace FleetWise.Controllers
             {
                 FullName = AuthService.DisplayName(user.FirstName, user.MiddleName, user.LastName),
                 Initials = Initials(user.FirstName, user.LastName),
+                PhotoUrl = ProfilePhotoStore.Url(id, user.PhotoKey),
                 FirstName = user.FirstName ?? "",
                 MiddleName = user.MiddleName ?? "",
                 LastName = user.LastName ?? "",
@@ -221,6 +224,55 @@ namespace FleetWise.Controllers
             valid = digits.Length == 0 || (digits.Length == 11 && digits.StartsWith("09"));
             if (digits.Length == 0 || !valid) return null;
             return $"{digits[..4]} {digits[4..7]} {digits[7..]}";
+        }
+
+        // ---------------------------------------------------------------- photograph
+
+        // Anyone signed in may see anyone's photograph: it is shown beside names across
+        // the dashboard. The version in the URL is the object's name, so a request that
+        // names the current one is cached for good and any other is not cached at all.
+        [HttpGet("/Profile/Photo/{userId:int}")]
+        public async Task<IActionResult> Photo(int userId, string? v)
+        {
+            if (await _photos.ReadAsync(userId) is not var (key, bytes)) return NotFound();
+            Response.Headers.CacheControl = v == ProfilePhotoStore.Version(key)
+                ? ProfilePhotoStore.CacheControl
+                : "no-cache";
+            return File(bytes, "image/jpeg");
+        }
+
+        // The browser reduces the photograph before sending it, so anything over the
+        // bucket's limit or not a JPEG did not come from this page.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(ProfilePhotoStore.MaxBytes + 16384)]
+        public async Task<IActionResult> UploadPhoto(IFormFile? photo)
+        {
+            if (Me() is not int id) return Unauthorized();
+            if (photo is null || photo.Length == 0 || photo.Length > ProfilePhotoStore.MaxBytes)
+                return BadRequest(new { error = "Choose a photo under 256 KB." });
+
+            using var buffer = new MemoryStream();
+            await photo.CopyToAsync(buffer);
+            var bytes = buffer.ToArray();
+            if (!ProfilePhotoStore.IsJpeg(bytes))
+                return BadRequest(new { error = "That file is not a photo this page can use." });
+
+            if (!await _photos.ReplaceAsync(id, bytes))
+                return StatusCode(502, new { error = "The photo could not be saved. Try again." });
+
+            await _audit.WriteAsync("profile_photo_changed", "changed their profile photo", "users", id);
+            return Json(new { ok = true, url = ProfilePhotoStore.Url(id, await _photos.KeyAsync(id)) });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemovePhoto()
+        {
+            if (Me() is not int id) return Unauthorized();
+            if (await _photos.RemoveAsync(id))
+                await _audit.WriteAsync("profile_photo_removed", "removed their profile photo", "users", id);
+            return Json(new { ok = true });
         }
 
         // ---------------------------------------------------------------- password

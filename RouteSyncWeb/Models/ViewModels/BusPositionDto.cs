@@ -28,6 +28,10 @@ public class BusPositionDto
     [JsonPropertyName("driverName")]
     public string DriverName { get; set; }
 
+    // The driver's profile photograph, or null for none.
+    [JsonPropertyName("driverPhotoUrl")]
+    public string? DriverPhotoUrl { get; set; }
+
     [JsonPropertyName("status")]
     public string Status { get; set; }
 

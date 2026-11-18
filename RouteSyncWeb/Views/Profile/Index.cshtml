@@ -44,7 +44,18 @@
     <h2 class="pf-title">My Profile</h2>
 
     <section class="pf-card pf-hero">
-        <div class="pf-avatar" aria-hidden="true">@Model.Initials</div>
+        @* Opens the photograph larger, with what can be done to it. *@
+        <button type="button" class="pf-avatar" data-photo-open
+                aria-label="@(Model.PhotoUrl is null ? "Add a profile photo" : "View profile photo")">
+            @if (Model.PhotoUrl is not null)
+            {
+                <img src="@Model.PhotoUrl" alt="" />
+            }
+            else
+            {
+                <span aria-hidden="true">@Model.Initials</span>
+            }
+        </button>
         <div class="pf-hero-text">
             <div class="pf-hero-name">@Model.FullName</div>
             <div class="pf-hero-tags">
@@ -55,6 +66,39 @@
         </div>
     </section>
 </div>
+
+@* The photograph is chosen here and reduced in the browser before it is sent. *@
+<dialog class="pf-photo-dialog" aria-labelledby="pfPhotoTitle">
+    <form class="pf-photo" asp-action="UploadPhoto" method="post" data-remove="@Url.Action("RemovePhoto")">
+        <div class="pf-photo-head">
+            <h3 class="pf-photo-title" id="pfPhotoTitle">Profile photo</h3>
+            <button type="button" class="pf-photo-x" data-photo-close aria-label="Close" autofocus>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+        </div>
+        <div class="pf-photo-large">
+            @if (Model.PhotoUrl is not null)
+            {
+                <img src="@Model.PhotoUrl" alt="Your profile photo" />
+            }
+            else
+            {
+                <span aria-hidden="true">@Model.Initials</span>
+            }
+        </div>
+        <p class="pf-photo-error" role="alert"></p>
+        <div class="pf-photo-actions">
+            @if (Model.PhotoUrl is not null)
+            {
+                <button type="button" class="pf-btn pf-btn--ghost pf-photo-remove" data-photo-remove>Remove</button>
+            }
+            <label class="pf-btn pf-btn--primary pf-photo-change" data-photo-change>
+                @(Model.PhotoUrl is null ? "Add photo" : "Change photo")
+                <input type="file" accept="image/*" class="pf-photo-pick" />
+            </label>
+        </div>
+    </form>
+</dialog>
 
 @if (!string.IsNullOrEmpty(saved))
 {

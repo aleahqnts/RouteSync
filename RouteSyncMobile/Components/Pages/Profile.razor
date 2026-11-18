@@ -3,6 +3,8 @@
 @using Microsoft.AspNetCore.Identity
 @inject SessionService Session
 @inject DriverDataService Data
+@inject ProfilePhotos Photos
+@inject IPhotoCapture Camera
 @inject AuthApi Api
 @inject MessageWatch Watch
 @inject IJSRuntime JS
@@ -26,7 +28,14 @@ else
     <div class="profile">
 
         <div class="hero">
-            <div class="hero-avatar">@Initials</div>
+            @if (photoSrc is not null)
+            {
+                <img class="hero-avatar hero-photo" src="@photoSrc" alt="" />
+            }
+            else
+            {
+                <div class="hero-avatar">@Initials</div>
+            }
             <p class="hero-name">@Session.DisplayName</p>
             <div class="hero-tags">
                 <span class="tag role">Driver</span>
@@ -35,6 +44,24 @@ else
                 </span>
             </div>
             <p class="hero-since">Driving with RouteSync since @PhTime.Raw(user.CreatedAt).ToString("MMMM yyyy")</p>
+            <div class="photo-actions">
+                <button class="photo-btn" @onclick="() => ChangePhoto(false)" disabled="@savingPhoto">Take photo</button>
+                <button class="photo-btn" @onclick="() => ChangePhoto(true)" disabled="@savingPhoto">Choose photo</button>
+                @if (user.PhotoKey is not null)
+                {
+                    <button class="photo-btn @(removeArmed ? "armed" : "")" @onclick="RemovePhoto" disabled="@savingPhoto">
+                        @(removeArmed ? "Tap again to remove" : "Remove")
+                    </button>
+                }
+            </div>
+            @if (savingPhoto)
+            {
+                <p class="photo-msg">Saving photo…</p>
+            }
+            else if (photoMsg is not null)
+            {
+                <p class="photo-msg err">@photoMsg</p>
+            }
         </div>
 
         <div class="stats">
@@ -247,6 +274,9 @@ else
     private int tripsDone, tripsThisMonth, passengers;
     private DateTime? lastTripDate;
 
+    private string? photoSrc, photoMsg;
+    private bool savingPhoto, removeArmed;
+
     private string contact = "", address = "", emName = "", emNumber = "";
     private bool savingProfile, profileOk;
     private string? profileMsg;
@@ -337,6 +367,65 @@ else
         }
 
         leaveRequests = leaveTask.IsCompletedSuccessfully ? leaveTask.Result : new();
+
+        // Read from the phone after the first time, so this costs nothing on most visits.
+        if (user?.PhotoKey is string key && await Photos.ReadAsync(key) is byte[] bytes)
+            photoSrc = DataUrl(bytes);
+    }
+
+    private static string DataUrl(byte[] jpeg) => "data:image/jpeg;base64," + Convert.ToBase64String(jpeg);
+
+    // Uploads under a new name first and points the row at it second, so a failure at
+    // either step leaves the old photograph showing everywhere rather than none.
+    private async Task ChangePhoto(bool fromGallery)
+    {
+        photoMsg = null;
+        removeArmed = false;
+        var jpeg = await Camera.CaptureAsync(maxEdge: 512, quality: 80, fromGallery: fromGallery);
+        if (jpeg is null || user is null) return;
+
+        savingPhoto = true;
+        StateHasChanged();
+        try
+        {
+            var key = await Photos.UploadAsync(user.UserId, jpeg);
+            if (key is null) { photoMsg = "The photo could not be uploaded. Try again."; return; }
+
+            await Data.SetPhotoKeyAsync(user.UserId, key);
+            var old = user.PhotoKey;
+            user.PhotoKey = key;
+            photoSrc = DataUrl(jpeg);
+            if (old is not null) _ = Photos.DeleteAsync(old);
+        }
+        catch (Exception ex)
+        {
+            photoMsg = "The photo could not be saved. Check your connection.";
+            System.Diagnostics.Debug.WriteLine($"[Profile.Photo] {ex}");
+        }
+        finally { savingPhoto = false; }
+    }
+
+    private async Task RemovePhoto()
+    {
+        if (!removeArmed) { removeArmed = true; return; }
+        removeArmed = false;
+        if (user?.PhotoKey is not string old) return;
+
+        savingPhoto = true;
+        photoMsg = null;
+        try
+        {
+            await Data.SetPhotoKeyAsync(user.UserId, null);
+            user.PhotoKey = null;
+            photoSrc = null;
+            _ = Photos.DeleteAsync(old);
+        }
+        catch (Exception ex)
+        {
+            photoMsg = "The photo could not be removed. Check your connection.";
+            System.Diagnostics.Debug.WriteLine($"[Profile.Photo] {ex}");
+        }
+        finally { savingPhoto = false; }
     }
 
     private DotNetObjectReference<Profile>? _ptrRef;

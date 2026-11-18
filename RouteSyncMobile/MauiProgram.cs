@@ -49,6 +49,7 @@ public static class MauiProgram
 		// objects themselves.
 		builder.Services.AddSingleton<Services.ChecklistDraft>();
 		builder.Services.AddSingleton<Services.InspectionPhotos>();
+		builder.Services.AddSingleton<Services.ProfilePhotos>();
 
 		// GPS telemetry: the on-device buffer and the background tracker.
 		builder.Services.AddSingleton<Services.TelemetryQueue>();

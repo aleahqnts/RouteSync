@@ -83,6 +83,84 @@
 
     .pf-hero-text { min-width: 0; }
 
+    .pf-avatar { flex: none; padding: 0; border: 0; overflow: hidden; cursor: pointer; }
+    .pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .pf-avatar:hover { filter: brightness(.94); }
+    .pf-avatar:focus-visible { outline: 2px solid var(--pf-teal); outline-offset: 2px; }
+
+    /* The photograph at size, with its actions beneath it. One width whatever the
+       photograph's shape: the frame is square and the photograph fills it. Placed
+       explicitly, since a page-wide margin reset undoes the browser's own centring. */
+    .pf-photo-dialog {
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        width: min(360px, calc(100vw - 32px));
+        height: fit-content;
+        max-height: calc(100vh - 32px);
+        padding: 0;
+        border: 1px solid var(--pf-border);
+        border-radius: 16px;
+        background: light-dark(#fff, #2F2F2F);
+        color: var(--pf-text);
+        box-shadow: 0 20px 50px rgb(15 23 42 / .25);
+    }
+    .pf-photo-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 14px 12px 20px;
+    }
+    .pf-photo-title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--pf-dark); }
+    .pf-photo-x {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        color: var(--pf-text);
+        font-size: 1.1rem;
+        cursor: pointer;
+    }
+    .pf-photo-x:hover { background: var(--pf-bg); }
+    .pf-photo-x:focus-visible { outline: 2px solid var(--pf-teal); outline-offset: 1px; }
+    .pf-photo-dialog::backdrop { background: rgb(15 23 42 / .5); }
+    .pf-photo { margin: 0; }
+    .pf-photo-large {
+        display: grid;
+        place-items: center;
+        width: calc(100% - 40px);
+        margin: 0 20px;
+        aspect-ratio: 1;
+        border-radius: 0;
+        overflow: hidden;
+        background: var(--pf-teal-light);
+        color: var(--pf-teal);
+        font-size: 4rem;
+        font-weight: 800;
+    }
+    .pf-photo-large img { width: 100%; height: 100%; object-fit: cover; }
+    .pf-photo-error { margin: 10px 20px 0; color: light-dark(#B42318, #F97066); font-size: .8rem; }
+    .pf-photo-error:empty { display: none; }
+    .pf-photo-actions { display: flex; gap: 10px; padding: 16px 20px 20px; }
+    .pf-photo-actions .pf-btn {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        margin: 0;
+        box-shadow: none;
+    }
+    .pf-photo-remove { color: light-dark(#B42318, #F97066); }
+    .pf-photo-actions label { position: relative; cursor: pointer; }
+    .pf-photo-pick { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .pf-photo-actions label:focus-within { outline: 2px solid var(--pf-teal); outline-offset: 2px; }
+    .pf-photo-actions [aria-disabled="true"], .pf-photo-actions button:disabled { opacity: .6; pointer-events: none; }
+
     .pf-avatar {
         display: grid;
         place-items: center;

@@ -9,6 +9,9 @@ namespace FleetWise.Models
 
         public string Email { get; set; } = string.Empty;
 
+        // The profile photograph's URL, or null when there is none.
+        public string? PhotoUrl { get; set; }
+
         public string RoleName { get; set; } = string.Empty;
 
         public string AccountStatus { get; set; } = string.Empty;

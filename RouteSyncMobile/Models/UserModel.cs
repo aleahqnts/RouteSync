@@ -53,4 +53,8 @@ public class UserModel : BaseModel
 
     [Column("last_login")]
     public DateTime? LastLogin { get; set; }
+
+    // Path of the profile photograph in the profile-photos bucket, or null for none.
+    [Column("photo_key")]
+    public string? PhotoKey { get; set; }
 }

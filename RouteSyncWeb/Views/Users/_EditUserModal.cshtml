@@ -53,6 +53,16 @@
                             <span asp-validation-for="AccountStatus" class="us-field-error"></span>
                         </div>
                     </div>
+                    <div id="euPhotoSection" hidden>
+                        <div class="us-section-header">Photo</div>
+                        <div class="us-section-body">
+                            <div class="us-reset-row">
+                                <img class="us-face us-face--lg" id="euPhoto" alt="" />
+                                <button type="submit" form="removePhotoForm" class="us-btn us-btn--outline">Remove Photo</button>
+                                <span class="us-field-hint">For a photo that is not suitable. They can add another.</span>
+                            </div>
+                        </div>
+                    </div>
                     <div class="us-section-header">Password</div>
                     <div class="us-section-body">
                         <div class="us-reset-row" id="rpDefault">
@@ -78,6 +88,9 @@
                     <button type="button" class="us-btn us-btn--outline" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="us-btn us-btn--primary" id="euSave">Save Changes</button>
                 </div>
+            </form>
+            <form asp-action="RemovePhoto" asp-controller="Users" method="post" id="removePhotoForm" hidden>
+                <input type="hidden" name="userId" id="phUserId" />
             </form>
             <form asp-action="ResetPassword" asp-controller="Users" method="post" id="resetPasswordForm" hidden>
                 <input type="hidden" name="userId" id="rpUserId" />

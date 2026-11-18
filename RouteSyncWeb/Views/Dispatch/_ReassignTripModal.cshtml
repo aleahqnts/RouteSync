@@ -444,13 +444,15 @@
                 current: {
                     id: cur.driverId,
                     name: cur.driverName,
+                    photo: cur.photo,
                     problem: o.driverIssue ? (onLeave ? 'On approved leave that day' : 'Cannot drive this trip') : null
                 },
                 items: o.drivers.map(d => ({
                     id: d.driverId, name: d.driverName,
-                    tier: d.tier, rank: d.rank, warning: d.warning, reason: d.reason, facts: d.facts
+                    tier: d.tier, rank: d.rank, warning: d.warning, reason: d.reason, facts: d.facts,
+                    photo: d.photo
                 })),
-                onLeave: o.driversOnLeave.map(d => ({ id: d.driverId, name: d.driverName, reason: d.reason })),
+                onLeave: o.driversOnLeave.map(d => ({ id: d.driverId, name: d.driverName, reason: d.reason, photo: d.photo })),
                 selected: rtmStartingPick(o.driverIssue, o.drivers[0], cur.driverId, d => d.driverId),
                 shortfall: o.driverShortfall
             });

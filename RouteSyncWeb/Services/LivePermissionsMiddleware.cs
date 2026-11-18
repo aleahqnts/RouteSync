@@ -47,6 +47,8 @@ namespace FleetWise.Services
                     Replace(kept, ClaimTypes.Name, now.Name);
                     Replace(kept, ClaimTypes.Email, now.Email);
                     if (now.RoleName is not null) Replace(kept, ClaimTypes.Role, now.RoleName);
+                    kept.RemoveAll(c => c.Type == PhotoClaim);
+                    if (now.PhotoUrl is not null) kept.Add(new Claim(PhotoClaim, now.PhotoUrl));
                 }
 
                 var roleName = kept.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
@@ -61,6 +63,9 @@ namespace FleetWise.Services
 
             await _next(context);
         }
+
+        // The signed-in person's profile photograph URL, for the sidebar. Absent for none.
+        public const string PhotoClaim = "photo";
 
         private static void Replace(List<Claim> claims, string type, string value)
         {

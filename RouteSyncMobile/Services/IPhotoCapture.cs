@@ -7,12 +7,12 @@ namespace FleetWiseMobile.Services;
 // photograph that cannot be sent.
 public interface IPhotoCapture
 {
-    // Opens the camera and returns the photograph as JPEG bytes, reduced to
-    // maxEdge on its longer side.
+    // Opens the camera, or the gallery when fromGallery is set, and returns the photograph
+    // as JPEG bytes, reduced to maxEdge on its longer side.
     // Returns null when the driver backed out, when the camera is unavailable, or when permission
     // was refused. None of those is an error: a photograph is optional, and an inspection
     // carries on without one.
-    Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75);
+    Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75, bool fromGallery = false);
 }
 
 // Reduction through the cross-platform imaging stack, used by the desktop development
@@ -24,13 +24,15 @@ public interface IPhotoCapture
 // the moment a driver is standing at a fault.
 public class MauiPhotoCapture : IPhotoCapture
 {
-    public async Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75)
+    public async Task<byte[]?> CaptureAsync(int maxEdge = 1280, int quality = 75, bool fromGallery = false)
     {
         try
         {
-            if (!MediaPicker.Default.IsCaptureSupported) return null;
+            if (!fromGallery && !MediaPicker.Default.IsCaptureSupported) return null;
 
-            var shot = await MediaPicker.Default.CapturePhotoAsync();
+            var shot = fromGallery
+                ? await MediaPicker.Default.PickPhotoAsync()
+                : await MediaPicker.Default.CapturePhotoAsync();
             if (shot is null) return null;
 
             await using var source = await shot.OpenReadAsync();

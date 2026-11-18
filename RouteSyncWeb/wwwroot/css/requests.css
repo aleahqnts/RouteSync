@@ -587,6 +587,8 @@
     }
 
         .rq-cover-avatar[hidden] { display: none; }
+        .rq-cover-avatar { overflow: hidden; }
+        .rq-cover-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
     .rq-cover-eyebrow {
         font-size: .7rem;

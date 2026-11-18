@@ -1108,6 +1108,12 @@
         let coversShown = false;
         let coverRows = [];          // one per shift, in date order
         let coverNames = new Map();  // driver ID to name, for a chosen driver no longer listed
+        const coverPhotos = new Map();  // driver ID to profile photograph URL
+
+        function rqRememberCovers(s) {
+            s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
+            Object.keys(s.photos || {}).forEach(function (id) { coverPhotos.set(Number(id), s.photos[id]); });
+        }
         let coverSeq = 0;            // the latest ranking asked for; older answers are dropped
         let coverTimer = null;
         let coverDirty = null;       // the row picked from and not yet ranked around
@@ -1193,7 +1199,16 @@
             if (row.choice > 0) {
                 const c = rqCandidateOf(row, row.choice);
                 const name = c ? c.name : (coverNames.get(row.choice) || 'Driver ' + row.choice);
-                row.avatar.textContent = rqInitials(name);
+                // The photograph when there is one, so the face can be put to the name.
+                const photo = coverPhotos.get(row.choice);
+                if (photo) {
+                    const img = rqEl('img');
+                    img.src = photo;
+                    img.alt = '';
+                    row.avatar.replaceChildren(img);
+                } else {
+                    row.avatar.textContent = rqInitials(name);
+                }
                 row.who.appendChild(rqEl('span', 'rq-cover-eyebrow', 'Covers this shift'));
                 const line = rqEl('span', 'rq-cover-nameline');
                 line.appendChild(rqEl('span', 'rq-cover-name', name));
@@ -1251,7 +1266,7 @@
                 items: s.candidates.map(function (c) {
                     return {
                         id: c.driverId, name: c.name, tier: c.tier, rank: c.rank,
-                        warning: c.warning, reason: c.reason, facts: c.facts
+                        warning: c.warning, reason: c.reason, facts: c.facts, photo: c.photo
                     };
                 }),
                 // A chosen driver the rules no longer offer stays in sight, with why.
@@ -1341,7 +1356,7 @@
             coverRows.forEach(function (r) {
                 const s = fresh.get(r.s.tripId);
                 if (!s) return;
-                s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
+                rqRememberCovers(s);
                 r.s = s;
 
                 if (!r.touched) {
@@ -1474,7 +1489,7 @@
             coversEl.replaceChildren();
 
             coverRows = shifts.map(function (s) {
-                s.candidates.forEach(function (c) { coverNames.set(c.driverId, c.name); });
+                rqRememberCovers(s);
                 return rqCoverRow(s);
             });
             coverRows.forEach(function (row) {

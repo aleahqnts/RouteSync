@@ -158,7 +158,9 @@
 
             @* Driver Details *@
             <div class="tdm-subsection-header">Driver Details</div>
-            <div class="tdm-section-body" style="border-bottom:none;">
+            <div class="tdm-section-body tdm-driver-body" style="border-bottom:none;">
+                @* Who should be at the wheel, to match against who is there. *@
+                <img class="rs-face rs-face--lg" id="tdm-driver-photo" alt="" hidden />
                 <div class="tdm-info-grid">
                     <div class="tdm-info-item">
                         <span class="tdm-label">Driver Name</span>
@@ -378,6 +380,10 @@
 
             // Driver
             document.getElementById('tdm-driver-name').textContent   = d.driverName ?? '—';
+            const driverPhoto = document.getElementById('tdm-driver-photo');
+            driverPhoto.hidden = !d.driverPhotoUrl;
+            if (d.driverPhotoUrl) driverPhoto.src = d.driverPhotoUrl;
+            else driverPhoto.removeAttribute('src');
             document.getElementById('tdm-driver-id').textContent     = d.driverId;
             document.getElementById('tdm-driver-status').innerHTML   = statusDot(d.driverStatus);
 

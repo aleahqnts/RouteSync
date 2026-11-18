@@ -1681,3 +1681,17 @@ th.rs-sortable:focus-visible {
 @keyframes rs-note-out {
     to { opacity: 0; visibility: hidden; }
 }
+
+
+/* A person's profile photograph beside their name. Round and cropped to fill, whatever
+   the photograph's shape. */
+.rs-face {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: light-dark(#E6F4F3, #2F4A49);
+}
+
+.rs-face--lg { width: 64px; height: 64px; }

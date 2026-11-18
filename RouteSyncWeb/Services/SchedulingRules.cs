@@ -8,8 +8,10 @@ namespace FleetWise.Services
     // Reason: One line a dispatcher can read without knowing the rules.
     // Warning: What taking this driver costs, or null when it costs nothing.
     // Facts: The figures the driver was ranked on, for showing beside the name.
+    // PhotoUrl: The driver's profile photograph, or null for none.
     public sealed record DriverCandidate(
-        int DriverId, string Name, int Rank, int Tier, string Reason, string? Warning, DriverFacts? Facts = null);
+        int DriverId, string Name, int Rank, int Tier, string Reason, string? Warning, DriverFacts? Facts = null,
+        string? PhotoUrl = null);
 
     // The figures a driver is ranked on.
     // RouteTrips: Trips on the trip's route in the last SchedulingData.HistoryDays days.
@@ -238,7 +240,8 @@ namespace FleetWise.Services
                 if (leave is not null)
                 {
                     onLeave.Add(new DriverCandidate(driver.UserId, name, 0, 0,
-                        $"On approved {leave.LeaveType?.ToLowerInvariant()} leave", null));
+                        $"On approved {leave.LeaveType?.ToLowerInvariant()} leave", null,
+                        PhotoUrl: ProfilePhotoStore.Url(driver.UserId, driver.PhotoKey)));
                     continue;
                 }
 
@@ -277,7 +280,8 @@ namespace FleetWise.Services
 
                 var facts = new DriverFacts(familiarity, routeName, week, sameDay.FirstOrDefault()?.ShiftType, run);
 
-                ranked.Add((new DriverCandidate(driver.UserId, name, 0, tier, reason, warning, facts), familiarity, week));
+                ranked.Add((new DriverCandidate(driver.UserId, name, 0, tier, reason, warning, facts,
+                    ProfilePhotoStore.Url(driver.UserId, driver.PhotoKey)), familiarity, week));
             }
 
             var ordered = ranked

@@ -6,7 +6,8 @@ namespace FleetWise.Services
 {
     // A signed-in person's name, email and role as the database holds them now.
     // RoleName: Null when the role could not be read, so the cookie's stands.
-    public sealed record AccountNow(string Name, string Email, string? RoleName);
+    // PhotoUrl: Null when the person has no profile photograph.
+    public sealed record AccountNow(string Name, string Email, string? RoleName, string? PhotoUrl);
 
     // Reads the signed-in person's account as it stands, for the claims each request carries.
     //
@@ -62,7 +63,8 @@ namespace FleetWise.Services
                 var now = new AccountNow(
                     AuthService.DisplayName(user.FirstName, user.MiddleName, user.LastName),
                     user.EmailAddress ?? "",
-                    string.IsNullOrWhiteSpace(role?.RoleName) ? null : role!.RoleName);
+                    string.IsNullOrWhiteSpace(role?.RoleName) ? null : role!.RoleName,
+                    ProfilePhotoStore.Url(user.UserId, user.PhotoKey));
 
                 _cache.Set(key, now, Ttl);
                 return now;

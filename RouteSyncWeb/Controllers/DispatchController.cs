@@ -303,6 +303,7 @@ namespace FleetWise.Controllers
                                 : "Unassigned",
                             DriverId = trip.DriverId,
                             DriverStatus = r.DriverStatus,
+                            DriverPhotoUrl = r.Driver is null ? null : ProfilePhotoStore.Url(r.Driver.UserId, r.Driver.PhotoKey),
                             TripStatus = r.TripStatus,
                             Flagged = r.Flagged,
                             NeedsRelief = r.TripStatus == "Active" && r.DriverStatus == "Unavailable",
@@ -621,6 +622,7 @@ namespace FleetWise.Controllers
                 DriverName = driver != null ? $"{driver.FirstName} {driver.LastName}" : "Unassigned",
                 DriverId = trip.DriverId.ToString(),
                 DriverStatus = driverStatus,
+                DriverPhotoUrl = driver is null ? null : ProfilePhotoStore.Url(driver.UserId, driver.PhotoKey),
 
                 IsCompleted = trip.TripStatus == "Completed",
                 TotalBoarded = trip.TripStatus == "Completed" ? trip.TotalBoarded : null,
@@ -975,6 +977,7 @@ namespace FleetWise.Controllers
                 reason = c.Reason,
                 warning = c.Warning,
                 facts = CandidateJson.Facts(c.Facts),
+                photo = c.PhotoUrl,
             };
 
             return Json(new
@@ -1014,6 +1017,7 @@ namespace FleetWise.Controllers
                     driverName = currentDriver is null
                         ? $"Driver {trip.DriverId}"
                         : $"{currentDriver.FirstName} {currentDriver.LastName}".Trim(),
+                    photo = currentDriver is null ? null : ProfilePhotoStore.Url(currentDriver.UserId, currentDriver.PhotoKey),
                 },
                 vehicles = vehicleRanking.Candidates.Select(c => new
                 {

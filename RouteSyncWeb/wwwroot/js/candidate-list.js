@@ -42,6 +42,21 @@
         return node;
     }
 
+    function face(item) {
+        if (item.photo) {
+            const img = el('img', 'rsc-face');
+            img.src = item.photo;
+            img.alt = '';
+            img.loading = 'lazy';
+            return img;
+        }
+        const words = String(item.name || '').trim().split(/\s+/).filter(Boolean);
+        const initials = words.length ? (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : '')) : '';
+        const span = el('span', 'rsc-face', initials.toUpperCase());
+        span.setAttribute('aria-hidden', 'true');
+        return span;
+    }
+
     function plural(n, one, many) {
         return n + ' ' + (n === 1 ? one : many);
     }
@@ -153,6 +168,9 @@
 
             const body = el('span', 'rsc-body');
             const line = el('span', 'rsc-line');
+            // A driver's face before the name, or their initials when there is no photo,
+            // so every name starts at the same place.
+            if (kind === 'driver') line.appendChild(face(item));
             const nameEl = el('span', 'rsc-name', item.name);
             nameEl.id = name + '-n-' + id;
             line.appendChild(nameEl);

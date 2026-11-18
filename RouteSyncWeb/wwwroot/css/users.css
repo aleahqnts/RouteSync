@@ -244,6 +244,24 @@
         width: 1%;
     }
 
+    /* A column of faces before the names. Initials stand in, the same size, so rows
+       without a photo still line up. */
+    .us-table .us-face-col { width: 1%; padding-right: 0; }
+    .us-face {
+        display: inline-grid;
+        place-items: center;
+        flex: none;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: light-dark(#E6F4F3, #2F4A49);
+        color: light-dark(#2F7F7B, #8FD3CF);
+        font-size: .65rem;
+        font-weight: 700;
+    }
+    .us-face--lg { width: 56px; height: 56px; }
+
     .us-table tbody tr:hover {
         background: light-dark(#FAFBFC, #383838);
     }
@@ -878,6 +896,9 @@
     .us-table.rs-cards td[data-label]::before {
         content: none;
     }
+
+    /* A phone card is two fixed lines with no room for a face. */
+    .us-table.rs-cards td.us-face-col { display: none; }
 
     .us-table.rs-cards td.us-id {
         grid-column: 1;

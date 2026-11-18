@@ -140,6 +140,7 @@ builder.Services.AddScoped<RolePermissions>();
 builder.Services.AddScoped<LiveAccount>();
 builder.Services.AddScoped<NavCounts>();
 builder.Services.AddScoped<InspectionPhotoStore>();
+builder.Services.AddScoped<ProfilePhotoStore>();
 builder.Services.AddScoped<SchedulingData>();
 builder.Services.AddScoped<TripAssignments>();
 builder.Services.AddScoped<RosterPublisher>();

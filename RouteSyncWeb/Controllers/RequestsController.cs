@@ -290,6 +290,10 @@ namespace FleetWise.Controllers
                 }
             }
 
+            var photoOf = snapshot.Drivers
+                .Where(d => d.PhotoKey is not null)
+                .ToDictionary(d => d.UserId, d => ProfilePhotoStore.Url(d.UserId, d.PhotoKey));
+
             return Json(new
             {
                 shifts = SchedulingRules.SuggestCovers(trips, snapshot, pinned).Select(c =>
@@ -309,6 +313,12 @@ namespace FleetWise.Controllers
                         pinnedProblem = c.PinnedProblem,
                         shortfall = c.Shortfall,
                         candidates = c.Candidates.Select(CandidateJson.Driver),
+                        // Photographs of the drivers this shift can name, by driver id.
+                        photos = c.Candidates.Select(x => x.DriverId)
+                            .Append(c.PinnedDriverId ?? 0)
+                            .Where(photoOf.ContainsKey)
+                            .Distinct()
+                            .ToDictionary(id => id.ToString(), id => photoOf[id]),
                     };
                 }),
             });

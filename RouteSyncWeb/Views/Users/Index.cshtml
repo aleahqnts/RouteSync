@@ -61,6 +61,7 @@
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th data-nosort class="us-face-col"><span class="visually-hidden">Photo</span></th>
                     <th>First name</th>
                     <th>Last name</th>
                     <th>Email</th>
@@ -71,7 +72,7 @@
             </thead>
             <tbody id="usersTableBody">
                 <tr>
-                    <td colspan="7" class="us-table-loading">
+                    <td colspan="8" class="us-table-loading">
                         <div class="us-spinner"></div>
                     </td>
                 </tr>
@@ -127,6 +128,9 @@
             document.getElementById('euEmail').value = btn.dataset.email;
             document.getElementById('euRoleId').value = btn.dataset.roleId;
             document.getElementById('euAccountStatus').value = btn.dataset.accountStatus;
+            document.getElementById('phUserId').value = btn.dataset.userId;
+            document.getElementById('euPhotoSection').hidden = !btn.dataset.photoUrl;
+            document.getElementById('euPhoto').src = btn.dataset.photoUrl || '';
 
             // Held while open. When someone else has the account, it shows as usual but
             // read-only, with who has it in the footer. Saving is off until the hold is
@@ -267,7 +271,7 @@
             .then(function (html) { if (asked === userRowsAsked) tbody.innerHTML = html; })
             .catch(function () {
                 if (asked !== userRowsAsked) return;
-                tbody.innerHTML = '<tr><td colspan="7" class="us-empty">Users could not be loaded. Try again.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="us-empty">Users could not be loaded. Try again.</td></tr>';
             });
     }
 

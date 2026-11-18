@@ -52,4 +52,9 @@ public class UserModel : BaseModel
 
     [Column("emergency_contact_number")]
     public string? EmergencyContactNumber { get; set; }
+
+    // Path of the profile photograph, read only. ProfilePhotoStore is its one writer, so a
+    // whole-row save here can never undo a photograph changed a moment earlier.
+    [Column("photo_key", ignoreOnInsert: true, ignoreOnUpdate: true)]
+    public string? PhotoKey { get; set; }
 }

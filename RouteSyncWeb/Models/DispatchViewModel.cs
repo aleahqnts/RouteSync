@@ -58,6 +58,9 @@ namespace FleetWise.ViewModels
         public int DriverId { get; set; }
 
         public string DriverStatus { get; set; }
+
+        // The driver's profile photograph, or null for none.
+        public string? DriverPhotoUrl { get; set; }
         public string TripStatus { get; set; }
 
         // Roadworthiness, derived from THIS trip's own checklist (a failed inspection),

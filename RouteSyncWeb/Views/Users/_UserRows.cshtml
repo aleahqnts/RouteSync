@@ -14,7 +14,7 @@
 @if (Model.Count == 0)
 {
     <tr>
-        <td colspan="7" class="us-empty">No users match. Clear the search or filter to see everyone.</td>
+        <td colspan="8" class="us-empty">No users match. Clear the search or filter to see everyone.</td>
     </tr>
 }
 else
@@ -24,6 +24,16 @@ else
         var statusClass = user.AccountStatus == "Activated" ? "us-status--active" : "us-status--inactive";
         <tr>
             <td class="us-id">@user.UserId</td>
+            <td class="us-face-col">
+                @if (user.PhotoUrl is not null)
+                {
+                    <img class="us-face" src="@user.PhotoUrl" alt="" loading="lazy" />
+                }
+                else
+                {
+                    <span class="us-face" aria-hidden="true">@(user.FirstName.Length > 0 ? user.FirstName[..1] : "")@(user.LastName.Length > 0 ? user.LastName[..1] : "")</span>
+                }
+            </td>
             <td>@user.FirstName</td>
             <td>@user.LastName</td>
             <td>@user.Email</td>
@@ -33,7 +43,7 @@ else
                 <button type="button" class="us-btn-edit" data-bs-toggle="modal" data-bs-target="#editUserModal"
                         data-user-id="@user.UserId" data-first-name="@user.FirstName" data-middle-name="@user.MiddleName"
                         data-last-name="@user.LastName" data-email="@user.Email" data-role-id="@user.RoleId"
-                        data-account-status="@user.AccountStatus">Edit</button>
+                        data-account-status="@user.AccountStatus" data-photo-url="@user.PhotoUrl">Edit</button>
             </td>
         </tr>
     }
