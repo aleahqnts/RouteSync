@@ -38,37 +38,60 @@ namespace FleetWise.Services
         // Forgets every cached role, so the next read is fresh.
         public static void Invalidate() => Interlocked.Increment(ref _generation);
 
+        // How long the last successful read stands in when the database cannot be reached.
+        private static readonly TimeSpan LastGoodTtl = TimeSpan.FromMinutes(10);
+
         // The permission keys a role currently holds.
-        public async Task<IReadOnlyList<string>> ForRoleAsync(string? roleName)
+        public Task<IReadOnlyList<string>> ForRoleAsync(string? roleName)
         {
-            if (string.IsNullOrWhiteSpace(roleName)) return Array.Empty<string>();
+            if (string.IsNullOrWhiteSpace(roleName))
+                return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
 
-            var key = $"perm:{Volatile.Read(ref _generation)}:{roleName}";
-            if (_cache.TryGetValue(key, out IReadOnlyList<string>? cached) && cached is not null)
-                return cached;
-
-            IReadOnlyList<string> permissions;
-            try
+            return ResolveAsync(_cache, Volatile.Read(ref _generation), roleName, async () =>
             {
                 var response = await _supabase.From<Role>()
                     .Filter("role_name", Postgrest.Constants.Operator.Equals, roleName)
                     .Get();
 
-                permissions = response.Models.FirstOrDefault()?.WebPermissions?
+                return response.Models.FirstOrDefault()?.WebPermissions?
                     .Where(kv => kv.Value)
                     .Select(kv => kv.Key)
                     .ToList() ?? new List<string>();
+            });
+        }
+
+        // The cached permissions when fresh, otherwise a new read.
+        //
+        // A read that fails falls back to the last permissions this role was read with, so a
+        // database that cannot be reached for a moment does not lock everyone out of every
+        // page and fill the audit trail with refusals. LiveAccount keeps the cookie's role on
+        // a failed read for the same reason. The fallback belongs to the same generation as
+        // the fresh entry, so a role saved since then is never served its old permissions:
+        // with no earlier read to stand on, a failure grants nothing and is not cached, and
+        // the next request tries again.
+        public static async Task<IReadOnlyList<string>> ResolveAsync(
+            IMemoryCache cache, int generation, string roleName,
+            Func<Task<IReadOnlyList<string>>> read)
+        {
+            var key = $"perm:{generation}:{roleName}";
+            if (cache.TryGetValue(key, out IReadOnlyList<string>? cached) && cached is not null)
+                return cached;
+
+            var lastGoodKey = $"perm-last:{generation}:{roleName}";
+            IReadOnlyList<string> permissions;
+            try
+            {
+                permissions = await read();
             }
             catch
             {
-                // A read that fails grants nothing, and is not cached, so the next request
-                // tries again. Failing closed on a lookup the operator cannot see is the
-                // safer way round: the alternative hands out access because a query timed
-                // out.
-                return Array.Empty<string>();
+                return cache.TryGetValue(lastGoodKey, out IReadOnlyList<string>? lastGood) && lastGood is not null
+                    ? lastGood
+                    : Array.Empty<string>();
             }
 
-            _cache.Set(key, permissions, Ttl);
+            cache.Set(key, permissions, Ttl);
+            cache.Set(lastGoodKey, permissions, LastGoodTtl);
             return permissions;
         }
     }
