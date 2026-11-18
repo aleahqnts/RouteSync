@@ -2269,11 +2269,17 @@ CREATE TABLE IF NOT EXISTS "public"."users" (
     "contact_number" "text",
     "address" "text",
     "emergency_contact_name" "text",
-    "emergency_contact_number" "text"
+    "emergency_contact_number" "text",
+    "photo_key" "text",
+    CONSTRAINT "ck_users_photo_key" CHECK ((("photo_key" IS NULL) OR ("photo_key" ~ (('^'::"text" || ("user_id")::"text") || '/[0-9a-f]{32}\.jpg$'::"text"))))
 );
 
 
 ALTER TABLE "public"."users" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."users"."photo_key" IS 'Path of the profile photograph in the profile-photos bucket, or null for none. Always inside the owner''s own folder, which the check constraint holds the driver app to.';
+
 
 
 CREATE OR REPLACE VIEW "public"."users_app" AS
@@ -2290,7 +2296,8 @@ CREATE OR REPLACE VIEW "public"."users_app" AS
     "emergency_contact_number",
     "created_at",
     "updated_at",
-    "last_login"
+    "last_login",
+    "photo_key"
    FROM "public"."users"
   WHERE ("user_id" = COALESCE("public"."jwt_uid"(), "user_id"))
   WITH CASCADED CHECK OPTION;
@@ -3880,6 +3887,10 @@ GRANT UPDATE("updated_at") ON TABLE "public"."users_app" TO "app_driver";
 
 
 GRANT UPDATE("last_login") ON TABLE "public"."users_app" TO "app_driver";
+
+
+
+GRANT UPDATE("photo_key") ON TABLE "public"."users_app" TO "app_driver";
 
 
 
