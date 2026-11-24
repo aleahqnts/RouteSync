@@ -485,8 +485,10 @@
             var driverPhoto = document.getElementById('fmPanelDriverPhoto');
             driverPhoto.hidden = !bus.driverPhotoUrl;
             // Set only when it changes, since this runs on every position update.
-            if (bus.driverPhotoUrl && driverPhoto.getAttribute('src') !== bus.driverPhotoUrl)
+            if (bus.driverPhotoUrl && driverPhoto.getAttribute('src') !== bus.driverPhotoUrl) {
                 driverPhoto.src = bus.driverPhotoUrl;
+                rsPhotoViewable(driverPhoto, bus.driverName);
+            }
             document.getElementById('fmPanelPax').textContent = bus.passengers;
             // Written as an escape rather than the sign itself: this file carries no
             // byte order mark, so it is decoded as whatever the response says, and a

@@ -382,7 +382,10 @@
             document.getElementById('tdm-driver-name').textContent   = d.driverName ?? '—';
             const driverPhoto = document.getElementById('tdm-driver-photo');
             driverPhoto.hidden = !d.driverPhotoUrl;
-            if (d.driverPhotoUrl) driverPhoto.src = d.driverPhotoUrl;
+            if (d.driverPhotoUrl) {
+                driverPhoto.src = d.driverPhotoUrl;
+                rsPhotoViewable(driverPhoto, d.driverName);
+            }
             else driverPhoto.removeAttribute('src');
             document.getElementById('tdm-driver-id').textContent     = d.driverId;
             document.getElementById('tdm-driver-status').innerHTML   = statusDot(d.driverStatus);

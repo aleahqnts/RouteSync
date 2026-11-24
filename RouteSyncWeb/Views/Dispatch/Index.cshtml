@@ -351,7 +351,9 @@
                                             <span class="dp-tooltip">@dTooltip</span>
                                             @if (trip.DriverPhotoUrl is not null)
                                             {
-                                                <img class="rs-face" src="@trip.DriverPhotoUrl" alt="" loading="lazy" />
+                                                <img class="rs-face" src="@trip.DriverPhotoUrl" alt="" loading="lazy"
+                                                     data-photo-view="@trip.DriverName" tabindex="0" role="button"
+                                                     aria-label="View photo of @trip.DriverName" />
                                             }
                                             <strong>@trip.DriverName</strong>
                                             @* A card on a phone has no columns, so there the number

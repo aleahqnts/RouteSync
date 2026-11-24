@@ -48,6 +48,7 @@
             img.src = item.photo;
             img.alt = '';
             img.loading = 'lazy';
+            rsPhotoViewable(img, item.name);
             return img;
         }
         const words = String(item.name || '').trim().split(/\s+/).filter(Boolean);

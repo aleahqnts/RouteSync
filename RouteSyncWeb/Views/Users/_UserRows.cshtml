@@ -27,11 +27,9 @@ else
             <td class="us-face-col">
                 @if (user.PhotoUrl is not null)
                 {
-                    <button type="button" class="us-face-btn" data-on="click:usViewPhoto"
-                            data-photo-url="@user.PhotoUrl" data-name="@user.FirstName @user.LastName"
-                            aria-label="View photo of @user.FirstName @user.LastName">
-                        <img class="us-face" src="@user.PhotoUrl" alt="" loading="lazy" />
-                    </button>
+                    <img class="us-face" src="@user.PhotoUrl" alt="" loading="lazy"
+                         data-photo-view="@user.FirstName @user.LastName" tabindex="0" role="button"
+                         aria-label="View photo of @user.FirstName @user.LastName" />
                 }
                 else
                 {

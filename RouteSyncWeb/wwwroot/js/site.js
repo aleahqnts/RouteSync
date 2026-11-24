@@ -126,3 +126,61 @@ window.rsLockLine = function (el, holder) {
     el.replaceChildren(icon, name, time);
     el.hidden = false;
 };
+
+// A person's photo at a readable size, for every small face on the dashboard.
+//
+// An image opts in with data-photo-view, holding the name shown beneath it (empty for
+// none). Clicking it, or Enter or Space on it, opens one shared dialog; any click or
+// Escape closes it. The open is caught before the image's own row or card sees the
+// click, so viewing a face never also opens a trip or picks a driver. Inside a
+// Bootstrap modal the dialog is placed in that modal, whose focus trap would otherwise
+// pull the keyboard back out of it, and Escape is kept from closing the modal too.
+(function () {
+    var dialog;
+
+    function build() {
+        dialog = document.createElement('dialog');
+        dialog.className = 'rs-photo-view';
+        dialog.innerHTML = '<img alt="" /><p></p>';
+        dialog.addEventListener('click', function () { dialog.close(); });
+        dialog.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    }
+
+    function open(img) {
+        if (!dialog) build();
+        (img.closest('.modal') || document.body).appendChild(dialog);
+        var name = img.getAttribute('data-photo-view') || '';
+        var big = dialog.querySelector('img');
+        big.src = img.currentSrc || img.src;
+        big.alt = name ? 'Photo of ' + name : 'Photo';
+        var caption = dialog.querySelector('p');
+        caption.textContent = name;
+        caption.hidden = !name;
+        dialog.showModal();
+    }
+
+    function target(e) {
+        var img = e.target.closest && e.target.closest('img[data-photo-view]');
+        return img && img.getAttribute('src') ? img : null;
+    }
+
+    function handle(e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        var img = target(e);
+        if (!img) return;
+        e.preventDefault();
+        e.stopPropagation();
+        open(img);
+    }
+
+    document.addEventListener('click', handle, true);
+    document.addEventListener('keydown', handle, true);
+
+    /** Marks an image built in script as viewable, with the name to show beneath it. */
+    window.rsPhotoViewable = function (img, name) {
+        img.setAttribute('data-photo-view', name || '');
+        img.tabIndex = 0;
+        img.setAttribute('role', 'button');
+        img.setAttribute('aria-label', name ? 'View photo of ' + name : 'View photo');
+    };
+})();

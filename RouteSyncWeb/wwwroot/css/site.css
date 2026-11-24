@@ -1695,3 +1695,33 @@ th.rs-sortable:focus-visible {
 }
 
 .rs-face--lg { width: 64px; height: 64px; }
+
+/* Shared photo viewer (site.js). Placed explicitly, since the page-wide margin reset
+   undoes the browser's own centring of a dialog. */
+img[data-photo-view] { cursor: zoom-in; }
+img[data-photo-view]:focus-visible { outline: 2px solid #4AADA8; outline-offset: 2px; }
+.rs-photo-view {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: fit-content;
+    height: fit-content;
+    padding: 16px;
+    border: 0;
+    border-radius: 16px;
+    background: light-dark(#fff, #2F2F2F);
+    color: light-dark(#1b2a56, #e2e8f0);
+    text-align: center;
+    box-shadow: 0 20px 50px rgb(15 23 42 / .25);
+    cursor: zoom-out;
+    outline: none;
+}
+.rs-photo-view::backdrop { background: rgb(15 23 42 / .6); }
+.rs-photo-view img {
+    display: block;
+    width: min(320px, calc(100vw - 64px));
+    aspect-ratio: 1;
+    border-radius: 12px;
+    object-fit: cover;
+}
+.rs-photo-view p { margin: 12px 0 0; font-weight: 600; }
