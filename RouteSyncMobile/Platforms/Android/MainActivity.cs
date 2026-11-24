@@ -47,6 +47,49 @@ public class MainActivity : MauiAppCompatActivity
         return status == PermissionStatus.Granted ? status : await Permissions.RequestAsync<T>();
     }
 
+    // Gallery pick through the phone's own gallery app (ACTION_PICK on the image store).
+    // MediaPicker uses Android's system photo picker instead, which looks like Google
+    // Photos and is not what a driver expects when asked to choose a photo. The returned
+    // address carries a one-time read grant, so no storage permission is needed.
+    private const int GalleryRequest = 4211;
+    private static TaskCompletionSource<global::Android.Net.Uri?>? _galleryPick;
+
+    private static global::Android.Content.Intent GalleryIntent() =>
+        new(global::Android.Content.Intent.ActionPick,
+            global::Android.Provider.MediaStore.Images.Media.ExternalContentUri);
+
+    // Whether any app answers a gallery pick. Needs the matching <queries> entry in the
+    // manifest, or Android 11 and later hide every answer and this is always false.
+    public static bool CanPickFromGallery =>
+        Platform.CurrentActivity is MainActivity a &&
+        GalleryIntent().ResolveActivity(a.PackageManager!) is not null;
+
+    // Null when the driver backs out without choosing.
+    public static async Task<byte[]?> PickFromGalleryAsync()
+    {
+        if (Platform.CurrentActivity is not MainActivity activity) return null;
+        var intent = GalleryIntent();
+
+        _galleryPick?.TrySetResult(null);
+        _galleryPick = new TaskCompletionSource<global::Android.Net.Uri?>();
+        activity.StartActivityForResult(intent, GalleryRequest);
+
+        var uri = await _galleryPick.Task;
+        if (uri is null) return null;
+        await using var input = activity.ContentResolver!.OpenInputStream(uri);
+        if (input is null) return null;
+        await using var copy = new MemoryStream();
+        await input.CopyToAsync(copy);
+        return copy.ToArray();
+    }
+
+    protected override void OnActivityResult(int requestCode, Result resultCode, global::Android.Content.Intent? data)
+    {
+        base.OnActivityResult(requestCode, resultCode, data);
+        if (requestCode == GalleryRequest)
+            _galleryPick?.TrySetResult(resultCode == Result.Ok ? data?.Data : null);
+    }
+
     protected override void OnResume()
     {
         base.OnResume();

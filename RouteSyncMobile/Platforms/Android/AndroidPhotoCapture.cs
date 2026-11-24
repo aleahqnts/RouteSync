@@ -23,6 +23,13 @@ public class AndroidPhotoCapture : IPhotoCapture
         {
             if (!fromGallery && !MediaPicker.Default.IsCaptureSupported) return null;
 
+            // The phone's own gallery app first. The system photo picker is the fallback
+            // for a phone with no app that answers a gallery pick.
+            if (fromGallery && MainActivity.CanPickFromGallery)
+                return await MainActivity.PickFromGalleryAsync() is byte[] picked
+                    ? Reduce(picked, maxEdge, quality)
+                    : null;
+
             var shot = fromGallery
                 ? await MediaPicker.Default.PickPhotoAsync()
                 : await MediaPicker.Default.CapturePhotoAsync();
