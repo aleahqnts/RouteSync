@@ -1043,8 +1043,16 @@ begin
     -- lower a figure: its own count is monotonic, so a lower one from it is stale.
     v_may_lower := v_role = 'app_driver' and not v_camera_live;
 
-    v_final := case when v_may_lower then v_claim
-                    else greatest(OLD.total_boarded, v_claim) end;
+    -- The counting camera may take back one boarding per write, for someone who stepped
+    -- in and straight back out. Only while it is live on its own open trip, so a stale
+    -- figure can at worst cost one passenger until the next write puts it right.
+    v_final := case
+      when v_may_lower then v_claim
+      when v_role = 'app_camera' and v_camera_live
+           and OLD.trip_status is distinct from 'Completed'
+           and OLD.counter_device_id = v_claims->>'device_id'
+        then greatest(OLD.total_boarded - 1, v_claim)
+      else greatest(OLD.total_boarded, v_claim) end;
   end if;
 
   NEW.total_boarded := greatest(0, v_final);
@@ -1079,8 +1087,7 @@ begin
 
   -- A surface that has been out of contact sending a figure from before the divergence.
   if v_device and not v_may_lower
-     and v_claim is distinct from OLD.total_boarded
-     and v_claim < OLD.total_boarded then
+     and v_claim < NEW.total_boarded then
     insert into public.audit_log
       (actor_type, actor_id, actor_role, action, target_table, target_id,
        source, outcome, summary, changes)
