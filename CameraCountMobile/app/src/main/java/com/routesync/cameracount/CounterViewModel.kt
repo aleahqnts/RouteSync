@@ -147,6 +147,17 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
          */
         const val STALL_AFTER_MS = 12_000L
 
+        /** Poll passes between checks that the bus still has this phone bound: about a
+         *  minute. */
+        private const val BIND_CHECK_EVERY = 15
+
+        /**
+         * Set when the phone was unbound locally because an admin released it from the
+         * dashboard, so the Setup screen can say why it is showing. Cleared by the next
+         * bind. Held in memory only: after a restart the Setup screen shows plainly.
+         */
+        @Volatile var releasedByAdmin = false
+
         /** Poll passes between charge readings: four seconds apart, so five minutes. */
         private const val HEALTH_EVERY = 75
 
@@ -253,6 +264,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
             prefs.bind(v, passcode, p)
             plate = p
             lastSummary = null
+            releasedByAdmin = false
             startPolling(v)
             onResult(null)
         }
@@ -336,7 +348,23 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = waiting()
         pollJob?.cancel()
         pollJob = viewModelScope.launch {
+            var tick = 0
             while (true) {
+                // The config follower runs first, so a wake request is answered before the
+                // rest of the tick, and regardless of trip state, so a parked bus still
+                // obeys a remote calibration. Wrapped separately so a configuration failure
+                // cannot break the trip poll.
+                runCatching { followDeviceConfig() }
+
+                // An admin can release this phone from the dashboard. Checked while no trip
+                // is being counted, so a release never cuts a running count short.
+                if (++tick % BIND_CHECK_EVERY == 0 && tripId == null &&
+                    SupabaseApi.runCatching { isBoundTo(vehicleId, deviceId) }.getOrNull() == false
+                ) {
+                    releasedLocally()
+                    return@launch
+                }
+
                 try {
                     val active = SupabaseApi.findActiveTrip(vehicleId)
                     when {
@@ -388,11 +416,6 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching { drainEvents() }
                     .onFailure { android.util.Log.w(TAG, "event drain failed: ${it.message}") }
 
-                // The config follower runs regardless of trip state, so a parked bus still
-                // obeys a remote calibration. Wrapped separately so a configuration failure
-                // cannot break the trip poll.
-                runCatching { followDeviceConfig() }
-
                 // What the phone can say about itself. Isolated like the rest: a health
                 // record is worth having and worth nothing next to the counting.
                 runCatching { reportHealth() }
@@ -401,9 +424,28 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                 // reason, and for one more: it is the only write here that depends on a
                 // migration, and a database without it must cost nothing but the figure.
                 runCatching { reportBattery() }
-                delay(4_000)
+
+                // Halfway through the wait, a read of the wake request alone, so a
+                // calibration photo starts within about two seconds of being asked for.
+                delay(2_000)
+                runCatching { handleWake(SupabaseApi.getWakeRequestedAt(deviceId), prefs.configVersion()) }
+                delay(2_000)
             }
         }
+    }
+
+    /**
+     * Goes back to Setup after an admin released this phone from the dashboard. Local
+     * only: the vehicle row already names no phone, or names its replacement, so it is
+     * left as it is.
+     */
+    private suspend fun releasedLocally() {
+        stopCounting()
+        prefs.unbind()
+        vehicleId = ""
+        tripId = null
+        releasedByAdmin = true
+        _state.value = UiState.NeedsSetup
     }
 
     /**

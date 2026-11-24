@@ -48,6 +48,7 @@ class WatcherService : Service() {
 
     private suspend fun watch() {
         val prefs = Prefs(this)
+        var tick = 0
         while (true) {
             try {
                 // With the UI on screen its view model handles trips.
@@ -55,6 +56,15 @@ class WatcherService : Service() {
                     val vehicle = prefs.vehicleId.first()
                     if (!vehicle.isNullOrBlank()) {
                         if (SupabaseApi.deviceJwt == null) SupabaseApi.deviceJwt = prefs.deviceJwt()
+                        // About once a minute, whether an admin has released this phone
+                        // from the dashboard. A release unbinds the phone locally only.
+                        if (++tick % 4 == 0 &&
+                            SupabaseApi.isBoundTo(vehicle, prefs.deviceId()) == false
+                        ) {
+                            prefs.unbind()
+                            CounterViewModel.releasedByAdmin = true
+                            continue
+                        }
                         val active = SupabaseApi.findActiveTrip(vehicle)
                         if (active != null) launchUi()
                     }

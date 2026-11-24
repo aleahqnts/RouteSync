@@ -443,6 +443,37 @@ object SupabaseApi {
         }
     }
 
+    /** Only the wake request, read between full config reads so a wake is answered
+     *  within about two seconds while keeping that extra read as small as it can be. */
+    suspend fun getWakeRequestedAt(deviceId: String): Instant? = withContext(Dispatchers.IO) {
+        val url = "$BASE/device_config?device_id=eq.$deviceId&select=wake_requested_at"
+        val req = Request.Builder().url(url).supabaseHeaders().get().build()
+        http.newCall(req).execute().use { res ->
+            if (!res.isSuccessful) throw HttpRefused(res.code, "GET device_config ${res.code}")
+            val arr = JSONArray(res.body?.string() ?: "[]")
+            if (arr.length() == 0) return@withContext null
+            arr.getJSONObject(0).optString("wake_requested_at", "")
+                .takeIf { it.isNotEmpty() && it != "null" }
+                ?.let { runCatching { java.time.OffsetDateTime.parse(it).toInstant() }.getOrNull() }
+        }
+    }
+
+    /**
+     * Whether the vehicle still names this device as its counter phone. False once an
+     * admin has released the phone from the dashboard. Null when the vehicle row cannot
+     * be read, which is never taken as a release.
+     */
+    suspend fun isBoundTo(vehicleId: String, deviceId: String): Boolean? = withContext(Dispatchers.IO) {
+        val url = "$BASE/vehicles?vehicle_id=eq.$vehicleId&select=counter_device_id"
+        val req = Request.Builder().url(url).supabaseHeaders().get().build()
+        http.newCall(req).execute().use { res ->
+            if (!res.isSuccessful) return@withContext null
+            val arr = JSONArray(res.body?.string() ?: "[]")
+            if (arr.length() == 0) return@withContext null
+            arr.getJSONObject(0).optString("counter_device_id", "") == deviceId
+        }
+    }
+
     /**
      * Writes a locally made calibration up to the database, and seeds the row on first
      * boot. The upsert keeps the database authoritative even though the edit happened on

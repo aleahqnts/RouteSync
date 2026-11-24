@@ -238,6 +238,15 @@ private fun SetupCard(vm: CounterViewModel, onBind: (String, String, (String?) -
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
+        if (CounterViewModel.releasedByAdmin) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "An admin released this phone from its bus.",
+                color = RsColor.Muted, fontSize = 14.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Spacer(Modifier.height(22.dp))
 
         var showPasscode by remember { mutableStateOf(false) }
