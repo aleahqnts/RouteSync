@@ -804,19 +804,21 @@ private fun DetectionSurface(
         }
 
         // Entry point for a mid-trip adjustment. Counting continues, but crossings are
-        // ignored while the line is being dragged.
+        // ignored while the line is being dragged. Screen off sits beside it as an icon
+        // so both stay in the top strip, clear of the doorway in the preview.
         if (counting && !editingLine) {
-            Column(
+            Row(
                 Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(16.dp),
-                horizontalAlignment = Alignment.End
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(
                     onClick = { adjusting = true; lastPersonAt = System.currentTimeMillis() }
                 ) { Text("Adjust line", color = Color.White, fontSize = 12.sp) }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { screenOff = true }) {
-                    Text("Screen off", color = Color.White, fontSize = 12.sp)
-                }
+                Spacer(Modifier.width(8.dp))
+                IconButton(
+                    onClick = { screenOff = true },
+                    modifier = Modifier.clip(CircleShape).background(Color(0xAA000000))
+                ) { Icon(RsIcons.EyeOff, contentDescription = "Screen off", tint = Color.White) }
             }
         }
 
