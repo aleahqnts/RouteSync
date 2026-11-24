@@ -262,6 +262,35 @@
     }
     .us-face--lg { width: 56px; height: 56px; }
 
+    .us-face-btn {
+        display: inline-grid;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: none;
+        cursor: zoom-in;
+    }
+    .us-face-btn:focus-visible { outline: 2px solid #4AADA8; outline-offset: 2px; }
+
+    .us-photo-view {
+        padding: 16px;
+        border: 0;
+        border-radius: 16px;
+        background: light-dark(#fff, #1e293b);
+        color: light-dark(#1b2a56, #e2e8f0);
+        text-align: center;
+        cursor: zoom-out;
+    }
+    .us-photo-view::backdrop { background: rgb(15 23 42 / .6); }
+    .us-photo-view img {
+        display: block;
+        width: min(320px, 80vw);
+        aspect-ratio: 1;
+        border-radius: 12px;
+        object-fit: cover;
+    }
+    .us-photo-view p { margin: 12px 0 0; font-weight: 600; }
+
     .us-table tbody tr:hover {
         background: light-dark(#FAFBFC, #383838);
     }

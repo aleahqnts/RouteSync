@@ -85,11 +85,24 @@
 @await Html.PartialAsync("_EditUserModal", (EditUserViewModel)ViewBag.EditUserModel)
 @await Html.PartialAsync("_ManageRolesModal", (RoleFormViewModel)ViewBag.RoleFormModel)
 
+@* A user's photo at a readable size. Any click or Escape closes it. *@
+<dialog class="us-photo-view" id="usPhotoView" data-on="click:usClosePhoto">
+    <img id="usPhotoViewImg" alt="" />
+    <p id="usPhotoViewName"></p>
+</dialog>
+
 <script nonce="@CspNonce.Value">
     // What this page's controls run, by the names in their data-on attributes. The content
     // security policy refuses onclick and its kin; see wwwroot/js/data-on.js.
     rsOn({
-        usLoadRows: function () { loadUserRows(); }
+        usLoadRows: function () { loadUserRows(); },
+        usViewPhoto: function () {
+            document.getElementById('usPhotoViewImg').src = this.dataset.photoUrl;
+            document.getElementById('usPhotoViewImg').alt = 'Photo of ' + this.dataset.name;
+            document.getElementById('usPhotoViewName').textContent = this.dataset.name;
+            document.getElementById('usPhotoView').showModal();
+        },
+        usClosePhoto: function () { this.close(); }
     });
 
     document.addEventListener('DOMContentLoaded', function () {
