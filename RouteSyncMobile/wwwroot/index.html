@@ -30,6 +30,16 @@
     <script src="js/password-ui.js"></script>
     <script src="js/date-picker.js"></script>
     <script src="js/bao.js"></script>
+    <script>
+        // A long press on a link or image would otherwise lift it as a draggable link
+        // or open the WebView's link menu, which belongs in a browser, not an app.
+        // Text fields keep their own long-press menu for copy and paste.
+        ['contextmenu', 'dragstart'].forEach(function (type) {
+            document.addEventListener(type, function (e) {
+                if (e.target.closest && e.target.closest('a, img')) e.preventDefault();
+            });
+        });
+    </script>
 
 </body>
 

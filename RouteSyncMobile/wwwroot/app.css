@@ -5,6 +5,12 @@ html, body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* Links and images are app controls, never something to drag out or preview. */
+a, img {
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+}
+
 /* Page titles use a bundled bold face. Android WebViews resolve the system stack to the
    phone's own font, and some (HyperOS among them) render it far lighter than the weight
    asked for. Selawik is metric-compatible with Segoe UI; licence in fonts/selawik-OFL.txt. */
