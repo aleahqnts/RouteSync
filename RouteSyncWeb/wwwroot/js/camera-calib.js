@@ -163,7 +163,7 @@
 
     // The release the phone reports, and whether a newer one is published. Phones on
     // releases before the report existed send nothing, so the line stays hidden.
-    function version(running, latest) {
+    function showVersion(running, latest) {
         const el = $('camVersion');
         if (!el) return;
         if (!running) { el.style.display = 'none'; return; }
@@ -180,7 +180,7 @@
 
     function applyState(s) {
         if (!s) return;
-        version(s.status && s.status.app_version, s.latestSentinel);
+        showVersion(s.status && s.status.app_version, s.latestSentinel);
         if (s.status && s.status.last_seen) {
             chip(Date.now() - Date.parse(s.status.last_seen) < 30000);
         } else {
@@ -236,7 +236,7 @@
             const w = await post(window.camUrls.wake, { deviceId: deviceId });
             if (!w.ok) { showError("Can't reach the camera service. Try again."); return; }
             if (!(await waitForSnapshot())) {
-                showError("The camera didn't respond. Is the counter phone on and connected?");
+                showError('Connection timed out. The camera did not respond.');
                 return;
             }
             if (!(await loadImage())) { showError("Couldn't load the photo. Try again."); return; }
