@@ -21,7 +21,7 @@
     {
         <div class="cc-wait">
             <div class="cc-spin"></div>
-            <p class="cc-wait-t">Waking the camera&#8230;</p>
+            <p class="cc-wait-t">@waitText</p>
             <p class="cc-wait-s">The counter phone is taking a fresh photo of the doorway.</p>
         </div>
     }
@@ -82,6 +82,7 @@
     private bool busy;
     private bool refreshing;
     private string? errMsg;
+    private string waitText = "Waking the camera…";
     private string? note;
     private string? imgSrc;
     private string? dev;
@@ -122,6 +123,7 @@
     {
         stage = Stage.Waking;
         errMsg = null;
+        waitText = "Waking the camera…";
         StateHasChanged();
 
         try
@@ -136,6 +138,22 @@
                 inwardSign = cfg.InwardSign == 0 ? 1 : cfg.InwardSign;
                 version = cfg.Version;
                 useBack = cfg.UseBackCamera;
+            }
+
+            // A phone that has not checked in for a minute will not answer a wake, so
+            // say so now rather than after the full wait.
+            var st = await Data.GetDeviceStatusAsync(dev!);
+            if (st?.LastSeen is not DateTimeOffset seen)
+            {
+                stage = Stage.Error;
+                errMsg = "Camera has not reported yet.";
+                return;
+            }
+            if (DateTimeOffset.UtcNow - seen > TimeSpan.FromSeconds(60))
+            {
+                stage = Stage.Error;
+                errMsg = $"Camera offline since {PhTime.FromUtc(seen.UtcDateTime):MMM d, h:mm tt}.";
+                return;
             }
 
             wakeSentAt = DateTimeOffset.UtcNow;
@@ -173,6 +191,11 @@
             try
             {
                 var st = await Data.GetDeviceStatusAsync(dev!);
+                if (st?.WakeState == "capturing" && waitText != "Camera is taking a photo…")
+                {
+                    waitText = "Camera is taking a photo…";
+                    StateHasChanged();
+                }
                 if (st?.SnapshotReadyAt is DateTimeOffset ready &&
                     ready >= wakeSentAt.AddSeconds(-5)) // small clock-skew slack
                 {
