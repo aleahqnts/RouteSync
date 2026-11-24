@@ -45,14 +45,14 @@ public static class AppUpdate
     // Written beside it under a .part name and renamed only once complete, so a file at
     // path is always a whole download that can be installed again
     // without fetching it a second time.
-    public static async Task DownloadAsync(string url, string path, IProgress<double> progress)
+    public static async Task DownloadAsync(string url, string path, IProgress<(long Done, long Total)> progress)
     {
         var part = path + ".part";
         await DownloadToAsync(url, part, progress);
         File.Move(part, path, overwrite: true);
     }
 
-    private static async Task DownloadToAsync(string url, string path, IProgress<double> progress)
+    private static async Task DownloadToAsync(string url, string path, IProgress<(long Done, long Total)> progress)
     {
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RouteSync-Driver");
@@ -70,7 +70,7 @@ public static class AppUpdate
         {
             await target.WriteAsync(buffer.AsMemory(0, read));
             done += read;
-            if (total > 0) progress.Report((double)done / total);
+            progress.Report((done, total));
         }
     }
 }

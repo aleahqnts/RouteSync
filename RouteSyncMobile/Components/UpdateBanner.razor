@@ -17,7 +17,7 @@
             {
                 <div class="upd-row">
                     <div class="upd-bar"><div class="upd-fill" style="transform:scaleX(@progress.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture))"></div></div>
-                    <span class="upd-pct">@Percent%</span>
+                    <span class="upd-pct">@(sizeText ?? $"{Percent}%")</span>
                 </div>
             }
         </div>
@@ -39,6 +39,7 @@
     private UpdateOffer? offer;
     private bool dismissed, busy;
     private double progress;
+    private string? sizeText;
     private string? error;
 
     private int Percent => (int)Math.Round(progress * 100);
@@ -94,9 +95,10 @@
             // Already downloaded when the installer was backed out of or failed: install it again.
             if (File.Exists(path)) progress = 1;
             else
-                await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<double>(p =>
+                await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<(long Done, long Total)>(p =>
                 {
-                    progress = p;
+                    if (p.Total > 0) progress = (double)p.Done / p.Total;
+                    sizeText = p.Total > 0 ? $"{p.Done >> 20} / {p.Total >> 20} MB" : $"{p.Done >> 20} MB";
                     InvokeAsync(StateHasChanged);
                 }));
             Installer.Install(path);
@@ -108,6 +110,7 @@
         }
         busy = false;
         progress = 0;
+        sizeText = null;
     }
 
     private static string UpdatesFolder => Path.Combine(FileSystem.CacheDirectory, "updates");
