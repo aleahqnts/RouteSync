@@ -413,6 +413,19 @@
 .cam-batt.low { color: #d15b5b; }
 .cam-batt.charging { color: #2fae74; }
 
+/* A low phone is flagged by the icon alone: a slow breath, gentle enough to sit beside
+   the driver all trip without nagging. */
+.cam-batt.low .cam-batt-ico { animation: batt-breathe 2.4s ease-in-out infinite; }
+
+@keyframes batt-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cam-batt.low .cam-batt-ico { animation: none; }
+}
+
 .cam-held {
     margin: 8px 0 0;
     padding: 8px 10px;

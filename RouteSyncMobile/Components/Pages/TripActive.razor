@@ -184,15 +184,6 @@ else
                         : $"The camera is holding {camStatus.UnreconciledCounts} trip counts it has not been able to send.")
                 </p>
             }
-            @* Said in words as well as colour when the phone is running low, since the
-               driver is the one who can reach it with a charger before it stops
-               counting. *@
-            @if (CamBattery is int low && low <= CamBatteryLow && !CamCharging)
-            {
-                <p class="cam-held">
-                    The camera phone is at @low% battery. Plug it in to keep it counting.
-                </p>
-            }
             <button class="cam-btn calib" @onclick="@(() => Nav.NavigateTo($"/camera-calibrate/{TripId}"))">
                 Calibrate Camera
             </button>
