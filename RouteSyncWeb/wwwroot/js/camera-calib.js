@@ -199,6 +199,9 @@
             try {
                 const s = await getState();
                 applyState(s);
+                if (s && s.status && s.status.wake_state === 'capturing') {
+                    $('camWaitText').textContent = 'Camera is taking a photo…';
+                }
                 if (s && s.status && s.status.snapshot_ready_at &&
                     Date.parse(s.status.snapshot_ready_at) >= wakeSentAt - 5000) {
                     return true;
@@ -231,6 +234,14 @@
                 sign = s.config.inward_sign || 1;
                 useBack = !!s.config.use_back_camera;
                 version = s.config.version || 0;
+            }
+            // A phone that has not checked in for a minute will not answer a wake, so
+            // say so now rather than after the full wait.
+            const seen = s.status && s.status.last_seen;
+            if (!seen) { showError('Camera has not reported yet.'); return; }
+            if (Date.now() - Date.parse(seen) > 60000) {
+                showError('Camera offline since ' + rsTime.instant(new Date(seen)) + '.');
+                return;
             }
             wakeSentAt = Date.now();
             const w = await post(window.camUrls.wake, { deviceId: deviceId });
