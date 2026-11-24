@@ -25,7 +25,7 @@ else
                 <p class="greet">Hello,</p>
                 <h1 class="name">@Session.DisplayName</h1>
             </div>
-            <img class="avatar" src="@(photoSrc ?? "images/user-avatar.png")" alt="" />
+            <img class="avatar @(photoSrc is null ? "" : "avatar--photo")" src="@(photoSrc ?? "images/user-avatar.png")" alt="" />
         </div>
 
         @* Bao, the mascot, greets the driver with the one thing the day needs from them,

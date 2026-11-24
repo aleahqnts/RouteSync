@@ -32,11 +32,22 @@
     letter-spacing: -0.3px;
 }
 
+/* The tallest item in the header, so the header grows to it and the greeting centres
+   beside it. Its top edge therefore sits on the page's 56px top padding, the same
+   clearance every page keeps below the status bar (the WebView reports no safe-area
+   inset), and never rises into it. */
 .avatar {
-    width: 48px;
-    height: 48px;
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
     border-radius: 50%;
     object-fit: cover;
+}
+
+/* A thin ring lifts a pale photo off the white header. The stock avatar has its own
+   outline, so it goes without. */
+.avatar--photo {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #e3e8ef;
 }
 
 /* Bao's card: a full-width teal band with Bao set into it, his head above its top edge,
