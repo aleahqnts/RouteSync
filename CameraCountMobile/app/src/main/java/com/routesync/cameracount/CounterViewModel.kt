@@ -31,9 +31,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - Config follower, on the same 4s tick: reconcile `device_config` in both directions.
  * - Event drain, on the same 4s tick: deliver held crossings to `boarding_events`.
  *
- * The count is monotonic. It seeds from the database when a trip is acquired and only
- * ever rises, so restarts, manual handovers and reconnects reconcile without double
- * counting.
+ * The count seeds from the database when a trip is acquired and rises with each boarding,
+ * so restarts, manual handovers and reconnects reconcile without double counting. The one
+ * way it falls is a boarding taken back by the same person stepping straight back out.
  */
 class CounterViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -71,6 +71,11 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     private val flushNow = Channel<Unit>(Channel.CONFLATED)
     private var tripId: String? = null
     private var count = 0
+    // The total the database last stored from this phone. A polled total above it was
+    // written by someone else, the driver's manual counter, and is absorbed. One at or
+    // below it is this phone's own write, possibly not yet caught up with a boarding taken
+    // back, and absorbing it would undo the take-back.
+    private var lastStored = 0
     private var vehicleId: String = ""
     private var plate: String? = null
     private var deviceId: String = ""
@@ -273,9 +278,9 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Called by the camera pipeline for each crossing of the counting line.
      *
-     * Every crossing is recorded, in both directions. Only an inward one moves the
-     * count: an exit is evidence about what the camera saw, not a passenger, and the
-     * reported total never falls.
+     * Every crossing is recorded, in both directions. An inward one adds to the count,
+     * and an outward one that takes back a boarding moments old subtracts it. Any other
+     * exit is evidence about what the camera saw, not a passenger.
      *
      * The record is written to the device's own queue first and sent later. A crossing
      * that exists only in memory does not survive a dead zone followed by a process
@@ -286,7 +291,8 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
      * overwrite an increment landing between its read and its write, so the crossing is
      * handed to the main thread whole. Only the moment it happened is taken here.
      */
-    fun onCrossing(direction: CrossDirection) {
+    fun onCrossing(crossing: com.routesync.cameracount.camera.Crossing) {
+        val direction = crossing.direction
         val at = System.currentTimeMillis()
         viewModelScope.launch {
             val t = tripId ?: return@launch
@@ -305,11 +311,14 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     .onFailure { android.util.Log.w(TAG, "crossing not queued: ${it.message}") }
             }
 
-            if (direction != CrossDirection.IN) return@launch
-            count++
+            when {
+                direction == CrossDirection.IN -> count++
+                crossing.undo -> count = (count - 1).coerceAtLeast(0)
+                else -> return@launch
+            }
             persistPending(t)
             flushNow.trySend(Unit)
-            // Carry the sync state forward. A boarding says nothing about whether the last
+            // Carry the sync state forward. A change in the count says nothing about whether the last
             // flush reached the server, so reporting success here would show "synced" on
             // every passenger while the bus is in a dead zone.
             publishCounting(lastFlushOk = (state.value as? UiState.Counting)?.lastFlushOk ?: true)
@@ -336,7 +345,10 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                         active != null && tripId == active.tripId -> {
                             // The manual counter may have run while this device was down.
                             // Absorb its total, never lower the local one.
-                            count = maxOf(count, active.totalBoarded)
+                            if (active.totalBoarded > lastStored) {
+                                lastStored = active.totalBoarded
+                                count = maxOf(count, active.totalBoarded)
+                            }
                             publishCounting(
                                 lastFlushOk = (state.value as? UiState.Counting)?.lastFlushOk ?: true
                             )
@@ -413,6 +425,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
         tripId = active.tripId
         val saved = prefs.pendingCount(active.tripId)?.count ?: 0
         count = maxOf(count, active.totalBoarded, saved)
+        lastStored = active.totalBoarded
         persistPending(active.tripId)
         lastFrameAt = android.os.SystemClock.elapsedRealtime() // camera warm-up grace
         CountingService.start(getApplication(), vehicleId)
@@ -732,13 +745,13 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     publishCounting(lastFlushOk = false, cameraStalled = true)
                     continue
                 }
-                val stillOwner = try {
+                val stored = try {
                     SupabaseApi.patchCount(t, count, deviceId)
                 } catch (_: Exception) {
                     publishCounting(lastFlushOk = false) // offline: count persisted locally
                     continue
                 }
-                if (!stillOwner) {
+                if (stored == null) {
                     // Another device took the claim, which the stale-heartbeat rule allows
                     // after 30s of silence. The local count is discarded: the new owner
                     // seeds from the database and counts on from there, so keeping it
@@ -754,6 +767,7 @@ class CounterViewModel(app: Application) : AndroidViewModel(app) {
                     _state.value = UiState.Standby(vehicleId, trip)
                     break
                 }
+                lastStored = stored
                 publishCounting(lastFlushOk = true)
             }
         }

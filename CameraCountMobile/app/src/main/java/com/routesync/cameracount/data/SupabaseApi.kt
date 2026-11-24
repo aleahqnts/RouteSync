@@ -155,9 +155,11 @@ object SupabaseApi {
      * Heartbeat freshness is how RouteSync knows the camera is alive.
      *
      * Guarded on ownership: if another device has taken the claim this matches no rows
-     * and returns false, so the caller stands down instead of contending for the row.
+     * and returns null, so the caller stands down instead of contending for the row.
+     * Otherwise returns the total the database stored, which its count guard may have
+     * set above the one sent.
      */
-    suspend fun patchCount(tripId: String, totalBoarded: Int, deviceId: String): Boolean =
+    suspend fun patchCount(tripId: String, totalBoarded: Int, deviceId: String): Int? =
         withContext(Dispatchers.IO) {
             val body = JSONObject()
                 .put("total_boarded", totalBoarded)
@@ -172,7 +174,8 @@ object SupabaseApi {
                 .build()
             http.newCall(req).execute().use { res ->
                 if (!res.isSuccessful) throw HttpRefused(res.code, "PATCH trips ${res.code}")
-                JSONArray(res.body?.string() ?: "[]").length() > 0
+                val arr = JSONArray(res.body?.string() ?: "[]")
+                if (arr.length() == 0) null else arr.getJSONObject(0).optInt("total_boarded", totalBoarded)
             }
         }
 
