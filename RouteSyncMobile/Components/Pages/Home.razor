@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject SessionService Session
 @inject DriverDataService Data
+@inject ProfilePhotos Photos
 @inject TelemetryQueue Queue
 @inject IJSRuntime JS
 @inject NavigationManager Nav
@@ -24,7 +25,7 @@ else
                 <p class="greet">Hello,</p>
                 <h1 class="name">@Session.DisplayName</h1>
             </div>
-            <img class="avatar" src="images/user-avatar.png" alt="" />
+            <img class="avatar" src="@(photoSrc ?? "images/user-avatar.png")" alt="" />
         </div>
 
         @* Bao, the mascot, greets the driver with the one thing the day needs from them,
@@ -650,7 +651,26 @@ else
         try { await Queue.FlushAsync(); } catch { /* offline: stays queued */ }
         await Load();
         _ = PollLoop(); // background: new assignments appear without pull-to-refresh
+        _ = LoadPhotoAsync();
         App.Returned += OnReturned;
+    }
+
+    // The driver's own photo for the greeting. Read from the phone after the first time,
+    // so the network is only asked for the user row. Without one, the stock avatar stays.
+    private string? photoSrc;
+
+    private async Task LoadPhotoAsync()
+    {
+        try
+        {
+            var user = await Data.GetUserAsync(Session.CurrentUser!.UserId);
+            if (user?.PhotoKey is string key && await Photos.ReadAsync(key) is byte[] bytes)
+            {
+                photoSrc = "data:image/jpeg;base64," + Convert.ToBase64String(bytes);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { /* offline: the stock avatar stays */ }
     }
 
     // A trip assigned by a dispatcher has to appear without the driver doing anything, so
