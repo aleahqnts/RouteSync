@@ -154,7 +154,7 @@
         if (!await WaitForSnapshotAsync())
         {
             stage = Stage.Error;
-            errMsg = "The camera didn't respond. Is the counter phone on and connected?";
+            errMsg = "Connection timed out. The camera did not respond.";
             return;
         }
 
