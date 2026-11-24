@@ -98,7 +98,7 @@
                 await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<(long Done, long Total)>(p =>
                 {
                     if (p.Total > 0) progress = (double)p.Done / p.Total;
-                    sizeText = p.Total > 0 ? $"{p.Done >> 20} / {p.Total >> 20} MB" : $"{p.Done >> 20} MB";
+                    sizeText = p.Total > 0 ? $"{p.Done / 1048576.0:0.0} / {p.Total / 1048576.0:0.0} MB" : $"{p.Done / 1048576.0:0.0} MB";
                     InvokeAsync(StateHasChanged);
                 }));
             Installer.Install(path);

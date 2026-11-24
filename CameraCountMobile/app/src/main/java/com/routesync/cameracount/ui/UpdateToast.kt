@@ -82,7 +82,8 @@ fun UpdateToast(modifier: Modifier = Modifier) {
                 // Progress arrives on the download thread; the label is set back on the main
                 // thread so the toast redraws as it changes.
                 if (!apk.exists()) AppUpdate.download(found.apkUrl, apk) { done, total ->
-                    val label = if (total > 0) "${done shr 20} / ${total shr 20} MB" else "${done shr 20} MB"
+                    val mb = { b: Long -> String.format(java.util.Locale.US, "%.1f", b / 1048576.0) }
+                    val label = if (total > 0) "${mb(done)} / ${mb(total)} MB" else "${mb(done)} MB"
                     scope.launch { progress = label }
                 }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileProvider", apk)
