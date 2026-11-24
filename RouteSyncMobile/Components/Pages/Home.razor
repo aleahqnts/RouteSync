@@ -664,9 +664,13 @@ else
         try
         {
             var user = await Data.GetUserAsync(Session.CurrentUser!.UserId);
-            if (user?.PhotoKey is string key && await Photos.ReadAsync(key) is byte[] bytes)
+            if (user is null) return;
+            var next = user.PhotoKey is string key && await Photos.ReadAsync(key) is byte[] bytes
+                ? "data:image/jpeg;base64," + Convert.ToBase64String(bytes)
+                : null;
+            if (next != photoSrc)
             {
-                photoSrc = "data:image/jpeg;base64," + Convert.ToBase64String(bytes);
+                photoSrc = next;
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -697,7 +701,13 @@ else
 
     // The page was not refreshed while the app was in the background, so it is read again
     // the moment the driver comes back rather than on the next tick.
-    private void OnReturned() => _ = RefreshAsync();
+    // The photo too, which may have been changed in Profile; it is cached on the phone by
+    // key, so only the user row is fetched unless the key changed.
+    private void OnReturned()
+    {
+        _ = RefreshAsync();
+        _ = LoadPhotoAsync();
+    }
 
     private async Task RefreshAsync()
     {
