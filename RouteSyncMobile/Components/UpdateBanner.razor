@@ -42,7 +42,11 @@
     private string? sizeText;
     private string? error;
 
-    private int Percent => (int)Math.Round(progress * 100);
+    // Always a dot for the decimal, whatever the phone's language.
+    private static string Mb(long bytes) =>
+        (bytes / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+    private int Percent =>(int)Math.Round(progress * 100);
 
     private string Subtitle => error ?? (busy
         ? (progress >= 1 ? "Opening the installer" : $"Downloading version {offer!.Version.ToString(3)}")
@@ -98,7 +102,7 @@
                 await AppUpdate.DownloadAsync(offer.ApkUrl, path, new Progress<(long Done, long Total)>(p =>
                 {
                     if (p.Total > 0) progress = (double)p.Done / p.Total;
-                    sizeText = p.Total > 0 ? $"{p.Done / 1048576.0:0.0} / {p.Total / 1048576.0:0.0} MB" : $"{p.Done / 1048576.0:0.0} MB";
+                    sizeText = p.Total > 0 ? $"{Mb(p.Done)} / {Mb(p.Total)} MB" : $"{Mb(p.Done)} MB";
                     InvokeAsync(StateHasChanged);
                 }));
             Installer.Install(path);
