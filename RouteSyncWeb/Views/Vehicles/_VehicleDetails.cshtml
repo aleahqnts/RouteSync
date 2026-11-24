@@ -63,6 +63,7 @@
                     <div class="vh-detail-inline">
                         <div class="vh-detail-row"><strong>Counter Phone:</strong> @Model.CounterDeviceId</div>
                         <button type="button" class="vh-btn vh-btn--primary vh-btn--sm" data-vehicle-id="@Model.VehicleId" data-on="click:vhCamOpen">Calibrate Camera</button>
+                        <button type="button" class="vh-btn vh-btn--outline vh-btn--sm" data-vehicle-id="@Model.VehicleId" data-device-id="@Model.CounterDeviceId" data-on="click:vhCamRelease">Release Phone</button>
                     </div>
                 }
                 else

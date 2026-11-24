@@ -1650,5 +1650,42 @@ namespace FleetWise.Controllers
 
             return ok ? Json(new { version = newV }) : StatusCode(502);
         }
+
+        // Releases a counter phone from its bus, for a phone that cannot unbind itself
+        // because it is off, lost or broken.
+        //
+        // The phone's access to the bus's trips follows this column, so once it is
+        // cleared the old phone can no longer count here even if it comes back on. A bus
+        // on a trip is refused, since the phone still holds that trip's count until its
+        // heartbeat lapses. The write is conditional on the expected phone, so a phone
+        // bound in the meantime is never released by mistake.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CameraRelease(string vehicleId, string deviceId, string? note)
+        {
+            if (string.IsNullOrWhiteSpace(vehicleId) || string.IsNullOrWhiteSpace(deviceId))
+                return BadRequest("Missing vehicle or device.");
+            if (await OnActiveTripAsync(vehicleId))
+                return BadRequest($"{vehicleId} is on a trip. End the trip before releasing its counter phone.");
+
+            var req = CamReq(HttpMethod.Patch,
+                $"rest/v1/vehicles?vehicle_id=eq.{Uri.EscapeDataString(vehicleId)}" +
+                $"&counter_device_id=eq.{Uri.EscapeDataString(deviceId)}");
+            req.Headers.TryAddWithoutValidation("Prefer", "return=representation");
+            req.Content = new StringContent("{\"counter_device_id\":null}",
+                System.Text.Encoding.UTF8, "application/json");
+            var res = await _camHttp.SendAsync(req);
+            if (!res.IsSuccessStatusCode) return StatusCode(502);
+
+            using var doc = System.Text.Json.JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            if (doc.RootElement.GetArrayLength() == 0)
+                return BadRequest("The counter phone on this bus has changed. Reopen the vehicle and try again.");
+
+            var reason = string.IsNullOrWhiteSpace(note) ? "" : $": {note.Trim()}";
+            await _audit.WriteAsync("camera_released",
+                $"released counter phone {deviceId} from {vehicleId}{reason}",
+                "vehicles", vehicleId);
+            return Ok();
+        }
     }
 }

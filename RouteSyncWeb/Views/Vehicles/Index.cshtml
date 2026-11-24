@@ -271,6 +271,7 @@
         camSave:               function () { camSave(); },
         // _VehicleDetails
         vhCamOpen:             function () { camOpen(this.dataset.vehicleId); },
+        vhCamRelease:          function () { vhCamRelease(this.dataset.vehicleId, this.dataset.deviceId); },
         vhOpenChecklist:       function () { vhOpenChecklist(); },
         vhReturnToService:     function () { vhSetService(this.dataset.vehicleId, false, this.dataset.logId ? Number(this.dataset.logId) : null); },
         vhMarkOutOfService:    function () { vhMarkOutOfService(this.dataset.vehicleId, this.dataset.logId ? Number(this.dataset.logId) : null); },
@@ -863,6 +864,23 @@
                 const r = await vhPostResult('@Url.Action("SetServiceState", "Vehicles")', params);
                 if (r.ok) { vhActionCancel(); vhReloadModal(); loadVehicleRows(); }
                 else { vhActionError(r.message || 'Could not update the service state.'); }
+            }
+        });
+    }
+
+    function vhCamRelease(vehicleId, deviceId) {
+        vhOpenAction({
+            title: 'Release Counter Phone',
+            desc: 'Counter phone ' + deviceId + ' will be unassigned from ' + vehicleId +
+                  ' and will stop counting passengers on this bus. To use it again, it must be' +
+                  ' set up with the bind passcode. Add a reason (optional).',
+            confirmLabel: 'Release Phone', danger: true,
+            onConfirm: async function (note) {
+                const params = { vehicleId: vehicleId, deviceId: deviceId };
+                if (note) params.note = note;
+                const r = await vhPostResult('@Url.Action("CameraRelease", "Vehicles")', params);
+                if (r.ok) { vhActionCancel(); vhReloadModal(); loadVehicleRows(); }
+                else { vhActionError(r.message || 'Could not release the counter phone.'); }
             }
         });
     }
